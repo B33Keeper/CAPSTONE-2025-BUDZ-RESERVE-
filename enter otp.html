@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <title>Verify OTP</title>
+</head>
+<body>
+
+  <div class="login-container">
+    <img src="login photo/BBC.png" alt="BBC Logo">
+
+    <form action="reset_password.php" method="POST" onsubmit="return validateOTP()">
+      <div class="input-container">
+        <i class="fa fa-key"></i>
+        <input type="text" id="otp" name="otp" placeholder="     Enter One Time Password" required>
+      </div>
+      <div id="otpError" class="error"></div>
+
+      <p>We sent you a code to: <b>Samplemail@gmail.com</b></p>
+      <p><a href="resend_otp.php">Didn’t get a code?</a></p>
+
+      <button type="submit">Confirm</button>
+    </form>
+
+    <div class="links">
+      <a href="index.php">Back to Login</a>
+    </div>
+  </div>
+
+  <script>
+    function validateOTP() {
+      const otp = document.getElementById("otp").value.trim();
+      const error = document.getElementById("otpError");
+      error.innerText = "";
+
+      if (otp === "") {
+        error.innerText = "OTP is required.";
+        return false;
+      }
+      if (otp.length < 4) {
+        error.innerText = "OTP must be at least 4 digits.";
+        return false;
+      }
+      return true;
+    }
+  </script>
+
+</body>
+</html>
