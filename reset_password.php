@@ -4,7 +4,7 @@ include 'db.php';
 
 // Guard: must have verified OTP
 if (!isset($_SESSION['reset_verified']) || $_SESSION['reset_verified'] !== true || empty($_SESSION['reset_email'])) {
-  echo "<script>window.addEventListener('DOMContentLoaded',function(){ if(typeof showPopup==='function'){ showPopup('Please verify OTP first.', {redirectUrl:'forgot password.php'}); } else { alert('Please verify OTP first.'); window.location.href='forgot password.php'; } });</script>";
+  echo "<script>window.addEventListener('DOMContentLoaded',function(){ showPopup('Please verify OTP first.', {redirectUrl:'forgot password.php'}); });</script>";
   // Do not exit yet so the HTML renders script
 }
 
@@ -17,9 +17,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $strongPasswordPattern = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/`~]).{8,}$/";
 
   if ($passwordPlain !== $confirmPasswordPlain) {
-    echo "<script>window.addEventListener('DOMContentLoaded',function(){ if(typeof showPopup==='function'){ showPopup('Passwords do not match.'); } else { alert('Passwords do not match.'); } });</script>";
+    echo "<script>window.addEventListener('DOMContentLoaded',function(){ showPopup('Passwords do not match.'); });</script>";
   } else if (!preg_match($strongPasswordPattern, $passwordPlain)) {
-    echo "<script>window.addEventListener('DOMContentLoaded',function(){ if(typeof showPopup==='function'){ showPopup('Password must be 8+ chars with upper, lower, number, and special.'); } else { alert('Password must be 8+ chars with upper, lower, number, and special.'); } });</script>";
+    echo "<script>window.addEventListener('DOMContentLoaded',function(){ showPopup('Password must be 8+ chars with upper, lower, number, and special.'); });</script>";
   } else if (!empty($email)) {
     $hashed = password_hash($passwordPlain, PASSWORD_DEFAULT);
     $stmt = $conn->prepare("UPDATE users SET password=? WHERE email=?");
@@ -28,10 +28,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       // Clear reset session flags
       unset($_SESSION['reset_otp'], $_SESSION['reset_otp_expires']);
       $_SESSION['reset_verified'] = false;
-      echo "<script>window.addEventListener('DOMContentLoaded',function(){ if(typeof showPopup==='function'){ showPopup('Password reset successful. Please log in.', {redirectUrl:'login.php'}); } else { alert('Password reset successful. Please log in.'); window.location.href='login.php'; } });</script>";
+      echo "<script>window.addEventListener('DOMContentLoaded',function(){ showPopup('Password reset successful. Please log in.', {redirectUrl:'login.php'}); });</script>";
     } else {
       $err = addslashes($stmt->error);
-      echo "<script>window.addEventListener('DOMContentLoaded',function(){ if(typeof showPopup==='function'){ showPopup('Unable to update password: {$err}'); } else { alert('Unable to update password: {$err}'); } });</script>";
+      echo "<script>window.addEventListener('DOMContentLoaded',function(){ showPopup('Unable to update password: {$err}'); });</script>";
     }
     $stmt->close();
   }
