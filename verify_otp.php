@@ -45,15 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" type="text/css" href="Assets/styles/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <title>Verify OTP</title>
+ <title>Verify OTP</title>
   <script src="Assets/js/LoginSignup.js"></script>
   <script src="Assets/js/verify_otp.js"></script>
 </head>
 <body>
 
   <div class="login-container">
-    <img src="login photo/BBC.png" alt="BBC Logo">
+    <img src="Assets/icons/BBC ICON.png" alt="BBC Logo">
 
     <form action="verify_otp.php" method="POST" onsubmit="return validateOTP()">
       <div class="input-container">
