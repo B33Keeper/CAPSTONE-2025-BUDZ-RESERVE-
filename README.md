@@ -1,12 +1,8 @@
-added:
-*modern folder structure
-*images proper linking
-*phpmailer installed in the folder
-*complexpassword regex in signup, reset pass
-* 2 factor authentication in mail
-* window pop up error handler
+ I USED A BOOTSTRAP FRAMEWORK FOR THE PROJECT
 
-
-*login process complete
-*Signup process complete
-*forgot password process complete
+✅ Custom smooth scroll animation with cubic easing
+- ✅ **No horizontal overflow** on any device
+- ✅ **Perfect mobile experience** with touch-friendly navigation
+- ✅ **Consistent behavior** across all browsers and devices
+- ✅ **Professional appearance** with Bootstrap's design standards
+- ✅ **Easy maintenance** with standard Bootstrap classes

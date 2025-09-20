@@ -28,6 +28,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Also save equipment data if provided
                 if (!empty($_POST['equipment']) && is_array($_POST['equipment'])) {
                     $_SESSION['selected_equipment'] = $_POST['equipment'];
+                    // Save equipment names and prices
+                    if (!empty($_POST['equipment_name']) && is_array($_POST['equipment_name'])) {
+                        $_SESSION['equipment_names'] = $_POST['equipment_name'];
+                    }
+                    if (!empty($_POST['equipment_price']) && is_array($_POST['equipment_price'])) {
+                        $_SESSION['equipment_prices'] = $_POST['equipment_price'];
+                    }
                 }
                 break;
             case 'select_equipment':
@@ -42,6 +49,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get current step
 $current_step = isset($_GET['step']) ? (int)$_GET['step'] : 1; // default to Step 1
+
+// Fetch user data for step 3
+$user_data = null;
+if ($current_step == 3) {
+    $username = $_SESSION['username'];
+    $user_query = "SELECT name, email, contact_number FROM users WHERE username = ?";
+    $stmt = mysqli_prepare($conn, $user_query);
+    mysqli_stmt_bind_param($stmt, "s", $username);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $user_data = mysqli_fetch_assoc($result);
+    mysqli_stmt_close($stmt);
+}
 
 // Fetch equipment data from database
 $equipment_query = "SELECT * FROM equipments WHERE status = 'Available' ORDER BY equipment_name";
@@ -70,6 +90,8 @@ if (isset($_POST['date']) && $_POST['date'] !== '') {
 $selected_date = isset($_SESSION['selected_date']) ? $_SESSION['selected_date'] : date('Y-m-d');
 $selected_courts = $_SESSION['selected_courts'] ?? [];
 $selected_equipment = $_SESSION['selected_equipment'] ?? [];
+$equipment_names = $_SESSION['equipment_names'] ?? [];
+$equipment_prices = $_SESSION['equipment_prices'] ?? [];
 $payment_data = $_SESSION['payment_data'] ?? [];
 
 // Generate reference number
@@ -83,52 +105,81 @@ if (!isset($_SESSION['reference_number'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book a Court - Budz Badminton Court</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="Assets/styles/index_style.css">
     <link rel="stylesheet" type="text/css" href="Assets/styles/book_style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="Assets/js/index.js"></script>
     
-</head>
+    </head>
 <body>
+<?php
+    // Show popup if redirected after login
+if (isset($_GET['login']) && $_GET['login'] === 'success') {
+    echo "<script>(function(){function e(){if(document.getElementById('popupOverlay'))return;var e=document.createElement('div');e.id='popupOverlay',e.style.position='fixed',e.style.inset='0',e.style.background='rgba(0,0,0,0.5)',e.style.display='none',e.style.alignItems='center',e.style.justifyContent='center',e.style.zIndex='9999';var t=document.createElement('div');t.id='popupModal',t.style.background='#fff',t.style.padding='20px',t.style.borderRadius='8px',t.style.maxWidth='420px',t.style.width='90%',t.style.boxShadow='0 10px 30px rgba(0,0,0,0.2)',t.style.fontFamily='inherit',t.style.display='flex',t.style.flexDirection='column',t.style.alignItems='center',t.style.textAlign='center';var o=document.createElement('div');o.id='popupMessage',o.style.marginBottom='16px',o.style.textAlign='center';var n=document.createElement('button');n.id='popupCloseBtn',n.type='button',n.textContent='OK',n.style.padding='10px 16px',n.style.background='#0d6efd',n.style.color='#fff',n.style.border='none',n.style.borderRadius='6px',n.style.cursor='pointer',t.appendChild(o),t.appendChild(n),e.appendChild(t),document.body.appendChild(e)}window.showPopup=window.showPopup||function(t,o){e();var n=document.getElementById('popupOverlay'),d=document.getElementById('popupMessage'),i=document.getElementById('popupCloseBtn');function r(){n.style.display='none',i.removeEventListener('click',s),n.removeEventListener('click',l),o&&'function'==typeof o.onClose&&function(){try{o.onClose()}catch(e){}}(),o&&o.redirectUrl&&(window.location.href=o.redirectUrl)}function s(){r()}function l(e){e.target===n&&r()}d.textContent=t||'',n.style.display='flex',i.addEventListener('click',s),n.addEventListener('click',l)};window.addEventListener('DOMContentLoaded',function(){showPopup('Login Successfully')});})();</script>";
+}
+?>
+
+ 
     <!-- Header -->
     <header class="header">
-        <div class="container">
-            <div class="logo">
-                <img src="Assets/icons/BBC ICON.png" alt="BBC Logo">
-            </div>
-            <nav class="nav">
-                <ul>
-                    <li><a href="index.php">Home</a></li>
-                    <li><a href="#about">About Us</a></li>
-                    <li><a href="#gallery">Gallery</a></li>
-                    <li><a href="#contact">Contact us</a></li>
-                    <li><a href="Book.php" class="active">Book a court</a></li>
-                    <li><a href="#queue" class="queue-btn">Manage Queuing</a></li>
-                </ul>
-            </nav>
-            
-            <div class="user-profile">
-                <div class="profile-info">
-                    <img src="#" alt="Profile Picture" class="profile-pic">
-                    <span class="username"><?php echo htmlspecialchars($_SESSION['username']); ?></span>
-                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+            <div class="container-fluid">
+                <!-- Logo -->
+                <a class="navbar-brand" href="#home">
+                    <img src="Assets/icons/BBC ICON.png" alt="BBC Logo" class="logo-img">
+                </a>
+                
+                <!-- Mobile Toggle Button -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                
+                <!-- Navigation Menu -->
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mx-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.php">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.php#about">About Us</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.php#gallery">Gallery</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.php#contact">Contact us</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link book-btn active" href="Book.php">Book a court</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link queue-btn" href="#" onclick="alert('Queue management coming soon!')">Manage Queuing</a>
+                        </li>
+                    </ul>
+                    
+                    <!-- User Profile Dropdown -->
+                    <div class="dropdown">
+                        <a class="dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="#" alt="Profile Picture" class="profile-pic me-2">
+                            <span class="username"><?php echo htmlspecialchars($_SESSION['username']); ?></span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#profile">
+                                <i class="fas fa-user me-2"></i>Profile
+                            </a></li>
+                            <li><a class="dropdown-item" href="#reservations">
+                                <i class="fas fa-calendar-check me-2"></i>My Reservations
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item logout-item" href="logout.php">
+                                <i class="fas fa-power-off me-2"></i>Log Out
+                            </a></li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="dropdown-menu">
-                    <a href="#profile" class="dropdown-item">
-                        <i class="fas fa-user"></i>
-                        <span>Profile</span>
-                    </a>
-                    <a href="#reservations" class="dropdown-item">
-                        <i class="fas fa-calendar-check"></i>
-                        <span>My Reservations</span>
-                    </a>
-                    <a href="logout.php" class="dropdown-item logout-item">
-                        <i class="fas fa-power-off"></i>
-                        <span>Log Out</span>
-                    </a>
-                </div>
             </div>
-        </div>
+        </nav>
     </header>
 
     <!-- Progress Indicator -->
@@ -493,15 +544,15 @@ if (!isset($_SESSION['reference_number'])) {
                     <div class="info-row">
                         <div class="info-field">
                             <label>Name:</label>
-                            <input type="text" placeholder="Enter your Complete Name" name="name" required>
+                            <div class="user-data-display"><?php echo htmlspecialchars($user_data['name'] ?? 'Not provided'); ?></div>
                         </div>
                         <div class="info-field">
                             <label>Contact Number:</label>
-                            <input type="tel" placeholder="Enter your Contact Number" name="contact" required>
+                            <div class="user-data-display"><?php echo htmlspecialchars($user_data['contact_number'] ?? 'Not provided'); ?></div>
                         </div>
                         <div class="info-field">
                             <label>Email Address:</label>
-                            <input type="email" placeholder="Enter your Email Address" name="email" required>
+                            <div class="user-data-display"><?php echo htmlspecialchars($user_data['email'] ?? 'Not provided'); ?></div>
                         </div>
                     </div>
                 </div>
@@ -511,7 +562,6 @@ if (!isset($_SESSION['reference_number'])) {
                     <table class="summary-table">
                         <thead>
                             <tr>
-                                <th>No.</th>
                                 <th>Court</th>
                                 <th>Schedule</th>
                                 <th>Sub total</th>
@@ -545,19 +595,19 @@ if (!isset($_SESSION['reference_number'])) {
                 <div class="payment-methods">
                     <h3>Payment method:</h3>
                     <div class="payment-options">
-                        <div class="payment-option" onclick="selectPayment('gcash')">
+                        <div class="payment-option">
                             <div class="payment-icon gcash-icon">G</div>
                             <span>GCash</span>
                         </div>
-                        <div class="payment-option" onclick="selectPayment('maya')">
+                        <div class="payment-option">
                             <div class="payment-icon maya-icon">maya</div>
                             <span>Maya</span>
                         </div>
-                        <div class="payment-option" onclick="selectPayment('grabpay')">
+                        <div class="payment-option">
                             <div class="payment-icon grabpay-icon">Grab Pay</div>
                             <span>GrabPay</span>
                         </div>
-                        <div class="payment-option" onclick="selectPayment('banking')">
+                        <div class="payment-option">
                             <div class="payment-icon banking-icon">🏦</div>
                             <span>Online Banking</span>
                         </div>
@@ -585,6 +635,8 @@ if (!isset($_SESSION['reference_number'])) {
         // Declare and initialize variables before loading external script
         var selectedCourts = <?php echo json_encode($selected_courts); ?>;
         var selectedEquipment = <?php echo json_encode($selected_equipment); ?>;
+        var equipmentNames = <?php echo json_encode($equipment_names); ?>;
+        var equipmentPrices = <?php echo json_encode($equipment_prices); ?>;
         var currentStep = <?php echo $current_step; ?>;
         
         console.log('Variables initialized:', {
@@ -594,5 +646,7 @@ if (!isset($_SESSION['reference_number'])) {
         });
     </script>
     <script src="Assets/js/book.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

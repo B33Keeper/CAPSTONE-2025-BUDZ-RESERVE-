@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 19, 2025 at 05:08 AM
+-- Generation Time: Sep 20, 2025 at 05:50 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -128,6 +128,7 @@ CREATE TABLE `users` (
   `sex` enum('Male','Female','Other') DEFAULT NULL,
   `username` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
+  `contact_number` varchar(15) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `profile_picture` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -137,12 +138,13 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `age`, `sex`, `username`, `email`, `password`, `profile_picture`, `created_at`) VALUES
-(3, 'Test User', 21, 'Male', 'user', 'user@gmail.com', '$2y$10$y2QrXStx.fAUH9vNGZrAMOl9YLPuApENd1z3ynLNVKAJ4IJvgijiu', NULL, '2025-09-15 18:27:14'),
-(4, 'Ivan Louis Cielo', 22, 'Male', 'Ivan', 'cieloivanlouis@gmail.com', '$2y$10$/KtccZC/R17jRcOjKtuqX.bZkjHE3RxNoAsD96W2rQIwMjhicGKXe', NULL, '2025-09-15 18:34:40'),
-(5, 'Jersey Anne Cruz', 23, 'Female', 'jersey', 'jersey@gmail.com', '$2y$10$a8uVwluWOgopapiNIWduDeFcg9ZcKFMbv.mWh6yhOhZmIQNWKCzNS', NULL, '2025-09-15 18:37:39'),
-(6, 'Jacob \"Cob\" Dela Cruz', 24, 'Male', 'cob', 'cob@gmail.com', '$2y$10$rUxdWqING..eR.gaqnQzOudWNh.RYGIiUQbHb3EIjLt7SBMcCZZna', NULL, '2025-09-15 18:38:14'),
-(8, 'Zhiky Pogi', 21, 'Male', 'zhiky09', 'zhiky090924@gmail.com', '$2y$10$aJbcjdwOYk5oZ3ullWQzqej.p6vg0aSWiv51BsbaJta.l/2Lq6Mvm', NULL, '2025-09-16 07:12:12');
+INSERT INTO `users` (`id`, `name`, `age`, `sex`, `username`, `email`, `contact_number`, `password`, `profile_picture`, `created_at`) VALUES
+(3, 'Test User', 21, 'Male', 'user', 'user@gmail.com', '09171234567', '$2y$10$y2QrXStx.fAUH9vNGZrAMOl9YLPuApENd1z3ynLNVKAJ4IJvgijiu', NULL, '2025-09-15 18:27:14'),
+(4, 'Ivan Louis Cielo', 22, 'Male', 'Ivan', 'cieloivanlouis@gmail.com', '09182345678', '$2y$10$/KtccZC/R17jRcOjKtuqX.bZkjHE3RxNoAsD96W2rQIwMjhicGKXe', NULL, '2025-09-15 18:34:40'),
+(5, 'Jersey Anne Cruz', 23, 'Female', 'jersey', 'jersey@gmail.com', '09193456789', '$2y$10$a8uVwluWOgopapiNIWduDeFcg9ZcKFMbv.mWh6yhOhZmIQNWKCzNS', NULL, '2025-09-15 18:37:39'),
+(6, 'Jacob \"Cob\" Dela Cruz', 24, 'Male', 'cob', 'cob@gmail.com', '09204567891', '$2y$10$rUxdWqING..eR.gaqnQzOudWNh.RYGIiUQbHb3EIjLt7SBMcCZZna', NULL, '2025-09-15 18:38:14'),
+(8, 'Zhiky Pogi', 21, 'Male', 'zhiky09', 'zhiky090924@gmail.com', '09215678912', '$2y$10$aJbcjdwOYk5oZ3ullWQzqej.p6vg0aSWiv51BsbaJta.l/2Lq6Mvm', NULL, '2025-09-16 07:12:12'),
+(9, 'Filbert', 21, 'Male', 'zhiky090924', 'ic.filbert.delacruz@cvsu.edu.ph', '09226789123', '$2y$10$UhesDcczp6SzZG54ubFL2O8/i6TpP4.0tM9R5Znmqs0tUwKbOt34a', NULL, '2025-09-19 03:34:06');
 
 --
 -- Indexes for dumped tables
@@ -202,7 +204,7 @@ ALTER TABLE `reservations`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- Constraints for dumped tables

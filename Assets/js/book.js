@@ -2,6 +2,145 @@
 // Global variables - these are set from PHP in the HTML
 // selectedCourts, selectedEquipment, and currentStep are declared in Book.php
 
+// Custom Alert Modal System
+function showCustomAlert(message, title = 'Notification') {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'custom-modal-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.className = 'custom-modal';
+    modal.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 0;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease;
+        overflow: hidden;
+    `;
+    
+    // Create modal header
+    const header = document.createElement('div');
+    header.style.cssText = `
+        background: #2196F3;
+        color: white;
+        padding: 20px;
+        font-size: 18px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    `;
+    header.innerHTML = `
+        <div style="width: 24px; height: 24px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;">!</div>
+        ${title}
+    `;
+    
+    // Create modal body
+    const body = document.createElement('div');
+    body.style.cssText = `
+        padding: 25px;
+        font-size: 16px;
+        line-height: 1.5;
+        color: #333;
+    `;
+    body.textContent = message;
+    
+    // Create modal footer
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+        padding: 20px 25px;
+        background: #f8f9fa;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    `;
+    
+    const okButton = document.createElement('button');
+    okButton.textContent = 'OK';
+    okButton.style.cssText = `
+        background: #2196F3;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    `;
+    
+    okButton.addEventListener('mouseenter', () => {
+        okButton.style.background = '#1976D2';
+    });
+    
+    okButton.addEventListener('mouseleave', () => {
+        okButton.style.background = '#2196F3';
+    });
+    
+    okButton.addEventListener('click', () => {
+        closeCustomModal();
+    });
+    
+    footer.appendChild(okButton);
+    
+    // Assemble modal
+    modal.appendChild(header);
+    modal.appendChild(body);
+    modal.appendChild(footer);
+    overlay.appendChild(modal);
+    
+    // Add to document
+    document.body.appendChild(overlay);
+    
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            closeCustomModal();
+        }
+    });
+    
+    // Close on Escape key
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            closeCustomModal();
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+    
+    // Focus the OK button
+    okButton.focus();
+}
+
+function closeCustomModal() {
+    const overlay = document.querySelector('.custom-modal-overlay');
+    if (overlay) {
+        overlay.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => {
+            if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        }, 300);
+    }
+}
+
 // Custom Datepicker for Step 1
 function initDatePicker() {
     if (currentStep !== 1) return;
@@ -46,10 +185,26 @@ function initDatePicker() {
                 btn.classList.add('disabled');
                 btn.disabled = true;
             }
-            btn.addEventListener('click', function(){
+            btn.addEventListener('click', function(e){
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Update input value
                 inputEl.value = fmt(dateObj);
+                
+                // Remove selected class from all days
                 gridEl.querySelectorAll('.dp-day').forEach(x=>x.classList.remove('selected'));
+                
+                // Add selected class to clicked day
                 btn.classList.add('selected');
+                
+                // Force a reflow to ensure the class is applied
+                btn.offsetHeight;
+                
+                // Trigger a custom event for any additional handling
+                btn.dispatchEvent(new CustomEvent('dateSelected', {
+                    detail: { date: dateObj, formatted: fmt(dateObj) }
+                }));
             });
             gridEl.appendChild(btn);
         }
@@ -147,7 +302,6 @@ function updateCourtSummary() {
         validCourts.forEach((item, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${index + 1}</td>
                 <td>${item.court ? 'Court ' + item.court : ''}</td>
                 <td>${item.time ? item.time : ''}</td>
                 <td>${item.price ? item.price : ''}</td>
@@ -177,10 +331,11 @@ function updateEquipmentSummary() {
         `;
         tbody.appendChild(row);
     } else {
-        // Get equipment data from the page
+        // Get equipment data from the page or session
         const equipmentCards = document.querySelectorAll('.equipment-card');
         const equipmentData = {};
         
+        // Try to get equipment data from DOM first (step 2)
         equipmentCards.forEach(card => {
             const equipmentId = card.getAttribute('data-equipment-id');
             const equipmentName = card.querySelector('h3').textContent;
@@ -190,6 +345,16 @@ function updateEquipmentSummary() {
                 equipmentData[equipmentId] = { name: equipmentName, price: price };
             }
         });
+        
+        // If no equipment cards found (step 3), use session data
+        if (Object.keys(equipmentData).length === 0 && typeof equipmentNames !== 'undefined' && typeof equipmentPrices !== 'undefined') {
+            Object.keys(equipmentNames).forEach(item => {
+                equipmentData[item] = {
+                    name: equipmentNames[item],
+                    price: parseFloat(equipmentPrices[item])
+                };
+            });
+        }
         
         Object.keys(selectedEquipment || {}).forEach(item => {
             if (selectedEquipment[item] > 0 && equipmentData[item]) {
@@ -218,6 +383,7 @@ function updateTotal() {
     const equipmentCards = document.querySelectorAll('.equipment-card');
     const equipmentData = {};
     
+    // Try to get equipment data from DOM first (step 2)
     equipmentCards.forEach(card => {
         const equipmentId = card.getAttribute('data-equipment-id');
         const priceElement = card.querySelector('.equipment-price');
@@ -226,6 +392,13 @@ function updateTotal() {
             equipmentData[equipmentId] = price;
         }
     });
+    
+    // If no equipment cards found (step 3), use session data
+    if (Object.keys(equipmentData).length === 0 && typeof equipmentPrices !== 'undefined') {
+        Object.keys(equipmentPrices).forEach(item => {
+            equipmentData[item] = parseFloat(equipmentPrices[item]);
+        });
+    }
     
     Object.keys(selectedEquipment || {}).forEach(item => {
         if (equipmentData[item]) {
@@ -256,6 +429,16 @@ function proceedToNext() {
     console.log('proceedToNext called, currentStep:', currentStep);
     if (currentStep == 2) {
         console.log('Proceeding to step 3, selectedCourts:', selectedCourts);
+        
+        // Check if user has selected anything
+        const hasCourtSelection = selectedCourts && selectedCourts.length > 0;
+        const hasEquipmentSelection = selectedEquipment && Object.keys(selectedEquipment).some(item => selectedEquipment[item] > 0);
+        
+        if (!hasCourtSelection && !hasEquipmentSelection) {
+            showCustomAlert('Please select at least one court or equipment before proceeding.');
+            return;
+        }
+        
         // Save selections and go to payment
         const form = document.createElement('form');
         form.method = 'POST';
@@ -276,14 +459,39 @@ function proceedToNext() {
             form.appendChild(input);
         });
         
-        // Save equipment selections
+        // Save equipment selections with equipment data
         Object.keys(selectedEquipment || {}).forEach(item => {
             if (selectedEquipment[item] > 0) {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = `equipment[${item}]`;
-                input.value = selectedEquipment[item];
-                form.appendChild(input);
+                // Get equipment data from DOM
+                const equipmentCard = document.querySelector(`[data-equipment-id="${item}"]`);
+                if (equipmentCard) {
+                    const equipmentName = equipmentCard.querySelector('h3').textContent;
+                    const priceElement = equipmentCard.querySelector('.equipment-price');
+                    if (priceElement) {
+                        const price = parseFloat(priceElement.textContent.replace('₱', '').replace(',', ''));
+                        
+                        // Save equipment quantity
+                        const quantityInput = document.createElement('input');
+                        quantityInput.type = 'hidden';
+                        quantityInput.name = `equipment[${item}]`;
+                        quantityInput.value = selectedEquipment[item];
+                        form.appendChild(quantityInput);
+                        
+                        // Save equipment name
+                        const nameInput = document.createElement('input');
+                        nameInput.type = 'hidden';
+                        nameInput.name = `equipment_name[${item}]`;
+                        nameInput.value = equipmentName;
+                        form.appendChild(nameInput);
+                        
+                        // Save equipment price
+                        const priceInput = document.createElement('input');
+                        priceInput.type = 'hidden';
+                        priceInput.name = `equipment_price[${item}]`;
+                        priceInput.value = price;
+                        form.appendChild(priceInput);
+                    }
+                }
             }
         });
         
@@ -292,83 +500,10 @@ function proceedToNext() {
     }
 }
 
-// Payment method selection
-function selectPayment(method) {
-    // Remove selected class from all payment options
-    document.querySelectorAll('.payment-option').forEach(option => {
-        option.classList.remove('selected');
-    });
-    
-    // Add selected class to clicked option
-    const selectedOption = document.querySelector(`[onclick="selectPayment('${method}')"]`);
-    if (selectedOption) {
-        selectedOption.classList.add('selected');
-    }
-    
-    // Store selected payment method for API integration
-    window.selectedPaymentMethod = method;
-    console.log('Selected payment method:', method);
-}
 
 // Process payment
 function processPayment() {
-    // Check if a payment method is selected
-    if (!window.selectedPaymentMethod) {
-        alert('Please select a payment method first.');
-        return;
-    }
-    
-    // Validate form fields
-    const nameField = document.querySelector('input[name="name"]');
-    const contactField = document.querySelector('input[name="contact"]');
-    const emailField = document.querySelector('input[name="email"]');
-    
-    if (!nameField.value.trim() || !contactField.value.trim() || !emailField.value.trim()) {
-        alert('Please fill in all required fields (Name, Contact Number, Email Address).');
-        return;
-    }
-    
-    // Prepare payment data for API
-    const paymentData = {
-        paymentMethod: window.selectedPaymentMethod,
-        customerInfo: {
-            name: nameField.value.trim(),
-            contact: contactField.value.trim(),
-            email: emailField.value.trim()
-        },
-        bookingData: {
-            courts: selectedCourts || [],
-            equipment: selectedEquipment || {},
-            totalAmount: calculateTotalAmount(),
-            referenceNumber: document.querySelector('.reference-banner span').textContent.replace('Reference Number: ', ''),
-            selectedDate: document.querySelector('.selected-date-display strong').textContent
-        }
-    };
-    
-    console.log('Payment data prepared for API:', paymentData);
-    
-    // TODO: Replace with actual API call
-    // Example API call structure:
-    // fetch('/api/process-payment', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(paymentData)
-    // })
-    // .then(response => response.json())
-    // .then(data => {
-    //     if (data.success) {
-    //         // Redirect to success page or show confirmation
-    //         window.location.href = '/booking-success?ref=' + data.referenceNumber;
-    //     } else {
-    //         alert('Payment failed: ' + data.message);
-    //     }
-    // })
-    // .catch(error => {
-    //     console.error('Payment error:', error);
-    //     alert('Payment processing failed. Please try again.');
-    // });
-    
-    alert(`Payment processing with ${window.selectedPaymentMethod}... This would integrate with actual payment gateway.`);
+    showCustomAlert('PAYMONGO API NOT INTEGRATED YET', 'Payment Processing');
 }
 
 // Helper function to calculate total amount

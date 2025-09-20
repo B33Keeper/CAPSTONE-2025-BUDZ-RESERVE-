@@ -1,5 +1,67 @@
-       // User profile dropdown functionality
-       document.addEventListener('DOMContentLoaded', function() {
+    // Custom smooth scrolling function
+    function smoothScrollTo(targetPosition, duration = 800) {
+        const startPosition = window.pageYOffset;
+        const distance = targetPosition - startPosition;
+        let startTime = null;
+        
+        function animation(currentTime) {
+            if (startTime === null) startTime = currentTime;
+            const timeElapsed = currentTime - startTime;
+            const progress = Math.min(timeElapsed / duration, 1);
+            
+            // Easing function for smooth animation
+            const easeInOutCubic = progress < 0.5 
+                ? 4 * progress * progress * progress 
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+            
+            const currentPosition = startPosition + (distance * easeInOutCubic);
+            window.scrollTo(0, currentPosition);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animation);
+            }
+        }
+        
+        // Cancel any existing animation
+        if (window.scrollAnimationId) {
+            cancelAnimationFrame(window.scrollAnimationId);
+        }
+        
+        window.scrollAnimationId = requestAnimationFrame(animation);
+    }
+    
+    // Smooth scrolling for navigation links
+    function scrollToSection(sectionId) {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            const headerHeight = document.querySelector('.navbar').offsetHeight;
+            const elementPosition = element.offsetTop - headerHeight - 20; // 20px extra spacing
+            
+            // Use custom smooth scroll animation
+            smoothScrollTo(elementPosition, 800);
+            
+            // Update active nav link
+            updateActiveNavLink(sectionId);
+        }
+    }
+    
+    function updateActiveNavLink(activeId) {
+        // Remove active class from all nav links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        // Add active class to clicked link
+        const activeLink = document.querySelector(`a[href="#${activeId}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+        }
+    }
+    
+    
+    // Initialize everything after DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // User profile dropdown functionality
         const userProfile = document.querySelector('.user-profile');
         const dropdownMenu = document.querySelector('.dropdown-menu');
         
@@ -16,24 +78,39 @@
                 }
             });
         }
-    });
-
-    // Smooth scrolling for navigation links
-    var anchors = document.querySelectorAll('a[href^="#"]');
-    if (anchors && anchors.length) {
-        anchors.forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
+        
+        // Small delay to ensure all elements are rendered
+        setTimeout(function() {
+            // Handle navigation clicks
+            const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const sectionId = this.getAttribute('href').substring(1);
+                    scrollToSection(sectionId);
                 });
-            }
             });
-        });
-    }
+            
+            // Handle scroll to update active nav link based on current section
+            window.addEventListener('scroll', function() {
+                const sections = ['home', 'about', 'gallery', 'contact'];
+                const scrollPosition = window.scrollY + 100; // Offset for header
+                
+                sections.forEach(sectionId => {
+                    const element = document.getElementById(sectionId);
+                    if (element) {
+                        const elementTop = element.offsetTop;
+                        const elementBottom = elementTop + element.offsetHeight;
+                        
+                        if (scrollPosition >= elementTop && scrollPosition < elementBottom) {
+                            updateActiveNavLink(sectionId);
+                        }
+                    }
+                });
+            });
+        }, 100); // 100ms delay
+    });
 
     // Gallery carousel functionality
     let currentSlide = 0;
