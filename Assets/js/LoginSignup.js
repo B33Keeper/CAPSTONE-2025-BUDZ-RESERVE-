@@ -31,13 +31,67 @@ function validateForm() {
     // Simple signup validation
     function validateSignup() {
       let isValid = true;
+      
+      // Get form elements
+      let name = document.getElementById("name").value.trim();
+      let age = document.getElementById("age").value;
+      let sex = document.querySelector('input[name="sex"]:checked') ? document.querySelector('input[name="sex"]:checked').value : "";
+      let username = document.getElementById("username").value.trim();
+      let email = document.getElementById("email").value.trim();
       let password = document.getElementById("password").value;
       let confirmPassword = document.getElementById("confirmPassword").value;
       
+      // Get error elements
+      const nameErrorEl = document.getElementById("nameError");
+      const ageErrorEl = document.getElementById("ageError");
+      const sexErrorEl = document.getElementById("sexError");
+      const usernameErrorEl = document.getElementById("usernameError");
+      const emailErrorEl = document.getElementById("emailError");
       const passwordErrorEl = document.getElementById("passwordError");
       const confirmPasswordErrorEl = document.getElementById("confirmPasswordError");
+      
+      // Clear previous errors
+      if (nameErrorEl) nameErrorEl.innerText = "";
+      if (ageErrorEl) ageErrorEl.innerText = "";
+      if (sexErrorEl) sexErrorEl.innerText = "";
+      if (usernameErrorEl) usernameErrorEl.innerText = "";
+      if (emailErrorEl) emailErrorEl.innerText = "";
       if (passwordErrorEl) passwordErrorEl.innerText = "";
       if (confirmPasswordErrorEl) confirmPasswordErrorEl.innerText = "";
+
+      // Validate name
+      if (name === "") {
+        if (nameErrorEl) nameErrorEl.innerText = "Name is required.";
+        isValid = false;
+      }
+
+      // Validate age
+      if (age === "" || age < 1 || age > 120) {
+        if (ageErrorEl) ageErrorEl.innerText = "Please enter a valid age (1-120).";
+        isValid = false;
+      }
+
+      // Validate sex
+      if (sex === "") {
+        if (sexErrorEl) sexErrorEl.innerText = "Please select a gender.";
+        isValid = false;
+      }
+
+      // Validate username
+      if (username === "") {
+        if (usernameErrorEl) usernameErrorEl.innerText = "Username is required.";
+        isValid = false;
+      }
+
+      // Validate email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (email === "") {
+        if (emailErrorEl) emailErrorEl.innerText = "Email is required.";
+        isValid = false;
+      } else if (!emailRegex.test(email)) {
+        if (emailErrorEl) emailErrorEl.innerText = "Please enter a valid email address.";
+        isValid = false;
+      }
 
       // Complex password regex: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
       const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?`~]).{8,}$/;

@@ -15,7 +15,7 @@ if (!isset($_SESSION['username'])) {
     <title>Budz Badminton Court - Home</title>
     <link rel="stylesheet" type="text/css" href="Assets/styles/index_style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+  
 </head>
 <body>
 <?php
@@ -38,14 +38,14 @@ if (isset($_GET['login']) && $_GET['login'] === 'success') {
                     <li><a href="#about">About Us</a></li>
                     <li><a href="#gallery">Gallery</a></li>
                     <li><a href="#contact">Contact us</a></li>
-                    <li><a href="#book" class="book-btn">Book a court</a></li>
+                    <li><a href="Book.php" class="book-btn">Book a court</a></li>
                     <li><a href="#queue" class="queue-btn">Manage Queuing</a></li>
-                </ul>
-            </nav>
-            
+      </ul>
+    </nav>
+
             <div class="user-profile">
                 <div class="profile-info">
-                    <img src="https://via.placeholder.com/40x40/FF6B6B/FFFFFF?text=JH" alt="Profile Picture" class="profile-pic">
+                    <img src="#" alt="Profile Picture" class="profile-pic">
                     <span class="username"><?php echo htmlspecialchars($_SESSION['username']); ?></span>
                     <i class="fas fa-chevron-down dropdown-arrow"></i>
                 </div>
@@ -257,7 +257,7 @@ if (isset($_GET['login']) && $_GET['login'] === 'success') {
     <footer class="copyright">
         <div class="container">
             <p>&copy; 2025 Budz Badminton Court. All Rights Reserved.</p>
-        </div>
+  </div>
     </footer>
   <script src="Assets/js/index.js"></script>
 

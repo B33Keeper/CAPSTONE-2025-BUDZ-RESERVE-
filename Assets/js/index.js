@@ -19,8 +19,10 @@
     });
 
     // Smooth scrolling for navigation links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
+    var anchors = document.querySelectorAll('a[href^="#"]');
+    if (anchors && anchors.length) {
+        anchors.forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
             e.preventDefault();
             const target = document.querySelector(this.getAttribute('href'));
             if (target) {
@@ -29,8 +31,9 @@
                     block: 'start'
                 });
             }
+            });
         });
-    });
+    }
 
     // Gallery carousel functionality
     let currentSlide = 0;
@@ -54,19 +57,23 @@
     }
 
     // Initialize carousel
-    if (galleryItems.length > 0) {
+    if (galleryItems && galleryItems.length > 0) {
         showSlide(0);
-        
-        document.querySelector('.carousel-btn.next').addEventListener('click', nextSlide);
-        document.querySelector('.carousel-btn.prev').addEventListener('click', prevSlide);
+        const nextBtn = document.querySelector('.carousel-btn.next');
+        const prevBtn = document.querySelector('.carousel-btn.prev');
+        if (nextBtn) nextBtn.addEventListener('click', nextSlide);
+        if (prevBtn) prevBtn.addEventListener('click', prevSlide);
     }
 
     // Form submission
-    document.querySelector('.suggestion-form form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        alert('Thank you for your suggestion! We will review it and get back to you soon.');
-        this.reset();
-    });
+    var suggestionForm = document.querySelector('.suggestion-form form');
+    if (suggestionForm) {
+        suggestionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Thank you for your suggestion! We will review it and get back to you soon.');
+            this.reset();
+        });
+    }
 
     // Book now buttons functionality
     document.querySelectorAll('.cta-button, .step-button').forEach(button => {
