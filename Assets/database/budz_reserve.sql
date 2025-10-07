@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 20, 2025 at 05:50 AM
+-- Generation Time: Oct 07, 2025 at 02:07 PM
 -- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- PHP Version: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -96,24 +96,34 @@ CREATE TABLE `reservations` (
   `End_Time` time NOT NULL,
   `Status` enum('Pending','Confirmed','Cancelled') NOT NULL DEFAULT 'Pending',
   `Created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `Price` decimal(10,2) NOT NULL
+  `Price` decimal(10,2) NOT NULL,
+  `Payment_Status` enum('Paid','Unpaid','Refunded') NOT NULL DEFAULT 'Unpaid',
+  `Payment_Method` enum('GCash','Grab pay','Cash','Card') NOT NULL DEFAULT 'GCash'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `reservations`
 --
 
-INSERT INTO `reservations` (`Reservation_ID`, `User_ID`, `Court_ID`, `Reservation_Date`, `Start_Time`, `End_Time`, `Status`, `Created_at`, `Price`) VALUES
-(1, 3, 1, '2025-09-22', '08:00:00', '09:00:00', 'Confirmed', '2025-09-15 01:15:00', 250.00),
-(2, 4, 2, '2025-09-22', '10:00:00', '11:00:00', 'Pending', '2025-09-15 06:40:00', 250.00),
-(3, 5, 3, '2025-09-23', '14:00:00', '15:00:00', 'Confirmed', '2025-09-16 02:20:00', 250.00),
-(4, 6, 8, '2025-09-23', '16:00:00', '17:00:00', 'Pending', '2025-09-16 08:05:00', 220.00),
-(5, 8, 10, '2025-09-24', '09:00:00', '10:00:00', 'Confirmed', '2025-09-17 00:50:00', 220.00),
-(6, 3, 11, '2025-09-24', '18:00:00', '19:00:00', 'Cancelled', '2025-09-17 05:30:00', 350.00),
-(7, 4, 4, '2025-09-25', '07:00:00', '08:00:00', 'Confirmed', '2025-09-17 23:10:00', 250.00),
-(8, 5, 7, '2025-09-25', '15:00:00', '16:00:00', 'Pending', '2025-09-18 03:25:00', 220.00),
-(9, 6, 6, '2025-09-26', '19:00:00', '20:00:00', 'Confirmed', '2025-09-19 01:05:00', 250.00),
-(10, 8, 12, '2025-09-26', '20:00:00', '21:00:00', 'Confirmed', '2025-09-19 07:15:00', 350.00);
+INSERT INTO `reservations` (`Reservation_ID`, `User_ID`, `Court_ID`, `Reservation_Date`, `Start_Time`, `End_Time`, `Status`, `Created_at`, `Price`, `Payment_Status`, `Payment_Method`) VALUES
+(1, 3, 1, '2025-09-22', '08:00:00', '09:00:00', 'Confirmed', '2025-09-15 01:15:00', 250.00, 'Unpaid', 'GCash'),
+(2, 4, 2, '2025-09-22', '10:00:00', '11:00:00', 'Pending', '2025-09-15 06:40:00', 250.00, 'Unpaid', 'GCash'),
+(3, 5, 3, '2025-09-23', '14:00:00', '15:00:00', 'Confirmed', '2025-09-16 02:20:00', 250.00, 'Unpaid', 'GCash'),
+(4, 6, 8, '2025-09-23', '16:00:00', '17:00:00', 'Pending', '2025-09-16 08:05:00', 220.00, 'Unpaid', 'GCash'),
+(6, 3, 11, '2025-09-24', '18:00:00', '19:00:00', 'Cancelled', '2025-09-17 05:30:00', 350.00, 'Unpaid', 'GCash'),
+(7, 4, 4, '2025-09-25', '07:00:00', '08:00:00', 'Confirmed', '2025-09-17 23:10:00', 250.00, 'Unpaid', 'GCash'),
+(8, 5, 7, '2025-09-25', '15:00:00', '16:00:00', 'Pending', '2025-09-18 03:25:00', 220.00, 'Unpaid', 'GCash'),
+(9, 6, 6, '2025-09-26', '19:00:00', '20:00:00', 'Confirmed', '2025-09-19 01:05:00', 250.00, 'Unpaid', 'GCash'),
+(11, 10, 1, '2025-09-22', '08:00:00', '09:00:00', 'Confirmed', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash'),
+(12, 10, 2, '2025-09-24', '09:00:00', '10:00:00', 'Confirmed', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash'),
+(13, 10, 3, '2025-10-01', '10:00:00', '11:00:00', 'Confirmed', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash'),
+(14, 10, 1, '2025-10-03', '11:00:00', '12:00:00', 'Confirmed', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash'),
+(15, 10, 2, '2025-10-05', '12:00:00', '13:00:00', 'Pending', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash'),
+(16, 10, 1, '2025-10-08', '13:00:00', '14:00:00', 'Confirmed', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash'),
+(17, 10, 3, '2025-10-12', '14:00:00', '15:00:00', 'Pending', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash'),
+(18, 10, 2, '2025-10-15', '15:00:00', '16:00:00', 'Confirmed', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash'),
+(19, 10, 4, '2025-10-24', '16:00:00', '17:00:00', 'Confirmed', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash'),
+(20, 10, 1, '2025-10-31', '17:00:00', '18:00:00', 'Pending', '2025-10-07 11:30:47', 250.00, 'Unpaid', 'GCash');
 
 -- --------------------------------------------------------
 
@@ -143,8 +153,8 @@ INSERT INTO `users` (`id`, `name`, `age`, `sex`, `username`, `email`, `contact_n
 (4, 'Ivan Louis Cielo', 22, 'Male', 'Ivan', 'cieloivanlouis@gmail.com', '09182345678', '$2y$10$/KtccZC/R17jRcOjKtuqX.bZkjHE3RxNoAsD96W2rQIwMjhicGKXe', NULL, '2025-09-15 18:34:40'),
 (5, 'Jersey Anne Cruz', 23, 'Female', 'jersey', 'jersey@gmail.com', '09193456789', '$2y$10$a8uVwluWOgopapiNIWduDeFcg9ZcKFMbv.mWh6yhOhZmIQNWKCzNS', NULL, '2025-09-15 18:37:39'),
 (6, 'Jacob \"Cob\" Dela Cruz', 24, 'Male', 'cob', 'cob@gmail.com', '09204567891', '$2y$10$rUxdWqING..eR.gaqnQzOudWNh.RYGIiUQbHb3EIjLt7SBMcCZZna', NULL, '2025-09-15 18:38:14'),
-(8, 'Zhiky Pogi', 21, 'Male', 'zhiky09', 'zhiky090924@gmail.com', '09215678912', '$2y$10$aJbcjdwOYk5oZ3ullWQzqej.p6vg0aSWiv51BsbaJta.l/2Lq6Mvm', NULL, '2025-09-16 07:12:12'),
-(9, 'Filbert', 21, 'Male', 'zhiky090924', 'ic.filbert.delacruz@cvsu.edu.ph', '09226789123', '$2y$10$UhesDcczp6SzZG54ubFL2O8/i6TpP4.0tM9R5Znmqs0tUwKbOt34a', NULL, '2025-09-19 03:34:06');
+(9, 'Filbert', 21, 'Male', 'zhiky090924', 'ic.filbert.delacruz@cvsu.edu.ph', '09226789123', '$2y$10$UhesDcczp6SzZG54ubFL2O8/i6TpP4.0tM9R5Znmqs0tUwKbOt34a', NULL, '2025-09-19 03:34:06'),
+(10, 'Filbert Dela Cruz', 21, 'Male', 'filbert', 'zhiky090924@gmail.com', NULL, '$2y$10$AnTe0KlF55i8ISwBa71x5.IqJJ4vDpbInuoSYhKSRq0gZAsWHTPCm', 'Assets/uploads/avatars/filbert_1759831809.jpg', '2025-10-07 08:43:20');
 
 --
 -- Indexes for dumped tables
@@ -168,7 +178,8 @@ ALTER TABLE `equipments`
 ALTER TABLE `reservations`
   ADD PRIMARY KEY (`Reservation_ID`),
   ADD KEY `User_ID` (`User_ID`),
-  ADD KEY `Court_ID` (`Court_ID`);
+  ADD KEY `Court_ID` (`Court_ID`),
+  ADD KEY `idx_reservations_user_date` (`User_ID`,`Reservation_Date`);
 
 --
 -- Indexes for table `users`
@@ -198,13 +209,13 @@ ALTER TABLE `equipments`
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `Reservation_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `Reservation_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables
