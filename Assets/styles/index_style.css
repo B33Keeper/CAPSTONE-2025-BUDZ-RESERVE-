@@ -85,6 +85,14 @@ body {
     padding: 0.5rem 1rem !important;
 }
 
+/* Remove underline from dropdown username/link */
+.dropdown-toggle,
+.dropdown-toggle:focus,
+.dropdown-toggle:hover,
+.username {
+    text-decoration: none !important;
+}
+
 .dropdown-toggle:hover {
     color: #2196F3 !important;
     background: none !important;

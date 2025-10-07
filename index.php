@@ -15,8 +15,11 @@ if (!isset($_SESSION['username'])) {
     <title>Budz Badminton Court - Home</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="Assets/styles/index_style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="Assets/styles/user_profile.css">
+    <link rel="stylesheet" type="text/css" href="Assets/styles/reservations.css">
   
 </head>
 <body>
@@ -67,15 +70,36 @@ if (isset($_GET['login']) && $_GET['login'] === 'success') {
                     <!-- User Profile Dropdown -->
                     <div class="dropdown">
                         <a class="dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="#" alt="Profile Picture" class="profile-pic me-2">
+                            <?php
+                            require_once __DIR__ . '/db.php';
+                            $navAvatar = '';
+                            if (isset($_SESSION['username'])) {
+                                $u = $_SESSION['username'];
+                                if ($stmt = $conn->prepare("SELECT profile_picture FROM users WHERE username = ? LIMIT 1")) {
+                                    $stmt->bind_param("s", $u);
+                                    if ($stmt->execute()) {
+                                        $res = $stmt->get_result();
+                                        if ($row = $res->fetch_assoc()) {
+                                            $navAvatar = !empty($row['profile_picture']) ? $row['profile_picture'] : '';
+                                        }
+                                    }
+                                    $stmt->close();
+                                }
+                            }
+                            $navAvatar = $navAvatar !== '' ? $navAvatar : 'Assets/img/home-page/Ellipse 1.png';
+                            ?>
+                            <img src="<?php echo htmlspecialchars($navAvatar); ?>" alt="Profile Picture" class="profile-pic me-2" onerror="this.onerror=null;this.src='Assets/img/home-page/Ellipse 1.png';">
                             <span class="username"><?php echo htmlspecialchars($_SESSION['username']); ?></span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#profile">
+                            <li><a class="dropdown-item js-up-open" href="#">
                                 <i class="fas fa-user me-2"></i>Profile
                             </a></li>
-                            <li><a class="dropdown-item" href="#reservations">
+                            <li><a class="dropdown-item js-resv-open" href="#">
                                 <i class="fas fa-calendar-check me-2"></i>My Reservations
+                            </a></li>
+                            <li><a class="dropdown-item js-history-open" href="#">
+                                <i class="fas fa-clock me-2"></i>Reservation History
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item logout-item" href="logout.php">
@@ -87,6 +111,9 @@ if (isset($_GET['login']) && $_GET['login'] === 'success') {
             </div>
         </nav>
     </header>
+
+    <?php include __DIR__ . '/user_profile_modal.php'; ?>
+    <?php include __DIR__ . '/reservations_modal.php'; ?>
 
     <!-- Floating Decorative Elements -->
     <div class="floating-elements">
@@ -319,6 +346,20 @@ if (isset($_GET['login']) && $_GET['login'] === 'success') {
   <script src="Assets/js/index.js"></script>
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="Assets/js/user_profile.js"></script>
+  <script src="Assets/js/reservations.js"></script>
+
+  <!-- App Feedback Modal -->
+  <div class="modal fade" id="appFeedbackModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-body text-center" id="appFeedbackBody"></div>
+        <div class="p-3 text-center">
+          <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
