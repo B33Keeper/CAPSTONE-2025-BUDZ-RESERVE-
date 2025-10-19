@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: budz-reserve-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-budz_reserve}
+      MYSQL_USER: ${MYSQL_USER:-budz_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-budz_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database_export.sql:/docker-entrypoint-initdb.d/01-database-export.sql
+      - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql
+    networks:
+      - budz-reserve-network
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-password}"]
+      timeout: 20s
+      retries: 10
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile.prod
+    container_name: budz-reserve-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: ${MYSQL_USER:-budz_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-budz_password}
+      DB_DATABASE: ${MYSQL_DATABASE:-budz_reserve}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      PORT: 3001
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - budz-reserve-network
+
+  # Frontend React App
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile.prod
+    container_name: budz-reserve-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
+      VITE_APP_NAME: ${VITE_APP_NAME:-Budz Reserve}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - budz-reserve-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: budz-reserve-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.prod.conf:/etc/nginx/nginx.conf
+      - ./uploads:/var/www/uploads
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - budz-reserve-network
+
+volumes:
+  mysql_data:
+
+networks:
+  budz-reserve-network:
+    driver: bridge

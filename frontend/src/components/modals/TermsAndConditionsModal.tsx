@@ -1,0 +1,153 @@
+import { useState } from 'react'
+
+interface TermsAndConditionsModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onAccept: () => void
+}
+
+export function TermsAndConditionsModal({ isOpen, onClose, onAccept }: TermsAndConditionsModalProps) {
+  const [accepted, setAccepted] = useState(false)
+
+
+  if (!isOpen) return null
+
+  const handleAccept = () => {
+    if (accepted) {
+      onAccept()
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4" style={{ zIndex: 9999 }}>
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] overflow-y-auto relative">
+        {/* X Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold z-10"
+        >
+          ×
+        </button>
+        
+        <div className="p-6 pb-8">
+          {/* Header */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold underline text-gray-800">Terms and Conditions</h2>
+          </div>
+
+          {/* Introduction */}
+          <div className="mb-6">
+            <p className="font-bold text-gray-800">By making a reservation, you agree to the following terms:</p>
+          </div>
+
+          {/* Terms Content */}
+          <div className="bg-gray-50 rounded-lg p-6 mb-6">
+            <div className="space-y-4">
+              {/* Payment Methods */}
+              <div className="bg-white p-4 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                <h3 className="font-bold text-xl mb-3 text-blue-700">
+                  <span className="bg-blue-500 text-white rounded-full w-8 h-8 inline-flex items-center justify-center text-sm font-bold mr-3">1</span>
+                  Accepted Payment Methods
+                </h3>
+                <p className="mb-2 ml-11 text-gray-800">We accept the following payment methods for court reservations:</p>
+                <ul className="list-disc list-inside ml-14 text-gray-800">
+                  <li>Online Payment Gateways (e.g., PayPal, Gcash)</li>
+                </ul>
+              </div>
+
+              {/* Payment Timing */}
+              <div className="bg-white p-4 rounded-lg border-l-4 border-green-500 shadow-sm">
+                <h3 className="font-bold text-xl mb-3 text-green-700">
+                  <span className="bg-green-500 text-white rounded-full w-8 h-8 inline-flex items-center justify-center text-sm font-bold mr-3">2</span>
+                  Payment Timing
+                </h3>
+                <p className="ml-11 text-gray-800">Full payment is required at the time of booking to confirm your reservation.</p>
+              </div>
+
+              {/* Security */}
+              <div className="bg-white p-4 rounded-lg border-l-4 border-purple-500 shadow-sm">
+                <h3 className="font-bold text-xl mb-3 text-purple-700">
+                  <span className="bg-purple-500 text-white rounded-full w-8 h-8 inline-flex items-center justify-center text-sm font-bold mr-3">3</span>
+                  Security of Payment
+                </h3>
+                <p className="ml-11 text-gray-800">Payments are processed through secure, encrypted payment gateways to protect your personal and financial information.</p>
+              </div>
+
+              {/* Confirmation */}
+              <div className="bg-white p-4 rounded-lg border-l-4 border-orange-500 shadow-sm">
+                <h3 className="font-bold text-xl mb-3 text-orange-700">
+                  <span className="bg-orange-500 text-white rounded-full w-8 h-8 inline-flex items-center justify-center text-sm font-bold mr-3">4</span>
+                  Payment Confirmation
+                </h3>
+                <ul className="list-disc list-inside ml-14 space-y-1 text-gray-800">
+                  <li>A confirmation email will be sent upon successful payment and reservation.</li>
+                  <li>If you do not receive a confirmation within 10mins, please contact our support team.</li>
+                </ul>
+              </div>
+
+              {/* Failed Payments */}
+              <div className="bg-white p-4 rounded-lg border-l-4 border-red-500 shadow-sm">
+                <h3 className="font-bold text-xl mb-3 text-red-700">
+                  <span className="bg-red-500 text-white rounded-full w-8 h-8 inline-flex items-center justify-center text-sm font-bold mr-3">5</span>
+                  Failed or Declined Payments
+                </h3>
+                <ul className="list-disc list-inside ml-14 space-y-1 text-gray-800">
+                  <li>If a payment fails or is declined, the reservation will not be processed.</li>
+                  <li>Users are responsible for ensuring sufficient funds and correct payment details at the time of transaction.</li>
+                </ul>
+              </div>
+
+              {/* Refunds */}
+              <div className="bg-white p-4 rounded-lg border-l-4 border-indigo-500 shadow-sm">
+                <h3 className="font-bold text-xl mb-3 text-indigo-700">
+                  <span className="bg-indigo-500 text-white rounded-full w-8 h-8 inline-flex items-center justify-center text-sm font-bold mr-3">6</span>
+                  Refunds and Cancellation
+                </h3>
+                <p className="ml-11 text-gray-800">Strictly "No Cancellation and refund policy" once you reserved a court there is no cancellation.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Agreement Text */}
+          <div className="mb-4">
+            <p className="text-sm text-gray-800">By click this, you agreed to our policy, terms and condition.</p>
+          </div>
+
+          {/* Checkbox */}
+          <div className="flex items-center mb-6">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={(e) => setAccepted(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="ml-2 text-sm text-gray-800">I accept the terms and condition.</span>
+            </label>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex space-x-4">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAccept}
+              disabled={!accepted}
+              className={`px-6 py-2 rounded transition-colors ${
+                accepted
+                  ? 'bg-blue-500 text-white hover:bg-blue-600'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              Proceed
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
