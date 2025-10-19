@@ -4,13 +4,15 @@ A full-stack web application for booking badminton courts, built with React, Nes
 
 ## 🚀 Features
 
-- **User Authentication**: Secure login/registration with JWT tokens
-- **Court Booking**: Real-time court availability and booking system
+- **User Authentication**: Secure login/registration with JWT tokens and database persistence
+- **Court Booking**: Real-time court availability and booking system with 12 courts available
 - **Equipment Rental**: Badminton equipment rental with inventory management
-- **Profile Management**: User profile with photo upload and settings
-- **Responsive Design**: Mobile-first design that works on all devices
-- **Admin Dashboard**: Court and equipment management
-- **Payment Integration**: Ready for payment gateway integration
+- **Profile Management**: User profile with photo upload, change password, and settings
+- **Responsive Design**: Mobile-first design that works perfectly on desktop, laptop, and mobile devices
+- **Modern UI/UX**: Enhanced visual design with animations and smooth interactions
+- **Terms & Conditions**: Integrated terms and conditions modal for booking
+- **Database Integration**: Full MySQL database integration with persistent data storage
+- **Docker Support**: Complete Docker containerization for easy deployment
 
 ## 🛠️ Tech Stack
 
@@ -46,8 +48,9 @@ A full-stack web application for booking badminton courts, built with React, Nes
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/budz-reserve.git
-   cd budz-reserve
+   git clone https://github.com/B33Keeper/CAPSTONE-2025-BUDZ-RESERVE-.git
+   cd CAPSTONE-2025-BUDZ-RESERVE-
+   git checkout react-version
    ```
 
 2. **Set up environment variables**
@@ -81,47 +84,26 @@ A full-stack web application for booking badminton courts, built with React, Nes
    - Backend API: http://localhost:3001
    - API Documentation: http://localhost:3001/api
 
-### Option 2: Manual Setup
+### Option 2: Manual Setup (Alternative)
 
-1. **Install dependencies**
-   ```bash
-   # Root dependencies
-   npm install
-   
-   # Frontend dependencies
-   cd frontend && npm install
-   
-   # Backend dependencies
-   cd ../backend && npm install
-   ```
-
-2. **Set up MySQL database**
+1. **Start MySQL service** (XAMPP or local MySQL)
+2. **Create database**
    ```sql
    CREATE DATABASE budz_reserve;
    ```
-
 3. **Import database schema**
    ```bash
    mysql -u root -p budz_reserve < database_export.sql
    ```
-
-4. **Configure environment variables**
+4. **Start backend server**
    ```bash
-   # Backend
-   cp backend/env.example backend/.env
-   
-   # Frontend
-   cp frontend/env.example frontend/.env
+   node simple-backend.js
+   ```
+5. **Start frontend server**
+   ```bash
+   node simple-static-server.js
    ```
 
-5. **Start the servers**
-   ```bash
-   # Terminal 1 - Backend
-   cd backend && npm run start:dev
-   
-   # Terminal 2 - Frontend
-   cd frontend && npm run dev
-   ```
 
 ## 🐳 Docker Configuration
 
@@ -269,7 +251,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Authors
 
-- **Your Name** - *Initial work* - [YourGitHub](https://github.com/yourusername)
+- **B33Keeper** - *Initial work* - [B33Keeper](https://github.com/B33Keeper)
 
 ## 🙏 Acknowledgments
 
