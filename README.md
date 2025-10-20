@@ -4,37 +4,133 @@ A full-stack web application for booking badminton courts, built with React, Nes
 
 ## 🚀 Features
 
+### 🔐 Authentication & Security
 - **User Authentication**: Secure login/registration with JWT tokens and database persistence
-- **Court Booking**: Real-time court availability and booking system with 12 courts available
+- **Role-Based Access Control**: Admin and user roles with different permissions
+- **Forgot Password**: Email-based password reset with OTP verification
+- **Password Security**: Bcrypt hashing and secure password validation
+- **Session Management**: JWT token refresh and automatic logout
+
+### 🏸 Court Management
+- **Court Booking System**: Real-time court availability with 12 courts available
+- **Dynamic Pricing**: Different pricing tiers for courts (Courts 1-6: ₱250, Courts 7-9: ₱220, Courts 10-11: ₱180)
+- **Time Slot Management**: Flexible time slot booking with availability checking
+- **Maintenance Mode**: Courts can be marked as maintenance with visual indicators
+- **Booking History**: Complete booking history and reservation management
+
+### 🎾 Equipment & Services
 - **Equipment Rental**: Badminton equipment rental with inventory management
+- **Equipment Catalog**: Rackets, shoes, socks, and other badminton gear
+- **Inventory Tracking**: Real-time equipment availability and status
+- **Equipment Pricing**: Dynamic pricing for different equipment types
+
+### 👤 User Management
 - **Profile Management**: User profile with photo upload, change password, and settings
+- **Avatar Upload**: Profile picture upload with image optimization
+- **User Dashboard**: Personal dashboard with booking history and statistics
+- **Account Settings**: Comprehensive user account management
+
+### 👨‍💼 Admin Dashboard
+- **Admin Panel**: Complete administrative dashboard with statistics
+- **User Management**: View and manage all registered users
+- **Analytics**: Real-time statistics and data visualization
+- **Charts & Reports**: Monthly overview charts and reservation status pie charts
+- **User Statistics**: Total user count, daily reservations, and sales tracking
+- **Responsive Design**: Mobile-friendly admin interface
+
+### 💳 Payment Integration
+- **PayMongo Integration**: Complete payment gateway integration
+- **Secure Payments**: PCI-compliant payment processing
+- **Payment Status Tracking**: Real-time payment status updates
+- **Payment History**: Complete payment transaction history
+- **Refund Management**: Automated refund processing
+
+### 📧 Communication
+- **Email System**: Automated email notifications and communications
+- **OTP Verification**: Email-based OTP for password reset
+- **Email Templates**: Professional Handlebars-based email templates
+- **SMTP Configuration**: Gmail SMTP integration for reliable email delivery
+
+### 🎨 User Interface
 - **Responsive Design**: Mobile-first design that works perfectly on desktop, laptop, and mobile devices
 - **Modern UI/UX**: Enhanced visual design with animations and smooth interactions
+- **Interactive Components**: Hover effects, transitions, and micro-interactions
+- **Custom Scrollbars**: Styled scrollbars for better user experience
+- **Loading States**: Comprehensive loading indicators and skeleton screens
+
+### 📋 Legal & Compliance
 - **Terms & Conditions**: Integrated terms and conditions modal for booking
+- **Privacy Policy**: Comprehensive privacy policy integration
+- **Payment Policies**: Payment, refund, and cancellation policy information
+- **Legal Compliance**: GDPR-ready data handling and user consent
+
+### 🗄️ Data Management
 - **Database Integration**: Full MySQL database integration with persistent data storage
+- **TypeORM**: Advanced ORM with entity relationships and migrations
+- **Data Validation**: Comprehensive input validation and sanitization
+- **Data Backup**: Automated database backup and recovery
+
+### 🐳 DevOps & Deployment
 - **Docker Support**: Complete Docker containerization for easy deployment
+- **Docker Compose**: Multi-container orchestration for development and production
+- **Nginx Reverse Proxy**: Production-ready reverse proxy configuration
+- **Environment Configuration**: Comprehensive environment variable management
+- **CI/CD Ready**: GitHub Actions ready for automated deployment
+
+### 🔧 Technical Features
+- **API Documentation**: Complete Swagger/OpenAPI documentation
+- **Rate Limiting**: API rate limiting and throttling
+- **Error Handling**: Comprehensive error handling and logging
+- **File Upload**: Secure file upload with validation
+- **CORS Configuration**: Cross-origin resource sharing setup
+- **Health Checks**: Application health monitoring endpoints
 
 ## 🛠️ Tech Stack
 
 ### Frontend
 - **React 18** with TypeScript
 - **Vite** for fast development and building
-- **Tailwind CSS** for styling
-- **Framer Motion** for animations
-- **Axios** for API calls
+- **Tailwind CSS** for styling and responsive design
+- **React Router DOM** for client-side routing
+- **Axios** for HTTP API calls with interceptors
 - **Zustand** for state management
+- **React Hook Form** for form handling
+- **Zod** for form validation
+- **React Hot Toast** for notifications
+- **Lucide React** for icons
 
 ### Backend
 - **NestJS** with TypeScript
-- **MySQL** database
-- **JWT** for authentication
+- **MySQL 8.0** database with TypeORM
+- **JWT** for authentication and authorization
+- **Passport** for authentication strategies
+- **Bcrypt** for password hashing
 - **Multer** for file uploads
-- **Class Validator** for validation
+- **Class Validator** for DTO validation
+- **Class Transformer** for data transformation
+- **Nodemailer** for email services
+- **Handlebars** for email templates
+- **Swagger/OpenAPI** for API documentation
+- **Throttler** for rate limiting
 
-### DevOps
-- **Docker** & **Docker Compose**
-- **Nginx** reverse proxy
+### Payment Integration
+- **PayMongo** payment gateway
+- **RESTful API** integration
+- **Webhook handling** for payment status updates
+
+### DevOps & Infrastructure
+- **Docker** & **Docker Compose** for containerization
+- **Nginx** reverse proxy for production
 - **MySQL 8.0** containerized database
+- **Node.js 18** Alpine Linux containers
+- **Multi-stage Docker builds** for optimization
+
+### Development Tools
+- **TypeScript** for type safety
+- **ESLint** for code linting
+- **Prettier** for code formatting
+- **Git** for version control
+- **GitHub** for repository hosting
 
 ## 📋 Prerequisites
 
@@ -129,25 +225,67 @@ budz-reserve/
 ├── frontend/                 # React frontend
 │   ├── src/
 │   │   ├── components/      # Reusable components
+│   │   │   ├── modals/      # Modal components
+│   │   │   ├── Header.tsx   # Navigation header
+│   │   │   └── Footer.tsx   # Site footer
 │   │   ├── pages/          # Page components
-│   │   ├── hooks/          # Custom hooks
-│   │   ├── lib/            # API services
-│   │   └── store/          # State management
+│   │   │   ├── AdminDashboard.tsx  # Admin panel
+│   │   │   ├── BookingPage.tsx     # Court booking
+│   │   │   ├── LoginPage.tsx       # User authentication
+│   │   │   └── ForgotPasswordPage.tsx  # Password reset
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── lib/            # API services and utilities
+│   │   ├── store/          # Zustand state management
+│   │   └── App.tsx         # Main application component
 │   ├── public/             # Static assets
 │   └── dist/               # Built frontend
 ├── backend/                 # NestJS backend
 │   ├── src/
 │   │   ├── modules/        # Feature modules
-│   │   ├── database/       # Database config
-│   │   └── main.ts         # Entry point
-│   └── uploads/            # File uploads
+│   │   │   ├── auth/       # Authentication module
+│   │   │   ├── users/      # User management
+│   │   │   ├── courts/     # Court management
+│   │   │   ├── equipment/  # Equipment management
+│   │   │   ├── reservations/ # Booking system
+│   │   │   ├── payments/   # Payment processing
+│   │   │   ├── upload/     # File upload handling
+│   │   │   └── time-slots/ # Time slot management
+│   │   ├── database/       # Database configuration
+│   │   ├── templates/      # Email templates
+│   │   └── main.ts         # Application entry point
+│   ├── uploads/            # File uploads directory
+│   └── dist/               # Compiled backend
 ├── docker/                 # Docker configurations
-│   └── nginx/             # Nginx configs
+│   └── nginx/             # Nginx reverse proxy configs
+├── Assets/                 # Static assets and images
 ├── database_export.sql     # Database schema
 ├── docker-compose.yml      # Production Docker setup
 ├── docker-compose.dev.yml  # Development Docker setup
+├── PAYMONGO_SETUP.md      # Payment integration guide
 └── README.md              # This file
 ```
+
+## 👨‍💼 Admin Features
+
+### Dashboard Overview
+- **Real-time Statistics**: Live user count, daily reservations, and sales tracking
+- **Interactive Charts**: Monthly overview bar charts and reservation status pie charts
+- **User Management**: View and manage all registered users
+- **Responsive Design**: Mobile-friendly admin interface with collapsible sidebar
+
+### Admin Capabilities
+- **User Management**: View total users, active users, and user statistics
+- **Court Management**: Add, edit, and manage court availability and pricing
+- **Equipment Management**: Manage badminton equipment inventory
+- **Reservation Oversight**: View and manage all court reservations
+- **Payment Monitoring**: Track payment status and transaction history
+- **System Analytics**: Monitor system performance and usage statistics
+
+### Security Features
+- **Role-based Access**: Admin-only access to sensitive operations
+- **JWT Authentication**: Secure admin authentication
+- **API Protection**: Protected endpoints with proper authorization
+- **Audit Logging**: Track admin actions and system changes
 
 ## 🔧 Environment Variables
 
@@ -155,47 +293,99 @@ Create a `.env` file in the root directory:
 
 ```env
 # Database Configuration
-MYSQL_ROOT_PASSWORD=password
-MYSQL_DATABASE=budz_reserve
-MYSQL_USER=budz_user
-MYSQL_PASSWORD=budz_password
-
-# Backend Configuration
-NODE_ENV=development
 DB_HOST=localhost
 DB_PORT=3306
-DB_USERNAME=budz_user
-DB_PASSWORD=budz_password
+DB_USERNAME=root
+DB_PASSWORD=password
 DB_DATABASE=budz_reserve
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 JWT_EXPIRES_IN=24h
+JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=noreply@budzreserve.com
+
+# Application Configuration
 PORT=3001
+NODE_ENV=development
+API_PREFIX=api
 CORS_ORIGIN=http://localhost:3000
 
-# Frontend Configuration
-VITE_API_URL=http://localhost:3001/api
-VITE_APP_NAME=Budz Reserve
+# File Upload Configuration
+UPLOAD_DEST=./uploads
+MAX_FILE_SIZE=5242880
+
+# Rate Limiting
+THROTTLE_TTL=60
+THROTTLE_LIMIT=10
+
+# PayMongo Configuration
+PAYMONGO_SECRET_KEY=sk_test_your_paymongo_secret_key_here
+PAYMONGO_PUBLIC_KEY=pk_test_your_paymongo_public_key_here
+PAYMONGO_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+
+# Frontend URL for redirects
+FRONTEND_URL=http://localhost:3000
 ```
 
 ## 🎯 API Endpoints
 
-### Authentication
+### Authentication & User Management
 - `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
 - `GET /api/auth/profile` - Get user profile
+- `POST /api/auth/forgot-password` - Send password reset OTP
+- `POST /api/auth/verify-otp` - Verify OTP for password reset
+- `POST /api/auth/reset-password` - Reset password with OTP
+- `GET /api/users/count` - Get total user count (Admin)
+- `GET /api/users/active-count` - Get active user count (Admin)
 
-### Courts
+### Court Management
 - `GET /api/courts` - Get all courts
 - `GET /api/courts/availability` - Check court availability
+- `POST /api/courts` - Create new court (Admin)
+- `PUT /api/courts/:id` - Update court details (Admin)
+- `DELETE /api/courts/:id` - Delete court (Admin)
 
-### Equipment
+### Equipment Management
 - `GET /api/equipment` - Get all equipment
+- `POST /api/equipment` - Add new equipment (Admin)
+- `PUT /api/equipment/:id` - Update equipment details (Admin)
+- `DELETE /api/equipment/:id` - Delete equipment (Admin)
+
+### Reservations
+- `GET /api/reservations` - Get user reservations
+- `POST /api/reservations` - Create new reservation
+- `PUT /api/reservations/:id` - Update reservation
+- `DELETE /api/reservations/:id` - Cancel reservation
+- `GET /api/reservations/admin` - Get all reservations (Admin)
 
 ### Time Slots
 - `GET /api/time-slots` - Get available time slots
+- `POST /api/time-slots` - Create time slot (Admin)
+- `PUT /api/time-slots/:id` - Update time slot (Admin)
 
-### Uploads
+### File Uploads
 - `POST /api/upload/avatar` - Upload profile picture
+- `POST /api/upload/general` - Upload general files
+
+### Payment Processing
+- `POST /api/payment/create-checkout` - Create PayMongo checkout session
+- `GET /api/payment/status/:paymentIntentId` - Get payment status
+- `GET /api/payments` - Get payment history
+- `GET /api/payments/:id` - Get specific payment details
+- `PATCH /api/payments/:id/status` - Update payment status (Admin)
+
+### Health & Monitoring
+- `GET /api/health` - Application health check
+- `GET /api/docs` - API documentation (Swagger)
 
 ## 🧪 Testing
 
