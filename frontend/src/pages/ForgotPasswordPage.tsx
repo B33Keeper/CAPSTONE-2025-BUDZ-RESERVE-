@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Loader2 } from 'lucide-react'
+import api from '@/lib/api'
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -27,24 +28,12 @@ export function ForgotPasswordPage() {
   const onSubmit = async (data: ForgotPasswordFormData) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`http://localhost:3001/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        toast.success('OTP sent to your email address!')
-        navigate('/verify-otp', { state: { email: data.email } })
-      } else {
-        toast.error(result.message || 'Failed to send OTP')
-      }
+      const response = await api.post('/auth/forgot-password', data)
+      
+      toast.success(response.data.message || 'OTP sent to your email address!')
+      navigate('/verify-otp', { state: { email: data.email } })
     } catch (error: any) {
-      toast.error('Network error. Please try again.')
+      toast.error(error.response?.data?.message || 'Failed to send OTP')
     } finally {
       setIsLoading(false)
     }

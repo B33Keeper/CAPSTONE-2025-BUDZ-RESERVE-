@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2, ArrowLeft, CheckCircle } from 'lucide-react'
+import api from '@/lib/api'
 
 const resetPasswordSchema = z.object({
   newPassword: z
@@ -54,32 +55,20 @@ export function ResetPasswordPage() {
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`http://localhost:3001/api/auth/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          otp,
-          newPassword: data.newPassword,
-        }),
+      const response = await api.post('/auth/reset-password', {
+        email,
+        otp,
+        newPassword: data.newPassword,
       })
 
-      const result = await response.json()
-
-      if (response.ok) {
-        setIsSuccess(true)
-        toast.success('Password reset successfully!')
-        // Navigate to login page after a short delay
-        setTimeout(() => {
-          navigate('/login')
-        }, 2000)
-      } else {
-        toast.error(result.message || 'Failed to reset password')
-      }
+      setIsSuccess(true)
+      toast.success('Password reset successfully!')
+      // Navigate to login page after a short delay
+      setTimeout(() => {
+        navigate('/login')
+      }, 2000)
     } catch (error: any) {
-      toast.error('Network error. Please try again.')
+      toast.error(error.response?.data?.message || 'Failed to reset password')
     } finally {
       setIsLoading(false)
     }

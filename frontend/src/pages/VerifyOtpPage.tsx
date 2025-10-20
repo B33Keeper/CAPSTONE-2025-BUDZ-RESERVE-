@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Loader2, ArrowLeft, CheckCircle } from 'lucide-react'
+import api from '@/lib/api'
 
 const verifyOtpSchema = z.object({
   otp: z.string().min(6, 'OTP must be 6 digits').max(6, 'OTP must be 6 digits'),
@@ -43,31 +44,19 @@ export function VerifyOtpPage() {
   const onSubmit = async (data: VerifyOtpFormData) => {
     setIsLoading(true)
     try {
-      const response = await fetch(`http://localhost:3001/api/auth/verify-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          otp: data.otp,
-        }),
+      const response = await api.post('/auth/verify-otp', {
+        email,
+        otp: data.otp,
       })
 
-      const result = await response.json()
-
-      if (response.ok) {
-        setIsVerified(true)
-        toast.success('OTP verified successfully!')
-        // Navigate to reset password page after a short delay
-        setTimeout(() => {
-          navigate('/reset-password', { state: { email, otp: data.otp } })
-        }, 1500)
-      } else {
-        toast.error(result.message || 'Invalid OTP')
-      }
+      setIsVerified(true)
+      toast.success('OTP verified successfully!')
+      // Navigate to reset password page after a short delay
+      setTimeout(() => {
+        navigate('/reset-password', { state: { email, otp: data.otp } })
+      }, 1500)
     } catch (error: any) {
-      toast.error('Network error. Please try again.')
+      toast.error(error.response?.data?.message || 'Invalid OTP')
     } finally {
       setIsLoading(false)
     }

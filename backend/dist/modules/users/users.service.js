@@ -77,6 +77,12 @@ let UsersService = class UsersService {
             select: ['id', 'name', 'username', 'email', 'age', 'sex', 'contact_number', 'profile_picture', 'is_active', 'created_at'],
         });
     }
+    async getUserCount() {
+        return this.usersRepository.count();
+    }
+    async getActiveUserCount() {
+        return this.usersRepository.count({ where: { is_active: true } });
+    }
     async findOne(id) {
         const user = await this.usersRepository.findOne({
             where: { id },

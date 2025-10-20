@@ -36,7 +36,7 @@ let AuthController = class AuthController {
         return this.authService.refreshToken(req.user);
     }
     getProfile(req) {
-        return req.user;
+        return this.authService.getProfile(req.user.id);
     }
     async forgotPassword(forgotPasswordDto) {
         return this.authService.forgotPassword(forgotPasswordDto);

@@ -9,6 +9,9 @@ import { BookingPage } from '@/pages/BookingPage'
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
 import { VerifyOtpPage } from '@/pages/VerifyOtpPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
+import { PaymentSuccessPage } from '@/pages/PaymentSuccessPage'
+import { PaymentFailedPage } from '@/pages/PaymentFailedPage'
+import AdminDashboard from '@/pages/AdminDashboard'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Toaster } from 'react-hot-toast'
 
@@ -16,18 +19,17 @@ function App() {
   const { checkAuth } = useAuthStore()
 
   useEffect(() => {
-    // Temporarily disable auth check for testing
-    // checkAuth()
+    checkAuth()
   }, [checkAuth])
 
-  // Temporarily disable loading state for testing
-  // if (isLoading) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center">
-  //       <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-  //     </div>
-  //   )
-  // }
+  const { isLoading } = useAuthStore()
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -47,7 +49,17 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="payment/success" element={<PaymentSuccessPage />} />
+          <Route path="payment/failed" element={<PaymentFailedPage />} />
         </Route>
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
       <Toaster
         position="top-center"

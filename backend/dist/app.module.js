@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const throttler_1 = require("@nestjs/throttler");
 const mailer_1 = require("@nestjs-modules/mailer");
+const handlebars_adapter_1 = require("@nestjs-modules/mailer/dist/adapters/handlebars.adapter");
 const database_module_1 = require("./database/database.module");
 const auth_module_1 = require("./modules/auth/auth.module");
 const users_module_1 = require("./modules/users/users.module");
@@ -31,6 +32,31 @@ exports.AppModule = AppModule = __decorate([
                 isGlobal: true,
                 envFilePath: '.env',
             }),
+            mailer_1.MailerModule.forRootAsync({
+                imports: [config_1.ConfigModule],
+                useFactory: async (configService) => ({
+                    transport: {
+                        host: configService.get('SMTP_HOST', 'smtp.gmail.com'),
+                        port: configService.get('SMTP_PORT', 587),
+                        secure: false,
+                        auth: {
+                            user: configService.get('SMTP_USER'),
+                            pass: configService.get('SMTP_PASS'),
+                        },
+                    },
+                    defaults: {
+                        from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
+                    },
+                    template: {
+                        dir: process.cwd() + '/src/templates',
+                        adapter: new handlebars_adapter_1.HandlebarsAdapter(),
+                        options: {
+                            strict: true,
+                        },
+                    },
+                }),
+                inject: [config_1.ConfigService],
+            }),
             throttler_1.ThrottlerModule.forRoot([
                 {
                     ttl: 60000,
@@ -48,12 +74,7 @@ exports.AppModule = AppModule = __decorate([
             time_slots_module_1.TimeSlotsModule,
         ],
         controllers: [health_controller_1.HealthController],
-        providers: [
-            {
-                provide: mailer_1.MailerService,
-                useValue: { sendMail: async () => null },
-            },
-        ],
+        providers: [],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

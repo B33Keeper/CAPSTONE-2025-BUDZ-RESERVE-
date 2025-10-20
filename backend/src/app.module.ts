@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 // import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { MailerService } from '@nestjs-modules/mailer';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -21,6 +22,33 @@ import { HealthController } from './health.controller';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+
+    // Email configuration
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        transport: {
+          host: configService.get('SMTP_HOST', 'smtp.gmail.com'),
+          port: configService.get('SMTP_PORT', 587),
+          secure: false, // true for 465, false for other ports
+          auth: {
+            user: configService.get('SMTP_USER'),
+            pass: configService.get('SMTP_PASS'),
+          },
+        },
+        defaults: {
+          from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
+        },
+        template: {
+          dir: process.cwd() + '/src/templates',
+          adapter: new HandlebarsAdapter(),
+          options: {
+            strict: true,
+          },
+        },
+      }),
+      inject: [ConfigService],
     }),
 
     // Rate limiting
@@ -45,11 +73,6 @@ import { HealthController } from './health.controller';
     TimeSlotsModule,
   ],
   controllers: [HealthController],
-  providers: [
-    {
-      provide: MailerService,
-      useValue: { sendMail: async () => null },
-    },
-  ],
+  providers: [],
 })
 export class AppModule {}

@@ -11,6 +11,7 @@ interface User {
   sex?: 'Male' | 'Female'
   contact_number?: string
   profile_picture?: string
+  role?: string
 }
 
 interface AuthState {
@@ -58,6 +59,9 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           })
+
+          // Return user data for navigation logic
+          return { user, access_token }
         } catch (error: any) {
           set({ isLoading: false })
           throw new Error(error.response?.data?.message || 'Login failed')

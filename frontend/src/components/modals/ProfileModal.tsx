@@ -61,16 +61,35 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     },
   })
 
+  // Update form values when user data changes
+  useEffect(() => {
+    if (user) {
+      profileForm.reset({
+        name: user.name || '',
+        age: user.age || 0,
+        sex: (user.sex as 'Male' | 'Female') || 'Male',
+        email: user.email || '',
+        contact_number: user.contact_number || '',
+      })
+    }
+  }, [user, profileForm])
+
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
   })
 
   const onProfileSubmit = async (data: ProfileFormData) => {
     try {
-      updateUser(data)
+      // Call backend API to update profile
+      const response = await api.patch('/users/profile', data)
+      const updatedUser = response.data
+      
+      // Update local state with the response from backend
+      updateUser(updatedUser)
       toast.success('Profile updated successfully!')
     } catch (error: any) {
-      toast.error(error.message || 'Failed to update profile')
+      console.error('Profile update error:', error)
+      toast.error(error.response?.data?.message || error.message || 'Failed to update profile')
     }
   }
 
@@ -205,7 +224,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4"
+      className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-blue-900/20 to-purple-900/20 backdrop-blur-md flex items-center justify-center z-50 p-2 sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose()
@@ -213,275 +232,340 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       }}
     >
       <div 
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] sm:h-[700px] flex flex-col sm:flex-row overflow-hidden animate-in slide-in-from-bottom-4 duration-300"
+        className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 w-full max-w-6xl h-[90vh] sm:h-[700px] flex flex-col sm:flex-row overflow-hidden animate-in slide-in-from-bottom-4 duration-500"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Left Sidebar */}
-        <div className="w-full sm:w-1/3 bg-gradient-to-br from-blue-50/30 to-indigo-50/30 border-r border-gray-200/50 p-4 sm:p-6 flex flex-col">
-          {/* Profile Picture */}
-          <div className="text-center mb-6">
-            <div className="relative inline-block group">
-              <div className="relative">
-                <img
-                  src={user?.profile_picture || '/assets/img/home-page/Ellipse 1.png'}
-                  alt="Profile"
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-lg group-hover:shadow-xl transition-all duration-300"
-                />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white shadow-md"></div>
-                <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                  <Upload className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                form="none"
-              />
-              <button
-                onClick={handleUploadClick}
-                className="text-blue-600 text-sm mt-3 hover:text-blue-700 flex items-center justify-center mx-auto font-medium transition-colors duration-200"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Edit profile picture
-              </button>
-            </div>
+        <div className="w-full sm:w-1/3 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 border-r border-blue-200/30 flex flex-col relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
+            <div className="absolute top-20 right-0 w-24 h-24 bg-white rounded-full translate-x-12"></div>
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-white rounded-full -translate-x-20 translate-y-20"></div>
           </div>
-
-          {/* User Info */}
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center mb-2">
-              {user?.sex === 'Male' ? (
-                <div className="w-4 h-4 bg-blue-500 rounded-full mr-3 flex items-center justify-center shadow-sm">
-                  <span className="text-white text-xs font-bold">♂</span>
+          {/* Profile Picture Section */}
+          <div className="p-6 text-center relative z-10">
+            <div className="flex justify-center mb-6">
+              <div className="relative inline-block group">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full p-1 animate-pulse"></div>
+                  <img
+                    src={user?.profile_picture || '/assets/img/home-page/Ellipse 1.png'}
+                    alt="Profile"
+                    className="relative w-28 h-28 rounded-full object-cover border-4 border-white shadow-2xl group-hover:shadow-3xl transition-all duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
+                    <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                  </div>
+                  <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center backdrop-blur-sm">
+                    <div className="bg-white/20 rounded-full p-3">
+                      <Upload className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
                 </div>
-              ) : user?.sex === 'Female' ? (
-                <div className="w-4 h-4 bg-pink-500 rounded-full mr-3 flex items-center justify-center shadow-sm">
-                  <span className="text-white text-xs font-bold">♀</span>
-                </div>
-              ) : (
-                <div className="w-4 h-4 bg-gray-400 rounded-full mr-3 shadow-sm"></div>
-              )}
-              <span className="text-gray-800 font-semibold text-lg">{user?.name || 'User'}</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  form="none"
+                />
+              </div>
             </div>
-            <div className="text-sm text-gray-500">
-              {user?.email || 'user@example.com'}
+            
+            {/* Edit Profile Picture Button */}
+            <button
+              onClick={handleUploadClick}
+              className="text-white/90 text-sm hover:text-white flex items-center justify-center mx-auto font-medium transition-all duration-300 mb-8 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full backdrop-blur-sm"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Edit profile picture
+            </button>
+
+            {/* User Info */}
+            <div className="mb-8">
+              <div className="flex items-center justify-center mb-3">
+                {user?.sex === 'Male' ? (
+                  <div className="w-6 h-6 bg-blue-400 rounded-full mr-3 flex items-center justify-center shadow-lg">
+                    <span className="text-white text-sm font-bold">♂</span>
+                  </div>
+                ) : user?.sex === 'Female' ? (
+                  <div className="w-6 h-6 bg-pink-400 rounded-full mr-3 flex items-center justify-center shadow-lg">
+                    <span className="text-white text-sm font-bold">♀</span>
+                  </div>
+                ) : (
+                  <div className="w-6 h-6 bg-gray-400 rounded-full mr-3 shadow-lg"></div>
+                )}
+                <span className="text-white font-bold text-xl">{user?.name || 'User'}</span>
+              </div>
+              <div className="text-sm text-white/80 break-all bg-white/10 rounded-lg px-3 py-2 backdrop-blur-sm">
+                {user?.email || 'user@example.com'}
+              </div>
             </div>
           </div>
 
           {/* Separator */}
-          <div className="border-t border-gray-200/50 mb-6"></div>
+          <div className="border-t border-white/20 mx-6"></div>
 
-          {/* Navigation */}
-          <nav className="space-y-2 flex-1">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`w-full flex items-center space-x-3 p-4 rounded-xl transition-all duration-200 group ${
-                activeTab === 'profile'
-                  ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-                  : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
-              }`}
-            >
-              <User className={`w-5 h-5 ${activeTab === 'profile' ? 'text-white' : 'text-gray-400 group-hover:text-blue-500'}`} />
-              <span className="font-medium">Manage profile</span>
-              {activeTab === 'profile' && (
-                <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('password')}
-              className={`w-full flex items-center space-x-3 p-4 rounded-xl transition-all duration-200 group ${
-                activeTab === 'password'
-                  ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-                  : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
-              }`}
-            >
-              <Lock className={`w-5 h-5 ${activeTab === 'password' ? 'text-white' : 'text-gray-400 group-hover:text-blue-500'}`} />
-              <span className="font-medium">Change password</span>
-              {activeTab === 'password' && (
-                <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
-              )}
-            </button>
-          </nav>
+          {/* Navigation Section */}
+          <div className="flex-1 p-6 relative z-10">
+            <nav className="space-y-4">
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`w-full flex items-center space-x-4 p-4 rounded-2xl transition-all duration-300 group relative overflow-hidden ${
+                  activeTab === 'profile'
+                    ? 'bg-white/20 text-white shadow-xl backdrop-blur-sm border border-white/30'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {activeTab === 'profile' && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
+                )}
+                <div className={`relative z-10 p-2 rounded-lg ${activeTab === 'profile' ? 'bg-white/20' : 'group-hover:bg-white/10'}`}>
+                  <User className="w-5 h-5" />
+                </div>
+                <span className="font-semibold relative z-10">Manage profile</span>
+                {activeTab === 'profile' && (
+                  <div className="ml-auto w-3 h-3 bg-white rounded-full shadow-lg relative z-10"></div>
+                )}
+              </button>
+                
+              <button
+                onClick={() => setActiveTab('password')}
+                className={`w-full flex items-center space-x-4 p-4 rounded-2xl transition-all duration-300 group relative overflow-hidden ${
+                  activeTab === 'password'
+                    ? 'bg-white/20 text-white shadow-xl backdrop-blur-sm border border-white/30'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {activeTab === 'password' && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
+                )}
+                <div className={`relative z-10 p-2 rounded-lg ${activeTab === 'password' ? 'bg-white/20' : 'group-hover:bg-white/10'}`}>
+                  <Lock className="w-5 h-5" />
+                </div>
+                <span className="font-semibold relative z-10">Change password</span>
+                {activeTab === 'password' && (
+                  <div className="ml-auto w-3 h-3 bg-white rounded-full shadow-lg relative z-10"></div>
+                )}
+              </button>
+            </nav>
+          </div>
 
-          {/* Logout Button - Bottom Center */}
-          <div className="mt-auto pt-4">
+          {/* Logout Button Section */}
+          <div className="p-6 border-t border-white/20 relative z-10">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center space-x-2 p-4 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 group border border-red-200 hover:border-red-300"
+              className="w-full flex items-center justify-center space-x-3 p-4 rounded-2xl text-white/90 hover:text-white transition-all duration-300 group bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 hover:border-red-400/50 backdrop-blur-sm"
             >
-              <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              <span className="font-medium">Logout</span>
+              <div className="p-2 rounded-lg bg-red-500/20 group-hover:bg-red-500/30 transition-colors duration-300">
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <span className="font-semibold">Logout</span>
             </button>
           </div>
         </div>
 
         {/* Right Content */}
-        <div className="w-full sm:w-2/3 p-4 sm:p-6 flex flex-col">
+        <div className="w-full sm:w-2/3 p-4 sm:p-8 flex flex-col bg-gradient-to-br from-gray-50/50 to-white/80">
           {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="flex justify-between items-center mb-8">
+            <div className="relative">
+              <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
                 {activeTab === 'profile' ? 'My Profile' : 'Change Password'}
               </h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-600 mt-2 font-medium">
                 {activeTab === 'profile' ? 'Manage your personal information' : 'Update your account security'}
               </p>
+              <div className="absolute -bottom-2 left-0 w-16 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"></div>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+              className="text-gray-400 hover:text-gray-600 transition-all duration-300 p-3 hover:bg-gray-100 rounded-xl group"
               aria-label="Close profile modal"
               title="Close profile modal"
             >
-              <X className="w-6 h-6" />
+              <X className="w-6 h-6 group-hover:scale-110 transition-transform duration-200" />
             </button>
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto flex justify-center">
-            <div className="max-w-lg w-full">
+            <div className="max-w-2xl w-full">
               {activeTab === 'profile' ? (
-                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6 py-4">
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8 py-6">
                   {/* Username Field */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-gray-800 flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
                       Username
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <div className="p-2 rounded-lg bg-blue-50 group-focus-within:bg-blue-100 transition-colors duration-300">
+                          <User className="h-5 w-5 text-blue-500 group-focus-within:text-blue-600 transition-colors duration-200" />
+                        </div>
                       </div>
                       <input
                         {...profileForm.register('name')}
-                        className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                        className="w-full pl-20 pr-6 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
                         placeholder="Enter your name"
                         autoComplete="name"
                       />
                     </div>
                     {profileForm.formState.errors.name && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        {profileForm.formState.errors.name.message}
-                      </p>
+                      <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+                        <p className="text-sm text-red-600 flex items-center">
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          {profileForm.formState.errors.name.message}
+                        </p>
+                      </div>
                     )}
                   </div>
 
                   {/* Email Field */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-gray-800 flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
                       Email
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <div className="p-2 rounded-lg bg-green-50 group-focus-within:bg-green-100 transition-colors duration-300">
+                          <Mail className="h-5 w-5 text-green-500 group-focus-within:text-green-600 transition-colors duration-200" />
+                        </div>
                       </div>
                       <input
                         {...profileForm.register('email')}
                         type="email"
-                        className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                        className="w-full pl-20 pr-6 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
                         placeholder="Enter your email"
                         autoComplete="email"
                       />
                     </div>
                     {profileForm.formState.errors.email && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        {profileForm.formState.errors.email.message}
-                      </p>
+                      <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+                        <p className="text-sm text-red-600 flex items-center">
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          {profileForm.formState.errors.email.message}
+                        </p>
+                      </div>
                     )}
                   </div>
 
                   {/* Age and Sex Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                     {/* Age Field */}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-gray-700">
+                    <div className="space-y-3">
+                      <label className="block text-sm font-bold text-gray-800 flex items-center">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
                         Age
                       </label>
                       <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Calendar className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                          <div className="p-2 rounded-lg bg-purple-50 group-focus-within:bg-purple-100 transition-colors duration-300">
+                            <Calendar className="h-5 w-5 text-purple-500 group-focus-within:text-purple-600 transition-colors duration-200" />
+                          </div>
                         </div>
                         <input
                           {...profileForm.register('age', { valueAsNumber: true })}
                           type="number"
-                          className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                          className="w-full pl-20 pr-6 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
                           placeholder="Enter your age"
                         />
                       </div>
                       {profileForm.formState.errors.age && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center">
-                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          {profileForm.formState.errors.age.message}
-                        </p>
+                        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+                          <p className="text-sm text-red-600 flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            {profileForm.formState.errors.age.message}
+                          </p>
+                        </div>
                       )}
                     </div>
 
                     {/* Sex Field */}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-gray-700">
+                    <div className="space-y-3">
+                      <label className="block text-sm font-bold text-gray-800 flex items-center">
+                        <div className="w-2 h-2 bg-pink-500 rounded-full mr-3"></div>
                         Gender
                       </label>
                       <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                          <div className="p-2 rounded-lg bg-pink-50 group-focus-within:bg-pink-100 transition-colors duration-300">
+                            <div className="w-5 h-5 flex items-center justify-center">
+                              {user?.sex === 'Male' ? (
+                                <span className="text-pink-500 text-lg font-bold">♂</span>
+                              ) : (
+                                <span className="text-pink-500 text-lg font-bold">♀</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                         <select
                           {...profileForm.register('sex')}
-                          className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white appearance-none cursor-pointer"
+                          className="w-full pl-20 pr-12 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg appearance-none cursor-pointer"
                         >
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
                         </select>
-                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                        <div className="absolute inset-y-0 right-0 pr-6 flex items-center pointer-events-none">
                           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </div>
                       </div>
                       {profileForm.formState.errors.sex && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center">
-                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          {profileForm.formState.errors.sex.message}
-                        </p>
+                        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+                          <p className="text-sm text-red-600 flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            {profileForm.formState.errors.sex.message}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
 
                   {/* Contact Number Field */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-gray-800 flex items-center">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
                       Contact Number
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Phone className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <div className="p-2 rounded-lg bg-orange-50 group-focus-within:bg-orange-100 transition-colors duration-300">
+                          <Phone className="h-5 w-5 text-orange-500 group-focus-within:text-orange-600 transition-colors duration-200" />
+                        </div>
                       </div>
                       <input
                         {...profileForm.register('contact_number')}
                         type="tel"
-                        className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                        className="w-full pl-20 pr-6 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
                         placeholder="Enter your contact number"
                         autoComplete="tel"
                       />
                     </div>
                     {profileForm.formState.errors.contact_number && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        {profileForm.formState.errors.contact_number.message}
-                      </p>
+                      <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+                        <p className="text-sm text-red-600 flex items-center">
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          {profileForm.formState.errors.contact_number.message}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </form>
@@ -618,20 +702,22 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
           </div>
 
           {/* Save Button */}
-          <div className="flex justify-end pt-8 pb-6 border-t border-gray-200">
+          <div className="flex justify-end pt-8 pb-6 border-t border-gray-200/50">
             <button
               onClick={activeTab === 'profile' ? profileForm.handleSubmit(onProfileSubmit) : passwordForm.handleSubmit(onPasswordSubmit)}
               disabled={isPasswordChanging}
-              className="bg-blue-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-4 rounded-2xl font-bold hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
             >
               {isPasswordChanging ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Changing Password...</span>
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4" />
+                  <div className="p-1 bg-white/20 rounded-lg">
+                    <Save className="w-5 h-5" />
+                  </div>
                   <span>Save Changes</span>
                 </>
               )}

@@ -30,6 +30,12 @@ let UsersController = class UsersController {
     findAll() {
         return this.usersService.findAll();
     }
+    getUserCount() {
+        return this.usersService.getUserCount();
+    }
+    getActiveUserCount() {
+        return this.usersService.getActiveUserCount();
+    }
     getProfile(req) {
         return this.usersService.findOne(req.user.id);
     }
@@ -89,6 +95,26 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('count'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get total user count' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'User count retrieved successfully' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "getUserCount", null);
+__decorate([
+    (0, common_1.Get)('active-count'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get active user count' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Active user count retrieved successfully' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "getActiveUserCount", null);
 __decorate([
     (0, common_1.Get)('profile'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

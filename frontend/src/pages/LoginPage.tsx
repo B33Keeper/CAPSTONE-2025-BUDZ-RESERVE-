@@ -29,9 +29,15 @@ export function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      await login(data)
+      const result = await login(data)
       toast.success('Login successful!')
-      navigate('/')
+      
+      // Check if user is admin and redirect accordingly
+      if (result?.user?.role === 'admin') {
+        navigate('/admin')
+      } else {
+        navigate('/')
+      }
     } catch (error: any) {
       toast.error(error.message || 'Login failed')
     }

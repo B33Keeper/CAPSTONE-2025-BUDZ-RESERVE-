@@ -16,6 +16,7 @@ export declare class User {
     profile_picture: string;
     is_active: boolean;
     is_verified: boolean;
+    role: string;
     verification_token: string;
     reset_password_token: string;
     reset_password_expires: Date;

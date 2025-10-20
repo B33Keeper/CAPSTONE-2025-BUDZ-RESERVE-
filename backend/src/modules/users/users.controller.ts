@@ -41,6 +41,24 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('count')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get total user count' })
+  @ApiResponse({ status: 200, description: 'User count retrieved successfully' })
+  getUserCount() {
+    return this.usersService.getUserCount();
+  }
+
+  @Get('active-count')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get active user count' })
+  @ApiResponse({ status: 200, description: 'Active user count retrieved successfully' })
+  getActiveUserCount() {
+    return this.usersService.getActiveUserCount();
+  }
+
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

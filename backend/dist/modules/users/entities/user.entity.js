@@ -72,6 +72,10 @@ __decorate([
     __metadata("design:type", Boolean)
 ], User.prototype, "is_verified", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ default: 'user' }),
+    __metadata("design:type", String)
+], User.prototype, "role", void 0);
+__decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "verification_token", void 0);

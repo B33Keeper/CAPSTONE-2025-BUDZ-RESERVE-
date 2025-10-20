@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { apiServices, Court, Equipment, TimeSlot } from '@/lib/apiServices'
 import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsModal'
+import { BookingDetailsModal } from '@/components/modals/BookingDetailsModal'
 
 interface CourtBooking {
   court: string
@@ -50,6 +51,7 @@ export function BookingPage() {
   const [availabilityData, setAvailabilityData] = useState<Map<number, any[]>>(new Map())
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
+  const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false)
 
 
   // Calculate total amount
@@ -319,7 +321,7 @@ export function BookingPage() {
     const isSelected = selectedCells.has(key)
 
     // Maintenance/Unavailable styles take precedence
-    if (courtStatus === 'Maintenance') return 'bg-yellow-400 text-black cursor-not-allowed'
+    if (courtStatus === 'Maintenance') return 'bg-white text-gray-900 cursor-not-allowed'
     if (courtStatus === 'Unavailable') return 'bg-gray-400 text-white cursor-not-allowed'
 
     // Selected vs available styles
@@ -627,7 +629,7 @@ export function BookingPage() {
           {/* Selected Date */}
           <div className="text-center mb-6">
             <p className="text-lg font-semibold">Selected date: {selectedDate}</p>
-        </div>
+          </div>
 
           {/* Content based on active tab */}
           {activeTab === 'Sheet 1' && (
@@ -735,7 +737,6 @@ export function BookingPage() {
                               {(() => {
                                 const key = `COURT ${court.Court_Id}-${timeSlot.display}`
                                 const isSelected = selectedCells.has(key)
-                                if (court.Status === 'Maintenance') return null
                                 const showBadge = court.Status === 'Available' && !isSelected
                                 return (
                                   <span className={`inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs md:text-sm ${showBadge ? 'bg-white/80 text-gray-900' : 'bg-transparent text-black'}`}>
@@ -823,7 +824,7 @@ export function BookingPage() {
                               {(() => {
                                 const key = `COURT ${court.Court_Id}-${timeSlot.display}`
                                 const isSelected = selectedCells.has(key)
-                                 const forceTransparent = isSelected || court.Status !== 'Available'
+                                const forceTransparent = isSelected || court.Status !== 'Available'
                                 return (
                                    <span className={`inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs md:text-sm ${forceTransparent ? 'bg-transparent text-black' : 'bg-white/80 text-gray-900'}`}>
                                     {court.Price}.00 php
@@ -1007,15 +1008,6 @@ export function BookingPage() {
                 </ul>
               </div>
 
-              {/* Terms and Conditions Link */}
-              <div className="text-center mb-4">
-                <button
-                  onClick={() => setShowTermsModal(true)}
-                  className="text-blue-600 hover:text-blue-800 underline text-sm"
-                >
-                  View Terms and Conditions
-                </button>
-              </div>
               </div>
           )}
 
@@ -1031,7 +1023,7 @@ export function BookingPage() {
                   Back
                 </button>
                 <button
-                  onClick={() => setCurrentStep(3)}
+                  onClick={() => setShowBookingDetailsModal(true)}
                    className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium"
                 >
                    Proceed to Payment
@@ -1086,6 +1078,17 @@ export function BookingPage() {
         isOpen={showTermsModal}
         onClose={handleCloseTerms}
         onAccept={handleAcceptTerms}
+      />
+
+      {/* Booking Details Modal */}
+      <BookingDetailsModal
+        isOpen={showBookingDetailsModal}
+        onClose={() => setShowBookingDetailsModal(false)}
+        onProceedToPayment={() => setCurrentStep(3)}
+        courtBookings={courtBookings}
+        equipmentBookings={equipmentBookings}
+        totalAmount={totalAmount}
+        selectedDate={selectedDate}
       />
     </div>
   )

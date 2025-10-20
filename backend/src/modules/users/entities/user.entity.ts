@@ -55,6 +55,9 @@ export class User {
   @Column({ default: false })
   is_verified: boolean;
 
+  @Column({ default: 'user' })
+  role: string;
+
   @Column({ nullable: true })
   verification_token: string;
 

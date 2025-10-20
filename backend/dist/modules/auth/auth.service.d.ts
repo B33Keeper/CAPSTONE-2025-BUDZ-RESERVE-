@@ -21,7 +21,11 @@ export declare class AuthService {
             username: any;
             email: any;
             name: any;
+            age: any;
+            sex: any;
+            contact_number: any;
             profile_picture: any;
+            role: any;
         };
     }>;
     register(registerDto: RegisterDto): Promise<{
@@ -31,12 +35,16 @@ export declare class AuthService {
             username: string;
             email: string;
             name: string;
+            age: number;
+            sex: import("../users/entities/user.entity").Gender;
+            contact_number: string;
             profile_picture: string;
         };
     }>;
     refreshToken(user: any): Promise<{
         access_token: string;
     }>;
+    getProfile(userId: number): Promise<import("../users/entities/user.entity").User>;
     private otpStore;
     forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{
         message: string;

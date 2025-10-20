@@ -45,7 +45,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
   getProfile(@Request() req: any) {
-    return req.user;
+    return this.authService.getProfile(req.user.id);
   }
 
   @Post('forgot-password')

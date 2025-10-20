@@ -11,6 +11,8 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const payments_service_1 = require("./payments.service");
 const payments_controller_1 = require("./payments.controller");
+const payment_controller_1 = require("./payment.controller");
+const paymongo_service_1 = require("./paymongo.service");
 const payment_entity_1 = require("./entities/payment.entity");
 const reservations_module_1 = require("../reservations/reservations.module");
 let PaymentsModule = class PaymentsModule {
@@ -22,9 +24,9 @@ exports.PaymentsModule = PaymentsModule = __decorate([
             typeorm_1.TypeOrmModule.forFeature([payment_entity_1.Payment]),
             reservations_module_1.ReservationsModule,
         ],
-        controllers: [payments_controller_1.PaymentsController],
-        providers: [payments_service_1.PaymentsService],
-        exports: [payments_service_1.PaymentsService],
+        controllers: [payments_controller_1.PaymentsController, payment_controller_1.PaymentController],
+        providers: [payments_service_1.PaymentsService, paymongo_service_1.PayMongoService],
+        exports: [payments_service_1.PaymentsService, paymongo_service_1.PayMongoService],
     })
 ], PaymentsModule);
 //# sourceMappingURL=payments.module.js.map

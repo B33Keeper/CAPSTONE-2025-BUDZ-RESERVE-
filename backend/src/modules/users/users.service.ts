@@ -44,6 +44,14 @@ export class UsersService {
     });
   }
 
+  async getUserCount(): Promise<number> {
+    return this.usersRepository.count();
+  }
+
+  async getActiveUserCount(): Promise<number> {
+    return this.usersRepository.count({ where: { is_active: true } });
+  }
+
   async findOne(id: number): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id },

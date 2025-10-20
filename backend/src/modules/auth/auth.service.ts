@@ -41,7 +41,11 @@ export class AuthService {
         username: user.username,
         email: user.email,
         name: user.name,
+        age: user.age,
+        sex: user.sex,
+        contact_number: user.contact_number,
         profile_picture: user.profile_picture,
+        role: user.role,
       },
     };
   }
@@ -59,6 +63,9 @@ export class AuthService {
           username: user.username,
           email: user.email,
           name: user.name,
+          age: user.age,
+          sex: user.sex,
+          contact_number: user.contact_number,
           profile_picture: user.profile_picture,
         },
       };
@@ -75,6 +82,10 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
     };
+  }
+
+  async getProfile(userId: number) {
+    return this.usersService.findOne(userId);
   }
 
   // Store OTPs temporarily (in production, use Redis or database)
@@ -106,31 +117,21 @@ export class AuthService {
           otp,
           name: user.name || user.username,
         },
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2196F3;">Password Reset Request</h2>
-            <p>Hello ${user.name || user.username},</p>
-            <p>You have requested to reset your password for your Budz Badminton account.</p>
-            <p style="font-size: 24px; background: #f5f5f5; padding: 10px; text-align: center; letter-spacing: 5px;">
-              Your OTP: <strong>${otp}</strong>
-            </p>
-            <p><strong>Note:</strong> This OTP will expire in 15 minutes.</p>
-            <p style="color: #666; font-size: 12px;">If you didn't request this password reset, please ignore this email or contact support if you have concerns.</p>
-            <hr>
-            <p style="color: #666; font-size: 12px; text-align: center;">
-              This is an automated email from Budz Badminton Court Reservation System.
-            </p>
-          </div>
-        `,
       });
 
+      console.log('✅ Email sent successfully to:', email);
       return { message: 'OTP sent to your email address' };
     } catch (error) {
-      // For development/testing purposes, return success even if email fails
-      console.log('Email sending failed:', error);
-      console.log('=== DEVELOPMENT MODE ===');
-      console.log('OTP for email', email, 'is:', otp);
-      console.log('=======================');
+      // Log error for debugging
+      console.error('❌ Email sending failed:', error);
+      console.log('=== DEVELOPMENT FALLBACK ===');
+      console.log('Email:', email);
+      console.log('User:', user.name || user.username);
+      console.log('OTP Code:', otp);
+      console.log('Expires at:', expiresAt);
+      console.log('=============================');
+      
+      // Return success even if email fails (for development)
       return { message: 'OTP generated successfully. Check console for OTP: ' + otp };
     }
   }

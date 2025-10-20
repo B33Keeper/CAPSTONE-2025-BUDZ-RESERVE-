@@ -20,5 +20,5 @@ RUN mkdir -p uploads/avatars uploads/general
 # Expose port
 EXPOSE 3001
 
-# TEMP: Run simple auth backend for development to unblock login/signup
-CMD ["node", "simple-server.js"]
+# Run NestJS application in development mode with watch
+CMD ["npm", "run", "start:dev"]

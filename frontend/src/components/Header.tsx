@@ -95,9 +95,9 @@ export function Header() {
   }
 
   const getNavButtonClasses = (sectionId: string) => {
-    const baseClasses = "transition-colors"
-    const activeClasses = "text-blue-600 font-semibold"
-    const inactiveClasses = "text-gray-700 hover:text-primary-600"
+    const baseClasses = "transition-all duration-300 px-4 py-2 rounded-lg font-medium"
+    const activeClasses = "text-blue-600 bg-blue-50 shadow-sm"
+    const inactiveClasses = "text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
 
     // If we're on the booking page, don't highlight any section navigation
     if (location.pathname === '/booking') {
@@ -108,9 +108,9 @@ export function Header() {
   }
 
   const getBookCourtClasses = () => {
-    const baseClasses = "transition-colors"
-    const activeClasses = "text-blue-600 font-semibold"
-    const inactiveClasses = "text-gray-700 hover:text-primary-600"
+    const baseClasses = "transition-all duration-300 px-4 py-2 rounded-lg font-medium"
+    const activeClasses = "text-blue-600 bg-blue-50 shadow-sm"
+    const inactiveClasses = "text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
 
     return `${baseClasses} ${location.pathname === '/booking' ? activeClasses : inactiveClasses}`
   }
@@ -142,9 +142,9 @@ export function Header() {
 
   return (
     <>
-    <header className="bg-white shadow-sm border-b sticky top-0 z-50 overflow-visible">
+    <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200/50 sticky top-0 z-50 overflow-visible">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-18">
             {/* Logo */}
             <Link to="/" className="flex items-center">
               <img src="/assets/icons/BBC ICON.png" alt="BBC Logo" className="h-12 sm:h-16" />
@@ -186,7 +186,7 @@ export function Header() {
               </button>
               <button
                 onClick={handleManageQueueingClick}
-                className="text-gray-700 hover:text-primary-600 transition-colors"
+                className="transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
               >
                 Manage Queueing
               </button>
@@ -313,13 +313,13 @@ export function Header() {
                 <>
                   <Link
                     to="/login"
-                    className="text-gray-700 hover:text-primary-600 transition-colors"
+                    className="transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
                   >
                     Login
                   </Link>
                   <Link
                     to="/signup"
-                    className="text-gray-700 hover:text-primary-600 transition-colors"
+                    className="transition-all duration-300 px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
                   >
                     Sign Up
                   </Link>
@@ -332,7 +332,7 @@ export function Header() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-700 hover:text-primary-600 transition-colors"
+              className="p-2 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 transition-all duration-300"
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
               title={isMenuOpen ? "Close menu" : "Open menu"}
             >
@@ -344,28 +344,28 @@ export function Header() {
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white/95 backdrop-blur-md border-t border-gray-200/50">
               <button
                 onClick={() => scrollToSection('home')}
-                className={`block w-full text-left px-3 py-2 transition-colors ${location.pathname === '/booking' ? 'text-gray-700 hover:text-primary-600' : (activeSection === 'home' ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-primary-600')}`}
+                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${location.pathname === '/booking' ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'home' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
               >
                 Home
               </button>
               <button
                 onClick={() => scrollToSection('about')}
-                className={`block w-full text-left px-3 py-2 transition-colors ${location.pathname === '/booking' ? 'text-gray-700 hover:text-primary-600' : (activeSection === 'about' ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-primary-600')}`}
+                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${location.pathname === '/booking' ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'about' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
               >
                 About Us
               </button>
               <button
                 onClick={() => scrollToSection('gallery')}
-                className={`block w-full text-left px-3 py-2 transition-colors ${location.pathname === '/booking' ? 'text-gray-700 hover:text-primary-600' : (activeSection === 'gallery' ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-primary-600')}`}
+                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${location.pathname === '/booking' ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'gallery' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
               >
                 Gallery
               </button>
               <button
                 onClick={() => scrollToSection('contact')}
-                className={`block w-full text-left px-3 py-2 transition-colors ${location.pathname === '/booking' ? 'text-gray-700 hover:text-primary-600' : (activeSection === 'contact' ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-primary-600')}`}
+                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${location.pathname === '/booking' ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'contact' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
               >
                 Contact Us
               </button>
@@ -374,7 +374,7 @@ export function Header() {
                   handleBookCourtClick()
                   setIsMenuOpen(false)
                 }}
-                className={`block w-full text-left px-3 py-2 transition-colors ${isAuthenticated && location.pathname === '/booking' ? 'text-blue-600 font-semibold' : 'text-gray-700 hover:text-primary-600'}`}
+                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${isAuthenticated && location.pathname === '/booking' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50'}`}
               >
                 Book Court
               </button>
@@ -383,7 +383,7 @@ export function Header() {
                   handleManageQueueingClick()
                   setIsMenuOpen(false)
                 }}
-                className="block w-full text-left px-3 py-2 text-gray-700 hover:text-primary-600 transition-colors"
+                className="block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
               >
                 Manage Queueing
               </button>
@@ -451,14 +451,14 @@ export function Header() {
                 <>
                   <Link
                     to="/login"
-                    className="block px-3 py-2 text-gray-700 hover:text-primary-600 transition-colors"
+                    className="block px-4 py-3 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 transition-all duration-300 font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Login
                   </Link>
                   <Link
                     to="/signup"
-                    className="block px-3 py-2 text-gray-700 hover:text-primary-600 transition-colors"
+                    className="block px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-all duration-300 font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign Up
