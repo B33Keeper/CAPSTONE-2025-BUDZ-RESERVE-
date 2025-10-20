@@ -1,0 +1,1120 @@
+/* Booking Page Styles */
+body {
+    background-color: #f5f5f5;
+    font-family: 'Arial', sans-serif;
+    margin-top: 80px; /* Account for fixed header */
+}
+
+/* Progress Indicator */
+.progress-container {
+    background: white;
+    padding: 30px 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-top: 0;
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.step-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.step.completed .step-circle {
+    background: #4CAF50;
+    color: white;
+}
+
+.step.active .step-circle {
+    background: #2196F3;
+    color: white;
+    box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.2);
+}
+
+.step-label {
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+    font-weight: 500;
+}
+
+.step-line {
+    width: 100px;
+    height: 2px;
+    background: #e0e0e0;
+    margin: 0 20px;
+    margin-top: -30px;
+}
+
+.step.completed + .step-line {
+    background: #4CAF50;
+}
+
+/* Booking Container */
+.booking-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.booking-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+/* Booking Header */
+.booking-header {
+    background: #34495e;
+    color: white;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.booking-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.booking-tabs {
+    display: flex;
+    gap: 10px;
+}
+
+.tab-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.8);
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    position: relative;
+    backdrop-filter: blur(10px);
+}
+
+.tab-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.4);
+    color: white;
+    transform: translateY(-1px);
+}
+
+.tab-btn.active {
+    background: rgba(255,255,255,0.95);
+    border-color: rgba(255,255,255,0.95);
+    color: #333;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    font-weight: 600;
+}
+
+
+/* Selected Date */
+.selected-date {
+    text-align: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.selected-date strong {
+    font-size: 20px;
+    color: #333;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    padding: 30px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.4s ease;
+    background: white;
+    border-radius: 0 0 10px 10px;
+}
+
+.tab-content.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+    animation: slideInUp 0.4s ease;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* Legend */
+.legend {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 30px;
+    justify-content: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+}
+
+.legend-color.available {
+    background: white;
+}
+
+.legend-color.reserved {
+    background: #666;
+}
+
+.legend-color.maintenance {
+    background: #ffc107;
+}
+
+.legend-color.selected {
+    background: #4CAF50;
+}
+
+/* Court Table */
+.court-table {
+    overflow-x: auto;
+    margin-bottom: 30px;
+}
+
+.court-table table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.court-table th {
+    background: #f8f9fa;
+    padding: 15px 10px;
+    text-align: center;
+    font-weight: 600;
+    color: #333;
+    border: 1px solid #e0e0e0;
+}
+
+.court-table td {
+    padding: 15px 10px;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.time-slot {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+.court-cell {
+    position: relative;
+}
+
+.court-cell.available {
+    background: white;
+    color: #333;
+}
+
+.court-cell.available:hover {
+    background: #e3f2fd;
+}
+
+.court-cell.selected {
+    background: #4CAF50;
+    color: white;
+}
+
+.court-cell.reserved {
+    background: #666;
+    color: white;
+    cursor: not-allowed;
+}
+
+.court-cell.maintenance {
+    background: #ffc107;
+    color: #333;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Equipment Grid */
+.equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.equipment-card {
+    background-color: transparent;
+    width: 100%;
+    height: 350px;
+    perspective: 1000px;
+    cursor: pointer;
+    position: relative;
+}
+
+.card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.6s ease-in-out;
+    transform-style: preserve-3d;
+}
+
+.equipment-card:hover .card-inner {
+    transform: rotateY(180deg);
+}
+
+.equipment-card:hover .card-front,
+.equipment-card:hover .card-back {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.card-front, .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: box-shadow 0.3s ease;
+}
+
+
+.card-back {
+    transform: rotateY(180deg);
+}
+
+/* Ensure description, stock, and quantity controls are only visible on the back */
+.card-front .equipment-description,
+.card-front .equipment-stock,
+.card-front .quantity-selector {
+    display: none !important;
+}
+
+.card-back .equipment-description,
+.card-back .equipment-stock,
+.card-back .quantity-selector {
+    display: block;
+}
+
+/* Hover hint styling */
+.hover-hint {
+    margin-top: auto;
+    text-align: center;
+    padding: 10px;
+}
+
+.hover-hint span {
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+    background: #f0f0f0;
+    padding: 5px 10px;
+    border-radius: 15px;
+}
+
+/* Card Front Styles */
+.card-front h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 18px;
+}
+
+.card-front .equipment-image {
+    margin-bottom: 15px;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.card-front .equipment-image img {
+    width: 100%;
+    height: 150px;
+    object-fit: contain;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+}
+
+.card-front .equipment-price {
+    font-size: 20px;
+    font-weight: bold;
+    color: #2196F3;
+    margin-bottom: 15px;
+}
+
+/* Card Back Styles */
+.card-back h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 18px;
+}
+
+.card-back .equipment-description {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    padding: 10px;
+}
+
+.card-back .equipment-description p {
+    color: #666;
+    line-height: 1.5;
+    font-size: 14px;
+    margin: 0;
+    text-align: center;
+}
+
+.card-back .equipment-stock {
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.card-back .equipment-stock span {
+    background: #e8f5e8;
+    color: #2e7d32;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.card-back .equipment-price-back {
+    font-size: 18px;
+    font-weight: bold;
+    color: #2196F3;
+    text-align: center;
+}
+
+.quantity-selector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: auto; /* Push to bottom of card */
+}
+
+/* Ensure quantity controls are properly positioned on the back */
+.card-back .quantity-selector {
+    margin-top: auto;
+    padding: 10px 0;
+    text-align: center;
+}
+
+.card-back .equipment-description {
+    margin-bottom: auto;
+}
+
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.qty-btn {
+    width: 35px;
+    height: 35px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.qty-btn:hover {
+    background: #2196F3;
+    color: white;
+    border-color: #2196F3;
+}
+
+.quantity {
+    font-size: 18px;
+    font-weight: bold;
+    min-width: 30px;
+    text-align: center;
+}
+
+/* Booking Summary */
+.booking-summary {
+    padding: 30px;
+    background: white;
+    margin-bottom: 0;
+}
+
+.selected-date-display {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 16px;
+    color: #333;
+    border-left: 4px solid #2196F3;
+}
+
+.booking-summary h3 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background: white;
+}
+
+.summary-table th {
+    background: #f5f5f5;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+    border: 1px solid #e0e0e0;
+    font-size: 14px;
+}
+
+.summary-table td {
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    font-size: 14px;
+    color: #666;
+}
+
+.total-section {
+    text-align: right;
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.total-label {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-right: 10px;
+}
+
+.total-amount {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2196F3;
+}
+
+/* Proceed Section */
+.proceed-section {
+    text-align: center;
+    padding: 30px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.proceed-section button.back-btn {
+    background: #2196F3 !important;
+    color: white !important;
+    border: none !important;
+    padding: 15px 40px !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    width: auto !important;
+    box-shadow: none !important;
+    outline: none !important;
+    text-decoration: none !important;
+    display: inline-block !important;
+}
+
+.proceed-section button.back-btn:hover {
+    background: #1976D2 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3) !important;
+    color: white !important;
+}
+
+.proceed-section button.back-btn:focus {
+    background: #2196F3 !important;
+    color: white !important;
+    border: none !important;
+    outline: none !important;
+}
+
+.proceed-section button.back-btn:active {
+    background: #1976D2 !important;
+    color: white !important;
+}
+
+.proceed-btn {
+    background: #2196F3;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.proceed-btn:hover {
+    background: #1976D2;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+}
+
+/* Payment Section */
+.payment-section {
+    padding: 0;
+}
+
+.payment-header {
+    background: #333;
+    color: white;
+    padding: 15px 30px;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.payment-title {
+    color: white;
+}
+
+.reference-banner {
+    background: #2196F3;
+    color: white;
+    padding: 15px 30px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.payment-methods {
+    padding: 30px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.payment-methods h3 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 18px;
+}
+
+.payment-options {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.payment-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.payment-option:hover {
+    border-color: #2196F3;
+    background: #f8f9fa;
+}
+
+.payment-option.selected {
+    border-color: #2196F3;
+    background: #e3f2fd;
+}
+
+.payment-icon {
+    width: 60px;
+    height: 40px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.gcash-icon {
+    background: #00A651;
+}
+
+.maya-icon {
+    background: #E91E63;
+}
+
+.grabpay-icon {
+    background: #00B04F;
+}
+
+.banking-icon {
+    background: #2196F3;
+}
+
+.payment-option span {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+.payment-policy {
+    padding: 30px;
+    background: #f8f9fa;
+}
+
+.payment-policy h4 {
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 16px;
+}
+
+.payment-policy p {
+    color: #666;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.pay-now-section {
+    padding: 30px;
+    text-align: right;
+}
+
+.pay-now-btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pay-now-btn:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+/* Custom Datepicker */
+.custom-datepicker {
+    max-width: 900px;
+    margin: 0 auto;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.dp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.dp-month {
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.dp-nav {
+    background: #2196F3;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+.dp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.dp-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+}
+
+.dp-day {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 14px 0;
+    text-align: center;
+    cursor: pointer;
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.dp-day:hover:not(.disabled) {
+    background-color: #f5f5f5;
+    border-color: #2196F3;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+}
+
+.dp-day.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.dp-day.selected {
+    outline: 3px solid #2196F3;
+    outline-offset: 2px;
+    background-color: #e3f2fd !important;
+    color: #1976d2 !important;
+    font-weight: bold;
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+.reference-banner {
+    background: #2196F3;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.user-info {
+    padding: 30px;
+    background: white;
+    margin-bottom: 0;
+}
+
+.info-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.info-field {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.info-field label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.info-field input {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.info-field input:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+.user-data-display {
+    padding: 12px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #333;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+}
+
+.payment-methods {
+    margin-bottom: 30px;
+}
+
+.payment-methods h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 18px;
+}
+
+.payment-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.payment-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.payment-option:hover {
+    border-color: #2196F3;
+    background: #f8f9fa;
+}
+
+.payment-option.selected {
+    border-color: #2196F3;
+    background: #e3f2fd;
+}
+
+.payment-option img {
+    width: 60px;
+    height: 40px;
+    object-fit: contain;
+    margin-bottom: 10px;
+}
+
+.payment-option span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.payment-policy {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #666;
+}
+
+.pay-now-section {
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    align-items: center;
+}
+
+.pay-now-btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pay-now-btn:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+/* Back button in payment section */
+.pay-now-section .back-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pay-now-section .back-btn:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .progress-steps {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .step-line {
+        display: none;
+    }
+    
+    .booking-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .booking-tabs {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .court-table {
+        font-size: 12px;
+    }
+    
+    .court-table th,
+    .court-table td {
+        padding: 8px 5px;
+    }
+    
+    .equipment-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .payment-options {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Custom Modal Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 480px) {
+    .booking-container {
+        padding: 20px 10px;
+    }
+    
+    .tab-content {
+        padding: 20px;
+    }
+    
+    .legend {
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .payment-options {
+        grid-template-columns: 1fr;
+    }
+}

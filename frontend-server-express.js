@@ -42,3 +42,6 @@ app.listen(PORT, () => {
   console.log(`📁 Serving from: frontend/dist and frontend/public`);
   console.log(`🔗 API Proxy: /api/* -> ${API_TARGET}/api/*`);
 });
+
+
+

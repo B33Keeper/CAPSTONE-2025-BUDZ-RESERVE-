@@ -38,20 +38,6 @@ exports.AppModule = AppModule = __decorate([
                 },
             ]),
             database_module_1.DatabaseModule,
-            mailer_1.MailerModule.forRoot({
-                transport: {
-                    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-                    port: parseInt(process.env.SMTP_PORT || '587', 10),
-                    secure: false,
-                    auth: {
-                        user: process.env.SMTP_USER,
-                        pass: process.env.SMTP_PASS,
-                    },
-                },
-                defaults: {
-                    from: process.env.SMTP_FROM || 'noreply@budzreserve.com',
-                },
-            }),
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
             courts_module_1.CourtsModule,
@@ -62,6 +48,12 @@ exports.AppModule = AppModule = __decorate([
             time_slots_module_1.TimeSlotsModule,
         ],
         controllers: [health_controller_1.HealthController],
+        providers: [
+            {
+                provide: mailer_1.MailerService,
+                useValue: { sendMail: async () => null },
+            },
+        ],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

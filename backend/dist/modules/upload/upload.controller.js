@@ -25,6 +25,15 @@ let UploadController = class UploadController {
         this.usersService = usersService;
     }
     async uploadAvatar(file, req) {
+        console.log('Upload request received:', {
+            hasFile: !!file,
+            fileInfo: file ? {
+                originalname: file.originalname,
+                mimetype: file.mimetype,
+                size: file.size
+            } : null,
+            userId: req.user?.id
+        });
         if (!file) {
             throw new common_1.BadRequestException('No file uploaded');
         }
@@ -32,9 +41,9 @@ let UploadController = class UploadController {
         if (!allowedTypes.includes(file.mimetype)) {
             throw new common_1.BadRequestException('Invalid file type. Only images are allowed.');
         }
-        const maxSize = 5 * 1024 * 1024;
+        const maxSize = 10 * 1024 * 1024;
         if (file.size > maxSize) {
-            throw new common_1.BadRequestException('File too large. Maximum size is 5MB.');
+            throw new common_1.BadRequestException('File too large. Maximum size is 10MB.');
         }
         await this.uploadService.deleteOldAvatar(req.user.id, this.usersService);
         const filePath = await this.uploadService.uploadFile(file, 'avatars');

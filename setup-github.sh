@@ -35,3 +35,6 @@ echo "1. Review and update .env file with your settings"
 echo "2. Test the application: ./start-dev.sh"
 echo "3. Commit and push to GitHub"
 echo
+
+
+
