@@ -10,6 +10,7 @@ const config_1 = require("@nestjs/config");
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const cors_1 = __importDefault(require("cors"));
+const express_1 = __importDefault(require("express"));
 const path_1 = require("path");
 const app_module_1 = require("./app.module");
 async function bootstrap() {
@@ -67,6 +68,8 @@ async function bootstrap() {
         origin: ['http://localhost:3000', 'http://localhost:5173'],
         credentials: true,
     }));
+    app.use(express_1.default.json({ limit: '50mb' }));
+    app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,
@@ -89,9 +92,10 @@ async function bootstrap() {
     const document = swagger_1.SwaggerModule.createDocument(app, config);
     swagger_1.SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
     const port = configService.get('PORT', 3001);
-    await app.listen(port);
-    console.log(`🚀 Application is running on: http://localhost:${port}`);
-    console.log(`📚 API Documentation: http://localhost:${port}/${apiPrefix}/docs`);
+    const host = '0.0.0.0';
+    await app.listen(port, host);
+    console.log(`🚀 Application is running on: http://${host}:${port}`);
+    console.log(`📚 API Documentation: http://${host}:${port}/${apiPrefix}/docs`);
 }
 bootstrap();
 //# sourceMappingURL=main.js.map

@@ -146,40 +146,34 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB')
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image size must be less than 10MB')
       return
     }
 
     console.log('Starting upload process...')
     setIsUploading(true)
     try {
-      // Convert file to base64
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        try {
-          const base64String = e.target?.result as string
-          console.log('Base64 string length:', base64String.length)
-          
-          console.log('Sending upload request...')
-          const response = await api.post('/upload/avatar', { image: base64String })
-          console.log('Upload response:', response.data)
-          
-          const data = response.data
-          const fullImageUrl = `http://localhost:3001${data.profilePicture}`
-          updateUser({ profile_picture: fullImageUrl })
-          toast.success('Profile picture updated successfully!')
-        } catch (error: any) {
-          console.error('Upload error:', error)
-          toast.error(error.response?.data?.message || error.message || 'Failed to upload image')
-        } finally {
-          setIsUploading(false)
-        }
-      }
-      reader.readAsDataURL(file)
+      // Create FormData for multipart upload
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      console.log('Sending upload request...')
+      const response = await api.post('/upload/avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      console.log('Upload response:', response.data)
+      
+      const data = response.data
+      const fullImageUrl = `http://localhost:3001${data.profilePicture}`
+      updateUser({ profile_picture: fullImageUrl })
+      toast.success('Profile picture updated successfully!')
     } catch (error: any) {
       console.error('Upload error:', error)
-      toast.error(error.message || 'Failed to upload image')
+      toast.error(error.response?.data?.message || error.message || 'Failed to upload image')
+    } finally {
       setIsUploading(false)
     }
   }

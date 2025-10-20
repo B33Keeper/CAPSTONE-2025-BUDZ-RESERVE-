@@ -28,3 +28,6 @@ app.listen(PORT, () => {
   console.log(`📁 Serving from: frontend directory`);
   console.log(`🔗 API Proxy: /api/* -> http://localhost:3001/api/*`);
 });
+
+
+

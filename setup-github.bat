@@ -37,3 +37,6 @@ echo 2. Test the application: start-dev.bat
 echo 3. Commit and push to GitHub
 echo.
 pause
+
+
+

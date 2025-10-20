@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 // import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { MailerModule } from '@nestjs-modules/mailer';
+import { MailerService } from '@nestjs-modules/mailer';
 
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -34,22 +34,6 @@ import { HealthController } from './health.controller';
     // Database
     DatabaseModule,
 
-    // Email
-    MailerModule.forRoot({
-      transport: {
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: false,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      },
-      defaults: {
-        from: process.env.SMTP_FROM || 'noreply@budzreserve.com',
-      },
-    }),
-
     // Feature modules
     AuthModule,
     UsersModule,
@@ -61,5 +45,11 @@ import { HealthController } from './health.controller';
     TimeSlotsModule,
   ],
   controllers: [HealthController],
+  providers: [
+    {
+      provide: MailerService,
+      useValue: { sendMail: async () => null },
+    },
+  ],
 })
 export class AppModule {}

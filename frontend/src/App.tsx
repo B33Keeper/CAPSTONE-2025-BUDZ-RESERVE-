@@ -13,19 +13,21 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Toaster } from 'react-hot-toast'
 
 function App() {
-  const { checkAuth, isLoading } = useAuthStore()
+  const { checkAuth } = useAuthStore()
 
   useEffect(() => {
-    checkAuth()
+    // Temporarily disable auth check for testing
+    // checkAuth()
   }, [checkAuth])
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-      </div>
-    )
-  }
+  // Temporarily disable loading state for testing
+  // if (isLoading) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center">
+  //       <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+  //     </div>
+  //   )
+  // }
 
   return (
     <>

@@ -20,5 +20,5 @@ RUN mkdir -p uploads/avatars uploads/general
 # Expose port
 EXPOSE 3001
 
-# Start development server
-CMD ["npm", "run", "start:dev"]
+# TEMP: Run simple auth backend for development to unblock login/signup
+CMD ["node", "simple-server.js"]

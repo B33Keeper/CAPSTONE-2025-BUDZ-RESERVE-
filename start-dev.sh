@@ -20,3 +20,6 @@ fi
 
 echo "Starting services with Docker Compose..."
 docker-compose -f docker-compose.dev.yml up --build
+
+
+

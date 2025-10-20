@@ -248,28 +248,7 @@ export function BookingPage() {
     return { status: 'available' }
   }
 
-  const getCellClassName = (courtId: number, time: string, courtStatus?: string): string => {
-    const status = getCellStatus(courtId, time)
-    
-    // Check if court is unavailable or under maintenance from database
-    if (courtStatus === 'Unavailable' || courtStatus === 'Maintenance') {
-      return courtStatus === 'Maintenance' 
-        ? 'bg-yellow-400 text-black cursor-not-allowed'
-        : 'bg-gray-400 text-white cursor-not-allowed'
-    }
-    
-    switch (status.status) {
-      case 'reserved':
-        return 'bg-gray-800 text-white cursor-not-allowed'
-      case 'maintenance':
-        return 'bg-yellow-400 text-black cursor-not-allowed'
-      case 'selected':
-        return 'bg-green-300 text-black cursor-pointer'
-      case 'available':
-      default:
-        return 'bg-white text-black cursor-pointer hover:bg-green-100'
-    }
-  }
+  
 
   const handleRacketClick = (racketName: string) => {
     setFlippedCards(prev => {
@@ -331,6 +310,21 @@ export function BookingPage() {
         return [...filtered, newBooking]
       })
     }
+  }
+
+
+  // Visual state helper for table cells (keeps original colors)
+  const getCellClassName = (courtId: number, timeLabel: string, courtStatus?: string) => {
+    const key = `COURT ${courtId}-${timeLabel}`
+    const isSelected = selectedCells.has(key)
+
+    // Maintenance/Unavailable styles take precedence
+    if (courtStatus === 'Maintenance') return 'bg-yellow-400 text-black cursor-not-allowed'
+    if (courtStatus === 'Unavailable') return 'bg-gray-400 text-white cursor-not-allowed'
+
+    // Selected vs available styles
+    if (isSelected) return 'bg-green-300 text-black ring-2 ring-green-500'
+    return 'bg-white text-gray-900 hover:bg-blue-50 cursor-pointer'
   }
 
   const handleDateSelection = (date: string, isAvailable: boolean) => {
@@ -475,15 +469,16 @@ export function BookingPage() {
           {currentStep === 1 && (
              <>
                {/* Date Selection Header */}
-               <div className="bg-gray-600 text-white px-4 py-2 rounded-t-lg -mx-6 -mt-6 mb-6">
-                 <h2 className="text-lg font-medium">Select from the available dates below:</h2>
+               <div className="bg-gray-600 text-white px-6 py-4 rounded-t-lg -mx-6 -mt-6 mb-6 shadow">
+                 <h2 className="text-base sm:text-lg font-semibold">Select from the available dates below</h2>
+                 <p className="text-blue-100 text-xs sm:text-sm mt-1">Choose a date to proceed to time and court selection</p>
                </div>
                
                {/* Month Selector */}
                <div className="flex items-center justify-center mb-6">
                  <button
                    onClick={goToPreviousMonth}
-                   className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                   className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                    disabled={(() => {
                      const today = new Date()
                      const currentYear = today.getFullYear()
@@ -491,108 +486,109 @@ export function BookingPage() {
                      return selectedMonth.year <= currentYear && selectedMonth.month <= currentMonth
                    })()}
                  >
-                   <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                    </svg>
                  </button>
                  
                  <div className="mx-6 text-center">
-                   <h3 className="text-xl font-semibold text-gray-900">
+                   <h3 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
                      {new Date(selectedMonth.year, selectedMonth.month, 1).toLocaleDateString('en-US', { 
                        month: 'long', 
                        year: 'numeric' 
                      })}
                    </h3>
+                   <p className="text-xs text-gray-500">Tap a date to continue</p>
                  </div>
                  
                  <button
                    onClick={goToNextMonth}
-                   className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                   className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-50 text-gray-700"
                  >
-                   <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                    </svg>
                  </button>
                </div>
                
-               {/* Date Selection Grid - Clean Layout */}
-               <div className="grid grid-cols-7 gap-2 mb-6">
-                 {/* Day Headers */}
-                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                   <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
-                     {day}
-                   </div>
-                 ))}
+               {/* Date Selection Grid */}
+               <div className="bg-white rounded-lg ring-1 ring-gray-200 overflow-hidden">
+                 <div className="grid grid-cols-7 bg-gray-50">
+                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                     <div key={day} className="p-3 text-center text-xs sm:text-sm font-semibold text-gray-600">
+                       {day}
+                     </div>
+                   ))}
+                 </div>
                  
-                 {/* Calendar Days */}
-                 {(() => {
-                   const firstDayOfMonth = new Date(selectedMonth.year, selectedMonth.month, 1)
-                   const lastDayOfMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0)
-                   const firstDayWeekday = firstDayOfMonth.getDay()
-                   const daysInMonth = lastDayOfMonth.getDate()
-                   
-                   const calendarDays = []
-                   
-                   // Add empty cells for days before the first day of the month
-                   for (let i = 0; i < firstDayWeekday; i++) {
-                     calendarDays.push(
-                       <div key={`empty-${i}`} className="p-2"></div>
-                     )
-                   }
-                   
-                   // Add days of the month
-                   for (let day = 1; day <= daysInMonth; day++) {
-                     const date = new Date(selectedMonth.year, selectedMonth.month, day)
+                 <div className="grid grid-cols-7">
+                   {(() => {
+                     const firstDayOfMonth = new Date(selectedMonth.year, selectedMonth.month, 1)
+                     const lastDayOfMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0)
+                     const firstDayWeekday = firstDayOfMonth.getDay()
+                     const daysInMonth = lastDayOfMonth.getDate()
                      const today = new Date()
-                     const isPast = date < today
-                     const isAvailable = !isPast
                      
-                     const monthName = new Date(selectedMonth.year, selectedMonth.month, 1).toLocaleDateString('en-US', { month: 'long' })
-                     const dateString = `${monthName} ${day}, ${selectedMonth.year}`
-                     const isSelected = tempSelectedDate === dateString
-                     
-                     calendarDays.push(
-                       <div
-                         key={day}
-                         className={`p-2 text-center cursor-pointer rounded-lg transition-colors ${
-                           isSelected
-                             ? 'bg-green-500 text-white font-semibold'
-                             : isAvailable
-                             ? 'hover:bg-blue-100 text-gray-900'
-                             : 'text-gray-400 cursor-not-allowed'
-                         }`}
-                         onClick={() => {
-                           if (isAvailable) {
-                             handleDateSelection(dateString, true)
-                           }
-                         }}
-                       >
-                         <div className="text-sm">{day}</div>
-                       </div>
-                     )
-                   }
-                   
-                   return calendarDays
-                 })()}
+                     const items: JSX.Element[] = []
+                     for (let i = 0; i < firstDayWeekday; i++) {
+                       items.push(<div key={`empty-${i}`} className="h-12 sm:h-16 border-t border-gray-100" />)
+                     }
+                     for (let day = 1; day <= daysInMonth; day++) {
+                       const date = new Date(selectedMonth.year, selectedMonth.month, day)
+                       const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate())
+                       const isAvailable = !isPast
+                       const isToday = date.toDateString() === today.toDateString()
+                       const label = new Date(selectedMonth.year, selectedMonth.month, 1).toLocaleDateString('en-US', { month: 'long' })
+                       const dateString = `${label} ${day}, ${selectedMonth.year}`
+                       const isSelected = tempSelectedDate === dateString
+                       
+                       items.push(
+                         <button
+                           key={day}
+                           type="button"
+                           className={`relative h-12 sm:h-14 w-12 sm:w-14 mx-auto my-2 border-t border-gray-100 flex items-center justify-center rounded-full transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
+                             isSelected 
+                               ? 'bg-green-600 text-white font-semibold shadow-[inset_0_2px_6px_rgba(0,0,0,0.2)] scale-105' 
+                               : isAvailable 
+                                 ? 'hover:bg-green-50 text-gray-900 hover:scale-105' 
+                                 : 'text-gray-300 opacity-40 cursor-not-allowed line-through'
+                           }`}
+                           aria-selected={isSelected}
+                           onClick={() => isAvailable && handleDateSelection(dateString, true)}
+                           disabled={!isAvailable}
+                         >
+                           <span className="text-sm sm:text-base">{day}</span>
+                           {isToday && !isSelected && (
+                             <span className="absolute -bottom-1 block w-1.5 h-1.5 rounded-full bg-green-500" />
+                           )}
+                         </button>
+                       )
+                     }
+                     return items
+                   })()}
+                 </div>
                </div>
+               
+               {/* Selected Date Display */}
+               {tempSelectedDate && (
+                 <div className="mt-4 p-3 bg-green-50 ring-1 ring-green-200 rounded-lg text-center">
+                   <span className="text-sm text-green-800 font-medium">Selected date:</span>
+                   <span className="ml-2 text-sm text-green-700">{tempSelectedDate}</span>
+                 </div>
+               )}
                
                {/* Error Message */}
                {dateError && (
-                 <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-                   <div className="flex items-center">
-                     <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                     </svg>
-                     {dateError}
-                   </div>
-               </div>
+                 <div className="mt-4 p-4 bg-red-50 ring-1 ring-red-200 text-red-700 rounded-lg">
+                   {dateError}
+                 </div>
                )}
 
                {/* Proceed Button for Step 1 */}
-               <div className="text-center mt-8">
+               <div className="text-center mt-6">
                  <button 
                    onClick={handleProceedFromDateSelection}
-                   className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                   className="inline-flex items-center justify-center px-8 py-3 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow disabled:opacity-50 disabled:cursor-not-allowed"
                    disabled={!tempSelectedDate}
                  >
                    Proceed
@@ -605,23 +601,24 @@ export function BookingPage() {
             <>
               {/* Section Header with Tabs inside */}
               <div className="bg-gray-600 text-white px-4 py-2 rounded-t-lg -mx-6 -mt-6 mb-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-medium">Select from the available time and court:</h2>
                   
                   {/* Tabs inside the header container */}
-                  <div className="flex space-x-1">
+                  <div className="flex flex-wrap gap-2">
                     {tabs.map((tab) => (
-                 <button
+                      <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-4 py-2 rounded-t-lg text-sm font-medium ${
+                        className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                           activeTab === tab
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            ? 'bg-white text-gray-900'
+                            : 'bg-gray-500 text-gray-100 hover:bg-gray-400'
                         }`}
+                        aria-current={activeTab === tab ? 'page' : undefined}
                       >
                         {tab}
-                 </button>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -636,27 +633,63 @@ export function BookingPage() {
           {activeTab === 'Sheet 1' && (
             <div>
               {/* Legend */}
-              <div className="flex justify-center space-x-6 mb-6 text-sm">
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-white border border-gray-300 mr-2"></div>
+              <div className="flex flex-wrap justify-center gap-4 mb-6 text-xs sm:text-sm">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 ring-gray-300 bg-white">
+                  <span className="w-3.5 h-3.5 rounded bg-white ring-1 ring-gray-300"></span>
                   <span>Available</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-gray-600 mr-2"></div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-600 text-white">
+                  <span className="w-3.5 h-3.5 rounded bg-gray-600"></span>
                   <span>Reserved</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-yellow-400 mr-2"></div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-yellow-400 text-black">
+                  <span className="w-3.5 h-3.5 rounded bg-yellow-400"></span>
                   <span>Maintenance</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-green-300 mr-2"></div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-300 text-gray-900">
+                  <span className="w-3.5 h-3.5 rounded bg-green-300"></span>
                   <span>Selected</span>
                 </div>
               </div>
 
-               {/* Court Selection Table */}
-               <div className="overflow-x-auto">
+              {/* Mobile-friendly cards (Sheet 1) */}
+              <div className="sm:hidden space-y-4">
+                {generateTimeSlots().map((timeSlot) => (
+                  <div key={timeSlot.id} className="rounded-lg ring-1 ring-gray-200 overflow-hidden">
+                    <div className="bg-gray-100 px-4 py-2 text-sm font-medium">{timeSlot.display}</div>
+                    <div className="grid grid-cols-2 gap-2 p-3">
+                      {courts.slice(0, 6).map((court) => {
+                        const key = `COURT ${court.Court_Id}-${timeSlot.display}`
+                        const isSelected = selectedCells.has(key)
+                        const status = getCellStatus(court.Court_Id, timeSlot.display).status
+                        const disabled = status === 'reserved' || status === 'maintenance' || court.Status !== 'Available'
+                        return (
+                          <button
+                            key={`${timeSlot.id}-${court.Court_Id}`}
+                            type="button"
+                            aria-pressed={isSelected}
+                            disabled={disabled}
+                            onClick={() => !disabled && handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price)}
+                            className={`flex items-center justify-between px-3 py-2 rounded-md text-left text-xs border transition-colors
+                              ${disabled ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed' :
+                              isSelected ? 'bg-green-300 text-gray-900 border-green-400 ring-2 ring-green-500' :
+                              'bg-white text-gray-900 border-gray-200 hover:bg-blue-50'}`}
+                            title={`${court.Court_Name}${disabled ? ' (not available)' : ''}`}
+                          >
+                            <span className="truncate mr-2">{court.Court_Name}</span>
+                            <span className={`ml-auto inline-block px-2 py-0.5 rounded text-[10px] ${disabled ? 'bg-transparent text-gray-500' : 'bg-white/80 text-gray-900'}`}>
+                              {court.Price}.00 php
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Court Selection Table (Tablet/Desktop) */}
+              <div className="hidden sm:block overflow-x-auto rounded-lg ring-1 ring-gray-200 shadow-sm">
                  {loading ? (
                    <div className="text-center py-8">
                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -678,28 +711,38 @@ export function BookingPage() {
                      <p className="mt-2 text-gray-600">Loading availability data...</p>
                    </div>
                  ) : (
-                   <table className="w-full border-collapse">
+                  <table className="w-full border-collapse" role="grid">
                      <thead>
-                       <tr className="bg-gray-100">
-                         <th className="border border-gray-300 px-4 py-2 text-left">TIME</th>
+                      <tr className="bg-gray-100 sticky top-0 z-10">
+                        <th className="border border-gray-300 px-4 py-2 text-left text-xs sm:text-sm">TIME</th>
                          {courts.slice(0, 6).map((court) => (
-                           <th key={court.Court_Id} className="border border-gray-300 px-4 py-2 text-center">
+                          <th key={court.Court_Id} className="border border-gray-300 px-4 py-2 text-center text-xs sm:text-sm">
                              {court.Court_Name}
                            </th>
                          ))}
                        </tr>
                      </thead>
                      <tbody>
-                       {generateTimeSlots().map((timeSlot) => (
-                         <tr key={timeSlot.id}>
-                           <td className="border border-gray-300 px-4 py-2 font-medium">{timeSlot.display}</td>
+                      {generateTimeSlots().map((timeSlot, idx) => (
+                        <tr key={timeSlot.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="border border-gray-300 px-4 py-2 font-medium sticky left-0 bg-inherit text-xs sm:text-sm">{timeSlot.display}</td>
                            {courts.slice(0, 6).map((court) => (
                              <td
                                key={`${timeSlot.display}-${court.Court_Id}`}
-                               className={`border border-gray-300 px-4 py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
+                              className={`border border-gray-300 px-1 sm:px-2 md:px-4 py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
                                onClick={() => court.Status === 'Available' ? handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price) : undefined}
-                             >
-                               {court.Price}.00 php
+                            >
+                              {(() => {
+                                const key = `COURT ${court.Court_Id}-${timeSlot.display}`
+                                const isSelected = selectedCells.has(key)
+                                if (court.Status === 'Maintenance') return null
+                                const showBadge = court.Status === 'Available' && !isSelected
+                                return (
+                                  <span className={`inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs md:text-sm ${showBadge ? 'bg-white/80 text-gray-900' : 'bg-transparent text-black'}`}>
+                                    {court.Price}.00 php
+                                  </span>
+                                )
+                              })()}
                              </td>
                            ))}
                          </tr>
@@ -713,28 +756,28 @@ export function BookingPage() {
 
           {activeTab === 'Sheet 2' && (
             <div>
-              {/* Legend */}
-              <div className="flex justify-center space-x-6 mb-6 text-sm">
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-white border border-gray-300 mr-2"></div>
+              {/* Legend (same as Sheet 1) */}
+              <div className="flex flex-wrap justify-center gap-4 mb-6 text-xs sm:text-sm">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 ring-gray-300 bg-white">
+                  <span className="w-3.5 h-3.5 rounded bg-white ring-1 ring-gray-300"></span>
                   <span>Available</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-gray-600 mr-2"></div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-600 text-white">
+                  <span className="w-3.5 h-3.5 rounded bg-gray-600"></span>
                   <span>Reserved</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-yellow-400 mr-2"></div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-yellow-400 text-black">
+                  <span className="w-3.5 h-3.5 rounded bg-yellow-400"></span>
                   <span>Maintenance</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-4 h-4 bg-green-300 mr-2"></div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-300 text-gray-900">
+                  <span className="w-3.5 h-3.5 rounded bg-green-300"></span>
                   <span>Selected</span>
                 </div>
               </div>
 
-              {/* Court Selection Table - Courts 7-12 */}
-              <div className="overflow-x-auto">
+              {/* Court Selection Table - Courts 7-12 (Tablet/Desktop) */}
+              <div className="hidden sm:block overflow-x-auto rounded-lg ring-1 ring-gray-200 shadow-sm">
                 {loading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -756,28 +799,37 @@ export function BookingPage() {
                     <p className="mt-2 text-gray-600">Loading availability data...</p>
                   </div>
                 ) : (
-                  <table className="w-full border-collapse">
+                  <table className="w-full border-collapse" role="grid">
                     <thead>
-                      <tr className="bg-gray-100">
-                        <th className="border border-gray-300 px-4 py-2 text-left">TIME</th>
+                      <tr className="bg-gray-100 sticky top-0 z-10">
+                        <th className="border border-gray-300 px-4 py-2 text-left text-xs sm:text-sm">TIME</th>
                         {courts.slice(6, 12).map((court) => (
-                          <th key={court.Court_Id} className="border border-gray-300 px-4 py-2 text-center">
+                          <th key={court.Court_Id} className="border border-gray-300 px-4 py-2 text-center text-xs sm:text-sm">
                             {court.Court_Name}
                           </th>
                         ))}
                       </tr>
                     </thead>
                      <tbody>
-                       {generateTimeSlots().map((timeSlot) => (
-                         <tr key={timeSlot.id}>
-                           <td className="border border-gray-300 px-4 py-2 font-medium">{timeSlot.display}</td>
+                       {generateTimeSlots().map((timeSlot, idx) => (
+                         <tr key={timeSlot.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                           <td className="border border-gray-300 px-4 py-2 font-medium sticky left-0 bg-inherit text-xs sm:text-sm">{timeSlot.display}</td>
                            {courts.slice(6, 12).map((court) => (
-                             <td
+                            <td
                                key={`${timeSlot.display}-${court.Court_Id}`}
-                               className={`border border-gray-300 px-4 py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
+                               className={`border border-gray-300 px-1 sm:px-2 md:px-4 py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
                                onClick={() => court.Status === 'Available' ? handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price) : undefined}
-                             >
-                              {court.Price}.00 php
+                            >
+                              {(() => {
+                                const key = `COURT ${court.Court_Id}-${timeSlot.display}`
+                                const isSelected = selectedCells.has(key)
+                                 const forceTransparent = isSelected || court.Status !== 'Available'
+                                return (
+                                   <span className={`inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs md:text-sm ${forceTransparent ? 'bg-transparent text-black' : 'bg-white/80 text-gray-900'}`}>
+                                    {court.Price}.00 php
+                                  </span>
+                                )
+                              })()}
                             </td>
                           ))}
                         </tr>

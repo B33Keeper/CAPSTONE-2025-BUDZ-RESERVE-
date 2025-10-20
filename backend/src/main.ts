@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import compression from 'compression';
 import cors from 'cors';
+import express from 'express';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
@@ -83,6 +84,10 @@ async function bootstrap() {
     credentials: true,
   }));
 
+  // Body size limits for file uploads
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -112,10 +117,11 @@ async function bootstrap() {
   SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
 
   const port = configService.get('PORT', 3001);
-  await app.listen(port);
+  const host = '0.0.0.0';
+  await app.listen(port, host);
 
-  console.log(`🚀 Application is running on: http://localhost:${port}`);
-  console.log(`📚 API Documentation: http://localhost:${port}/${apiPrefix}/docs`);
+  console.log(`🚀 Application is running on: http://${host}:${port}`);
+  console.log(`📚 API Documentation: http://${host}:${port}/${apiPrefix}/docs`);
 }
 
 bootstrap();

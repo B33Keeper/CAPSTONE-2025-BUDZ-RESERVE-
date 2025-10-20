@@ -29,6 +29,16 @@ export class UploadController {
   @ApiOperation({ summary: 'Upload user avatar' })
   @ApiResponse({ status: 200, description: 'File uploaded successfully' })
   async uploadAvatar(@UploadedFile() file: Express.Multer.File, @Request() req: any) {
+    console.log('Upload request received:', { 
+      hasFile: !!file, 
+      fileInfo: file ? { 
+        originalname: file.originalname, 
+        mimetype: file.mimetype, 
+        size: file.size 
+      } : null,
+      userId: req.user?.id 
+    });
+    
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -39,10 +49,10 @@ export class UploadController {
       throw new BadRequestException('Invalid file type. Only images are allowed.');
     }
 
-    // Validate file size (5MB max)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      throw new BadRequestException('File too large. Maximum size is 5MB.');
+      throw new BadRequestException('File too large. Maximum size is 10MB.');
     }
 
     // Delete old avatar before uploading new one
