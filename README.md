@@ -2,10 +2,32 @@
 
 A full-stack web application for booking badminton courts, built with React, NestJS, and MySQL. This system allows users to reserve courts, rent equipment, and manage their profiles with a modern, responsive interface.
 
+## 🆕 Latest Updates (v2.0)
+
+### 🎯 New Admin Management Pages
+- **Admin Manage Courts**: Enhanced court management with dynamic pricing, status updates, and pagination
+- **Admin Manage Rackets**: Comprehensive equipment management with image upload and modal interfaces
+- **Admin View Suggestions**: Message management system for user feedback and suggestions
+- **Enhanced Admin Dashboard**: Improved welcome section with modern UI/UX design
+
+### 🔧 Enhanced Features
+- **Sticky Sidebar Navigation**: Always-accessible navigation across all admin pages
+- **Auto-save Login**: Remember me functionality with localStorage integration
+- **Image Management**: Upload, preview, and manage equipment images with modal interfaces
+- **Responsive Design**: Enhanced mobile optimization across all admin interfaces
+- **Professional UI/UX**: Modern design with gradients, shadows, and smooth animations
+
+### 📱 Improved User Experience
+- **Modal Interfaces**: Professional popup modals for equipment editing and image previews
+- **Enhanced Pagination**: Dynamic pagination with improved navigation controls
+- **Visual Feedback**: Better hover effects, transitions, and micro-interactions
+- **Typography**: Gradient text effects and improved readability
+
 ## 🚀 Features
 
 ### 🔐 Authentication & Security
 - **User Authentication**: Secure login/registration with JWT tokens and database persistence
+- **Auto-save Login**: Remember me functionality with localStorage integration for seamless user experience
 - **Role-Based Access Control**: Admin and user roles with different permissions
 - **Forgot Password**: Email-based password reset with OTP verification
 - **Password Security**: Bcrypt hashing and secure password validation
@@ -19,10 +41,13 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Booking History**: Complete booking history and reservation management
 
 ### 🎾 Equipment & Services
+- **Advanced Equipment Management**: Comprehensive racket and equipment inventory with image management
 - **Equipment Rental**: Badminton equipment rental with inventory management
-- **Equipment Catalog**: Rackets, shoes, socks, and other badminton gear
-- **Inventory Tracking**: Real-time equipment availability and status
+- **Equipment Catalog**: Rackets, shoes, socks, and other badminton gear with enhanced visual display
+- **Image Management**: Upload, preview, and manage equipment images with modal interfaces
+- **Inventory Tracking**: Real-time equipment availability and status with enhanced UI
 - **Equipment Pricing**: Dynamic pricing for different equipment types
+- **Modal Interfaces**: Edit and add equipment with popup modals for better user experience
 
 ### 👤 User Management
 - **Profile Management**: User profile with photo upload, change password, and settings
@@ -31,12 +56,17 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Account Settings**: Comprehensive user account management
 
 ### 👨‍💼 Admin Dashboard
-- **Admin Panel**: Complete administrative dashboard with statistics
-- **User Management**: View and manage all registered users
-- **Analytics**: Real-time statistics and data visualization
+- **Enhanced Admin Panel**: Complete administrative dashboard with modern UI/UX design
+- **Admin Manage Courts**: Comprehensive court management with pricing, status updates, and pagination
+- **Admin Manage Rackets**: Equipment management with image upload, inventory tracking, and modal interfaces
+- **Admin View Suggestions**: Message management system with user feedback handling
+- **Sticky Sidebar Navigation**: Always-accessible navigation with smooth scrolling
+- **User Management**: View and manage all registered users with enhanced interface
+- **Analytics**: Real-time statistics and data visualization with interactive charts
 - **Charts & Reports**: Monthly overview charts and reservation status pie charts
 - **User Statistics**: Total user count, daily reservations, and sales tracking
-- **Responsive Design**: Mobile-friendly admin interface
+- **Responsive Design**: Mobile-friendly admin interface with collapsible sidebar
+- **Auto-save Login**: Remember me functionality with localStorage integration
 
 ### 💳 Payment Integration
 - **PayMongo Integration**: Complete payment gateway integration
@@ -52,11 +82,14 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **SMTP Configuration**: Gmail SMTP integration for reliable email delivery
 
 ### 🎨 User Interface
-- **Responsive Design**: Mobile-first design that works perfectly on desktop, laptop, and mobile devices
-- **Modern UI/UX**: Enhanced visual design with animations and smooth interactions
-- **Interactive Components**: Hover effects, transitions, and micro-interactions
+- **Enhanced Responsive Design**: Mobile-first design with improved responsiveness across all admin pages
+- **Modern UI/UX**: Enhanced visual design with gradients, shadows, and smooth animations
+- **Interactive Components**: Hover effects, transitions, and micro-interactions with enhanced visual feedback
+- **Sticky Navigation**: Always-accessible sidebar navigation with smooth scrolling
+- **Modal Interfaces**: Professional popup modals for equipment management and image previews
 - **Custom Scrollbars**: Styled scrollbars for better user experience
 - **Loading States**: Comprehensive loading indicators and skeleton screens
+- **Enhanced Typography**: Gradient text effects and improved readability
 
 ### 📋 Legal & Compliance
 - **Terms & Conditions**: Integrated terms and conditions modal for booking
@@ -229,9 +262,13 @@ budz-reserve/
 │   │   │   ├── Header.tsx   # Navigation header
 │   │   │   └── Footer.tsx   # Site footer
 │   │   ├── pages/          # Page components
-│   │   │   ├── AdminDashboard.tsx  # Admin panel
+│   │   │   ├── AdminDashboard.tsx  # Enhanced admin panel with sticky sidebar
+│   │   │   ├── AdminManageCourts.tsx  # Court management with pagination
+│   │   │   ├── AdminManageRackets.tsx  # Equipment management with modals
+│   │   │   ├── AdminViewSuggestions.tsx  # Message management system
+│   │   │   ├── UploadPhoto.tsx  # Photo upload management
 │   │   │   ├── BookingPage.tsx     # Court booking
-│   │   │   ├── LoginPage.tsx       # User authentication
+│   │   │   ├── LoginPage.tsx       # User authentication with auto-save
 │   │   │   └── ForgotPasswordPage.tsx  # Password reset
 │   │   ├── hooks/          # Custom React hooks
 │   │   ├── lib/            # API services and utilities
@@ -274,12 +311,15 @@ budz-reserve/
 - **Responsive Design**: Mobile-friendly admin interface with collapsible sidebar
 
 ### Admin Capabilities
-- **User Management**: View total users, active users, and user statistics
-- **Court Management**: Add, edit, and manage court availability and pricing
-- **Equipment Management**: Manage badminton equipment inventory
-- **Reservation Oversight**: View and manage all court reservations
+- **Enhanced Court Management**: Add, edit, and manage court availability with dynamic pricing and status updates
+- **Advanced Equipment Management**: Comprehensive racket and equipment inventory with image management
+- **Message Management**: View and manage user suggestions and feedback messages
+- **User Management**: View total users, active users, and user statistics with enhanced interface
+- **Reservation Oversight**: View and manage all court reservations with improved pagination
 - **Payment Monitoring**: Track payment status and transaction history
 - **System Analytics**: Monitor system performance and usage statistics
+- **Image Management**: Upload, preview, and manage equipment images with modal interfaces
+- **Responsive Design**: Mobile-optimized admin interface with sticky navigation
 
 ### Security Features
 - **Role-based Access**: Admin-only access to sensitive operations
