@@ -63,6 +63,16 @@ export const apiServices = {
     return response.data
   },
 
+  async getCourtCount(): Promise<number> {
+    const response = await api.get('/courts/count')
+    return response.data
+  },
+
+  async getAvailableCourtCount(): Promise<number> {
+    const response = await api.get('/courts/available-count')
+    return response.data
+  },
+
   // Equipment
   async getEquipment(): Promise<Equipment[]> {
     const response = await api.get('/equipment')

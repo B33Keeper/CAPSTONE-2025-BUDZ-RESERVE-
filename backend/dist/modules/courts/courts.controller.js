@@ -32,6 +32,12 @@ let CourtsController = class CourtsController {
     getAvailableCourts() {
         return this.courtsService.getAvailableCourts();
     }
+    getCourtCount() {
+        return this.courtsService.getCourtCount();
+    }
+    getAvailableCourtCount() {
+        return this.courtsService.getAvailableCourtCount();
+    }
     findOne(id) {
         return this.courtsService.findOne(id);
     }
@@ -70,6 +76,22 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], CourtsController.prototype, "getAvailableCourts", null);
+__decorate([
+    (0, common_1.Get)('count'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get total court count' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Court count retrieved successfully' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CourtsController.prototype, "getCourtCount", null);
+__decorate([
+    (0, common_1.Get)('available-count'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get available court count' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Available court count retrieved successfully' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], CourtsController.prototype, "getAvailableCourtCount", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get court by ID' }),

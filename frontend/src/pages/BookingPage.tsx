@@ -109,6 +109,15 @@ export function BookingPage() {
         setCourts(courtsData)
         setEquipment(equipmentData)
         setTimeSlots(timeSlotsData)
+        
+        // Debug: Log equipment data to see image_path values
+        console.log('Equipment data loaded:', equipmentData)
+        equipmentData.forEach((item, index) => {
+          console.log(`Equipment ${index + 1}:`, {
+            name: item.equipment_name,
+            image_path: item.image_path
+          })
+        })
       } catch (err) {
         console.error('Error loading data:', err)
         setError('Failed to load data. Please try again.')
@@ -436,6 +445,20 @@ export function BookingPage() {
         }
         .rotate-y-180 {
           transform: rotateY(180deg);
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.6s ease-out forwards;
+          opacity: 0;
         }
       `}</style>
       
@@ -863,11 +886,12 @@ export function BookingPage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-6">
-                  {equipment.map((item) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
+                  {equipment.map((item, index) => (
                     <div
                       key={item.id}
-                      className="relative h-64 cursor-pointer"
+                      className="relative h-80 sm:h-72 md:h-80 lg:h-84 cursor-pointer group animate-fade-in"
+                      style={{ animationDelay: `${index * 100}ms` }}
                       onClick={() => handleRacketClick(item.equipment_name)}
                     >
                     {/* Flip Card Container */}
@@ -876,23 +900,94 @@ export function BookingPage() {
                       }`}>
                         {/* Front of Card */}
                         <div className="absolute inset-0 w-full h-full backface-hidden">
-                          <div className={`bg-white border-2 rounded-lg p-6 h-full flex flex-col justify-center items-center hover:shadow-md transition-shadow ${
-                            isRacketBooked(item.equipment_name) ? 'border-green-500' : 'border-gray-300'
+                          <div className={`relative bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 rounded-2xl p-3 sm:p-4 md:p-6 h-full flex flex-col justify-between items-center hover:shadow-2xl hover:scale-105 hover:-translate-y-2 transition-all duration-500 group-hover:border-blue-400 group-hover:from-blue-50 group-hover:to-blue-100 ${
+                            isRacketBooked(item.equipment_name) ? 'border-green-500 ring-4 ring-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-green-200' : 'border-gray-200 hover:border-blue-400'
                           }`}>
+                            {/* Premium Badge */}
+                            {item.stocks > 5 && (
+                              <div className="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                                Popular
+                              </div>
+                            )}
+                            
+                            {/* Stock Badge */}
+                            {item.stocks > 0 && (
+                              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-bounce">
+                                {item.stocks}
+                              </div>
+                            )}
+                            
+                            {/* Equipment Image Container */}
+                            <div className="flex-1 flex items-center justify-center w-full mb-4 relative">
+                              <div className="relative group/image">
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500"></div>
+                                <div className="relative w-full h-20 sm:h-24 md:h-32 bg-white rounded-lg shadow-sm overflow-hidden">
                             <img
-                              src={item.image_path || "/assets/img/equipments/racket.png"}
+                              src={`${item.image_path || "/assets/img/equipments/racket.png"}?v=${Date.now()}`}
                               alt={item.equipment_name}
-                              className="w-full h-28 object-contain mb-3 animate-pulse"
-                            />
-                            <h3 className="font-medium text-sm mb-2 text-center">{item.equipment_name}</h3>
-                            <p className="text-xs text-gray-600">Available stock: {item.stocks}</p>
-                            <p className="text-xs text-blue-600 font-medium">₱{item.price}/hour</p>
+                                    className="w-full h-full object-contain object-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-2"
+                                    style={{
+                                      filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
+                                      background: 'transparent'
+                                    }}
+                                  />
+                                </div>
+                                {/* Floating particles effect */}
+                                <div className="absolute inset-0 pointer-events-none">
+                                  <div className="absolute top-2 left-2 w-1 h-1 bg-blue-400 rounded-full animate-ping"></div>
+                                  <div className="absolute top-4 right-3 w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
+                                  <div className="absolute bottom-3 left-4 w-1 h-1 bg-green-400 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Equipment Info */}
+                            <div className="w-full text-center space-y-3">
+                              <h3 className="font-bold text-sm sm:text-base md:text-lg text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-all duration-300 transform group-hover:scale-105">
+                                {item.equipment_name}
+                              </h3>
+                              
+                              {/* Stock Status with Animation */}
+                              <div className="flex items-center justify-center space-x-2">
+                                <div className={`w-3 h-3 rounded-full animate-pulse ${
+                                  item.stocks > 0 ? 'bg-green-500 shadow-green-200 shadow-lg' : 'bg-red-500 shadow-red-200 shadow-lg'
+                                }`}></div>
+                                <p className="text-xs sm:text-sm text-gray-600 font-medium">
+                                  {item.stocks > 0 ? `${item.stocks} available` : 'Out of stock'}
+                                </p>
+                              </div>
+                              
+                              {/* Enhanced Price Display */}
+                              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl px-4 py-2 border border-blue-200 shadow-sm group-hover:shadow-md transition-all duration-300">
+                                <p className="text-sm sm:text-base font-bold text-blue-600 group-hover:text-blue-700">
+                                  ₱{item.price}/hour
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Enhanced Hover Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-purple-500/0 group-hover:from-blue-500/10 group-hover:to-purple-500/10 rounded-2xl transition-all duration-500 flex items-center justify-center">
+                              <div className="opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110">
+                                <div className="bg-white rounded-full p-3 shadow-xl border-2 border-blue-200">
+                                  <svg className="w-6 h-6 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Selection Indicator */}
+                            {isRacketBooked(item.equipment_name) && (
+                              <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                                Selected
+                              </div>
+                            )}
                           </div>
                         </div>
                       
                       {/* Back of Card (Configuration) */}
                       <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
-                        <div className="bg-white border border-gray-300 rounded-lg p-6 h-full flex flex-col justify-center items-center">
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-4 md:p-6 h-full flex flex-col justify-center items-center shadow-lg">
                           <div className="space-y-6 w-full">
                             <div className="text-center">
                               <label className="block text-sm font-medium mb-3">Time:</label>

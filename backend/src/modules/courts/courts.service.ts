@@ -52,4 +52,14 @@ export class CourtsService {
       order: { Court_Id: 'ASC' },
     });
   }
+
+  async getCourtCount(): Promise<number> {
+    return this.courtsRepository.count();
+  }
+
+  async getAvailableCourtCount(): Promise<number> {
+    return this.courtsRepository.count({
+      where: { Status: CourtStatus.AVAILABLE },
+    });
+  }
 }

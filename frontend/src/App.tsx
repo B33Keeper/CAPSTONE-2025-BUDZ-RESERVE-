@@ -12,6 +12,10 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { PaymentSuccessPage } from '@/pages/PaymentSuccessPage'
 import { PaymentFailedPage } from '@/pages/PaymentFailedPage'
 import AdminDashboard from '@/pages/AdminDashboard'
+import AdminManageCourts from '@/pages/AdminManageCourts'
+import AdminManageRackets from '@/pages/AdminManageRackets'
+import AdminViewSuggestions from '@/pages/AdminViewSuggestions'
+import UploadPhoto from '@/pages/UploadPhoto'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Toaster } from 'react-hot-toast'
 
@@ -59,6 +63,38 @@ function App() {
               <AdminDashboard />
             </ProtectedRoute>
           } 
+        />
+        <Route 
+          path="/admin/manage-courts" 
+          element={
+            <ProtectedRoute>
+              <AdminManageCourts />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/admin/manage-rackets" 
+          element={
+            <ProtectedRoute>
+              <AdminManageRackets />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/admin/view-suggestions" 
+          element={
+            <ProtectedRoute>
+              <AdminViewSuggestions />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/admin/upload-photo" 
+          element={
+            <ProtectedRoute>
+              <UploadPhoto />
+            </ProtectedRoute>
+          }
         />
       </Routes>
       <Toaster

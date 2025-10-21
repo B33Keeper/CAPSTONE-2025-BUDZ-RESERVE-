@@ -7,6 +7,8 @@ export declare class CourtsController {
     create(createCourtDto: CreateCourtDto): Promise<import("./entities/court.entity").Court>;
     findAll(): Promise<import("./entities/court.entity").Court[]>;
     getAvailableCourts(): Promise<import("./entities/court.entity").Court[]>;
+    getCourtCount(): Promise<number>;
+    getAvailableCourtCount(): Promise<number>;
     findOne(id: number): Promise<import("./entities/court.entity").Court>;
     update(id: number, updateCourtDto: UpdateCourtDto): Promise<import("./entities/court.entity").Court>;
     remove(id: number): Promise<void>;

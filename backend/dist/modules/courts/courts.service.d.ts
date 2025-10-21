@@ -11,4 +11,6 @@ export declare class CourtsService {
     update(id: number, updateCourtDto: UpdateCourtDto): Promise<Court>;
     remove(id: number): Promise<void>;
     getAvailableCourts(): Promise<Court[]>;
+    getCourtCount(): Promise<number>;
+    getAvailableCourtCount(): Promise<number>;
 }

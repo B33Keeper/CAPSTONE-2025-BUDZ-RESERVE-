@@ -1,23 +1,43 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useResponsive } from '@/hooks/useResponsive'
+import { galleryApiService, GalleryItem } from '@/lib/galleryApiService'
 
 export function GallerySection() {
   const { ref, controls } = useScrollAnimation()
   const { isMobile, isTablet } = useResponsive()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null)
-  
-  const galleryImages = [
-    { id: 1, src: '/assets/img/home-page/GALLERY/IMAGE 1.jpg', alt: 'Client Group Photo 1' },
-    { id: 2, src: '/assets/img/home-page/GALLERY/IMAGE 2.jpg', alt: 'Client Group Photo 2' },
-    { id: 3, src: '/assets/img/home-page/GALLERY/IMAGE 3.jpg', alt: 'Client Group Photo 3' },
-    { id: 4, src: '/assets/img/home-page/GALLERY/IMAGE 4.jpg', alt: 'Client Group Photo 4' },
-    { id: 5, src: '/assets/img/home-page/GALLERY/IMAGE 5.jpg', alt: 'Client Group Photo 5' },
-    { id: 6, src: '/assets/img/home-page/GALLERY/IMAGE 6.jpg', alt: 'Client Group Photo 6' },
-  ]
+  const [galleryImages, setGalleryImages] = useState<GalleryItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch gallery images from API
+  useEffect(() => {
+    const fetchGalleryImages = async () => {
+      try {
+        setLoading(true)
+        const images = await galleryApiService.getAll()
+        setGalleryImages(images)
+      } catch (error) {
+        console.error('Error fetching gallery images:', error)
+        // Fallback to static images if API fails
+        setGalleryImages([
+          { id: 1, title: 'Client Group Photo 1', image_path: '/assets/img/home-page/GALLERY/IMAGE 1.jpg', description: '', status: 'active', sort_order: 1, created_at: '', updated_at: '' },
+          { id: 2, title: 'Client Group Photo 2', image_path: '/assets/img/home-page/GALLERY/IMAGE 2.jpg', description: '', status: 'active', sort_order: 2, created_at: '', updated_at: '' },
+          { id: 3, title: 'Client Group Photo 3', image_path: '/assets/img/home-page/GALLERY/IMAGE 3.jpg', description: '', status: 'active', sort_order: 3, created_at: '', updated_at: '' },
+          { id: 4, title: 'Client Group Photo 4', image_path: '/assets/img/home-page/GALLERY/IMAGE 4.jpg', description: '', status: 'active', sort_order: 4, created_at: '', updated_at: '' },
+          { id: 5, title: 'Client Group Photo 5', image_path: '/assets/img/home-page/GALLERY/IMAGE 5.jpg', description: '', status: 'active', sort_order: 5, created_at: '', updated_at: '' },
+          { id: 6, title: 'Client Group Photo 6', image_path: '/assets/img/home-page/GALLERY/IMAGE 6.jpg', description: '', status: 'active', sort_order: 6, created_at: '', updated_at: '' },
+        ])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchGalleryImages()
+  }, [])
 
   // Responsive images per view
   const imagesPerView = isMobile ? 1 : 2
@@ -34,8 +54,8 @@ export function GallerySection() {
   const startIndex = currentIndex * imagesPerView
   const displayedImages = galleryImages.slice(startIndex, startIndex + imagesPerView)
 
-  const handleImageClick = (image: { src: string; alt: string }) => {
-    setSelectedImage(image)
+  const handleImageClick = (image: GalleryItem) => {
+    setSelectedImage({ src: image.image_path, alt: image.title })
   }
 
   const closeModal = () => {
@@ -151,14 +171,14 @@ export function GallerySection() {
                 >
                   <div className="aspect-[4/3] overflow-hidden rounded-2xl">
                     <img 
-                      src={image.src} 
-                      alt={image.alt} 
+                      src={image.image_path} 
+                      alt={image.title} 
                       className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                     />
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <h3 className="text-lg font-semibold mb-1">{image.alt}</h3>
+                    <h3 className="text-lg font-semibold mb-1">{image.title}</h3>
                     <p className="text-sm text-gray-200">Click to view full size</p>
                   </div>
                   <div className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-110 group-hover:rotate-12">
@@ -234,14 +254,14 @@ export function GallerySection() {
                 >
                   <div className="aspect-[4/3] overflow-hidden rounded-2xl">
                     <img 
-                      src={image.src} 
-                      alt={image.alt} 
+                      src={image.image_path} 
+                      alt={image.title} 
                       className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                     />
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <h3 className="text-lg font-semibold mb-1">{image.alt}</h3>
+                    <h3 className="text-lg font-semibold mb-1">{image.title}</h3>
                     <p className="text-sm text-gray-200">Click to view full size</p>
                   </div>
                   <div className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-110 group-hover:rotate-12">

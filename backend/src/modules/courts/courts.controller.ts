@@ -43,6 +43,20 @@ export class CourtsController {
     return this.courtsService.getAvailableCourts();
   }
 
+  @Get('count')
+  @ApiOperation({ summary: 'Get total court count' })
+  @ApiResponse({ status: 200, description: 'Court count retrieved successfully' })
+  getCourtCount() {
+    return this.courtsService.getCourtCount();
+  }
+
+  @Get('available-count')
+  @ApiOperation({ summary: 'Get available court count' })
+  @ApiResponse({ status: 200, description: 'Available court count retrieved successfully' })
+  getAvailableCourtCount() {
+    return this.courtsService.getAvailableCourtCount();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get court by ID' })
   @ApiResponse({ status: 200, description: 'Court retrieved successfully' })

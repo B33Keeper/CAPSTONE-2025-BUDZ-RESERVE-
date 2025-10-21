@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -16,21 +16,48 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const { login, isLoading } = useAuthStore()
   const navigate = useNavigate()
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   })
 
+  // Load saved credentials on component mount
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('savedUsername')
+    const savedPassword = localStorage.getItem('savedPassword')
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true'
+
+    if (savedUsername && savedPassword && savedRememberMe) {
+      setValue('username', savedUsername)
+      setValue('password', savedPassword)
+      setRememberMe(true)
+    }
+  }, [setValue])
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       const result = await login(data)
       toast.success('Login successful!')
+      
+      // Save credentials if "Remember me" is checked
+      if (rememberMe) {
+        localStorage.setItem('savedUsername', data.username)
+        localStorage.setItem('savedPassword', data.password)
+        localStorage.setItem('rememberMe', 'true')
+      } else {
+        // Clear saved credentials if "Remember me" is unchecked
+        localStorage.removeItem('savedUsername')
+        localStorage.removeItem('savedPassword')
+        localStorage.removeItem('rememberMe')
+      }
       
       // Check if user is admin and redirect accordingly
       if (result?.user?.role === 'admin') {
@@ -103,6 +130,20 @@ export function LoginPage() {
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
             )}
+          </div>
+
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center">
+            <input
+              id="remember-me"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+              Remember me
+            </label>
           </div>
 
           {/* Sign In Button */}

@@ -54,6 +54,14 @@ let CourtsService = class CourtsService {
             order: { Court_Id: 'ASC' },
         });
     }
+    async getCourtCount() {
+        return this.courtsRepository.count();
+    }
+    async getAvailableCourtCount() {
+        return this.courtsRepository.count({
+            where: { Status: court_entity_1.CourtStatus.AVAILABLE },
+        });
+    }
 };
 exports.CourtsService = CourtsService;
 exports.CourtsService = CourtsService = __decorate([
