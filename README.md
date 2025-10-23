@@ -2,7 +2,18 @@
 
 A full-stack web application for booking badminton courts, built with React, NestJS, and MySQL. This system allows users to reserve courts, rent equipment, and manage their profiles with a modern, responsive interface.
 
-## 🆕 Latest Updates (v2.0)
+## 🆕 Latest Updates (v2.1)
+
+### 🎯 Enhanced Booking Flow
+- **Streamlined Booking Process**: Improved user journey from landing page to booking completion
+- **Smart Login Redirect**: Automatic redirect to booking page after login when initiated from "Book Now" buttons
+- **Terms & Conditions Integration**: Terms modal now appears at the optimal point - when user selects a date
+- **Checkbox Synchronization**: Seamless checkbox state between booking details and terms modals
+
+### 🗑️ Gallery API Removal
+- **Removed Gallery API**: Eliminated unnecessary gallery API service for cleaner architecture
+- **Static Gallery Images**: Gallery now uses static images for better performance and reliability
+- **Simplified Gallery Section**: Streamlined gallery component without external API dependencies
 
 ### 🎯 New Admin Management Pages
 - **Admin Manage Courts**: Enhanced court management with dynamic pricing, status updates, and pagination
@@ -22,6 +33,7 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Enhanced Pagination**: Dynamic pagination with improved navigation controls
 - **Visual Feedback**: Better hover effects, transitions, and micro-interactions
 - **Typography**: Gradient text effects and improved readability
+- **Consistent Booking Flow**: Unified experience across all "Book Now" and "Book Court" buttons
 
 ## 🚀 Features
 
@@ -34,6 +46,9 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Session Management**: JWT token refresh and automatic logout
 
 ### 🏸 Court Management
+- **Enhanced Booking Flow**: Streamlined user journey from landing page to booking completion
+- **Smart Navigation**: Automatic redirect to booking page after login when initiated from "Book Now" buttons
+- **Terms Integration**: Terms and conditions modal appears at optimal point - when user selects a date
 - **Court Booking System**: Real-time court availability with 12 courts available
 - **Dynamic Pricing**: Different pricing tiers for courts (Courts 1-6: ₱250, Courts 7-9: ₱220, Courts 10-11: ₱180)
 - **Time Slot Management**: Flexible time slot booking with availability checking
@@ -48,6 +63,12 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Inventory Tracking**: Real-time equipment availability and status with enhanced UI
 - **Equipment Pricing**: Dynamic pricing for different equipment types
 - **Modal Interfaces**: Edit and add equipment with popup modals for better user experience
+
+### 🖼️ Gallery & Media
+- **Static Gallery Images**: High-performance gallery using static images for better reliability
+- **Simplified Architecture**: Removed unnecessary API dependencies for cleaner codebase
+- **Optimized Loading**: Faster gallery loading without external API calls
+- **Responsive Gallery**: Mobile-friendly gallery with smooth animations and transitions
 
 ### 👤 User Management
 - **Profile Management**: User profile with photo upload, change password, and settings
@@ -90,6 +111,8 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Custom Scrollbars**: Styled scrollbars for better user experience
 - **Loading States**: Comprehensive loading indicators and skeleton screens
 - **Enhanced Typography**: Gradient text effects and improved readability
+- **Streamlined Booking Flow**: Consistent user experience across all booking entry points
+- **Smart Modal Synchronization**: Seamless checkbox state management between related modals
 
 ### 📋 Legal & Compliance
 - **Terms & Conditions**: Integrated terms and conditions modal for booking
