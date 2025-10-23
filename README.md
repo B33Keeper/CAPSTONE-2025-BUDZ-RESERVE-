@@ -1,29 +1,474 @@
-# 🏸 Budz Reserve - Badminton Court Booking System
+# 🏸 Budz Reserve - Complete Project Documentation
 
-A full-stack web application for booking badminton courts, built with React, NestJS, and MySQL. This system allows users to reserve courts, rent equipment, and manage their profiles with a modern, responsive interface.
+A comprehensive badminton court booking system with full-stack React/NestJS implementation, Docker containerization, and Paymongo payment integration.
 
-## 🆕 Latest Updates (v2.0)
+## 🚨 CRITICAL: READ THIS FIRST!
 
-### 🎯 New Admin Management Pages
+> **⚠️ PAYMENT SYSTEM WILL NOT WORK WITHOUT NGROK!**
+> 
+> **ALL TEAMMATES MUST COMPLETE THE NGROK SETUP BEFORE TESTING PAYMENTS!**
+> 
+> **Scroll down to the "🚨 IMPORTANT: ngrok Setup for Payment Integration" section and follow ALL steps!**
+> 
+> **Without ngrok:**
+> - ❌ Payments will process but reservations won't be saved
+> - ❌ No email receipts will be sent
+> - ❌ Webhook processing will fail
+> - ❌ Incomplete payment flow
+
+---
+
+## 📋 Table of Contents
+
+1. [Project Overview](#-project-overview)
+2. [🚨 IMPORTANT: ngrok Setup for Payment Integration](#-important-ngrok-setup-for-payment-integration)
+3. [Quick Start Guide](#-quick-start-guide)
+4. [Technical Architecture](#-technical-architecture)
+5. [Features & Capabilities](#-features--capabilities)
+6. [Payment Integration](#-payment-integration)
+7. [Database Setup](#-database-setup)
+8. [Deployment Guide](#-deployment-guide)
+9. [Admin Management](#-admin-management)
+10. [Equipment & Racket Setup](#-equipment--racket-setup)
+11. [Troubleshooting](#-troubleshooting)
+12. [API Documentation](#-api-documentation)
+13. [Security & Best Practices](#-security--best-practices)
+
+---
+
+## 🚨 IMPORTANT: ngrok Setup for Payment Integration
+
+> **⚠️ CRITICAL NOTICE**: The payment system **WILL NOT WORK** without ngrok! All teammates must complete this setup before testing payments.
+
+### Why ngrok is Required
+- **Paymongo webhooks** need a public URL to send payment notifications
+- **Local development** (localhost:3001) is not accessible from Paymongo servers
+- **ngrok creates a secure tunnel** from your local machine to the internet
+- **Without ngrok**: Payments will process but reservations won't be saved automatically
+
+### 🚨 What Happens Without ngrok
+- ❌ **Payments process** but webhooks fail
+- ❌ **No automatic reservation creation**
+- ❌ **No email receipts sent**
+- ❌ **Manual database updates required**
+- ❌ **Incomplete payment flow**
+
+---
+
+## 📥 Step 1: Install ngrok
+
+### For Windows Users
+1. **Download ngrok** from [ngrok.com/download](https://ngrok.com/download)
+2. **Extract the zip file** to a folder (e.g., `C:\ngrok\`)
+3. **Add ngrok to PATH**:
+   - Open System Properties → Environment Variables
+   - Add `C:\ngrok\` to your PATH variable
+   - Restart your command prompt
+
+### For Mac Users
+```bash
+# Using Homebrew (recommended)
+brew install ngrok/ngrok/ngrok
+
+# Or download from ngrok.com
+```
+
+### For Linux Users
+```bash
+# Download and install
+wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+tar -xzf ngrok-v3-stable-linux-amd64.tgz
+sudo mv ngrok /usr/local/bin/
+```
+
+### Verify Installation
+```bash
+# Test that ngrok is installed
+ngrok version
+# Should show: ngrok version 3.x.x
+```
+
+---
+
+## 🔑 Step 2: Create ngrok Account & Get Auth Token
+
+### Create Account
+1. **Go to** [ngrok.com](https://ngrok.com)
+2. **Sign up** for a free account
+3. **Verify your email**
+
+### Get Auth Token
+1. **Login to ngrok dashboard**
+2. **Go to** "Your Authtoken" section
+3. **Copy your authtoken** (starts with `2_...`)
+
+### Configure ngrok
+```bash
+# Add your authtoken (replace with your actual token)
+ngrok config add-authtoken 2_your_actual_token_here
+```
+
+---
+
+## 🚀 Step 3: Start ngrok Tunnel
+
+### Start the Tunnel
+```bash
+# In a new terminal/command prompt, run:
+ngrok http 3001
+```
+
+### Expected Output
+```
+ngrok
+
+Session Status                online
+Account                       your-email@example.com (Plan: Free)
+Version                       3.24.0
+Region                        Asia Pacific (ap)
+Latency                       57ms
+Web Interface                 http://127.0.0.1:4040
+Forwarding                    https://abc123def456.ngrok-free.app -> http://localhost:3001
+
+Connections                   ttl     opn     rt1     rt5     p50     p90
+                              0       0       0.00    0.00    0.00    0.00
+```
+
+### ⚠️ IMPORTANT: Keep ngrok Running
+- **DO NOT close** the ngrok terminal
+- **DO NOT stop** the ngrok process
+- **Keep it running** while testing payments
+
+---
+
+## 🔧 Step 4: Update Paymongo Webhook URL
+
+### Get Your ngrok URL
+From the ngrok output, copy the **Forwarding URL**:
+```
+https://abc123def456.ngrok-free.app
+```
+
+### Update Paymongo Dashboard
+1. **Go to** [Paymongo Dashboard](https://dashboard.paymongo.com/)
+2. **Login** to your account
+3. **Navigate to** "Developers" → "Webhooks"
+4. **Edit existing webhook** or **Create new webhook**
+5. **Update the URL** to: `https://your-ngrok-url.ngrok-free.app/api/webhook/paymongo`
+6. **Select events**: `payment.paid`, `payment.failed`
+7. **Save** the webhook
+
+### Example Webhook URL
+```
+https://abc123def456.ngrok-free.app/api/webhook/paymongo
+```
+
+---
+
+## 🧪 Step 5: Test the Setup
+
+### Test Webhook Connection
+```bash
+# Test if your webhook is accessible
+curl https://your-ngrok-url.ngrok-free.app/api/webhook/paymongo
+
+# Should return: {"message": "Paymongo webhook endpoint"}
+```
+
+### Test Payment Flow
+1. **Start your application**:
+   ```bash
+   docker-compose -f docker-compose.dev.yml up -d
+   ```
+
+2. **Make a test booking**:
+   - Go to http://localhost:3000
+   - Login and make a booking
+   - Click "Proceed to Payment"
+
+3. **Complete payment**:
+   - Use test card: `4242424242424242`
+   - Complete the payment process
+
+4. **Verify webhook**:
+   - Check ngrok terminal for webhook requests
+   - Check database for new reservation
+   - Check email for receipt
+
+---
+
+## 🔄 Step 6: Daily Workflow
+
+### Every Time You Start Development
+1. **Start ngrok first**:
+   ```bash
+   ngrok http 3001
+   ```
+
+2. **Copy the new ngrok URL** (it changes each time)
+
+3. **Update Paymongo webhook** with new URL
+
+4. **Start your application**:
+   ```bash
+   docker-compose -f docker-compose.dev.yml up -d
+   ```
+
+### ⚠️ Important Notes
+- **ngrok URL changes** every time you restart ngrok
+- **Update Paymongo webhook** each time
+- **Keep ngrok running** during development
+- **Free ngrok accounts** have session limits
+
+---
+
+## 🆘 Troubleshooting ngrok
+
+### Common Issues
+
+#### "ngrok: command not found"
+```bash
+# Windows: Add ngrok to PATH
+# Mac/Linux: Install properly
+brew install ngrok/ngrok/ngrok
+```
+
+#### "ngrok session expired"
+```bash
+# Restart ngrok
+ngrok http 3001
+# Update Paymongo webhook with new URL
+```
+
+#### "Webhook not receiving requests"
+- Check ngrok is running
+- Verify webhook URL in Paymongo
+- Check backend is running on port 3001
+- Test webhook URL manually
+
+#### "ngrok tunnel not accessible"
+```bash
+# Check if port 3001 is in use
+netstat -ano | findstr :3001
+
+# Restart backend
+docker-compose restart backend
+```
+
+### Debug Commands
+```bash
+# Check ngrok status
+ngrok status
+
+# View ngrok web interface
+# Go to http://127.0.0.1:4040
+
+# Test webhook endpoint
+curl https://your-ngrok-url.ngrok-free.app/api/webhook/paymongo
+```
+
+---
+
+## 📋 Team Checklist
+
+### Before Starting Development
+- [ ] ngrok installed and configured
+- [ ] ngrok authtoken added
+- [ ] Paymongo webhook URL updated
+- [ ] Backend running on port 3001
+- [ ] ngrok tunnel active
+
+### Daily Setup
+- [ ] Start ngrok: `ngrok http 3001`
+- [ ] Copy new ngrok URL
+- [ ] Update Paymongo webhook URL
+- [ ] Start application: `docker-compose -f docker-compose.dev.yml up -d`
+- [ ] Test payment flow
+
+### If Payment Issues
+- [ ] Check ngrok is running
+- [ ] Verify webhook URL in Paymongo
+- [ ] Check backend logs: `docker-compose logs backend`
+- [ ] Test webhook endpoint manually
+- [ ] Restart ngrok if needed
+
+---
+
+## 🎯 Summary
+
+**ngrok is ESSENTIAL for payment integration!** Without it:
+- ❌ Payments won't work properly
+- ❌ Reservations won't be created automatically
+- ❌ Email receipts won't be sent
+- ❌ Webhook processing will fail
+
+**Every teammate must:**
+1. ✅ Install ngrok
+2. ✅ Get authtoken and configure
+3. ✅ Start ngrok tunnel
+4. ✅ Update Paymongo webhook URL
+5. ✅ Keep ngrok running during development
+
+---
+
+## 🎯 Project Overview
+
+**Budz Reserve** is a modern, full-stack web application for booking badminton courts, built with React, NestJS, and MySQL. The system provides a complete solution for court reservations, equipment rental, user management, and payment processing.
+
+### 🆕 Latest Updates (v2.0)
+
+#### 🎯 New Admin Management Pages
 - **Admin Manage Courts**: Enhanced court management with dynamic pricing, status updates, and pagination
 - **Admin Manage Rackets**: Comprehensive equipment management with image upload and modal interfaces
 - **Admin View Suggestions**: Message management system for user feedback and suggestions
 - **Enhanced Admin Dashboard**: Improved welcome section with modern UI/UX design
 
-### 🔧 Enhanced Features
+#### 🔧 Enhanced Features
 - **Sticky Sidebar Navigation**: Always-accessible navigation across all admin pages
 - **Auto-save Login**: Remember me functionality with localStorage integration
 - **Image Management**: Upload, preview, and manage equipment images with modal interfaces
 - **Responsive Design**: Enhanced mobile optimization across all admin interfaces
 - **Professional UI/UX**: Modern design with gradients, shadows, and smooth animations
 
-### 📱 Improved User Experience
+#### 📱 Improved User Experience
 - **Modal Interfaces**: Professional popup modals for equipment editing and image previews
 - **Enhanced Pagination**: Dynamic pagination with improved navigation controls
 - **Visual Feedback**: Better hover effects, transitions, and micro-interactions
 - **Typography**: Gradient text effects and improved readability
 
-## 🚀 Features
+---
+
+## 🚀 Quick Start Guide
+
+### Prerequisites
+- **Docker Desktop** - Download from [docker.com](https://docker.com)
+- **Git** - For cloning the repository
+- **ngrok** - **REQUIRED for payment integration** (see ngrok setup above)
+- **XAMPP** (Optional) - For phpMyAdmin access
+
+### ⚠️ IMPORTANT: Complete ngrok Setup First
+**Before starting the application, you MUST complete the ngrok setup above!** The payment system will not work without it.
+
+### Step 1: Complete ngrok Setup
+**MUST DO FIRST**: Follow the complete ngrok setup guide above before proceeding!
+
+### Step 2: Clone and Setup
+```bash
+# Clone the repository
+git clone https://github.com/B33Keeper/CAPSTONE-2025-BUDZ-RESERVE-.git
+cd CAPSTONE-2025-BUDZ-RESERVE-
+git checkout react-version
+
+# Copy environment template
+cp env.template .env
+```
+
+### Step 3: Start XAMPP (Optional)
+- Open XAMPP Control Panel
+- Start **Apache** service only
+- **DO NOT start MySQL** - We'll use Docker's MySQL
+- Keep XAMPP running for phpMyAdmin access
+
+### Step 4: Start ngrok Tunnel
+```bash
+# In a new terminal, start ngrok
+ngrok http 3001
+
+# Copy the ngrok URL (e.g., https://abc123.ngrok-free.app)
+# Update Paymongo webhook URL with this new URL
+```
+
+### Step 5: Start the Application
+```bash
+# Start all services (Frontend + Backend + Database + Nginx)
+docker-compose -f docker-compose.dev.yml up -d
+
+# Check if everything is running
+docker-compose -f docker-compose.dev.yml ps
+
+# View logs if needed
+docker-compose -f docker-compose.dev.yml logs -f
+```
+
+### Step 6: Access the Application
+- **🌐 Frontend**: http://localhost:3000
+- **🔧 Backend API**: http://localhost:3001/api
+- **📚 API Documentation**: http://localhost:3001/api/docs
+- **💾 Database (phpMyAdmin)**: http://localhost/phpmyadmin
+  - Server: 127.0.0.1:3307
+  - Username: budz_user
+  - Password: budz_password
+  - Database: budz_reserve
+
+### Step 7: Test Payment Integration
+1. **Make a test booking**:
+   - Go to http://localhost:3000
+   - Login and make a booking
+   - Click "Proceed to Payment"
+
+2. **Complete payment**:
+   - Use test card: `4242424242424242`
+   - Complete the payment process
+
+3. **Verify webhook**:
+   - Check ngrok terminal for webhook requests
+   - Check database for new reservation
+   - Check email for receipt
+
+### Step 8: Stop Everything
+```bash
+# Stop all containers
+docker-compose -f docker-compose.dev.yml down
+
+# Stop Nginx if needed (for phpMyAdmin access)
+docker stop budz-reserve-nginx
+```
+
+---
+
+## 🛠️ Technical Architecture
+
+### Frontend Stack
+- **React 18** with TypeScript
+- **Vite** for fast development and building
+- **Tailwind CSS** for styling and responsive design
+- **React Router DOM** for client-side routing
+- **Axios** for HTTP API calls with interceptors
+- **Zustand** for state management
+- **React Hook Form** for form handling
+- **Zod** for form validation
+- **React Hot Toast** for notifications
+- **Lucide React** for icons
+
+### Backend Stack
+- **NestJS** with TypeScript
+- **MySQL 8.0** database with TypeORM
+- **JWT** for authentication and authorization
+- **Passport** for authentication strategies
+- **Bcrypt** for password hashing
+- **Multer** for file uploads
+- **Class Validator** for DTO validation
+- **Class Transformer** for data transformation
+- **Nodemailer** for email services
+- **Handlebars** for email templates
+- **Swagger/OpenAPI** for API documentation
+- **Throttler** for rate limiting
+
+### Payment Integration
+- **PayMongo** payment gateway
+- **RESTful API** integration
+- **Webhook handling** for payment status updates
+
+### DevOps & Infrastructure
+- **Docker** & **Docker Compose** for containerization
+- **Nginx** reverse proxy for production
+- **MySQL 8.0** containerized database
+- **Node.js 18** Alpine Linux containers
+- **Multi-stage Docker builds** for optimization
+
+---
+
+## 🚀 Features & Capabilities
 
 ### 🔐 Authentication & Security
 - **User Authentication**: Secure login/registration with JWT tokens and database persistence
@@ -103,232 +548,112 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Data Validation**: Comprehensive input validation and sanitization
 - **Data Backup**: Automated database backup and recovery
 
-### 🐳 DevOps & Deployment
-- **Docker Support**: Complete Docker containerization for easy deployment
-- **Docker Compose**: Multi-container orchestration for development and production
-- **Nginx Reverse Proxy**: Production-ready reverse proxy configuration
-- **Environment Configuration**: Comprehensive environment variable management
-- **CI/CD Ready**: GitHub Actions ready for automated deployment
+---
 
-### 🔧 Technical Features
-- **API Documentation**: Complete Swagger/OpenAPI documentation
-- **Rate Limiting**: API rate limiting and throttling
-- **Error Handling**: Comprehensive error handling and logging
-- **File Upload**: Secure file upload with validation
-- **CORS Configuration**: Cross-origin resource sharing setup
-- **Health Checks**: Application health monitoring endpoints
+## 💳 Payment Integration
 
-## 🛠️ Tech Stack
+### PayMongo Integration Overview
+The system includes a complete PayMongo payment gateway integration with the following features:
+- Payment Intent creation and management
+- Multiple payment methods (Card, GCash, PayMaya, GrabPay)
+- Payment method creation and attachment
+- Email receipts and confirmations
+- Webhook handling for payment status updates
+- Frontend payment forms
 
-### Frontend
-- **React 18** with TypeScript
-- **Vite** for fast development and building
-- **Tailwind CSS** for styling and responsive design
-- **React Router DOM** for client-side routing
-- **Axios** for HTTP API calls with interceptors
-- **Zustand** for state management
-- **React Hook Form** for form handling
-- **Zod** for form validation
-- **React Hot Toast** for notifications
-- **Lucide React** for icons
+### API Keys Configuration
+The integration requires Paymongo API keys to be configured in environment variables:
+- **Public Key**: Set in `PAYMONGO_PUBLIC_KEY` environment variable
+- **Secret Key**: Set in `PAYMONGO_SECRET_KEY` environment variable  
+- **Webhook Secret**: Set in `PAYMONGO_WEBHOOK_SECRET` environment variable
 
-### Backend
-- **NestJS** with TypeScript
-- **MySQL 8.0** database with TypeORM
-- **JWT** for authentication and authorization
-- **Passport** for authentication strategies
-- **Bcrypt** for password hashing
-- **Multer** for file uploads
-- **Class Validator** for DTO validation
-- **Class Transformer** for data transformation
-- **Nodemailer** for email services
-- **Handlebars** for email templates
-- **Swagger/OpenAPI** for API documentation
-- **Throttler** for rate limiting
+### Payment Flow
+1. User fills out booking details
+2. User clicks "Proceed to Payment"
+3. Frontend calls backend `/api/payment/create-checkout`
+4. Backend creates PayMongo checkout session
+5. User is redirected to PayMongo checkout page
+6. User completes payment
+7. PayMongo redirects to success/failure page
+8. Webhook processes payment and creates reservation
+9. Email receipt is sent to customer
 
-### Payment Integration
-- **PayMongo** payment gateway
-- **RESTful API** integration
-- **Webhook handling** for payment status updates
+### Supported Payment Methods
+1. **Credit/Debit Card** - Visa, Mastercard, American Express
+2. **GCash** - Mobile wallet payment
+3. **PayMaya** - Mobile wallet payment
+4. **GrabPay** - Mobile wallet payment
+5. **Online Banking** - Bank transfer options
 
-### DevOps & Infrastructure
-- **Docker** & **Docker Compose** for containerization
-- **Nginx** reverse proxy for production
-- **MySQL 8.0** containerized database
-- **Node.js 18** Alpine Linux containers
-- **Multi-stage Docker builds** for optimization
+### Testing
+Use the following test card numbers for testing:
+- **Successful Payment**: `4242424242424242`
+- **Declined Payment**: `4000000000000002`
+- **Requires Authentication**: `4000002500003155`
 
-### Development Tools
-- **TypeScript** for type safety
-- **ESLint** for code linting
-- **Prettier** for code formatting
-- **Git** for version control
-- **GitHub** for repository hosting
+---
 
-## 📋 Prerequisites
+## 🗄️ Database Setup
 
-- **Node.js** (v18 or higher)
-- **Docker** and **Docker Compose**
-- **Git**
+### Automatic Database Initialization
+The database will be automatically initialized with:
+- ✅ Complete database schema
+- ✅ All existing data from production (12 courts, 6 users, 25 reservations)
+- ✅ Proper user accounts and permissions
+- ✅ Sample courts and equipment data
+- ✅ Payment records and reservation history
 
-## 🚀 Quick Start
+### Database Access
+- **URL**: http://localhost/phpmyadmin
+- **Server**: 127.0.0.1:3307
+- **Username**: budz_user
+- **Password**: budz_password
+- **Database**: budz_reserve
 
-### Option 1: Using Docker (Recommended)
+### Database Management
+```bash
+# Create backup
+docker exec budz-reserve-mysql mysqldump -u root -p budz_reserve > backup.sql
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/B33Keeper/CAPSTONE-2025-BUDZ-RESERVE-.git
-   cd CAPSTONE-2025-BUDZ-RESERVE-
-   git checkout react-version
-   ```
+# Restore backup
+docker exec -i budz-reserve-mysql mysql -u root -p budz_reserve < backup.sql
 
-2. **Set up environment variables**
-   ```bash
-   # Copy the template and edit with your values
-   cp env.template .env
-   ```
+# Run migrations
+docker exec budz-reserve-backend npm run migration:run
 
-3. **Start the application**
-   
-   **For Development:**
-   ```bash
-   # Windows
-   start-dev.bat
-   
-   # Linux/Mac
-   ./start-dev.sh
-   ```
-   
-   **For Production:**
-   ```bash
-   # Windows
-   start-prod.bat
-   
-   # Linux/Mac
-   ./start-prod.sh
-   ```
-
-4. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3001
-   - API Documentation: http://localhost:3001/api
-
-### Option 2: Manual Setup (Alternative)
-
-1. **Start MySQL service** (XAMPP or local MySQL)
-2. **Create database**
-   ```sql
-   CREATE DATABASE budz_reserve;
-   ```
-3. **Import database schema**
-   ```bash
-   mysql -u root -p budz_reserve < database_export.sql
-   ```
-4. **Start backend server**
-   ```bash
-   node simple-backend.js
-   ```
-5. **Start frontend server**
-   ```bash
-   node simple-static-server.js
-   ```
-
-
-## 🐳 Docker Configuration
-
-### Development
-- Uses `docker-compose.dev.yml`
-- Hot reloading enabled
-- Volume mounts for live code changes
-- MySQL on port 3306
-- Backend on port 3001
-- Frontend on port 3000
-
-### Production
-- Uses `docker-compose.yml`
-- Optimized builds
-- Nginx reverse proxy
-- SSL ready (configure in nginx)
-- Persistent data volumes
-
-## 📁 Project Structure
-
-```
-budz-reserve/
-├── frontend/                 # React frontend
-│   ├── src/
-│   │   ├── components/      # Reusable components
-│   │   │   ├── modals/      # Modal components
-│   │   │   ├── Header.tsx   # Navigation header
-│   │   │   └── Footer.tsx   # Site footer
-│   │   ├── pages/          # Page components
-│   │   │   ├── AdminDashboard.tsx  # Enhanced admin panel with sticky sidebar
-│   │   │   ├── AdminManageCourts.tsx  # Court management with pagination
-│   │   │   ├── AdminManageRackets.tsx  # Equipment management with modals
-│   │   │   ├── AdminViewSuggestions.tsx  # Message management system
-│   │   │   ├── UploadPhoto.tsx  # Photo upload management
-│   │   │   ├── BookingPage.tsx     # Court booking
-│   │   │   ├── LoginPage.tsx       # User authentication with auto-save
-│   │   │   └── ForgotPasswordPage.tsx  # Password reset
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── lib/            # API services and utilities
-│   │   ├── store/          # Zustand state management
-│   │   └── App.tsx         # Main application component
-│   ├── public/             # Static assets
-│   └── dist/               # Built frontend
-├── backend/                 # NestJS backend
-│   ├── src/
-│   │   ├── modules/        # Feature modules
-│   │   │   ├── auth/       # Authentication module
-│   │   │   ├── users/      # User management
-│   │   │   ├── courts/     # Court management
-│   │   │   ├── equipment/  # Equipment management
-│   │   │   ├── reservations/ # Booking system
-│   │   │   ├── payments/   # Payment processing
-│   │   │   ├── upload/     # File upload handling
-│   │   │   └── time-slots/ # Time slot management
-│   │   ├── database/       # Database configuration
-│   │   ├── templates/      # Email templates
-│   │   └── main.ts         # Application entry point
-│   ├── uploads/            # File uploads directory
-│   └── dist/               # Compiled backend
-├── docker/                 # Docker configurations
-│   └── nginx/             # Nginx reverse proxy configs
-├── Assets/                 # Static assets and images
-├── database_export.sql     # Database schema
-├── docker-compose.yml      # Production Docker setup
-├── docker-compose.dev.yml  # Development Docker setup
-├── PAYMONGO_SETUP.md      # Payment integration guide
-└── README.md              # This file
+# Generate new migration
+docker exec budz-reserve-backend npm run migration:generate -- -n MigrationName
 ```
 
-## 👨‍💼 Admin Features
+---
 
-### Dashboard Overview
-- **Real-time Statistics**: Live user count, daily reservations, and sales tracking
-- **Interactive Charts**: Monthly overview bar charts and reservation status pie charts
-- **User Management**: View and manage all registered users
-- **Responsive Design**: Mobile-friendly admin interface with collapsible sidebar
+## 🚀 Deployment Guide
 
-### Admin Capabilities
-- **Enhanced Court Management**: Add, edit, and manage court availability with dynamic pricing and status updates
-- **Advanced Equipment Management**: Comprehensive racket and equipment inventory with image management
-- **Message Management**: View and manage user suggestions and feedback messages
-- **User Management**: View total users, active users, and user statistics with enhanced interface
-- **Reservation Oversight**: View and manage all court reservations with improved pagination
-- **Payment Monitoring**: Track payment status and transaction history
-- **System Analytics**: Monitor system performance and usage statistics
-- **Image Management**: Upload, preview, and manage equipment images with modal interfaces
-- **Responsive Design**: Mobile-optimized admin interface with sticky navigation
+### Development Environment
+```bash
+# Start development services
+docker-compose -f docker-compose.dev.yml up -d
 
-### Security Features
-- **Role-based Access**: Admin-only access to sensitive operations
-- **JWT Authentication**: Secure admin authentication
-- **API Protection**: Protected endpoints with proper authorization
-- **Audit Logging**: Track admin actions and system changes
+# Check status
+docker-compose -f docker-compose.dev.yml ps
 
-## 🔧 Environment Variables
+# View logs
+docker-compose -f docker-compose.dev.yml logs -f
+```
 
+### Production Environment
+```bash
+# Start production services
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+```
+
+### Environment Variables
 Create a `.env` file in the root directory:
 
 ```env
@@ -367,15 +692,207 @@ THROTTLE_TTL=60
 THROTTLE_LIMIT=10
 
 # PayMongo Configuration
-PAYMONGO_SECRET_KEY=sk_test_your_paymongo_secret_key_here
-PAYMONGO_PUBLIC_KEY=pk_test_your_paymongo_public_key_here
-PAYMONGO_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+PAYMONGO_SECRET_KEY=your_paymongo_secret_key_here
+PAYMONGO_PUBLIC_KEY=your_paymongo_public_key_here
+PAYMONGO_WEBHOOK_SECRET=your_webhook_secret_here
 
 # Frontend URL for redirects
 FRONTEND_URL=http://localhost:3000
 ```
 
-## 🎯 API Endpoints
+### Nginx Configuration
+Create `/etc/nginx/sites-available/budz-reserve`:
+
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com www.yourdomain.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # File uploads
+    location /uploads {
+        alias /path/to/your/app/uploads;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+---
+
+## 👨‍💼 Admin Management
+
+### Dashboard Overview
+- **Real-time Statistics**: Live user count, daily reservations, and sales tracking
+- **Interactive Charts**: Monthly overview bar charts and reservation status pie charts
+- **User Management**: View and manage all registered users
+- **Responsive Design**: Mobile-friendly admin interface with collapsible sidebar
+
+### Admin Capabilities
+- **Enhanced Court Management**: Add, edit, and manage court availability with dynamic pricing and status updates
+- **Advanced Equipment Management**: Comprehensive racket and equipment inventory with image management
+- **Message Management**: View and manage user suggestions and feedback messages
+- **User Management**: View total users, active users, and user statistics with enhanced interface
+- **Reservation Oversight**: View and manage all court reservations with improved pagination
+- **Payment Monitoring**: Track payment status and transaction history
+- **System Analytics**: Monitor system performance and usage statistics
+- **Image Management**: Upload, preview, and manage equipment images with modal interfaces
+- **Responsive Design**: Mobile-optimized admin interface with sticky navigation
+
+### Security Features
+- **Role-based Access**: Admin-only access to sensitive operations
+- **JWT Authentication**: Secure admin authentication
+- **API Protection**: Protected endpoints with proper authorization
+- **Audit Logging**: Track admin actions and system changes
+
+---
+
+## 🎾 Equipment & Racket Setup
+
+### Adding New Racket Images
+To add the 5 different badminton racket images:
+
+1. **Save each image** with these exact filenames in `frontend/public/assets/img/equipments/`:
+   - `racket-black-red.png` - Black/red badminton racket
+   - `racket-silver-white.png` - Silver/white badminton racket
+   - `racket-dark-frame.png` - Dark frame with white grip
+   - `racket-white-silver.png` - White head with silver frame
+   - `racket-yellow-green.png` - Yellow/green badminton racket
+
+2. **Update the database** by running the SQL script:
+   ```bash
+   mysql -u your_username -p budz_reserve < add_racket_equipment.sql
+   ```
+
+3. **Restart the application** to see the changes:
+   ```bash
+   docker-compose down
+   docker-compose up -d
+   ```
+
+### Expected Results
+After completing these steps, the "Rent a Racket" page will display:
+1. **Standard Badminton Racket** (original) - ₱150/hour
+2. **Professional Badminton Racket - Black/Red** - ₱180/hour (15 available)
+3. **Premium Badminton Racket - Silver/White** - ₱200/hour (12 available)
+4. **Elite Badminton Racket - Dark Frame** - ₱160/hour (18 available)
+5. **Championship Badminton Racket - White/Silver** - ₱220/hour (10 available)
+6. **Tournament Badminton Racket - Yellow/Green** - ₱190/hour (14 available)
+
+---
+
+## 🆘 Troubleshooting
+
+### Common Issues and Solutions
+
+#### Port Already in Use
+```bash
+# Check what's using the ports
+netstat -ano | findstr :3000
+netstat -ano | findstr :3001
+netstat -ano | findstr :3306
+
+# Stop conflicting services or change ports in docker-compose.yml
+```
+
+#### Database Connection Issues
+```bash
+# Check if MySQL is running
+docker-compose logs mysql
+
+# Restart database
+docker-compose restart mysql
+
+# Check database initialization
+docker-compose exec mysql mysql -u root -p -e "SHOW DATABASES;"
+```
+
+#### Frontend Not Loading
+```bash
+# Check frontend logs
+docker-compose logs frontend
+
+# Rebuild frontend
+docker-compose up -d --build frontend
+```
+
+#### Backend API Not Responding
+```bash
+# Check backend logs
+docker-compose logs backend
+
+# Restart backend
+docker-compose restart backend
+
+# Check if backend is healthy
+curl http://localhost:3001/health
+```
+
+### Debug Commands
+```bash
+# Check container status
+docker-compose ps
+
+# View logs for specific service
+docker-compose logs [service-name]
+
+# Restart specific service
+docker-compose restart [service-name]
+
+# Full reset
+docker-compose down -v
+docker-compose up -d --build
+
+# Check Docker system resources
+docker system df
+docker system prune
+```
+
+### Payment Integration Issues
+
+#### "PayMongo API error: You did not provide an API key"
+- Check that environment variables are set correctly
+- Restart the backend container
+- Verify the secret key starts with `sk_test_` or `sk_live_`
+
+#### "Cannot POST /api/payment/create-checkout"
+- Ensure backend is running with NestJS (not simple-server.js)
+- Check backend logs: `docker logs budz-reserve-backend`
+- Verify the endpoint is registered in logs
+
+#### Payment redirect not working
+- Check `FRONTEND_URL` environment variable
+- Verify success/failure routes are configured in `App.tsx`
+- Check browser console for errors
+
+---
+
+## 📚 API Documentation
 
 ### Authentication & User Management
 - `POST /api/auth/register` - User registration
@@ -427,75 +944,61 @@ FRONTEND_URL=http://localhost:3000
 - `GET /api/health` - Application health check
 - `GET /api/docs` - API documentation (Swagger)
 
-## 🧪 Testing
+---
 
-```bash
-# Run backend tests
-cd backend && npm run test
+## 🔒 Security & Best Practices
 
-# Run frontend tests
-cd frontend && npm run test
+### Security Considerations
+1. **Change default passwords**
+2. **Use strong JWT secrets**
+3. **Enable SSL/TLS**
+4. **Regular security updates**
+5. **Database access restrictions**
+6. **File upload validation**
+7. **Rate limiting**
+8. **CORS configuration**
 
-# Run e2e tests
-npm run test:e2e
-```
+### Production Setup
+1. Replace test API keys with live keys
+2. Update webhook URLs to production domain
+3. Configure email SMTP settings
+4. Implement proper webhook signature verification
+5. Set up monitoring and logging
 
-## 📦 Building for Production
+### Code Standards
+- Use TypeScript for all new code
+- Follow existing component structure
+- Add proper error handling
+- Include JSDoc comments for functions
+- Test changes locally before pushing
 
-```bash
-# Build frontend
-cd frontend && npm run build
-
-# Build backend
-cd backend && npm run build
-
-# Or use Docker
-docker-compose up --build
-```
-
-## 🚀 Deployment
-
-### Using Docker
-1. Set up your production environment variables
-2. Run `docker-compose up -d`
-3. Configure your domain and SSL certificates
-
-### Manual Deployment
-1. Build the frontend: `cd frontend && npm run build`
-2. Build the backend: `cd backend && npm run build`
-3. Set up a reverse proxy (Nginx)
-4. Configure your database
-5. Start the backend server
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👥 Authors
-
-- **B33Keeper** - *Initial work* - [B33Keeper](https://github.com/B33Keeper)
-
-## 🙏 Acknowledgments
-
-- Badminton court management inspiration
-- React and NestJS communities
-- All contributors and testers
-
-## 📞 Support
-
-If you have any questions or need help, please:
-- Open an issue on GitHub
-- Contact us at support@budzreserve.com
-- Check the documentation in the `/docs` folder
+### Database Changes
+- Never modify the database directly
+- Use TypeORM migrations for schema changes
+- Test migrations locally first
+- Coordinate with team for major changes
 
 ---
 
+## 📞 Support
+
+If you have any questions or need help:
+
+1. **Check the logs**: `docker-compose logs -f`
+2. **Verify environment variables**
+3. **Check port availability**
+4. **Review Docker and Docker Compose versions**
+5. **Open an issue on GitHub**
+6. **Contact us at support@budzreserve.com**
+
+---
+
+## 🎉 Conclusion
+
+**Budz Reserve** is a comprehensive, production-ready badminton court booking system with modern technology stack, secure payment integration, and user-friendly interface. The system is designed to scale and can handle real-world usage with proper deployment and monitoring.
+
 **Happy Coding! 🏸✨**
+
+---
+
+*This documentation combines all project guides into a single comprehensive reference. For specific implementation details, refer to the individual markdown files in the project repository.*
