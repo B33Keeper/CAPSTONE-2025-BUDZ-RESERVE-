@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: budz-reserve-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USERNAME=budz_reserve
+      - DB_PASSWORD=secure_password_123
+      - DB_DATABASE=budz_reserve
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_EXPIRES_IN=7d
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mysql
+    networks:
+      - budz-reserve-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: budz-reserve-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - budz-reserve-network
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: budz-reserve-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password_123
+      - MYSQL_DATABASE=budz_reserve
+      - MYSQL_USER=budz_reserve
+      - MYSQL_PASSWORD=secure_password_123
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database_export.sql:/docker-entrypoint-initdb.d/01-database-export.sql
+      - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - budz-reserve-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: budz-reserve-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - budz-reserve-network
+
+volumes:
+  mysql_data:
+
+networks:
+  budz-reserve-network:
+    driver: bridge
