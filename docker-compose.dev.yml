@@ -32,6 +32,8 @@ services:
       dockerfile: ./backend/Dockerfile.dev
     container_name: budz-reserve-backend
     restart: unless-stopped
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
     environment:
       NODE_ENV: development
       DB_HOST: mysql

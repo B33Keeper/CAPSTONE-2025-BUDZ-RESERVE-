@@ -1,14 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, CheckCircle, AlertCircle, Shield, CreditCard, Clock, RefreshCw } from 'lucide-react'
 
 interface TermsAndConditionsModalProps {
   isOpen: boolean
   onClose: () => void
   onAccept: () => void
+  initialAccepted?: boolean
 }
 
-export function TermsAndConditionsModal({ isOpen, onClose, onAccept }: TermsAndConditionsModalProps) {
-  const [accepted, setAccepted] = useState(false)
+export function TermsAndConditionsModal({ isOpen, onClose, onAccept, initialAccepted = false }: TermsAndConditionsModalProps) {
+  const [accepted, setAccepted] = useState(initialAccepted)
+
+  // Update the accepted state when initialAccepted changes
+  useEffect(() => {
+    setAccepted(initialAccepted)
+  }, [initialAccepted])
 
   if (!isOpen) return null
 

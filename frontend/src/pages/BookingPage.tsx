@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { apiServices, Court, Equipment, TimeSlot } from '@/lib/apiServices'
 import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsModal'
 import { BookingDetailsModal } from '@/components/modals/BookingDetailsModal'
+import { RacketDetailsModal } from '@/components/modals/RacketDetailsModal'
+import { RacketConfigModal } from '@/components/modals/RacketConfigModal'
 
 interface CourtBooking {
   court: string
@@ -13,11 +15,12 @@ interface CourtBooking {
 interface EquipmentBooking {
   equipment: string
   time: string
+  quantity: number
   subtotal: number
 }
 
 interface CellStatus {
-  status: 'available' | 'reserved' | 'maintenance' | 'selected'
+  status: 'available' | 'reserved' | 'maintenance' | 'selected' | 'past'
 }
 
 export function BookingPage() {
@@ -31,9 +34,6 @@ export function BookingPage() {
     }
   })
   const [activeTab, setActiveTab] = useState('Sheet 1')
-  const [racketQuantity, setRacketQuantity] = useState(0)
-  const [racketTime, setRacketTime] = useState(1)
-  const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set())
   const [currentStep, setCurrentStep] = useState(1)
   const [dateError, setDateError] = useState('')
 
@@ -46,12 +46,33 @@ export function BookingPage() {
   const [courts, setCourts] = useState<Court[]>([])
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [, setTimeSlots] = useState<TimeSlot[]>([])
+  
+  // Calculate courts per sheet dynamically
+  const courtsPerSheet = 6
+  const totalSheets = Math.ceil(courts.length / courtsPerSheet)
+  
+  // Calculate current sheet index based on active tab
+  const getCurrentSheetIndex = () => {
+    if (activeTab.startsWith('Sheet ')) {
+      const sheetNumber = parseInt(activeTab.split(' ')[1])
+      return sheetNumber - 1 // Convert to 0-based index
+    }
+    return 0 // Default to first sheet for non-sheet tabs
+  }
+  
+  const currentSheetIndex = getCurrentSheetIndex()
+  const startIndex = currentSheetIndex * courtsPerSheet
+  const endIndex = Math.min(startIndex + courtsPerSheet, courts.length)
+  const currentSheetCourts = courts.slice(startIndex, endIndex)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [availabilityData, setAvailabilityData] = useState<Map<number, any[]>>(new Map())
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false)
+  const [showRacketDetailsModal, setShowRacketDetailsModal] = useState(false)
+  const [showRacketConfigModal, setShowRacketConfigModal] = useState(false)
+  const [selectedRacket, setSelectedRacket] = useState<Equipment | null>(null)
 
 
   // Calculate total amount
@@ -65,8 +86,32 @@ export function BookingPage() {
     { id: 4, name: 'completed', active: currentStep === 4 },
   ]
 
-  const tabs = ['Sheet 1', 'Sheet 2', 'Rent an racket', 'Booking details']
+  // Generate dynamic tabs based on number of courts
+  const sheetTabs = Array.from({ length: totalSheets }, (_, index) => `Sheet ${index + 1}`)
+  const tabs = [...sheetTabs, 'Rent a racket', 'Booking details']
 
+  // Check if a time slot has passed
+  const isTimeSlotPassed = (timeSlot: { start_time: string, end_time: string }) => {
+    if (!selectedDate) return false
+    
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const selectedDateObj = new Date(selectedDate)
+    const selectedDateOnly = new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), selectedDateObj.getDate())
+    
+    // If selected date is in the future, no time slots are passed
+    if (selectedDateOnly > today) return false
+    
+    // If selected date is today, check if the time slot has passed
+    if (selectedDateOnly.getTime() === today.getTime()) {
+      const [hours, minutes] = timeSlot.start_time.split(':')
+      const slotTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes))
+      return slotTime < now
+    }
+    
+    // If selected date is in the past, all time slots are passed
+    return true
+  }
 
   // Generate time slots for display (8 AM to 11 PM)
   const generateTimeSlots = () => {
@@ -83,51 +128,47 @@ export function BookingPage() {
         return `${displayHour}:${minutes} ${ampm}`
       }
       
-      slots.push({
+      const timeSlot = {
         id: hour,
         start_time: startTime,
         end_time: endTime,
         display: `${formatTime(startTime)} - ${formatTime(endTime)}`
-      })
+      }
+      
+      // Only include time slots that haven't passed
+      if (!isTimeSlotPassed(timeSlot)) {
+        slots.push(timeSlot)
+      }
     }
     return slots
   }
 
   // Load data from database
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        
-        const [courtsData, equipmentData, timeSlotsData] = await Promise.all([
-          apiServices.getCourts(),
-          apiServices.getEquipment(),
-          apiServices.getTimeSlots()
-        ])
-        
-        setCourts(courtsData)
-        setEquipment(equipmentData)
-        setTimeSlots(timeSlotsData)
-        
-        // Debug: Log equipment data to see image_path values
-        console.log('Equipment data loaded:', equipmentData)
-        equipmentData.forEach((item, index) => {
-          console.log(`Equipment ${index + 1}:`, {
-            name: item.equipment_name,
-            image_path: item.image_path
-          })
-        })
-      } catch (err) {
-        console.error('Error loading data:', err)
-        setError('Failed to load data. Please try again.')
-      } finally {
-        setLoading(false)
-      }
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const [courtsData, equipmentData, timeSlotsData] = await Promise.all([
+        apiServices.getCourts(),
+        apiServices.getEquipment(),
+        apiServices.getTimeSlots()
+      ])
+      
+      setCourts(courtsData)
+      setEquipment(equipmentData)
+      setTimeSlots(timeSlotsData)
+    } catch (err) {
+      console.error('Error loading data:', err)
+      setError('Failed to load data. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    
+  }
+
+  useEffect(() => {
     loadData()
   }, [])
+
 
   // Load availability data when date is selected
   const loadAvailabilityData = async (date: string) => {
@@ -193,8 +234,8 @@ export function BookingPage() {
     const cellKey = `COURT ${courtId}-${time}`
     const currentStatus = getCellStatus(courtId, time)
     
-    // Don't allow clicking on reserved or maintenance cells
-    if (currentStatus.status === 'reserved' || currentStatus.status === 'maintenance') {
+    // Don't allow clicking on reserved, maintenance, or past time slots
+    if (currentStatus.status === 'reserved' || currentStatus.status === 'maintenance' || currentStatus.status === 'past') {
       return
     }
     
@@ -234,6 +275,26 @@ export function BookingPage() {
       return { status: 'selected' }
     }
     
+    // Check if this time slot has passed
+    const timeSlot = {
+      start_time: time.split(' - ')[0].replace(/\s+(am|pm)/i, '').replace(/(\d+):(\d+)/, (match, hour, min) => {
+        const h = parseInt(hour)
+        const isPM = time.toLowerCase().includes('pm')
+        const adjustedHour = isPM && h !== 12 ? h + 12 : (!isPM && h === 12 ? 0 : h)
+        return `${adjustedHour.toString().padStart(2, '0')}:${min}`
+      }) + ':00',
+      end_time: time.split(' - ')[1].replace(/\s+(am|pm)/i, '').replace(/(\d+):(\d+)/, (match, hour, min) => {
+        const h = parseInt(hour)
+        const isPM = time.toLowerCase().includes('pm')
+        const adjustedHour = isPM && h !== 12 ? h + 12 : (!isPM && h === 12 ? 0 : h)
+        return `${adjustedHour.toString().padStart(2, '0')}:${min}`
+      }) + ':00'
+    }
+    
+    if (isTimeSlotPassed(timeSlot)) {
+      return { status: 'past' }
+    }
+    
     // Check real availability data from database
     const courtAvailability = availabilityData.get(courtId)
     if (courtAvailability && courtAvailability.length > 0) {
@@ -262,76 +323,31 @@ export function BookingPage() {
   
 
   const handleRacketClick = (racketName: string) => {
-    setFlippedCards(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(racketName)) {
-        newSet.delete(racketName)
-      } else {
-        newSet.add(racketName)
-      }
-      return newSet
-    })
-  }
-
-  const handleRacketQuantityChange = (racketName: string, newQuantity: number) => {
-    setRacketQuantity(newQuantity)
-    
-    // Find the equipment to get its price
-    const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
-    const price = Number(equipmentItem?.price) || 100 // Default to 100 if not found
-    
-    if (newQuantity === 0) {
-      // Remove from bookings if quantity is 0
-      setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
-      setFlippedCards(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(racketName)
-        return newSet
-      })
-    } else {
-      // Add or update booking
-      const newBooking: EquipmentBooking = {
-        equipment: racketName,
-        time: `${racketTime} hr`,
-        subtotal: price * racketTime * newQuantity
-      }
-      setEquipmentBookings(prev => {
-        const filtered = prev.filter(booking => booking.equipment !== racketName)
-        return [...filtered, newBooking]
-      })
+    const racket = equipment.find(eq => eq.equipment_name === racketName)
+    if (racket) {
+      setSelectedRacket(racket)
+      setShowRacketDetailsModal(true)
     }
   }
 
-  const handleRacketTimeChange = (racketName: string, newTime: number) => {
-    setRacketTime(newTime)
-    
-    // Find the equipment to get its price
-    const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
-    const price = Number(equipmentItem?.price) || 100 // Default to 100 if not found
-    
-    // Update existing booking with new time
-    if (racketQuantity > 0) {
-      const newBooking: EquipmentBooking = {
-        equipment: racketName,
-        time: `${newTime} hr`,
-        subtotal: price * newTime * racketQuantity
-      }
-      setEquipmentBookings(prev => {
-        const filtered = prev.filter(booking => booking.equipment !== racketName)
-        return [...filtered, newBooking]
-      })
-    }
-  }
 
 
   // Visual state helper for table cells (keeps original colors)
   const getCellClassName = (courtId: number, timeLabel: string, courtStatus?: string) => {
     const key = `COURT ${courtId}-${timeLabel}`
     const isSelected = selectedCells.has(key)
+    const cellStatus = getCellStatus(courtId, timeLabel)
 
-    // Maintenance/Unavailable styles take precedence
-    if (courtStatus === 'Maintenance') return 'bg-white text-gray-900 cursor-not-allowed'
-    if (courtStatus === 'Unavailable') return 'bg-gray-400 text-white cursor-not-allowed'
+    // Debug: Log maintenance status detection
+    if (courtStatus === 'Maintenance') {
+      console.log(`Court ${courtId} (${timeLabel}) is in Maintenance status - applying yellow styling`)
+    }
+
+    // Past time slots take highest precedence
+    if (cellStatus.status === 'past') return 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+
+    // Maintenance styles take precedence
+    if (courtStatus === 'Maintenance') return 'bg-yellow-400 text-black cursor-not-allowed'
 
     // Selected vs available styles
     if (isSelected) return 'bg-green-300 text-black ring-2 ring-green-500'
@@ -346,6 +362,9 @@ export function BookingPage() {
     
     setDateError('')
     setTempSelectedDate(date)
+    
+    // Show terms and conditions modal when date is selected
+    setShowTermsModal(true)
   }
 
   const handleProceedFromDateSelection = async () => {
@@ -421,11 +440,49 @@ export function BookingPage() {
 
   const handleAcceptTerms = () => {
     setShowTermsModal(false)
-    setCurrentStep(3) // Move to payment step
+    setSelectedDate(tempSelectedDate)
+    setCurrentStep(2) // Move to court selection step
   }
 
   const handleCloseTerms = () => {
     setShowTermsModal(false)
+    setTempSelectedDate('') // Reset the temporary selected date
+  }
+
+  // Racket modal handlers
+  const handleRacketDetailsClose = () => {
+    setShowRacketDetailsModal(false)
+    setSelectedRacket(null)
+  }
+
+  const handleRacketDetailsSelect = () => {
+    setShowRacketDetailsModal(false)
+    setShowRacketConfigModal(true)
+  }
+
+  const handleRacketConfigClose = () => {
+    setShowRacketConfigModal(false)
+    setSelectedRacket(null)
+  }
+
+  const handleRacketConfigConfirm = (time: number, quantity: number) => {
+    if (!selectedRacket) return
+    
+    const price = Number(selectedRacket.price) || 100
+    const newBooking: EquipmentBooking = {
+      equipment: selectedRacket.equipment_name,
+      time: `${time} hr`,
+      quantity: quantity,
+      subtotal: price * time * quantity
+    }
+    
+    setEquipmentBookings(prev => {
+      const filtered = prev.filter(booking => booking.equipment !== selectedRacket.equipment_name)
+      return [...filtered, newBooking]
+    })
+    
+    setShowRacketConfigModal(false)
+    setSelectedRacket(null)
   }
 
   // Initialize cell statuses on component mount
@@ -462,24 +519,24 @@ export function BookingPage() {
         }
       `}</style>
       
-      {/* Step Counter */}
-      <div className="bg-gray-200 px-6 py-4">
-        <div className="flex items-center justify-center space-x-8">
+      {/* Step Counter - Mobile Responsive */}
+      <div className="bg-gray-200 px-2 sm:px-4 lg:px-6 py-3 sm:py-4">
+        <div className="flex items-center justify-center space-x-2 sm:space-x-4 lg:space-x-8 overflow-x-auto pb-2">
             {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              <div key={step.id} className="flex items-center flex-shrink-0">
+              <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm ${
                 step.active ? 'bg-blue-600 text-white' : 
                 'bg-gray-300 text-gray-600'
               }`}>
                 {step.id}
                 </div>
-              <span className={`ml-2 text-sm ${
+              <span className={`ml-1 sm:ml-2 text-xs sm:text-sm ${
                 step.active ? 'text-blue-600 font-medium' : 'text-gray-500'
               }`}>
                     {step.name}
               </span>
                 {index < steps.length - 1 && (
-                <div className={`w-16 h-0.5 mx-4 ${
+                <div className={`w-8 sm:w-12 lg:w-16 h-0.5 mx-2 sm:mx-4 ${
                   step.active ? 'bg-blue-600' : 'bg-gray-300'
                 }`} />
                 )}
@@ -488,22 +545,22 @@ export function BookingPage() {
           </div>
         </div>
 
-      {/* Main Content */}
-      <div className="p-6">
-         <div className="bg-white rounded-lg shadow-lg p-6 mx-auto" style={{ maxWidth: 'calc(72rem + 400px)' }}>
+      {/* Main Content - Mobile Responsive */}
+      <div className="p-2 sm:p-4 lg:p-6">
+         <div className="bg-white rounded-lg shadow-lg p-3 sm:p-4 lg:p-6 mx-auto max-w-7xl">
           {currentStep === 1 && (
              <>
-               {/* Date Selection Header */}
-               <div className="bg-gray-600 text-white px-6 py-4 rounded-t-lg -mx-6 -mt-6 mb-6 shadow">
-                 <h2 className="text-base sm:text-lg font-semibold">Select from the available dates below</h2>
+               {/* Date Selection Header - Mobile Responsive */}
+               <div className="bg-gray-600 text-white px-3 sm:px-4 lg:px-6 py-3 sm:py-4 rounded-t-lg -mx-3 sm:-mx-4 lg:-mx-6 -mt-3 sm:-mt-4 lg:-mt-6 mb-4 sm:mb-6 shadow">
+                 <h2 className="text-sm sm:text-base lg:text-lg font-semibold">Select from the available dates below</h2>
                  <p className="text-blue-100 text-xs sm:text-sm mt-1">Choose a date to proceed to time and court selection</p>
                </div>
                
-               {/* Month Selector */}
-               <div className="flex items-center justify-center mb-6">
+               {/* Month Selector - Mobile Responsive */}
+               <div className="flex items-center justify-center mb-4 sm:mb-6">
                  <button
                    onClick={goToPreviousMonth}
-                   className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                   className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white shadow hover:bg-blue-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                    disabled={(() => {
                      const today = new Date()
                      const currentYear = today.getFullYear()
@@ -511,13 +568,13 @@ export function BookingPage() {
                      return selectedMonth.year <= currentYear && selectedMonth.month <= currentMonth
                    })()}
                  >
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                    </svg>
                  </button>
                  
-                 <div className="mx-6 text-center">
-                   <h3 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+                 <div className="mx-3 sm:mx-6 text-center">
+                   <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 tracking-tight">
                      {new Date(selectedMonth.year, selectedMonth.month, 1).toLocaleDateString('en-US', { 
                        month: 'long', 
                        year: 'numeric' 
@@ -528,19 +585,19 @@ export function BookingPage() {
                  
                  <button
                    onClick={goToNextMonth}
-                   className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-50 text-gray-700"
+                   className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white shadow hover:bg-blue-50 text-gray-700"
                  >
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                    </svg>
                  </button>
                </div>
                
-               {/* Date Selection Grid */}
+               {/* Date Selection Grid - Mobile Responsive */}
                <div className="bg-white rounded-lg ring-1 ring-gray-200 overflow-hidden">
                  <div className="grid grid-cols-7 bg-gray-50">
                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                     <div key={day} className="p-3 text-center text-xs sm:text-sm font-semibold text-gray-600">
+                     <div key={day} className="p-2 sm:p-3 text-center text-xs sm:text-sm font-semibold text-gray-600">
                        {day}
                      </div>
                    ))}
@@ -556,7 +613,7 @@ export function BookingPage() {
                      
                      const items: JSX.Element[] = []
                      for (let i = 0; i < firstDayWeekday; i++) {
-                       items.push(<div key={`empty-${i}`} className="h-12 sm:h-16 border-t border-gray-100" />)
+                       items.push(<div key={`empty-${i}`} className="h-10 sm:h-12 lg:h-16 border-t border-gray-100" />)
                      }
                      for (let day = 1; day <= daysInMonth; day++) {
                        const date = new Date(selectedMonth.year, selectedMonth.month, day)
@@ -571,20 +628,20 @@ export function BookingPage() {
                          <button
                            key={day}
                            type="button"
-                           className={`relative h-12 sm:h-14 w-12 sm:w-14 mx-auto my-2 border-t border-gray-100 flex items-center justify-center rounded-full transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
+                           className={`relative h-10 sm:h-12 lg:h-14 w-10 sm:w-12 lg:w-14 mx-auto my-1 sm:my-2 border-t border-gray-100 flex items-center justify-center rounded-full transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
                              isSelected 
                                ? 'bg-green-600 text-white font-semibold shadow-[inset_0_2px_6px_rgba(0,0,0,0.2)] scale-105' 
                                : isAvailable 
                                  ? 'hover:bg-green-50 text-gray-900 hover:scale-105' 
-                                 : 'text-gray-300 opacity-40 cursor-not-allowed line-through'
+                                 : 'text-gray-600 opacity-70 cursor-not-allowed line-through'
                            }`}
                            aria-selected={isSelected}
                            onClick={() => isAvailable && handleDateSelection(dateString, true)}
                            disabled={!isAvailable}
                          >
-                           <span className="text-sm sm:text-base">{day}</span>
+                           <span className="text-xs sm:text-sm lg:text-base">{day}</span>
                            {isToday && !isSelected && (
-                             <span className="absolute -bottom-1 block w-1.5 h-1.5 rounded-full bg-green-500" />
+                             <span className="absolute -bottom-1 block w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-green-500" />
                            )}
                          </button>
                        )
@@ -594,26 +651,26 @@ export function BookingPage() {
                  </div>
                </div>
                
-               {/* Selected Date Display */}
+               {/* Selected Date Display - Mobile Responsive */}
                {tempSelectedDate && (
-                 <div className="mt-4 p-3 bg-green-50 ring-1 ring-green-200 rounded-lg text-center">
-                   <span className="text-sm text-green-800 font-medium">Selected date:</span>
-                   <span className="ml-2 text-sm text-green-700">{tempSelectedDate}</span>
+                 <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-green-50 ring-1 ring-green-200 rounded-lg text-center">
+                   <span className="text-xs sm:text-sm text-green-800 font-medium">Selected date:</span>
+                   <span className="ml-1 sm:ml-2 text-xs sm:text-sm text-green-700">{tempSelectedDate}</span>
                  </div>
                )}
                
-               {/* Error Message */}
+               {/* Error Message - Mobile Responsive */}
                {dateError && (
-                 <div className="mt-4 p-4 bg-red-50 ring-1 ring-red-200 text-red-700 rounded-lg">
+                 <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-red-50 ring-1 ring-red-200 text-red-700 rounded-lg text-sm">
                    {dateError}
                  </div>
                )}
 
-               {/* Proceed Button for Step 1 */}
-               <div className="text-center mt-6">
+               {/* Proceed Button for Step 1 - Mobile Responsive */}
+               <div className="text-center mt-4 sm:mt-6">
                  <button 
                    onClick={handleProceedFromDateSelection}
-                   className="inline-flex items-center justify-center px-8 py-3 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                   className="inline-flex items-center justify-center px-6 sm:px-8 py-2 sm:py-3 rounded-lg font-semibold text-sm sm:text-base text-white bg-blue-600 hover:bg-blue-700 shadow disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                    disabled={!tempSelectedDate}
                  >
                    Proceed
@@ -624,18 +681,18 @@ export function BookingPage() {
 
           {currentStep === 2 && (
             <>
-              {/* Section Header with Tabs inside */}
-              <div className="bg-gray-600 text-white px-4 py-2 rounded-t-lg -mx-6 -mt-6 mb-6">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-medium">Select from the available time and court:</h2>
+              {/* Section Header with Tabs inside - Mobile Responsive */}
+              <div className="bg-gray-600 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-t-lg -mx-3 sm:-mx-4 lg:-mx-6 -mt-3 sm:-mt-4 lg:-mt-6 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <h2 className="text-sm sm:text-base lg:text-lg font-medium">Select from the available time and court:</h2>
                   
-                  {/* Tabs inside the header container */}
-                  <div className="flex flex-wrap gap-2">
+                  {/* Tabs inside the header container - Mobile Responsive */}
+                  <div className="flex flex-wrap gap-1 sm:gap-2 w-full sm:w-auto">
                     {tabs.map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
+                        className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors flex-shrink-0 ${
                           activeTab === tab
                             ? 'bg-white text-gray-900'
                             : 'bg-gray-500 text-gray-100 hover:bg-gray-400'
@@ -649,61 +706,65 @@ export function BookingPage() {
                 </div>
               </div>
 
-          {/* Selected Date */}
-          <div className="text-center mb-6">
-            <p className="text-lg font-semibold">Selected date: {selectedDate}</p>
+          {/* Selected Date - Mobile Responsive */}
+          <div className="text-center mb-4 sm:mb-6">
+            <p className="text-sm sm:text-base lg:text-lg font-semibold">Selected date: {selectedDate}</p>
           </div>
 
           {/* Content based on active tab */}
-          {activeTab === 'Sheet 1' && (
+          {sheetTabs.includes(activeTab) && (
             <div>
-              {/* Legend */}
-              <div className="flex flex-wrap justify-center gap-4 mb-6 text-xs sm:text-sm">
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 ring-gray-300 bg-white">
-                  <span className="w-3.5 h-3.5 rounded bg-white ring-1 ring-gray-300"></span>
+              {/* Legend - Mobile Responsive */}
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-3 lg:gap-4 mb-4 sm:mb-6 text-xs sm:text-sm">
+                <div className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-full ring-1 ring-gray-300 bg-white">
+                  <span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-white ring-1 ring-gray-300"></span>
                   <span>Available</span>
                 </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-600 text-white">
-                  <span className="w-3.5 h-3.5 rounded bg-gray-600"></span>
+                <div className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-full bg-gray-600 text-white">
+                  <span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-gray-600"></span>
                   <span>Reserved</span>
                 </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-yellow-400 text-black">
-                  <span className="w-3.5 h-3.5 rounded bg-yellow-400"></span>
+                <div className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-full bg-yellow-400 text-black">
+                  <span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-yellow-400"></span>
                   <span>Maintenance</span>
                 </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-300 text-gray-900">
-                  <span className="w-3.5 h-3.5 rounded bg-green-300"></span>
+                <div className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-full bg-gray-300 text-gray-500">
+                  <span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-gray-300"></span>
+                  <span>Past Time</span>
+                </div>
+                <div className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-full bg-green-300 text-gray-900">
+                  <span className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-green-300"></span>
                   <span>Selected</span>
                 </div>
               </div>
 
-              {/* Mobile-friendly cards (Sheet 1) */}
-              <div className="sm:hidden space-y-4">
+              {/* Mobile-friendly cards (Sheet 1) - Enhanced Mobile Responsive */}
+              <div className="sm:hidden space-y-3">
                 {generateTimeSlots().map((timeSlot) => (
                   <div key={timeSlot.id} className="rounded-lg ring-1 ring-gray-200 overflow-hidden">
-                    <div className="bg-gray-100 px-4 py-2 text-sm font-medium">{timeSlot.display}</div>
-                    <div className="grid grid-cols-2 gap-2 p-3">
-                      {courts.slice(0, 6).map((court) => {
+                    <div className="bg-gray-100 px-3 py-2 text-xs sm:text-sm font-medium">{timeSlot.display}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 sm:p-3">
+                      {currentSheetCourts.map((court) => {
                         const key = `COURT ${court.Court_Id}-${timeSlot.display}`
                         const isSelected = selectedCells.has(key)
                         const status = getCellStatus(court.Court_Id, timeSlot.display).status
-                        const disabled = status === 'reserved' || status === 'maintenance' || court.Status !== 'Available'
+                        const disabled = status === 'reserved' || status === 'maintenance' || status === 'past' || court.Status === 'Maintenance'
                         return (
                           <button
                             key={`${timeSlot.id}-${court.Court_Id}`}
                             type="button"
                             aria-pressed={isSelected}
                             disabled={disabled}
-                            onClick={() => !disabled && handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price)}
-                            className={`flex items-center justify-between px-3 py-2 rounded-md text-left text-xs border transition-colors
+                            onClick={() => !disabled && handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, typeof court.Price === 'number' ? court.Price : typeof court.Price === 'string' ? parseFloat(court.Price) : 0)}
+                            className={`flex items-center justify-between px-2 sm:px-3 py-2 sm:py-2.5 rounded-md text-left text-xs border transition-colors
                               ${disabled ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed' :
                               isSelected ? 'bg-green-300 text-gray-900 border-green-400 ring-2 ring-green-500' :
                               'bg-white text-gray-900 border-gray-200 hover:bg-blue-50'}`}
                             title={`${court.Court_Name}${disabled ? ' (not available)' : ''}`}
                           >
-                            <span className="truncate mr-2">{court.Court_Name}</span>
-                            <span className={`ml-auto inline-block px-2 py-0.5 rounded text-[10px] ${disabled ? 'bg-transparent text-gray-500' : 'bg-white/80 text-gray-900'}`}>
-                              {court.Price}.00 php
+                            <span className="truncate mr-1 sm:mr-2 text-xs">{court.Court_Name}</span>
+                            <span className={`ml-auto inline-block px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] ${disabled ? 'bg-transparent text-gray-500' : 'bg-white/80 text-gray-900'}`}>
+                              ₱{typeof court.Price === 'number' ? court.Price.toFixed(2) : typeof court.Price === 'string' ? parseFloat(court.Price).toFixed(2) : '0.00'}
                             </span>
                           </button>
                         )
@@ -713,35 +774,35 @@ export function BookingPage() {
                 ))}
               </div>
 
-              {/* Court Selection Table (Tablet/Desktop) */}
+              {/* Court Selection Table (Tablet/Desktop) - Enhanced Mobile Responsive */}
               <div className="hidden sm:block overflow-x-auto rounded-lg ring-1 ring-gray-200 shadow-sm">
                  {loading ? (
-                   <div className="text-center py-8">
-                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                     <p className="mt-2 text-gray-600">Loading courts...</p>
+                   <div className="text-center py-6 sm:py-8">
+                     <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mx-auto"></div>
+                     <p className="mt-2 text-sm sm:text-base text-gray-600">Loading courts...</p>
                    </div>
                  ) : error ? (
-                   <div className="text-center py-8">
-                     <p className="text-red-600">{error}</p>
+                   <div className="text-center py-6 sm:py-8">
+                     <p className="text-sm sm:text-base text-red-600">{error}</p>
                      <button 
                        onClick={() => window.location.reload()} 
-                       className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                       className="mt-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                      >
                        Retry
                      </button>
                    </div>
                  ) : loadingAvailability ? (
-                   <div className="text-center py-8">
-                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                     <p className="mt-2 text-gray-600">Loading availability data...</p>
+                   <div className="text-center py-6 sm:py-8">
+                     <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mx-auto"></div>
+                     <p className="mt-2 text-sm sm:text-base text-gray-600">Loading availability data...</p>
                    </div>
                  ) : (
                   <table className="w-full border-collapse" role="grid">
                      <thead>
                       <tr className="bg-gray-100 sticky top-0 z-10">
-                        <th className="border border-gray-300 px-4 py-2 text-left text-xs sm:text-sm">TIME</th>
-                         {courts.slice(0, 6).map((court) => (
-                          <th key={court.Court_Id} className="border border-gray-300 px-4 py-2 text-center text-xs sm:text-sm">
+                        <th className="border border-gray-300 px-2 sm:px-4 py-1.5 sm:py-2 text-left text-xs sm:text-sm">TIME</th>
+                         {currentSheetCourts.map((court) => (
+                          <th key={court.Court_Id} className="border border-gray-300 px-2 sm:px-4 py-1.5 sm:py-2 text-center text-xs sm:text-sm">
                              {court.Court_Name}
                            </th>
                          ))}
@@ -750,20 +811,25 @@ export function BookingPage() {
                      <tbody>
                       {generateTimeSlots().map((timeSlot, idx) => (
                         <tr key={timeSlot.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="border border-gray-300 px-4 py-2 font-medium sticky left-0 bg-inherit text-xs sm:text-sm">{timeSlot.display}</td>
-                           {courts.slice(0, 6).map((court) => (
+                          <td className="border border-gray-300 px-2 sm:px-4 py-1.5 sm:py-2 font-medium sticky left-0 bg-inherit text-xs sm:text-sm">{timeSlot.display}</td>
+                           {currentSheetCourts.map((court) => (
                              <td
                                key={`${timeSlot.display}-${court.Court_Id}`}
-                              className={`border border-gray-300 px-1 sm:px-2 md:px-4 py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
-                               onClick={() => court.Status === 'Available' ? handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price) : undefined}
+                              className={`border border-gray-300 px-1 sm:px-2 lg:px-4 py-1.5 sm:py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
+                               onClick={() => {
+                                 const cellStatus = getCellStatus(court.Court_Id, timeSlot.display)
+                                 if (court.Status === 'Available' && cellStatus.status !== 'past') {
+                                   handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, typeof court.Price === 'number' ? court.Price : typeof court.Price === 'string' ? parseFloat(court.Price) : 0)
+                                 }
+                               }}
                             >
                               {(() => {
                                 const key = `COURT ${court.Court_Id}-${timeSlot.display}`
                                 const isSelected = selectedCells.has(key)
                                 const showBadge = court.Status === 'Available' && !isSelected
                                 return (
-                                  <span className={`inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs md:text-sm ${showBadge ? 'bg-white/80 text-gray-900' : 'bg-transparent text-black'}`}>
-                                    {court.Price}.00 php
+                                  <span className={`inline-block px-1 sm:px-1.5 lg:px-2 py-0.5 rounded-md text-[9px] sm:text-[10px] lg:text-xs ${showBadge ? 'bg-white/80 text-gray-900' : 'bg-transparent text-black'}`}>
+                                    ₱{typeof court.Price === 'number' ? court.Price.toFixed(2) : typeof court.Price === 'string' ? parseFloat(court.Price).toFixed(2) : '0.00'}
                                   </span>
                                 )
                               })()}
@@ -778,261 +844,90 @@ export function BookingPage() {
             </div>
           )}
 
-          {activeTab === 'Sheet 2' && (
-            <div>
-              {/* Legend (same as Sheet 1) */}
-              <div className="flex flex-wrap justify-center gap-4 mb-6 text-xs sm:text-sm">
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 ring-gray-300 bg-white">
-                  <span className="w-3.5 h-3.5 rounded bg-white ring-1 ring-gray-300"></span>
-                  <span>Available</span>
-                </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-600 text-white">
-                  <span className="w-3.5 h-3.5 rounded bg-gray-600"></span>
-                  <span>Reserved</span>
-                </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-yellow-400 text-black">
-                  <span className="w-3.5 h-3.5 rounded bg-yellow-400"></span>
-                  <span>Maintenance</span>
-                </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-300 text-gray-900">
-                  <span className="w-3.5 h-3.5 rounded bg-green-300"></span>
-                  <span>Selected</span>
-                </div>
-              </div>
 
-              {/* Court Selection Table - Courts 7-12 (Tablet/Desktop) */}
-              <div className="hidden sm:block overflow-x-auto rounded-lg ring-1 ring-gray-200 shadow-sm">
-                {loading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Loading courts...</p>
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-8">
-                    <p className="text-red-600">{error}</p>
-                    <button 
-                      onClick={() => window.location.reload()} 
-                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : loadingAvailability ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Loading availability data...</p>
-                  </div>
-                ) : (
-                  <table className="w-full border-collapse" role="grid">
-                    <thead>
-                      <tr className="bg-gray-100 sticky top-0 z-10">
-                        <th className="border border-gray-300 px-4 py-2 text-left text-xs sm:text-sm">TIME</th>
-                        {courts.slice(6, 12).map((court) => (
-                          <th key={court.Court_Id} className="border border-gray-300 px-4 py-2 text-center text-xs sm:text-sm">
-                            {court.Court_Name}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                     <tbody>
-                       {generateTimeSlots().map((timeSlot, idx) => (
-                         <tr key={timeSlot.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                           <td className="border border-gray-300 px-4 py-2 font-medium sticky left-0 bg-inherit text-xs sm:text-sm">{timeSlot.display}</td>
-                           {courts.slice(6, 12).map((court) => (
-                            <td
-                               key={`${timeSlot.display}-${court.Court_Id}`}
-                               className={`border border-gray-300 px-1 sm:px-2 md:px-4 py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
-                               onClick={() => court.Status === 'Available' ? handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price) : undefined}
-                            >
-                              {(() => {
-                                const key = `COURT ${court.Court_Id}-${timeSlot.display}`
-                                const isSelected = selectedCells.has(key)
-                                const forceTransparent = isSelected || court.Status !== 'Available'
-                                return (
-                                   <span className={`inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs md:text-sm ${forceTransparent ? 'bg-transparent text-black' : 'bg-white/80 text-gray-900'}`}>
-                                    {court.Price}.00 php
-                                  </span>
-                                )
-                              })()}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'Rent an racket' && (
+          {activeTab === 'Rent a racket' && (
             <div>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                 Equipment rental rates vary by item. Check individual prices below.
               </p>
               {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-2 text-gray-600">Loading equipment...</p>
+                <div className="text-center py-6 sm:py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-sm sm:text-base text-gray-600">Loading equipment...</p>
                 </div>
               ) : error ? (
-                <div className="text-center py-8">
-                  <p className="text-red-600">{error}</p>
+                <div className="text-center py-6 sm:py-8">
+                  <p className="text-sm sm:text-base text-red-600">{error}</p>
                   <button 
                     onClick={() => window.location.reload()} 
-                    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    className="mt-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                   >
                     Retry
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
                   {equipment.map((item, index) => (
                     <div
                       key={item.id}
-                      className="relative h-80 sm:h-72 md:h-80 lg:h-84 cursor-pointer group animate-fade-in"
+                      className="relative h-64 sm:h-72 md:h-80 lg:h-84 cursor-pointer group animate-fade-in"
                       style={{ animationDelay: `${index * 100}ms` }}
                       onClick={() => handleRacketClick(item.equipment_name)}
                     >
-                    {/* Flip Card Container */}
-                      <div className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${
-                        flippedCards.has(item.equipment_name) ? 'rotate-y-180' : ''
+                      <div className={`relative bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 rounded-xl sm:rounded-2xl p-2 sm:p-3 md:p-4 lg:p-6 h-full flex flex-col justify-between items-center hover:shadow-2xl hover:scale-105 hover:-translate-y-2 transition-all duration-500 group-hover:border-blue-400 group-hover:from-blue-50 group-hover:to-blue-100 ${
+                        isRacketBooked(item.equipment_name) ? 'border-green-500 ring-4 ring-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-green-200' : 'border-gray-200 hover:border-blue-400'
                       }`}>
-                        {/* Front of Card */}
-                        <div className="absolute inset-0 w-full h-full backface-hidden">
-                          <div className={`relative bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 rounded-2xl p-3 sm:p-4 md:p-6 h-full flex flex-col justify-between items-center hover:shadow-2xl hover:scale-105 hover:-translate-y-2 transition-all duration-500 group-hover:border-blue-400 group-hover:from-blue-50 group-hover:to-blue-100 ${
-                            isRacketBooked(item.equipment_name) ? 'border-green-500 ring-4 ring-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-green-200' : 'border-gray-200 hover:border-blue-400'
-                          }`}>
-                            {/* Premium Badge */}
-                            {item.stocks > 5 && (
-                              <div className="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
-                                Popular
-                              </div>
-                            )}
-                            
-                            {/* Stock Badge */}
-                            {item.stocks > 0 && (
-                              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-bounce">
-                                {item.stocks}
-                              </div>
-                            )}
-                            
-                            {/* Equipment Image Container */}
-                            <div className="flex-1 flex items-center justify-center w-full mb-4 relative">
-                              <div className="relative group/image">
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500"></div>
-                                <div className="relative w-full h-20 sm:h-24 md:h-32 bg-white rounded-lg shadow-sm overflow-hidden">
-                            <img
-                              src={`${item.image_path || "/assets/img/equipments/racket.png"}?v=${Date.now()}`}
-                              alt={item.equipment_name}
-                                    className="w-full h-full object-contain object-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-2"
-                                    style={{
-                                      filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
-                                      background: 'transparent'
-                                    }}
-                                  />
-                                </div>
-                                {/* Floating particles effect */}
-                                <div className="absolute inset-0 pointer-events-none">
-                                  <div className="absolute top-2 left-2 w-1 h-1 bg-blue-400 rounded-full animate-ping"></div>
-                                  <div className="absolute top-4 right-3 w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
-                                  <div className="absolute bottom-3 left-4 w-1 h-1 bg-green-400 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Equipment Info */}
-                            <div className="w-full text-center space-y-3">
-                              <h3 className="font-bold text-sm sm:text-base md:text-lg text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-all duration-300 transform group-hover:scale-105">
-                                {item.equipment_name}
-                              </h3>
-                              
-                              {/* Stock Status with Animation */}
-                              <div className="flex items-center justify-center space-x-2">
-                                <div className={`w-3 h-3 rounded-full animate-pulse ${
-                                  item.stocks > 0 ? 'bg-green-500 shadow-green-200 shadow-lg' : 'bg-red-500 shadow-red-200 shadow-lg'
-                                }`}></div>
-                                <p className="text-xs sm:text-sm text-gray-600 font-medium">
-                                  {item.stocks > 0 ? `${item.stocks} available` : 'Out of stock'}
-                                </p>
-                              </div>
-                              
-                              {/* Enhanced Price Display */}
-                              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl px-4 py-2 border border-blue-200 shadow-sm group-hover:shadow-md transition-all duration-300">
-                                <p className="text-sm sm:text-base font-bold text-blue-600 group-hover:text-blue-700">
-                                  ₱{item.price}/hour
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Enhanced Hover Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-purple-500/0 group-hover:from-blue-500/10 group-hover:to-purple-500/10 rounded-2xl transition-all duration-500 flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110">
-                                <div className="bg-white rounded-full p-3 shadow-xl border-2 border-blue-200">
-                                  <svg className="w-6 h-6 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Selection Indicator */}
-                            {isRacketBooked(item.equipment_name) && (
-                              <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
-                                Selected
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      
-                      {/* Back of Card (Configuration) */}
-                      <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-4 md:p-6 h-full flex flex-col justify-center items-center shadow-lg">
-                          <div className="space-y-6 w-full">
-                            <div className="text-center">
-                              <label className="block text-sm font-medium mb-3">Time:</label>
-                              <div className="flex items-center justify-center">
-                <input
-                                  type="number"
-                                  value={racketTime}
-                                  onChange={(e) => handleRacketTimeChange(item.equipment_name, Number(e.target.value))}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-20 px-3 py-2 border border-gray-300 rounded text-sm text-center"
-                                />
-                                <span className="ml-2 text-sm">/hr</span>
-                              </div>
-              </div>
-                            <div className="text-center">
-                              <label className="block text-sm font-medium mb-3">Quantity:</label>
-                              <div className="flex items-center justify-center space-x-4">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    const newQuantity = Math.max(0, racketQuantity - 1)
-                                    handleRacketQuantityChange(item.equipment_name, newQuantity)
-                                  }}
-                                  className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
-                                >
-                                  -
-                                </button>
-                                <span className="w-12 text-center text-lg font-medium">{racketQuantity}</span>
-                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    const newQuantity = Math.min(item.stocks, racketQuantity + 1)
-                                    handleRacketQuantityChange(item.equipment_name, newQuantity)
-                                  }}
-                                  className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
-                                >
-                                  +
-                </button>
-              </div>
+                        
+                        {/* Equipment Image Container - Mobile Responsive */}
+                        <div className="flex-1 flex items-center justify-center w-full mb-2 sm:mb-4 relative">
+                          <div className="relative group/image">
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500"></div>
+                            <div className="relative w-full h-16 sm:h-20 md:h-24 lg:h-32 bg-white rounded-lg shadow-sm overflow-hidden">
+                              <img
+                                src={`${item.image_path || "/assets/img/equipments/racket-black-red.png"}?v=${Date.now()}`}
+                                alt={item.equipment_name}
+                                className="w-full h-full object-contain object-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-2"
+                                style={{
+                                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
+                                  background: 'transparent'
+                                }}
+                              />
                             </div>
                           </div>
                         </div>
+                        
+                        {/* Equipment Info - Mobile Responsive */}
+                        <div className="w-full text-center space-y-2 sm:space-y-3">
+                          <h3 className="font-bold text-xs sm:text-sm md:text-base lg:text-lg text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-all duration-300 transform group-hover:scale-105">
+                            {item.equipment_name}
+                          </h3>
+                          
+                          {/* Stock Status - Mobile Responsive */}
+                          <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                            <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
+                              item.stocks > 0 ? 'bg-green-500 shadow-green-200 shadow-lg' : 'bg-red-500 shadow-red-200 shadow-lg'
+                            }`}></div>
+                            <p className="text-xs sm:text-sm text-gray-600 font-medium">
+                              {item.stocks > 0 ? `${item.stocks} available` : 'Out of stock'}
+                            </p>
+                          </div>
+                          
+                          {/* Enhanced Price Display - Mobile Responsive */}
+                          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg sm:rounded-xl px-2 sm:px-4 py-1.5 sm:py-2 border border-blue-200 shadow-sm group-hover:shadow-md transition-all duration-300">
+                            <p className="text-xs sm:text-sm md:text-base font-bold text-blue-600 group-hover:text-blue-700">
+                              ₱{item.price}/hour
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Selection Indicator - Mobile Responsive */}
+                        {isRacketBooked(item.equipment_name) && (
+                          <div className="absolute top-1 left-1 sm:top-2 sm:left-2 bg-green-500 text-white text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full shadow-lg">
+                            Selected
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
                   ))}
                 </div>
               )}
@@ -1072,7 +967,8 @@ export function BookingPage() {
                     <thead>
                       <tr className="bg-gray-100">
                         <th className="border border-gray-300 px-4 py-2 text-left">Equipment</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Time:</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Time</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Quantity</th>
                         <th className="border border-gray-300 px-4 py-2 text-left">Sub total</th>
                       </tr>
                     </thead>
@@ -1081,7 +977,8 @@ export function BookingPage() {
                         <tr key={index}>
                           <td className="border border-gray-300 px-4 py-2">{booking.equipment}</td>
                           <td className="border border-gray-300 px-4 py-2">{booking.time}</td>
-                          <td className="border border-gray-300 px-4 py-2">{booking.subtotal}</td>
+                          <td className="border border-gray-300 px-4 py-2">{booking.quantity}</td>
+                          <td className="border border-gray-300 px-4 py-2">₱{booking.subtotal.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1091,7 +988,7 @@ export function BookingPage() {
 
               {/* Total */}
               <div className="text-right mb-6">
-                <span className="text-lg font-bold">TOTAL: {totalAmount}</span>
+                <span className="text-lg font-bold">TOTAL: ₱{totalAmount.toFixed(2)}</span>
               </div>
 
               {/* Notes */}
@@ -1184,6 +1081,22 @@ export function BookingPage() {
         equipmentBookings={equipmentBookings}
         totalAmount={totalAmount}
         selectedDate={selectedDate}
+      />
+
+      {/* Racket Details Modal */}
+      <RacketDetailsModal
+        isOpen={showRacketDetailsModal}
+        onClose={handleRacketDetailsClose}
+        onSelect={handleRacketDetailsSelect}
+        racket={selectedRacket}
+      />
+
+      {/* Racket Configuration Modal */}
+      <RacketConfigModal
+        isOpen={showRacketConfigModal}
+        onClose={handleRacketConfigClose}
+        onConfirm={handleRacketConfigConfirm}
+        racket={selectedRacket}
       />
     </div>
   )

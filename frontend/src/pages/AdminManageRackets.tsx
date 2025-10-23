@@ -512,27 +512,27 @@ const AdminManageRackets = () => {
             </div>
           </div>
 
-          {/* Rackets Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8">
+          {/* Rackets Grid - Mobile Responsive */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {rackets.map((racket) => (
               <div key={racket.id} className="group bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-2">
-                {/* Card Header */}
-                <div className="relative p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-                  <h3 className="text-xl font-bold text-gray-900 truncate pr-20">{racket.name}</h3>
+                {/* Card Header - Mobile Responsive */}
+                <div className="relative p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate pr-16 sm:pr-20">{racket.name}</h3>
                   <button
                     onClick={() => handleDeleteRacket(racket.id)}
-                    className="absolute top-4 right-4 w-16 h-16 bg-gradient-to-br from-red-200 to-red-300 hover:from-red-300 hover:to-red-400 rounded-full flex items-center justify-center transition-all duration-300 group shadow-lg hover:shadow-xl transform hover:scale-110"
+                    className="absolute top-3 right-3 sm:top-4 sm:right-4 w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-red-200 to-red-300 hover:from-red-300 hover:to-red-400 rounded-full flex items-center justify-center transition-all duration-300 group shadow-lg hover:shadow-xl transform hover:scale-110"
                     title="Delete Racket"
                   >
-                    <svg className="w-8 h-8 text-red-700 group-hover:text-red-800 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 sm:w-8 sm:h-8 text-red-700 group-hover:text-red-800 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 </div>
 
-                {/* Racket Image */}
-                <div className="p-6 flex justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                  <div className="w-48 h-48 flex items-center justify-center bg-white rounded-2xl shadow-inner border border-gray-200 group-hover:shadow-lg transition-all duration-300">
+                {/* Racket Image - Mobile Responsive */}
+                <div className="p-4 sm:p-6 flex justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+                  <div className="w-32 h-32 sm:w-48 sm:h-48 flex items-center justify-center bg-white rounded-2xl shadow-inner border border-gray-200 group-hover:shadow-lg transition-all duration-300">
                     <img
                       src={racket.image}
                       alt={racket.name}
@@ -565,32 +565,32 @@ const AdminManageRackets = () => {
                   </div>
                 </div>
 
-                {/* Stock Information */}
-                <div className="px-6 py-4 text-center bg-gradient-to-br from-blue-50 to-indigo-50">
-                  <div className="space-y-3">
-                    <div className="bg-white rounded-xl p-3 shadow-sm border border-blue-100">
-                      <p className="text-sm text-gray-600 mb-1">Available Stock</p>
-                      <p className="text-2xl font-bold text-blue-600">{racket.stock}</p>
+                {/* Stock Information - Mobile Responsive */}
+                <div className="px-4 sm:px-6 py-3 sm:py-4 text-center bg-gradient-to-br from-blue-50 to-indigo-50">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                    <div className="bg-white rounded-xl p-2 sm:p-3 shadow-sm border border-blue-100">
+                      <p className="text-xs sm:text-sm text-gray-600 mb-1">Available Stock</p>
+                      <p className="text-lg sm:text-2xl font-bold text-blue-600">{racket.stock}</p>
                     </div>
-                    <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-                      <p className="text-sm text-gray-600 mb-1">Brand</p>
-                      <p className="text-lg font-semibold text-gray-800">{racket.brand}</p>
+                    <div className="bg-white rounded-xl p-2 sm:p-3 shadow-sm border border-gray-100">
+                      <p className="text-xs sm:text-sm text-gray-600 mb-1">Brand</p>
+                      <p className="text-sm sm:text-lg font-semibold text-gray-800 truncate">{racket.brand}</p>
                     </div>
-                    <div className="bg-white rounded-xl p-3 shadow-sm border border-green-100">
-                      <p className="text-sm text-gray-600 mb-1">Price</p>
-                      <p className="text-xl font-bold text-green-600">{racket.price}</p>
+                    <div className="bg-white rounded-xl p-2 sm:p-3 shadow-sm border border-green-100">
+                      <p className="text-xs sm:text-sm text-gray-600 mb-1">Price</p>
+                      <p className="text-sm sm:text-xl font-bold text-green-600 truncate">{racket.price}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Edit Button */}
-                <div className="p-6 pt-4">
+                {/* Edit Button - Mobile Responsive */}
+                <div className="p-4 sm:p-6 pt-3 sm:pt-4">
                   <button
                     onClick={() => handleEditRacket(racket.id)}
-                    className="w-full bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 text-gray-800 py-4 px-6 rounded-xl transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 border-2 border-gray-300 hover:border-gray-400"
+                    className="w-full bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 text-gray-800 py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all duration-300 font-bold text-sm sm:text-lg shadow-lg hover:shadow-xl transform hover:scale-105 border-2 border-gray-300 hover:border-gray-400"
                   >
                     <span className="flex items-center justify-center space-x-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                       <span>Edit Racket</span>
@@ -603,22 +603,22 @@ const AdminManageRackets = () => {
         </main>
       </div>
 
-      {/* Edit Modal */}
+      {/* Edit Modal - Mobile Responsive */}
       {editModalOpen && editingRacket && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 text-center">
-              <h2 className="text-2xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            {/* Modal Header - Mobile Responsive */}
+            <div className="p-4 sm:p-6 border-b border-gray-200 text-center">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                 {isAddModal ? 'Add New Racket' : 'Edit Racket Information'}
               </h2>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column - Name and Image */}
-                <div className="space-y-6">
+            {/* Modal Content - Mobile Responsive */}
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                {/* Left Column - Name and Image - Mobile Responsive */}
+                <div className="space-y-4 sm:space-y-6">
                   {/* Name Field */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Name:</label>
@@ -626,7 +626,7 @@ const AdminManageRackets = () => {
                       type="text"
                       value={editingRacket.name}
                       onChange={(e) => setEditingRacket({...editingRacket, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                       placeholder="Enter racket name"
                     />
                   </div>
@@ -638,7 +638,7 @@ const AdminManageRackets = () => {
                       type="text"
                       value={editingRacket.brand}
                       onChange={(e) => setEditingRacket({...editingRacket, brand: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                       placeholder="Enter brand name"
                     />
                   </div>
@@ -650,20 +650,20 @@ const AdminManageRackets = () => {
                       type="text"
                       value={editingRacket.price}
                       onChange={(e) => setEditingRacket({...editingRacket, price: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                       placeholder="Enter price (e.g., ₱2,500.00)"
                     />
                   </div>
 
-                  {/* Image Upload Section */}
+                  {/* Image Upload Section - Mobile Responsive */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Racket Image:</label>
                     <div 
-                      className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                      className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
                       onClick={() => document.getElementById('racket-image-upload')?.click()}
                     >
                       {imagePreview ? (
-                        <div className="w-full h-48 flex items-center justify-center bg-gray-50 rounded-lg mb-4">
+                        <div className="w-full h-32 sm:h-48 flex items-center justify-center bg-gray-50 rounded-lg mb-3 sm:mb-4">
                           <img
                             src={imagePreview}
                             alt="Racket Preview"
@@ -671,11 +671,11 @@ const AdminManageRackets = () => {
                           />
                         </div>
                       ) : (
-                        <div className="w-full h-48 flex flex-col items-center justify-center bg-gray-50 rounded-lg mb-4">
-                          <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-full h-32 sm:h-48 flex flex-col items-center justify-center bg-gray-50 rounded-lg mb-3 sm:mb-4">
+                          <svg className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6H16a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h2" />
                           </svg>
-                          <p className="text-sm text-gray-500">Upload an attachment</p>
+                          <p className="text-xs sm:text-sm text-gray-500">Upload an attachment</p>
                         </div>
                       )}
                       <input
@@ -689,8 +689,8 @@ const AdminManageRackets = () => {
                   </div>
                 </div>
 
-                {/* Right Column - Specifications */}
-                <div className="space-y-6">
+                {/* Right Column - Specifications - Mobile Responsive */}
+                <div className="space-y-4 sm:space-y-6">
                   {/* Unit Field */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Unit:</label>
@@ -698,7 +698,7 @@ const AdminManageRackets = () => {
                       type="text"
                       value={editingRacket.unit}
                       onChange={(e) => setEditingRacket({...editingRacket, unit: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                     />
                   </div>
 
@@ -709,7 +709,7 @@ const AdminManageRackets = () => {
                       type="text"
                       value={editingRacket.weight}
                       onChange={(e) => setEditingRacket({...editingRacket, weight: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                     />
                   </div>
 
@@ -720,32 +720,32 @@ const AdminManageRackets = () => {
                       type="text"
                       value={editingRacket.tension}
                       onChange={(e) => setEditingRacket({...editingRacket, tension: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                     />
                   </div>
 
-                  {/* Quantity/Stock Field */}
+                  {/* Quantity/Stock Field - Mobile Responsive */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 text-center">Quantity:</label>
-                    <div className="flex items-center justify-center space-x-4">
+                    <div className="flex items-center justify-center space-x-3 sm:space-x-4">
                       <button
                         type="button"
                         onClick={() => setEditingRacket({...editingRacket, stock: Math.max(0, editingRacket.stock - 1)})}
-                        className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                         </svg>
                       </button>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 min-w-[4rem] text-center">
-                        <span className="text-xl font-bold text-gray-800">{editingRacket.stock}</span>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 sm:px-4 py-2 min-w-[3rem] sm:min-w-[4rem] text-center">
+                        <span className="text-lg sm:text-xl font-bold text-gray-800">{editingRacket.stock}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setEditingRacket({...editingRacket, stock: editingRacket.stock + 1})}
-                        className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
                       </button>
@@ -755,17 +755,17 @@ const AdminManageRackets = () => {
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-200 flex justify-center space-x-4">
+            {/* Modal Footer - Mobile Responsive */}
+            <div className="p-4 sm:p-6 border-t border-gray-200 flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
               <button
                 onClick={handleCancelEdit}
-                className="px-8 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium shadow-md hover:shadow-lg"
+                className="px-6 sm:px-8 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium shadow-md hover:shadow-lg text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveRacket}
-                className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-md hover:shadow-lg"
+                className="px-6 sm:px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-md hover:shadow-lg text-sm sm:text-base"
               >
                 Confirm
               </button>
@@ -774,18 +774,18 @@ const AdminManageRackets = () => {
         </div>
       )}
 
-      {/* Image Modal */}
+      {/* Image Modal - Mobile Responsive */}
       {selectedImage && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={closeImageModal}
         >
           <div className="relative max-w-4xl max-h-full">
             <button
               onClick={closeImageModal}
-              className="absolute top-4 right-4 z-10 w-10 h-10 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 w-8 h-8 sm:w-10 sm:h-10 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110"
             >
-              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

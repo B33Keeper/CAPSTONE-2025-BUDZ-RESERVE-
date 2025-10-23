@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, Calendar, Clock, MapPin, CreditCard, AlertCircle } from 'lucide-react'
 import { PaymentService } from '@/lib/paymentService'
+import { TermsAndConditionsModal } from './TermsAndConditionsModal'
 
 interface CourtBooking {
   court: string
@@ -34,6 +35,7 @@ export function BookingDetailsModal({
   selectedDate
 }: BookingDetailsModalProps) {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
 
   if (!isOpen) return null
 
@@ -62,6 +64,19 @@ export function BookingDetailsModal({
         alert('Payment processing failed. Please try again.')
       }
     }
+  }
+
+  const handleShowTerms = () => {
+    setShowTermsModal(true)
+  }
+
+  const handleCloseTerms = () => {
+    setShowTermsModal(false)
+  }
+
+  const handleAcceptTerms = () => {
+    setAcceptedTerms(true)
+    setShowTermsModal(false)
   }
 
   return (
@@ -199,7 +214,10 @@ export function BookingDetailsModal({
               />
               <span className="text-sm text-gray-700 text-center">
                 I have read and agree to the{' '}
-                <button className="text-blue-600 hover:text-blue-800 underline">
+                <button 
+                  onClick={handleShowTerms}
+                  className="text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                >
                   Terms and Conditions
                 </button>
                 {' '}and understand the no cancellation policy.
@@ -230,6 +248,14 @@ export function BookingDetailsModal({
           </button>
         </div>
       </div>
+
+      {/* Terms and Conditions Modal */}
+      <TermsAndConditionsModal
+        isOpen={showTermsModal}
+        onClose={handleCloseTerms}
+        onAccept={handleAcceptTerms}
+        initialAccepted={acceptedTerms}
+      />
     </div>
   )
 }

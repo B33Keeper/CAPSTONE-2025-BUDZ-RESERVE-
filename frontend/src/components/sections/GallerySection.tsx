@@ -1,43 +1,35 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useResponsive } from '@/hooks/useResponsive'
-import { galleryApiService, GalleryItem } from '@/lib/galleryApiService'
+
+interface GalleryItem {
+  id: number
+  title: string
+  image_path: string
+  description: string
+  status: 'active' | 'inactive'
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
 
 export function GallerySection() {
   const { ref, controls } = useScrollAnimation()
   const { isMobile, isTablet } = useResponsive()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null)
-  const [galleryImages, setGalleryImages] = useState<GalleryItem[]>([])
-  const [loading, setLoading] = useState(true)
-
-  // Fetch gallery images from API
-  useEffect(() => {
-    const fetchGalleryImages = async () => {
-      try {
-        setLoading(true)
-        const images = await galleryApiService.getAll()
-        setGalleryImages(images)
-      } catch (error) {
-        console.error('Error fetching gallery images:', error)
-        // Fallback to static images if API fails
-        setGalleryImages([
-          { id: 1, title: 'Client Group Photo 1', image_path: '/assets/img/home-page/GALLERY/IMAGE 1.jpg', description: '', status: 'active', sort_order: 1, created_at: '', updated_at: '' },
-          { id: 2, title: 'Client Group Photo 2', image_path: '/assets/img/home-page/GALLERY/IMAGE 2.jpg', description: '', status: 'active', sort_order: 2, created_at: '', updated_at: '' },
-          { id: 3, title: 'Client Group Photo 3', image_path: '/assets/img/home-page/GALLERY/IMAGE 3.jpg', description: '', status: 'active', sort_order: 3, created_at: '', updated_at: '' },
-          { id: 4, title: 'Client Group Photo 4', image_path: '/assets/img/home-page/GALLERY/IMAGE 4.jpg', description: '', status: 'active', sort_order: 4, created_at: '', updated_at: '' },
-          { id: 5, title: 'Client Group Photo 5', image_path: '/assets/img/home-page/GALLERY/IMAGE 5.jpg', description: '', status: 'active', sort_order: 5, created_at: '', updated_at: '' },
-          { id: 6, title: 'Client Group Photo 6', image_path: '/assets/img/home-page/GALLERY/IMAGE 6.jpg', description: '', status: 'active', sort_order: 6, created_at: '', updated_at: '' },
-        ])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchGalleryImages()
-  }, [])
+  
+  // Static gallery images - no API calls needed
+  const galleryImages: GalleryItem[] = [
+    { id: 1, title: 'Client Group Photo 1', image_path: '/assets/img/home-page/GALLERY/IMAGE 1.jpg', description: '', status: 'active', sort_order: 1, created_at: '', updated_at: '' },
+    { id: 2, title: 'Client Group Photo 2', image_path: '/assets/img/home-page/GALLERY/IMAGE 2.jpg', description: '', status: 'active', sort_order: 2, created_at: '', updated_at: '' },
+    { id: 3, title: 'Client Group Photo 3', image_path: '/assets/img/home-page/GALLERY/IMAGE 3.jpg', description: '', status: 'active', sort_order: 3, created_at: '', updated_at: '' },
+    { id: 4, title: 'Client Group Photo 4', image_path: '/assets/img/home-page/GALLERY/IMAGE 4.jpg', description: '', status: 'active', sort_order: 4, created_at: '', updated_at: '' },
+    { id: 5, title: 'Client Group Photo 5', image_path: '/assets/img/home-page/GALLERY/IMAGE 5.jpg', description: '', status: 'active', sort_order: 5, created_at: '', updated_at: '' },
+    { id: 6, title: 'Client Group Photo 6', image_path: '/assets/img/home-page/GALLERY/IMAGE 6.jpg', description: '', status: 'active', sort_order: 6, created_at: '', updated_at: '' },
+  ]
 
   // Responsive images per view
   const imagesPerView = isMobile ? 1 : 2

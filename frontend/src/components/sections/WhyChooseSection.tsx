@@ -3,31 +3,23 @@ import { useAuthStore } from '@/store/authStore'
 import { BookOpen, CreditCard, Users } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
-import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsModal'
 import { useState } from 'react'
 
 export function WhyChooseSection() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, termsAccepted, acceptTerms } = useAuthStore()
   const { ref, controls } = useScrollAnimation()
   const navigate = useNavigate()
-  const [showTermsModal, setShowTermsModal] = useState(false)
 
   const handleBookNowClick = (e: React.MouseEvent) => {
     e.preventDefault()
     if (isAuthenticated) {
-      setShowTermsModal(true)
+      // Go directly to booking page
+      navigate('/booking')
     } else {
-      navigate('/signup')
+      // Store the intended destination for after login
+      localStorage.setItem('intendedDestination', '/booking')
+      navigate('/login')
     }
-  }
-
-  const handleAcceptTerms = () => {
-    setShowTermsModal(false)
-    navigate('/booking')
-  }
-
-  const handleCloseTerms = () => {
-    setShowTermsModal(false)
   }
 
   const steps = [
@@ -257,12 +249,6 @@ export function WhyChooseSection() {
         </motion.div>
       </div>
       
-      {/* Terms and Conditions Modal */}
-      <TermsAndConditionsModal
-        isOpen={showTermsModal}
-        onClose={handleCloseTerms}
-        onAccept={handleAcceptTerms}
-      />
     </section>
   )
 }

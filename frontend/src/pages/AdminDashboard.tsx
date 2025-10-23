@@ -48,6 +48,20 @@ const AdminDashboard = () => {
       
       console.log('Fetching dashboard data...')
       
+      // Check if backend is running first
+      try {
+        await api.get('/health')
+      } catch (healthError) {
+        console.warn('Backend health check failed, using fallback data')
+        // Use fallback data when backend is not available
+        setUserCount(0)
+        setCourtCount(0)
+        setAvailableCourtCount(0)
+        setLoading(false)
+        setRefreshing(false)
+        return
+      }
+      
       // Fetch all data in parallel
       const [userCountData, courtCountData, availableCourtCountData] = await Promise.all([
         api.get('/users/count'),
@@ -68,7 +82,12 @@ const AdminDashboard = () => {
       setRefreshing(false)
     } catch (error: any) {
       console.error('Error fetching dashboard data:', error)
-      console.error('Error details:', error.response?.data)
+      console.error('Error details:', error.response?.data || error.message)
+      
+      // Set default values on error
+      setUserCount(0)
+      setCourtCount(0)
+      setAvailableCourtCount(0)
       setLoading(false)
       setRefreshing(false)
     }
@@ -438,7 +457,7 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Total Courts</p>
+                    <span className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Total Courts</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -504,7 +523,7 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Total Users</p>
-                  <p className="text-2xl sm:text-3xl font-bold group-hover:text-blue-300 transition-colors">
+                  <div className="text-2xl sm:text-3xl font-bold group-hover:text-blue-300 transition-colors">
                     {loading ? (
                       <div className="flex items-center space-x-1 sm:space-x-2">
                         <div className="animate-spin rounded-full h-4 w-4 sm:h-6 sm:w-6 border-b-2 border-white"></div>
@@ -513,7 +532,7 @@ const AdminDashboard = () => {
                     ) : (
                       `${userCount}`
                     )}
-                  </p>
+                  </div>
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-500 rounded-full flex items-center justify-center group-hover:bg-blue-500 transition-colors group-hover:scale-110 flex-shrink-0">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">

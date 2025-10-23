@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useActiveSection } from '@/hooks/useActiveSection'
-import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsModal'
 // Simple SVG icons to replace lucide-react
 const MenuIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -42,8 +41,7 @@ export function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isReservationsModalOpen, setIsReservationsModalOpen] = useState(false)
-  const [showTermsModal, setShowTermsModal] = useState(false)
-  const { user, isAuthenticated, logout } = useAuthStore()
+  const { user, isAuthenticated, logout, termsAccepted, acceptTerms } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const activeSection = useActiveSection()
@@ -55,23 +53,18 @@ export function Header() {
     setIsProfileOpen(false)
   }
 
-  // Handle Terms and Conditions for Book Court
+  // Handle Book Court click
   const handleBookCourtClick = () => {
     if (!isAuthenticated) {
+      // Store the intended destination for after login
+      localStorage.setItem('intendedDestination', '/booking')
       alert('Please login to proceed on booking')
       navigate('/login')
       return
     }
-    setShowTermsModal(true)
-  }
-
-  const handleAcceptTerms = () => {
-    setShowTermsModal(false)
+    
+    // Go directly to booking page
     navigate('/booking')
-  }
-
-  const handleCloseTerms = () => {
-    setShowTermsModal(false)
   }
 
   const scrollToSection = (sectionId: string) => {
@@ -143,17 +136,17 @@ export function Header() {
   return (
     <>
     <header className="bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200/50 sticky top-0 z-50 overflow-visible">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
-        <div className="flex justify-between items-center h-18">
-            {/* Logo */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 overflow-visible">
+        <div className="flex justify-between items-center h-16 sm:h-18">
+            {/* Logo - Mobile Responsive */}
             <Link to="/" className="flex items-center">
-              <img src="/assets/icons/BBC ICON.png" alt="BBC Logo" className="h-12 sm:h-16" />
+              <img src="/assets/icons/BBC ICON.png" alt="BBC Logo" className="h-10 sm:h-12 md:h-16" />
             </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center justify-between w-full">
-            {/* Center Navigation Links */}
-            <nav className="flex items-center space-x-8 justify-center flex-1">
+            {/* Center Navigation Links - Mobile Responsive */}
+            <nav className="flex items-center space-x-4 lg:space-x-8 justify-center flex-1">
               <button
                 onClick={() => scrollToSection('home')}
                 className={getNavButtonClasses('home')}
@@ -192,13 +185,13 @@ export function Header() {
               </button>
             </nav>
             
-            {/* Right Side - Login/Sign Up or Profile */}
-            <div className="flex items-center space-x-4">
+            {/* Right Side - Login/Sign Up or Profile - Mobile Responsive */}
+            <div className="flex items-center space-x-2 lg:space-x-4">
               {isAuthenticated ? (
                 <div className="relative flex justify-end" ref={profileRef}>
                   <button
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center space-x-3 px-3 py-2 rounded-xl text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 transition-all duration-300 group"
+                    className="flex items-center space-x-2 lg:space-x-3 px-2 lg:px-3 py-2 rounded-xl text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 transition-all duration-300 group"
                   >
                     <div className="relative">
                       <img
@@ -208,7 +201,7 @@ export function Header() {
                       />
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                     </div>
-                    <div className="hidden sm:block text-left">
+                    <div className="hidden lg:block text-left">
                       <div className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
                         {user?.name || user?.username}
                       </div>
@@ -484,12 +477,6 @@ export function Header() {
       onClose={() => setIsReservationsModalOpen(false)}
     />
 
-    {/* Terms and Conditions Modal */}
-    <TermsAndConditionsModal
-      isOpen={showTermsModal}
-      onClose={handleCloseTerms}
-      onAccept={handleAcceptTerms}
-    />
     </>
   )
 }

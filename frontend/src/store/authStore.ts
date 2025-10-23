@@ -18,11 +18,13 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
+  termsAccepted: boolean
   login: (credentials: { username: string; password: string }) => Promise<void>
   register: (userData: RegisterData) => Promise<void>
   logout: () => void
   checkAuth: () => Promise<void>
   updateUser: (userData: Partial<User>) => void
+  acceptTerms: () => void
 }
 
 interface RegisterData {
@@ -41,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      termsAccepted: false,
 
       login: async (credentials) => {
         set({ isLoading: true })
@@ -58,6 +61,7 @@ export const useAuthStore = create<AuthState>()(
             user,
             isAuthenticated: true,
             isLoading: false,
+            termsAccepted: false, // Reset terms acceptance on every login
           })
 
           // Return user data for navigation logic
@@ -84,6 +88,7 @@ export const useAuthStore = create<AuthState>()(
             user,
             isAuthenticated: true,
             isLoading: false,
+            termsAccepted: false, // Reset terms acceptance on every registration
           })
         } catch (error: any) {
           set({ isLoading: false })
@@ -94,9 +99,12 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
+        // Clear the entire auth storage to ensure clean logout
+        localStorage.removeItem('auth-storage')
         set({
           user: null,
           isAuthenticated: false,
+          termsAccepted: false,
         })
       },
 
@@ -121,14 +129,17 @@ export const useAuthStore = create<AuthState>()(
             user,
             isAuthenticated: true,
             isLoading: false,
+            termsAccepted: false, // Reset terms acceptance on every login
           })
         } catch (error) {
           localStorage.removeItem('access_token')
           localStorage.removeItem('refresh_token')
+          localStorage.removeItem('auth-storage')
           set({
             user: null,
             isAuthenticated: false,
             isLoading: false,
+            termsAccepted: false,
           })
         }
       },
@@ -141,12 +152,17 @@ export const useAuthStore = create<AuthState>()(
           })
         }
       },
+
+      acceptTerms: () => {
+        set({ termsAccepted: true })
+      },
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        termsAccepted: state.termsAccepted,
       }),
     }
   )

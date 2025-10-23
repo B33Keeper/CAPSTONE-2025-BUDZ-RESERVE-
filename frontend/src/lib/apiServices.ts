@@ -4,7 +4,7 @@ import api from './api'
 export interface Court {
   Court_Id: number
   Court_Name: string
-  Status: 'Available' | 'Maintenance' | 'Unavailable'
+  Status: 'Available' | 'Maintenance'
   Price: number
   Created_at: string
   Updated_at: string
@@ -49,7 +49,7 @@ export interface Reservation {
 export const apiServices = {
   // Courts
   async getCourts(): Promise<Court[]> {
-    const response = await api.get('/courts')
+    const response = await api.get(`/courts?t=${Date.now()}`)
     return response.data
   },
 

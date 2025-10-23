@@ -2,31 +2,23 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
-import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsModal'
 import { useState } from 'react'
 
 export function HeroSection() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, termsAccepted, acceptTerms } = useAuthStore()
   const { ref, controls } = useScrollAnimation()
   const navigate = useNavigate()
-  const [showTermsModal, setShowTermsModal] = useState(false)
 
   const handleBookNowClick = (e: React.MouseEvent) => {
     e.preventDefault()
     if (isAuthenticated) {
-      setShowTermsModal(true)
+      // Go directly to booking page
+      navigate('/booking')
     } else {
-      navigate('/signup')
+      // Store the intended destination for after login
+      localStorage.setItem('intendedDestination', '/booking')
+      navigate('/login')
     }
-  }
-
-  const handleAcceptTerms = () => {
-    setShowTermsModal(false)
-    navigate('/booking')
-  }
-
-  const handleCloseTerms = () => {
-    setShowTermsModal(false)
   }
 
   return (
@@ -153,7 +145,7 @@ export function HeroSection() {
               ease: "easeInOut" 
             }
           }}
-          className="hero-title text-4xl md:text-5xl lg:text-6xl font-bold mb-8 text-white" 
+          className="hero-title text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 sm:mb-8 text-white" 
           style={{ textShadow: '2px 2px 4px rgba(255,255,255,0.3), 0 0 20px rgba(255,255,255,0.1)' }}
         >
           <motion.span
@@ -178,7 +170,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={controls}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="hero-subtitle text-base md:text-lg lg:text-xl mb-10 text-white font-light" 
+          className="hero-subtitle text-sm sm:text-base md:text-lg lg:text-xl mb-8 sm:mb-10 text-white font-light" 
           style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.6)' }}
         >
           <motion.span
@@ -199,7 +191,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={controls}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="hero-description text-sm md:text-base lg:text-lg mb-16 leading-relaxed text-white/90 max-w-4xl mx-auto" 
+          className="hero-description text-xs sm:text-sm md:text-base lg:text-lg mb-12 sm:mb-16 leading-relaxed text-white/90 max-w-4xl mx-auto px-4" 
           style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.6)' }}
         >
           <motion.span
@@ -225,7 +217,7 @@ export function HeroSection() {
           {isAuthenticated ? (
             <motion.button
               onClick={handleBookNowClick}
-              className="cta-button bg-blue-500 text-white px-10 py-4 text-lg font-bold rounded-lg cursor-pointer relative overflow-hidden group"
+              className="cta-button bg-blue-500 text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 text-sm sm:text-base md:text-lg font-bold rounded-lg cursor-pointer relative overflow-hidden group"
               whileHover={{ 
                 scale: 1.05,
                 y: -2
@@ -291,7 +283,7 @@ export function HeroSection() {
             >
               <Link
                 to="/signup"
-                className="cta-button bg-blue-500 text-white px-10 py-4 text-lg font-bold rounded-lg cursor-pointer relative overflow-hidden group block"
+                className="cta-button bg-blue-500 text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 text-sm sm:text-base md:text-lg font-bold rounded-lg cursor-pointer relative overflow-hidden group block"
                 style={{ boxShadow: '0 8px 25px rgba(59, 130, 246, 0.4)' }}
               >
                 {/* Animated Background */}
@@ -341,12 +333,6 @@ export function HeroSection() {
         </motion.div>
       </motion.div>
       
-      {/* Terms and Conditions Modal */}
-      <TermsAndConditionsModal
-        isOpen={showTermsModal}
-        onClose={handleCloseTerms}
-        onAccept={handleAcceptTerms}
-      />
     </section>
   )
 }

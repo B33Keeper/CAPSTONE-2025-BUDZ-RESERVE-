@@ -286,18 +286,18 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             {/* User Info */}
             <div className="mb-8">
               <div className="flex items-center justify-center mb-3">
-                {user?.sex === 'Male' ? (
+                {profileForm.watch('sex') === 'Male' ? (
                   <div className="w-6 h-6 bg-blue-400 rounded-full mr-3 flex items-center justify-center shadow-lg">
                     <span className="text-white text-sm font-bold">♂</span>
                   </div>
-                ) : user?.sex === 'Female' ? (
+                ) : profileForm.watch('sex') === 'Female' ? (
                   <div className="w-6 h-6 bg-pink-400 rounded-full mr-3 flex items-center justify-center shadow-lg">
                     <span className="text-white text-sm font-bold">♀</span>
                   </div>
                 ) : (
                   <div className="w-6 h-6 bg-gray-400 rounded-full mr-3 shadow-lg"></div>
                 )}
-                <span className="text-white font-bold text-xl">{user?.name || 'User'}</span>
+                <span className="text-white font-bold text-xl">{profileForm.watch('name') || 'User'}</span>
               </div>
               <div className="text-sm text-white/80 break-all bg-white/10 rounded-lg px-3 py-2 backdrop-blur-sm">
                 {user?.email || 'user@example.com'}
@@ -497,13 +497,13 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                     <div className="space-y-3">
                       <label className="block text-sm font-bold text-gray-800 flex items-center">
                         <div className="w-2 h-2 bg-pink-500 rounded-full mr-3"></div>
-                        Gender
+                        Sex
                       </label>
                       <div className="relative group">
                         <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                           <div className="p-2 rounded-lg bg-pink-50 group-focus-within:bg-pink-100 transition-colors duration-300">
                             <div className="w-5 h-5 flex items-center justify-center">
-                              {user?.sex === 'Male' ? (
+                              {profileForm.watch('sex') === 'Male' ? (
                                 <span className="text-pink-500 text-lg font-bold">♂</span>
                               ) : (
                                 <span className="text-pink-500 text-lg font-bold">♀</span>
