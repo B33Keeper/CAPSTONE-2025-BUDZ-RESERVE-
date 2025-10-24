@@ -1,54 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import { api } from '@/lib/api'
+import toast from 'react-hot-toast'
 
 const AdminViewSuggestions = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('View Suggestions')
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
-  const [suggestions, setSuggestions] = useState([
-    {
-      id: 1,
-      user: 'James Harden',
-      date: '9/3/25',
-      time: '9:45 AM',
-      message: 'I just want share no...',
-      fullMessage: 'I just want share nothing but good vibes and positive energy to everyone in this community. Keep up the great work!'
-    },
-    {
-      id: 2,
-      user: 'Bronny James',
-      date: '9/3/25',
-      time: '9:45 AM',
-      message: 'Napakasolid boss amo...',
-      fullMessage: 'Napakasolid boss amo ng service nyo! Sobrang ganda ng facilities at very accommodating ang staff. More power!'
-    },
-    {
-      id: 3,
-      user: 'Stephen Curry',
-      date: '9/5/25',
-      time: '9:45 AM',
-      message: 'Great facilities and...',
-      fullMessage: 'Great facilities and excellent service! The courts are well-maintained and the staff is very professional.'
-    },
-    {
-      id: 4,
-      user: 'Hawkeye Mihawk',
-      date: '9/5/25',
-      time: '9:45 AM',
-      message: 'Suggestion for better...',
-      fullMessage: 'Suggestion for better lighting in Court 3 during evening hours. Overall experience is fantastic!'
-    },
-    {
-      id: 5,
-      user: 'Monkey D. Luffy',
-      date: '9/5/25',
-      time: '9:45 AM',
-      message: 'Amazing place to play...',
-      fullMessage: 'Amazing place to play badminton! The courts are perfect and the atmosphere is great. Highly recommended!'
-    }
-  ])
+  const [suggestions, setSuggestions] = useState([])
+  const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(5)
   const [selectedSuggestion, setSelectedSuggestion] = useState<any>(null)
@@ -76,6 +38,53 @@ const AdminViewSuggestions = () => {
     }
   }, [])
 
+  // Fetch suggestions from API
+  const fetchSuggestions = async () => {
+    try {
+      setLoading(true)
+      const response = await api.get('/suggestions')
+      const suggestionsData = response.data.map((suggestion: any) => ({
+        id: suggestion.id,
+        user: suggestion.user_name,
+        date: new Date(suggestion.created_at).toLocaleDateString('en-US', {
+          month: 'numeric',
+          day: 'numeric',
+          year: '2-digit'
+        }),
+        time: new Date(suggestion.created_at).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }),
+        message: suggestion.message.length > 30 ? suggestion.message.substring(0, 30) + '...' : suggestion.message,
+        fullMessage: suggestion.message
+      }))
+      setSuggestions(suggestionsData)
+    } catch (error) {
+      console.error('Error fetching suggestions:', error)
+      toast.error('Failed to load suggestions')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Delete suggestion
+  const handleDeleteSuggestion = async (id: number) => {
+    try {
+      await api.delete(`/suggestions/${id}`)
+      toast.success('Suggestion deleted successfully')
+      fetchSuggestions() // Refresh the list
+    } catch (error) {
+      console.error('Error deleting suggestion:', error)
+      toast.error('Failed to delete suggestion')
+    }
+  }
+
+  // Fetch suggestions on component mount
+  useEffect(() => {
+    fetchSuggestions()
+  }, [])
+
   const sidebarItems = [
     { id: 'Dashboard', icon: 'grid', label: 'Dashboard' },
     { id: 'Manage Courts', icon: 'calendar', label: 'Manage Courts' },
@@ -91,9 +100,6 @@ const AdminViewSuggestions = () => {
     setShowModal(true)
   }
 
-  const handleDeleteSuggestion = (id: number) => {
-    setSuggestions(suggestions.filter(suggestion => suggestion.id !== id))
-  }
 
   const closeModal = () => {
     setShowModal(false)
@@ -438,7 +444,26 @@ const AdminViewSuggestions = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {currentSuggestions.map((suggestion, index) => (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center justify-center space-y-4">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          <p className="text-gray-500 text-sm">Loading suggestions...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : currentSuggestions.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center justify-center space-y-4">
+                          <div className="text-gray-400 text-4xl">📝</div>
+                          <p className="text-gray-500 text-sm">No suggestions found</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    currentSuggestions.map((suggestion, index) => (
                     <tr key={suggestion.id} className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                       <td className="px-3 sm:px-6 py-4 sm:py-6 text-xs sm:text-sm font-bold text-gray-900">{suggestion.id}</td>
                       <td className="px-3 sm:px-6 py-4 sm:py-6 text-xs sm:text-sm font-semibold text-gray-800">{suggestion.user}</td>
@@ -465,7 +490,8 @@ const AdminViewSuggestions = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

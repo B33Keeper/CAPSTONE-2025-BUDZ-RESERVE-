@@ -16,6 +16,7 @@ const equipment_entity_1 = require("../modules/equipment/entities/equipment.enti
 const reservation_entity_1 = require("../modules/reservations/entities/reservation.entity");
 const payment_entity_1 = require("../modules/payments/entities/payment.entity");
 const time_slot_entity_1 = require("../modules/time-slots/entities/time-slot.entity");
+const suggestion_entity_1 = require("../modules/suggestions/entities/suggestion.entity");
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -31,11 +32,11 @@ exports.DatabaseModule = DatabaseModule = __decorate([
                     username: configService.get('DB_USERNAME', 'root'),
                     password: configService.get('DB_PASSWORD', ''),
                     database: configService.get('DB_DATABASE', 'budz_reserve'),
-                    entities: [user_entity_1.User, court_entity_1.Court, equipment_entity_1.Equipment, reservation_entity_1.Reservation, payment_entity_1.Payment, time_slot_entity_1.TimeSlot],
-                    synchronize: configService.get('NODE_ENV') === 'development',
+                    entities: [user_entity_1.User, court_entity_1.Court, equipment_entity_1.Equipment, reservation_entity_1.Reservation, payment_entity_1.Payment, time_slot_entity_1.TimeSlot, suggestion_entity_1.Suggestion],
+                    synchronize: false,
                     logging: configService.get('NODE_ENV') === 'development',
                     migrations: ['dist/database/migrations/*.js'],
-                    migrationsRun: true,
+                    migrationsRun: false,
                 }),
                 inject: [config_1.ConfigService],
             }),

@@ -156,6 +156,32 @@ INSERT INTO `users` (`id`, `name`, `age`, `sex`, `username`, `email`, `contact_n
 (9, 'Filbert', 21, 'Male', 'zhiky090924', 'ic.filbert.delacruz@cvsu.edu.ph', '09226789123', '$2y$10$UhesDcczp6SzZG54ubFL2O8/i6TpP4.0tM9R5Znmqs0tUwKbOt34a', NULL, '2025-09-19 03:34:06'),
 (10, 'Filbert Dela Cruz', 21, 'Male', 'filbert', 'zhiky090924@gmail.com', NULL, '$2y$10$AnTe0KlF55i8ISwBa71x5.IqJJ4vDpbInuoSYhKSRq0gZAsWHTPCm', 'Assets/uploads/avatars/filbert_1759831809.jpg', '2025-10-07 08:43:20');
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `suggestions`
+--
+
+CREATE TABLE `suggestions` (
+  `id` int(11) NOT NULL,
+  `user_name` varchar(100) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `message` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `suggestions`
+--
+
+INSERT INTO `suggestions` (`id`, `user_name`, `user_id`, `message`, `created_at`) VALUES
+(1, 'James Harden', 1, 'I just want share nothing but good vibes and positive energy to everyone in this community. Keep up the great work!', '2025-09-03 09:45:00'),
+(2, 'Bronny James', 2, 'Napakasolid boss amo ng service nyo! Sobrang ganda ng facilities at very accommodating ang staff. More power!', '2025-09-03 09:45:00'),
+(3, 'Stephen Curry', 3, 'Great facilities and excellent service! The courts are well-maintained and the staff is very professional.', '2025-09-05 09:45:00'),
+(4, 'Hawkeye Mihawk', 4, 'Suggestion for better lighting in Court 3 during evening hours. Overall experience is fantastic!', '2025-09-05 09:45:00'),
+(5, 'Monkey D. Luffy', 5, 'Amazing place to play badminton! The courts are perfect and the atmosphere is great. Highly recommended!', '2025-09-05 09:45:00');
+
 --
 -- Indexes for dumped tables
 --
@@ -180,6 +206,13 @@ ALTER TABLE `reservations`
   ADD KEY `User_ID` (`User_ID`),
   ADD KEY `Court_ID` (`Court_ID`),
   ADD KEY `idx_reservations_user_date` (`User_ID`,`Reservation_Date`);
+
+--
+-- Indexes for table `suggestions`
+--
+ALTER TABLE `suggestions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `users`
@@ -210,6 +243,12 @@ ALTER TABLE `equipments`
 --
 ALTER TABLE `reservations`
   MODIFY `Reservation_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+
+--
+-- AUTO_INCREMENT for table `suggestions`
+--
+ALTER TABLE `suggestions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `users`

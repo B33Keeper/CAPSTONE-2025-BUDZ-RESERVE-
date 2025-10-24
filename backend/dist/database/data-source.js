@@ -14,7 +14,7 @@ exports.default = new typeorm_1.DataSource({
     database: configService.get('DB_DATABASE', 'budz_reserve'),
     entities: ['src/**/*.entity.ts'],
     migrations: ['src/database/migrations/*.ts'],
-    synchronize: false,
+    synchronize: true,
     logging: true,
 });
 //# sourceMappingURL=data-source.js.map

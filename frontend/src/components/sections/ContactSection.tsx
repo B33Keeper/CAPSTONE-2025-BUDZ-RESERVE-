@@ -2,19 +2,42 @@ import React, { useState } from 'react'
 import { MapPin, Phone, Send } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
+import { useAuthStore } from '@/store/authStore'
+import { api } from '@/lib/api'
+import toast from 'react-hot-toast'
 
 export function ContactSection() {
   const { ref, controls } = useScrollAnimation()
+  const { isAuthenticated, user } = useAuthStore()
   const [formData, setFormData] = useState({
     name: '',
     message: '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log('Form submitted:', formData)
-    setFormData({ name: '', message: '' })
+    
+    try {
+      const submissionData = {
+        user_name: isAuthenticated ? user?.name || '' : formData.name,
+        user_id: isAuthenticated ? user?.id : null,
+        message: formData.message,
+      }
+      
+      await api.post('/suggestions', submissionData)
+      toast.success('Thank you for your feedback! Your message has been sent successfully.')
+      setFormData({ name: '', message: '' })
+    } catch (error: any) {
+      console.error('Error submitting suggestion:', error)
+      
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('Cannot connect to server. Please check if the backend is running.')
+      } else if (error.response?.status === 404) {
+        toast.error('API endpoint not found. Please check the backend configuration.')
+      } else {
+        toast.error(`Failed to send message: ${error.response?.data?.message || error.message}`)
+      }
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -69,19 +92,21 @@ export function ContactSection() {
             Enter your suggestions here in order for us to improve our services
           </motion.p>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="form-group">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
-              <input
-                type="text"
-                name="name"
-                placeholder="Enter your full name"
-                value={formData.name}
-                onChange={handleChange}
-                autoComplete="name"
-                required
-                className="w-full p-3 sm:p-4 border-2 border-gray-200 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-gray-300"
-              />
-            </div>
+            {!isAuthenticated && (
+              <div className="form-group">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  autoComplete="name"
+                  required
+                  className="w-full p-3 sm:p-4 border-2 border-gray-200 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-gray-300"
+                />
+              </div>
+            )}
             <div className="form-group">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Your Message</label>
               <textarea

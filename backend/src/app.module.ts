@@ -14,6 +14,7 @@ import { ReservationsModule } from './modules/reservations/reservations.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { TimeSlotsModule } from './modules/time-slots/time-slots.module';
+import { SuggestionsModule } from './modules/suggestions/suggestions.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -71,6 +72,7 @@ import { HealthController } from './health.controller';
     PaymentsModule,
     UploadModule,
     TimeSlotsModule,
+    SuggestionsModule,
   ],
   controllers: [HealthController],
   providers: [],
