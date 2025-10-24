@@ -2,7 +2,21 @@
 
 A full-stack web application for booking badminton courts, built with React, NestJS, and MySQL. This system allows users to reserve courts, rent equipment, and manage their profiles with a modern, responsive interface.
 
-## 🆕 Latest Updates (v2.1)
+## 🆕 Latest Updates (v2.2)
+
+### 📊 Admin Sales Report System
+- **Comprehensive Sales Dashboard**: Complete sales reporting with period-based filtering (Daily/Weekly/Monthly/Quarterly/Yearly)
+- **Racket Rental Tracking**: Advanced equipment rental management with duration display and brand information
+- **Download & Search Functionality**: Export sales data and search through transactions with professional interface
+- **Responsive Table Design**: No horizontal scrollbar with optimized column layout and equal spacing
+- **Real-time Data Visualization**: Interactive charts and statistics with modern UI/UX design
+
+### 💬 Enhanced Suggestions System
+- **Contact Form Integration**: Seamless integration between contact form and admin suggestions management
+- **Smart User Detection**: Conditional name field display based on user authentication status
+- **Admin Message Management**: Complete CRUD operations for user feedback and suggestions
+- **Backend API Integration**: Full suggestions module with database persistence and fallback support
+- **Professional UI**: Modern interface with proper spacing, alignment, and responsive design
 
 ### 🎯 Enhanced Booking Flow
 - **Streamlined Booking Process**: Improved user journey from landing page to booking completion
@@ -19,6 +33,7 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Admin Manage Courts**: Enhanced court management with dynamic pricing, status updates, and pagination
 - **Admin Manage Rackets**: Comprehensive equipment management with image upload and modal interfaces
 - **Admin View Suggestions**: Message management system for user feedback and suggestions
+- **Admin Sales Report**: Complete sales analytics with period filtering and data export capabilities
 - **Enhanced Admin Dashboard**: Improved welcome section with modern UI/UX design
 
 ### 🔧 Enhanced Features
@@ -27,6 +42,7 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Image Management**: Upload, preview, and manage equipment images with modal interfaces
 - **Responsive Design**: Enhanced mobile optimization across all admin interfaces
 - **Professional UI/UX**: Modern design with gradients, shadows, and smooth animations
+- **Table Optimization**: Fixed table layouts without horizontal scrollbars for better user experience
 
 ### 📱 Improved User Experience
 - **Modal Interfaces**: Professional popup modals for equipment editing and image previews
@@ -34,6 +50,7 @@ A full-stack web application for booking badminton courts, built with React, Nes
 - **Visual Feedback**: Better hover effects, transitions, and micro-interactions
 - **Typography**: Gradient text effects and improved readability
 - **Consistent Booking Flow**: Unified experience across all "Book Now" and "Book Court" buttons
+- **Smart Form Handling**: Conditional form fields based on user authentication status
 
 ## 🚀 Features
 
@@ -289,6 +306,7 @@ budz-reserve/
 │   │   │   ├── AdminManageCourts.tsx  # Court management with pagination
 │   │   │   ├── AdminManageRackets.tsx  # Equipment management with modals
 │   │   │   ├── AdminViewSuggestions.tsx  # Message management system
+│   │   │   ├── AdminSalesReport.tsx  # Sales analytics with period filtering
 │   │   │   ├── UploadPhoto.tsx  # Photo upload management
 │   │   │   ├── BookingPage.tsx     # Court booking
 │   │   │   ├── LoginPage.tsx       # User authentication with auto-save
@@ -308,6 +326,7 @@ budz-reserve/
 │   │   │   ├── equipment/  # Equipment management
 │   │   │   ├── reservations/ # Booking system
 │   │   │   ├── payments/   # Payment processing
+│   │   │   ├── suggestions/ # User feedback and suggestions
 │   │   │   ├── upload/     # File upload handling
 │   │   │   └── time-slots/ # Time slot management
 │   │   ├── database/       # Database configuration
@@ -336,13 +355,16 @@ budz-reserve/
 ### Admin Capabilities
 - **Enhanced Court Management**: Add, edit, and manage court availability with dynamic pricing and status updates
 - **Advanced Equipment Management**: Comprehensive racket and equipment inventory with image management
-- **Message Management**: View and manage user suggestions and feedback messages
+- **Sales Report Analytics**: Complete sales reporting with period-based filtering and data export capabilities
+- **Racket Rental Tracking**: Advanced equipment rental management with duration display and brand information
+- **Message Management**: View and manage user suggestions and feedback messages with CRUD operations
 - **User Management**: View total users, active users, and user statistics with enhanced interface
 - **Reservation Oversight**: View and manage all court reservations with improved pagination
 - **Payment Monitoring**: Track payment status and transaction history
-- **System Analytics**: Monitor system performance and usage statistics
+- **System Analytics**: Monitor system performance and usage statistics with interactive charts
 - **Image Management**: Upload, preview, and manage equipment images with modal interfaces
 - **Responsive Design**: Mobile-optimized admin interface with sticky navigation
+- **Data Export**: Download sales reports and transaction data with professional formatting
 
 ### Security Features
 - **Role-based Access**: Admin-only access to sensitive operations
@@ -438,6 +460,12 @@ FRONTEND_URL=http://localhost:3000
 ### File Uploads
 - `POST /api/upload/avatar` - Upload profile picture
 - `POST /api/upload/general` - Upload general files
+
+### Suggestions Management
+- `POST /api/suggestions` - Submit user suggestion/feedback (Public)
+- `GET /api/suggestions` - Get all suggestions (Admin)
+- `GET /api/suggestions/:id` - Get specific suggestion (Admin)
+- `DELETE /api/suggestions/:id` - Delete suggestion (Admin)
 
 ### Payment Processing
 - `POST /api/payment/create-checkout` - Create PayMongo checkout session
