@@ -88,16 +88,27 @@ export function Header() {
   }
 
   const getNavButtonClasses = (sectionId: string) => {
-    const baseClasses = "transition-all duration-300 px-4 py-2 rounded-lg font-medium"
-    const activeClasses = "text-blue-600 bg-blue-50 shadow-sm"
-    const inactiveClasses = "text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
+    const baseClasses = "relative transition-all duration-300 px-4 py-2 rounded-lg font-medium group"
+    const activeClasses = "text-blue-600"
+    const inactiveClasses = "text-gray-700 hover:text-blue-600"
 
-    // If we're on the booking page, don't highlight any section navigation
-    if (location.pathname === '/booking') {
+    // If we're not on the homepage, don't highlight any section navigation
+    if (location.pathname !== '/') {
       return `${baseClasses} ${inactiveClasses}`
     }
 
-    return `${baseClasses} ${activeSection === sectionId ? activeClasses : inactiveClasses}`
+    const isActive = activeSection === sectionId;
+    return `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`
+  }
+
+  const getNavUnderlineClasses = (sectionId: string) => {
+    // If we're not on the homepage, don't show underline
+    if (location.pathname !== '/') {
+      return "absolute bottom-0 left-0 h-0.5 bg-blue-600 transition-all duration-300 w-0 group-hover:w-full"
+    }
+
+    const isActive = activeSection === sectionId;
+    return `absolute bottom-0 left-0 h-0.5 bg-blue-600 transition-all duration-300 ${isActive ? 'w-full' : 'w-0 group-hover:w-full'}`
   }
 
   const getBookCourtClasses = () => {
@@ -151,37 +162,43 @@ export function Header() {
                 onClick={() => scrollToSection('home')}
                 className={getNavButtonClasses('home')}
               >
-                Home
+                <span className="relative">Home</span>
+                <span className={getNavUnderlineClasses('home')}></span>
               </button>
               <button
                 onClick={() => scrollToSection('about')}
                 className={getNavButtonClasses('about')}
               >
-                About Us
+                <span className="relative">About Us</span>
+                <span className={getNavUnderlineClasses('about')}></span>
               </button>
               <button
                 onClick={() => scrollToSection('gallery')}
                 className={getNavButtonClasses('gallery')}
               >
-                Gallery
+                <span className="relative">Gallery</span>
+                <span className={getNavUnderlineClasses('gallery')}></span>
               </button>
               <button
                 onClick={() => scrollToSection('contact')}
                 className={getNavButtonClasses('contact')}
               >
-                Contact Us
+                <span className="relative">Contact Us</span>
+                <span className={getNavUnderlineClasses('contact')}></span>
               </button>
               <button
                 onClick={handleBookCourtClick}
-                className={isAuthenticated ? getBookCourtClasses() : "text-gray-700 hover:text-primary-600 transition-colors"}
+                className={isAuthenticated ? "relative transition-all duration-300 px-4 py-2 rounded-lg font-medium group " + (location.pathname === '/booking' ? "text-blue-600" : "text-gray-700 hover:text-blue-600") : "text-gray-700 hover:text-primary-600 transition-colors relative group"}
               >
-                Book Court
+                <span className="relative">Book Court</span>
+                <span className={`absolute bottom-0 left-0 h-0.5 bg-blue-600 transition-all duration-300 ${location.pathname === '/booking' ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
               </button>
               <button
                 onClick={handleManageQueueingClick}
-                className="transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
+                className="relative transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 group"
               >
-                Manage Queueing
+                <span className="relative">Manage Queueing</span>
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
               </button>
             </nav>
             
@@ -306,15 +323,18 @@ export function Header() {
                 <>
                   <Link
                     to="/login"
-                    className="transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
+                    className={`relative transition-all duration-300 px-4 py-2 rounded-lg font-medium group ${location.pathname === '/login' ? 'text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50'}`}
                   >
-                    Login
+                    <span className="relative">Login</span>
+                    {location.pathname === '/login' && (
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transition-all duration-300"></span>
+                    )}
                   </Link>
                   <Link
                     to="/signup"
-                    className="transition-all duration-300 px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
+                    className={`relative transition-all duration-300 px-4 py-2 rounded-lg font-medium group ${location.pathname === '/signup' ? 'bg-blue-700' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'}`}
                   >
-                    Sign Up
+                    <span className="relative">Sign Up</span>
                   </Link>
                 </>
               )}

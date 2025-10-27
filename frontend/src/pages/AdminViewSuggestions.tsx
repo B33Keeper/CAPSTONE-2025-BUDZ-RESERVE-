@@ -12,7 +12,7 @@ const AdminViewSuggestions = () => {
   const [suggestions, setSuggestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(5)
+  const [itemsPerPage] = useState(10)
   const [selectedSuggestion, setSelectedSuggestion] = useState<any>(null)
   const [showModal, setShowModal] = useState(false)
   const navigate = useNavigate()
@@ -463,9 +463,13 @@ const AdminViewSuggestions = () => {
                       </td>
                     </tr>
                   ) : (
-                    currentSuggestions.map((suggestion, index) => (
+                    currentSuggestions.map((suggestion, index) => {
+                      // Calculate display ID based on page position
+                      const displayId = (currentPage - 1) * itemsPerPage + index + 1;
+                      
+                      return (
                     <tr key={suggestion.id} className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                      <td className="px-3 sm:px-6 py-4 sm:py-6 text-xs sm:text-sm font-bold text-gray-900">{suggestion.id}</td>
+                      <td className="px-3 sm:px-6 py-4 sm:py-6 text-xs sm:text-sm font-bold text-gray-900">{displayId}</td>
                       <td className="px-3 sm:px-6 py-4 sm:py-6 text-xs sm:text-sm font-semibold text-gray-800">{suggestion.user}</td>
                       <td className="px-3 sm:px-6 py-4 sm:py-6 text-xs sm:text-sm text-gray-600">{suggestion.date}</td>
                       <td className="px-3 sm:px-6 py-4 sm:py-6 text-xs sm:text-sm text-gray-600">{suggestion.time}</td>
@@ -490,7 +494,8 @@ const AdminViewSuggestions = () => {
                         </div>
                       </td>
                     </tr>
-                    ))
+                      )
+                    })
                   )}
                 </tbody>
               </table>

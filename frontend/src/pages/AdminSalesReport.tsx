@@ -360,7 +360,7 @@ const AdminSalesReport = () => {
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                   activeSidebarItem === item.id
                     ? 'bg-blue-100 text-blue-700 shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'
                 }`}
               >
                 <div className="w-6 h-6 flex items-center justify-center">

@@ -17,11 +17,8 @@ COPY backend/ .
 # Create uploads directory
 RUN mkdir -p uploads/avatars uploads/general
 
-# Make the startup script executable
-RUN chmod +x start-dev.sh
-
 # Expose port
 EXPOSE 3001
 
-# Run NestJS application in development mode with proper signal handling
-CMD ["./start-dev.sh"]
+# Run NestJS application in development mode
+CMD ["npm", "run", "start:dev"]

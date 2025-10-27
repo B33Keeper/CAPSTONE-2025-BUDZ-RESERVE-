@@ -15,7 +15,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./database_export.sql:/docker-entrypoint-initdb.d/01-database-export.sql
+      - ./backend/src/database/budz_reserve.sql:/docker-entrypoint-initdb.d/01-budz_reserve.sql
       - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql
     networks:
       - budz-reserve-network
