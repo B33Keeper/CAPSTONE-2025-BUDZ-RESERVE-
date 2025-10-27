@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt - Budz Reserve</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .subtitle {
+            font-size: 14px;
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        .success-icon {
+            text-align: center;
+            font-size: 64px;
+            margin: 20px 0;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .payment-info {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .info-value {
+            color: #333;
+            font-weight: bold;
+        }
+        .amount {
+            font-size: 28px;
+            color: #28a745;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+            background-color: #d4edda;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .booking-details {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .details-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 15px;
+        }
+        .details-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #bbdefb;
+        }
+        .details-item:last-child {
+            border-bottom: none;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 12px;
+        }
+        .thank-you {
+            text-align: center;
+            font-size: 24px;
+            color: #667eea;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="logo">🏸 Budz Reserve</h1>
+            <p class="subtitle">Badminton Court Booking System</p>
+        </div>
+
+        <div class="success-icon">✅</div>
+
+        <p class="greeting">Hello <strong>{{userName}}</strong>,</p>
+        
+        <div class="thank-you">Thank You for Your Booking!</div>
+        
+        <p>Your payment has been successfully processed. Here's your booking receipt:</p>
+
+        <div class="payment-info">
+            <div class="info-row">
+                <span class="info-label">Payment Method:</span>
+                <span class="info-value">{{paymentMethod}}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Reference Number:</span>
+                <span class="info-value">{{referenceNumber}}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Transaction ID:</span>
+                <span class="info-value">{{transactionId}}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Payment Date:</span>
+                <span class="info-value">{{paymentDate}}</span>
+            </div>
+        </div>
+
+        <div class="amount">₱ {{totalAmount}}</div>
+
+        <div class="booking-details">
+            <div class="details-title">📅 Booking Details</div>
+            {{#if courtName}}
+            <div class="details-item">
+                <strong>Court:</strong> {{courtName}}
+            </div>
+            {{/if}}
+            <div class="details-item">
+                <strong>Date:</strong> {{bookingDate}}
+            </div>
+            <div class="details-item">
+                <strong>Time:</strong> {{startTime}} - {{endTime}}
+            </div>
+            {{#if equipment}}
+            <div class="details-item">
+                <strong>Equipment:</strong> {{equipment}}
+            </div>
+            {{/if}}
+        </div>
+
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <strong>⚠️ Important Reminders:</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Please arrive 15 minutes before your scheduled time</li>
+                <li>Bring a valid ID for verification</li>
+                <li>No cancellations or refunds once reservation is made</li>
+                <li>Keep this receipt for your records</li>
+            </ul>
+        </div>
+
+        <p>We look forward to seeing you at the court! 🏸</p>
+
+        <div class="footer">
+            <p><strong>Budz Reserve - Badminton Court Booking</strong></p>
+            <p>This is an automated email. Please do not reply to this email.</p>
+            <p>© 2024 Budz Reserve. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

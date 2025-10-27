@@ -71,7 +71,7 @@ export class ReservationsService {
   async findByUser(userId: number): Promise<Reservation[]> {
     return this.reservationsRepository.find({
       where: { User_ID: userId },
-      relations: ['court', 'payments'],
+      relations: ['court'],
       order: { Created_at: 'DESC' },
     });
   }

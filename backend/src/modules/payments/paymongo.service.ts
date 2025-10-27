@@ -27,6 +27,7 @@ export class PayMongoService {
               amount: Math.round(amount * 100), // Convert to centavos
               currency,
               description: description || 'Badminton Court Booking',
+              payment_method_allowed: ['card', 'gcash', 'paymaya'],
             },
           },
         }),
@@ -45,7 +46,7 @@ export class PayMongoService {
     }
   }
 
-  async createPaymentSource(paymentIntentId: string, type: string = 'gcash') {
+  async createPaymentSource(paymentIntentId: string, amount: number, type: string = 'gcash') {
     try {
       const response = await fetch(`${this.baseUrl}/sources`, {
         method: 'POST',
@@ -57,7 +58,7 @@ export class PayMongoService {
           data: {
             attributes: {
               type,
-              amount: 0, // Will be set by payment intent
+              amount: Math.round(amount * 100), // Convert to centavos
               currency: 'PHP',
               redirect: {
                 success: `${this.configService.get('FRONTEND_URL')}/payment/success`,
@@ -114,17 +115,67 @@ export class PayMongoService {
     }
   }
 
+  async createCheckoutLink(
+    amount: number,
+    currency: string = 'PHP',
+    description?: string,
+    referenceNumber?: string,
+  ) {
+    try {
+      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+      
+      const response = await fetch(`${this.baseUrl}/checkout_links`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${this.secretKey}:`).toString('base64')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            attributes: {
+              amount: Math.round(amount * 100), // Convert to centavos
+              currency,
+              description: description || 'Badminton Court Booking',
+              statements: {
+                summary: 'Badminton Court Booking',
+              },
+              reference_number: referenceNumber,
+              redirect: {
+                success: `${frontendUrl}/payment/success`,
+                failed: `${frontendUrl}/payment/failed`,
+              },
+            },
+          },
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`PayMongo API error: ${result.errors?.[0]?.detail || 'Unknown error'}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logger.error('Error creating checkout link:', error);
+      throw error;
+    }
+  }
+
   async createCheckoutSession(amount: number, currency: string = 'PHP', description?: string) {
     try {
       // Create payment intent
       const paymentIntent = await this.createPaymentIntent(amount, currency, description);
       
-      // Create payment source
-      const source = await this.createPaymentSource(paymentIntent.id);
+      // Create GCash payment source with redirect
+      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+      const source = await this.createPaymentSource(
+        paymentIntent.id, 
+        amount,
+        'gcash'
+      );
       
-      // Attach source to payment intent
-      const attachedIntent = await this.attachPaymentSource(paymentIntent.id, source.id);
-      
+      // Return checkout URL
       return {
         paymentIntentId: paymentIntent.id,
         checkoutUrl: source.attributes.redirect.checkout_url,
@@ -154,6 +205,28 @@ export class PayMongoService {
       return result.data;
     } catch (error) {
       this.logger.error('Error getting payment intent:', error);
+      throw error;
+    }
+  }
+
+  async getCheckoutLink(linkId: string) {
+    try {
+      const response = await fetch(`${this.baseUrl}/checkout_links/${linkId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${this.secretKey}:`).toString('base64')}`,
+        },
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`PayMongo API error: ${result.errors?.[0]?.detail || 'Unknown error'}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logger.error('Error getting checkout link:', error);
       throw error;
     }
   }

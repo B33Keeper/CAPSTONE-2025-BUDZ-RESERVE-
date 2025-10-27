@@ -101,7 +101,7 @@ const AdminSalesReport = () => {
   // Calculate statistics
   const totalReservations = salesData.length
   const totalIncome = salesData.reduce((sum, item) => sum + item.price, 0)
-  const cancellations = salesData.filter(item => item.status === 'cancelled').length
+  const racketRentals = salesData.filter(item => item.racketRent !== null && item.racketRent !== undefined).length
 
   // Pagination
   const totalPages = Math.ceil(salesData.length / itemsPerPage)
@@ -592,45 +592,8 @@ const AdminSalesReport = () => {
             </table>
           </div>
 
-          {/* Pagination */}
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-6 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            <div className="text-sm text-gray-700 font-medium">
-              Showing <span className="font-bold text-blue-600">{startIndex + 1}</span> to <span className="font-bold text-blue-600">{Math.min(endIndex, salesData.length)}</span> of <span className="font-bold text-blue-600">{salesData.length}</span> results
-            </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-4 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                <span className="text-sm font-medium">Previous</span>
-              </button>
-              
-              <div className="flex items-center space-x-2">
-                <span className="px-4 py-2 text-sm font-bold text-gray-700 bg-white rounded-xl shadow-md">
-                  Page {currentPage} of {totalPages}
-                </span>
-              </div>
-              
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
-              >
-                <span className="text-sm font-medium">Next</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Summary Statistics */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Summary Statistics */}
+          <div className="mt-8 px-6 pb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-xl p-6 border border-blue-200 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center justify-between">
               <div>
@@ -661,21 +624,59 @@ const AdminSalesReport = () => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl shadow-xl p-6 border border-red-200 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl shadow-xl p-6 border border-orange-200 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-red-700">Cancellations</p>
-                <p className="text-3xl font-bold text-red-900">{cancellations}</p>
-                <p className="text-xs text-red-600 mt-1">Cancelled bookings</p>
+                <p className="text-sm font-semibold text-orange-700">Racket Rental</p>
+                <p className="text-3xl font-bold text-orange-900">{racketRentals}</p>
+                <p className="text-xs text-orange-600 mt-1">Rental transactions</p>
               </div>
-              <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
               </div>
             </div>
           </div>
+          </div>
+
+          {/* Pagination */}
+          <div className="mt-6 mx-6 mb-6 bg-white rounded-2xl shadow-lg border border-gray-200 px-6 py-6 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+            <div className="text-sm text-gray-700 font-medium">
+              Showing <span className="font-bold text-blue-600">{startIndex + 1}</span> to <span className="font-bold text-blue-600">{Math.min(endIndex, salesData.length)}</span> of <span className="font-bold text-blue-600">{salesData.length}</span> results
+            </div>
+            <div className="flex items-center space-x-3">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="text-sm font-medium">Previous</span>
+            </button>
+            
+            <div className="flex items-center space-x-2">
+              <span className="px-4 py-2 text-sm font-bold text-gray-700 bg-white rounded-xl shadow-md">
+                Page {currentPage} of {totalPages}
+              </span>
+            </div>
+            
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 rounded-xl bg-white border border-gray-300 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
+            >
+              <span className="text-sm font-medium">Next</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            </div>
+          </div>
         </div>
+
       </main>
       </div>
     </div>

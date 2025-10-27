@@ -23,12 +23,10 @@ interface Reservation {
   Status: string
   Total_Amount: number
   Reference_Number: string
+  Payment_Method?: string
   court: {
     Court_Name: string
   }
-  payments?: {
-    Payment_Method: string
-  }[]
 }
 
 interface ReservationsModalProps {
@@ -142,10 +140,7 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
 
   // Get payment method
   const getPaymentMethod = (reservation: Reservation) => {
-    if (reservation.payments && reservation.payments.length > 0) {
-      return reservation.payments[0].Payment_Method
-    }
-    return 'Gcash' // Default fallback
+    return reservation.Payment_Method || 'GCash' // Default fallback
   }
 
   // Safe number formatting

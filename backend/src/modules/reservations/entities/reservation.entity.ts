@@ -5,12 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
-  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Court } from '../../courts/entities/court.entity';
-import { Payment } from '../../payments/entities/payment.entity';
 
 export enum ReservationStatus {
   PENDING = 'Pending',
@@ -46,11 +44,17 @@ export class Reservation {
   })
   Status: ReservationStatus;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, name: 'Price' })
   Total_Amount: number;
 
   @Column({ nullable: true })
   Reference_Number: string;
+
+  @Column({ nullable: true })
+  Payment_Status: string;
+
+  @Column({ nullable: true })
+  Payment_Method: string;
 
   @Column({ type: 'text', nullable: true })
   Notes: string;
@@ -68,7 +72,4 @@ export class Reservation {
   @ManyToOne(() => Court, (court) => court.reservations)
   @JoinColumn({ name: 'Court_ID' })
   court: Court;
-
-  @OneToMany(() => Payment, (payment) => payment.reservation)
-  payments: Payment[];
 }
