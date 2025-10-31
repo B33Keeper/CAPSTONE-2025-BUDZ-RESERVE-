@@ -246,6 +246,33 @@ let ReservationsService = class ReservationsService {
                 return payment_entity_1.PaymentMethod.GCASH;
         }
     }
+    async checkDuplicateReservation(userId, courtId, date, startTime, endTime) {
+        try {
+            const reservationDate = new Date(date);
+            reservationDate.setHours(0, 0, 0, 0);
+            const existingReservation = await this.reservationsRepository.findOne({
+                where: {
+                    User_ID: userId,
+                    Court_ID: courtId,
+                    Reservation_Date: reservationDate,
+                    Start_Time: startTime,
+                    End_Time: endTime,
+                    Status: reservation_entity_1.ReservationStatus.CONFIRMED,
+                },
+            });
+            if (existingReservation) {
+                return {
+                    isDuplicate: true,
+                    message: 'You have already booked this court for the same date and time.',
+                };
+            }
+            return { isDuplicate: false };
+        }
+        catch (error) {
+            console.error('Error checking duplicate reservation:', error);
+            return { isDuplicate: false };
+        }
+    }
 };
 exports.ReservationsService = ReservationsService;
 exports.ReservationsService = ReservationsService = __decorate([

@@ -5,6 +5,8 @@ import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsM
 import { BookingDetailsModal } from '@/components/modals/BookingDetailsModal'
 import { PaymentSummaryStep } from '@/components/PaymentSummaryStep'
 import { PaymentService } from '@/lib/paymentService'
+import { useAuthStore } from '@/store/authStore'
+import api from '@/lib/api'
 
 interface CourtBooking {
   court: string
@@ -16,6 +18,7 @@ interface EquipmentBooking {
   equipment: string
   time: string
   subtotal: number
+    quantity?: number
 }
 
 interface CellStatus {
@@ -32,6 +35,7 @@ export function BookingPage() {
       month: today.getMonth()
     }
   })
+  // Default to first sheet, but will be updated when courts are loaded
   const [activeTab, setActiveTab] = useState('Sheet 1')
   const [racketQuantity, setRacketQuantity] = useState(0)
   const [racketTime, setRacketTime] = useState(1)
@@ -54,7 +58,12 @@ export function BookingPage() {
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false)
+  const [showEquipmentGuard, setShowEquipmentGuard] = useState(false)
   const [referenceNumber, setReferenceNumber] = useState('')
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [duplicateMessage, setDuplicateMessage] = useState('')
+  
+  const { user } = useAuthStore()
 
 
   // Calculate total amount
@@ -68,15 +77,64 @@ export function BookingPage() {
     { id: 4, name: 'completed', active: currentStep === 4 },
   ]
 
-  const tabs = ['Sheet 1', 'Sheet 2', 'Rent an racket', 'Booking details']
+  // Calculate number of sheets needed (6 courts per sheet)
+  const courtsPerSheet = 6
+  const numberOfSheets = Math.ceil(courts.length / courtsPerSheet)
+  
+  // Generate dynamic sheet tabs
+  const sheetTabs = Array.from({ length: numberOfSheets }, (_, i) => `Sheet ${i + 1}`)
+  const tabs = [...sheetTabs, 'Rent an racket', 'Booking details']
+  
+  // Helper function to get courts for a specific sheet
+  const getCourtsForSheet = (sheetIndex: number) => {
+    const startIndex = sheetIndex * courtsPerSheet
+    const endIndex = startIndex + courtsPerSheet
+    return courts.slice(startIndex, endIndex)
+  }
+  
+  // Helper function to check if a tab is a sheet tab
+  const isSheetTab = (tab: string) => tab.startsWith('Sheet')
 
 
   // Generate time slots for display (8 AM to 11 PM)
   const generateTimeSlots = () => {
     const slots = []
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    
+    // Check if selected date is today
+    let isToday = false
+    if (selectedDate) {
+      try {
+        const selectedDateObj = new Date(selectedDate)
+        const selectedDateOnly = new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), selectedDateObj.getDate())
+        isToday = selectedDateOnly.getTime() === today.getTime()
+      } catch (error) {
+        console.error('Error parsing selected date:', error)
+      }
+    }
+    
     for (let hour = 8; hour < 23; hour++) {
       const startTime = `${hour.toString().padStart(2, '0')}:00:00`
       const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`
+      
+      // If booking for today, filter out past time slots
+      if (isToday) {
+        // Get the current hour
+        const currentHour = now.getHours()
+        
+        // Calculate the next available hour (always the next hour)
+        // If current time is 7:40 PM (hour 19), next slot is 8:00 PM (hour 20)
+        // If current time is 8:00 PM (hour 20), next slot is 9:00 PM (hour 21)
+        // If current time is 8:01 PM (hour 20), next slot is 9:00 PM (hour 21)
+        const nextAvailableHour = currentHour + 1
+        
+        // Only show slots that start at or after the next available hour
+        // This ensures users can only book future time slots, not current or past ones
+        if (hour < nextAvailableHour) {
+          continue // Skip past time slots
+        }
+      }
       
       const formatTime = (time: string) => {
         const [hours, minutes] = time.split(':')
@@ -109,9 +167,20 @@ export function BookingPage() {
           apiServices.getTimeSlots()
         ])
         
-        setCourts(courtsData)
+        // Sort courts by ID to ensure proper order
+        const sortedCourts = courtsData.sort((a, b) => a.Court_Id - b.Court_Id)
+        setCourts(sortedCourts)
         setEquipment(equipmentData)
         setTimeSlots(timeSlotsData)
+        
+        // Ensure activeTab is valid if it's a sheet tab
+        if (activeTab.startsWith('Sheet')) {
+          const sheetNumber = parseInt(activeTab.replace('Sheet ', ''))
+          const totalSheets = Math.ceil(sortedCourts.length / 6)
+          if (sheetNumber > totalSheets || totalSheets === 0) {
+            setActiveTab('Sheet 1')
+          }
+        }
         
         // Debug: Log equipment data to see image_path values
         console.log('Equipment data loaded:', equipmentData)
@@ -130,6 +199,16 @@ export function BookingPage() {
     }
     
     loadData()
+  }, [])
+
+  // Show Terms and Conditions modal when user first enters the booking page
+  useEffect(() => {
+    // Only show the modal if user is authenticated and hasn't accepted terms in this session
+    // You can add localStorage check here if you want to remember acceptance across sessions
+    const hasAcceptedTerms = localStorage.getItem('termsAccepted')
+    if (!hasAcceptedTerms) {
+      setShowTermsModal(true)
+    }
   }, [])
 
   // Load availability data when date is selected
@@ -296,7 +375,8 @@ export function BookingPage() {
       const newBooking: EquipmentBooking = {
         equipment: racketName,
         time: `${racketTime} hr`,
-        subtotal: price * racketTime * newQuantity
+        subtotal: price * racketTime * newQuantity,
+        quantity: newQuantity
       }
       setEquipmentBookings(prev => {
         const filtered = prev.filter(booking => booking.equipment !== racketName)
@@ -317,7 +397,8 @@ export function BookingPage() {
       const newBooking: EquipmentBooking = {
         equipment: racketName,
         time: `${newTime} hr`,
-        subtotal: price * newTime * racketQuantity
+        subtotal: price * newTime * racketQuantity,
+        quantity: racketQuantity
       }
       setEquipmentBookings(prev => {
         const filtered = prev.filter(booking => booking.equipment !== racketName)
@@ -417,15 +498,106 @@ export function BookingPage() {
 
   const handleAcceptTerms = () => {
     setShowTermsModal(false)
-    // Generate reference number
-    const refNumber = Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
-    setReferenceNumber(refNumber)
-    setCurrentStep(3) // Move to payment step
+    // Store acceptance in localStorage to remember across sessions (optional)
+    localStorage.setItem('termsAccepted', 'true')
+  }
+
+  // Helper function to parse schedule string to start and end times (24-hour format)
+  const parseScheduleToTimes = (schedule: string): { startTime: string; endTime: string } => {
+    // Parse schedule like "9:00 am - 10:00 am" or "9:00 AM - 10:00 AM"
+    const timeMatch = schedule.match(/(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)/i)
+    
+    if (!timeMatch) {
+      throw new Error('Invalid schedule format')
+    }
+
+    const [, startHour, startMin, startPeriod, endHour, endMin, endPeriod] = timeMatch
+    
+    const convertTo24Hour = (hour: number, period: string, minute: number): string => {
+      let h = parseInt(hour.toString())
+      if (period.toUpperCase() === 'PM' && h !== 12) {
+        h += 12
+      } else if (period.toUpperCase() === 'AM' && h === 12) {
+        h = 0
+      }
+      return `${h.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`
+    }
+
+    return {
+      startTime: convertTo24Hour(parseInt(startHour), startPeriod, parseInt(startMin)),
+      endTime: convertTo24Hour(parseInt(endHour), endPeriod, parseInt(endMin))
+    }
+  }
+
+  // Helper function to get court ID from court name
+  const getCourtIdFromName = (courtName: string): number | null => {
+    const court = courts.find(c => c.Court_Name === courtName)
+    return court ? court.Court_Id : null
+  }
+
+  // Check for duplicate reservations before proceeding to payment
+  const checkForDuplicates = async (): Promise<{ isDuplicate: boolean; message: string }> => {
+    if (!user || !user.id) {
+      return { isDuplicate: false, message: '' }
+    }
+
+    if (courtBookings.length === 0) {
+      return { isDuplicate: false, message: '' }
+    }
+
+    // Parse selected date to YYYY-MM-DD format
+    const dateObj = new Date(selectedDate)
+    const formattedDate = dateObj.toISOString().split('T')[0]
+
+    // Check each court booking for duplicates
+    for (const booking of courtBookings) {
+      const courtId = getCourtIdFromName(booking.court)
+      if (!courtId) {
+        continue
+      }
+
+      try {
+        const { startTime, endTime } = parseScheduleToTimes(booking.schedule)
+        
+        const response = await api.post('/reservations/check-duplicate', {
+          courtId,
+          date: formattedDate,
+          startTime,
+          endTime
+        })
+
+        if (response.data.isDuplicate) {
+          return {
+            isDuplicate: true,
+            message: response.data.message || `You have already booked ${booking.court} for ${selectedDate} at ${booking.schedule}.`
+          }
+        }
+      } catch (error: any) {
+        console.error('Error checking duplicate:', error)
+        // Continue checking other bookings on error
+      }
+    }
+
+    return { isDuplicate: false, message: '' }
   }
 
   // Handle actual payment processing from step 3
   const handleProcessPayment = async (userInfo: { name: string; email: string; contactNumber: string }) => {
     try {
+      // Check for duplicate reservations first
+      const duplicateCheck = await checkForDuplicates()
+      if (duplicateCheck.isDuplicate) {
+        setDuplicateMessage(duplicateCheck.message)
+        setShowDuplicateModal(true)
+        return // Stop payment process
+      }
+
+      // Generate reference number if not already set
+      if (!referenceNumber) {
+        const refNumber = Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
+        setReferenceNumber(refNumber)
+      }
+
       // Calculate total amount
       const courtTotal = courtBookings.reduce((sum, booking) => sum + booking.subtotal, 0)
       const equipmentTotal = equipmentBookings.reduce((sum, booking) => sum + booking.subtotal, 0)
@@ -433,7 +605,7 @@ export function BookingPage() {
 
       // Prepare booking data for metadata
       const bookingData = {
-        userId: 1, // This should come from auth context
+        userId: user?.id || 1, // Use user from auth context
         selectedDate,
         courtBookings: courtBookings.map(booking => ({
           court: booking.court,
@@ -443,9 +615,10 @@ export function BookingPage() {
         equipmentBookings: equipmentBookings.map(booking => ({
           equipment: booking.equipment,
           time: booking.time,
-          subtotal: booking.subtotal
+          subtotal: booking.subtotal,
+          quantity: booking.quantity || 1
         })),
-        referenceNumber
+        referenceNumber: referenceNumber || Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
       }
 
       // Create checkout session with PayMongo
@@ -703,35 +876,39 @@ export function BookingPage() {
           </div>
 
           {/* Content based on active tab */}
-          {activeTab === 'Sheet 1' && (
-            <div>
-              {/* Legend */}
-              <div className="flex flex-wrap justify-center gap-4 mb-6 text-xs sm:text-sm">
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 ring-gray-300 bg-white">
-                  <span className="w-3.5 h-3.5 rounded bg-white ring-1 ring-gray-300"></span>
-                  <span>Available</span>
+          {isSheetTab(activeTab) && (() => {
+            const sheetIndex = parseInt(activeTab.replace('Sheet ', '')) - 1
+            const sheetCourts = getCourtsForSheet(sheetIndex)
+            
+            return (
+              <div>
+                {/* Legend */}
+                <div className="flex flex-wrap justify-center gap-4 mb-6 text-xs sm:text-sm">
+                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 ring-gray-300 bg-white">
+                    <span className="w-3.5 h-3.5 rounded bg-white ring-1 ring-gray-300"></span>
+                    <span>Available</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-600 text-white">
+                    <span className="w-3.5 h-3.5 rounded bg-gray-600"></span>
+                    <span>Reserved</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-yellow-400 text-black">
+                    <span className="w-3.5 h-3.5 rounded bg-yellow-400"></span>
+                    <span>Maintenance</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-300 text-gray-900">
+                    <span className="w-3.5 h-3.5 rounded bg-green-300"></span>
+                    <span>Selected</span>
+                  </div>
                 </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-600 text-white">
-                  <span className="w-3.5 h-3.5 rounded bg-gray-600"></span>
-                  <span>Reserved</span>
-                </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-yellow-400 text-black">
-                  <span className="w-3.5 h-3.5 rounded bg-yellow-400"></span>
-                  <span>Maintenance</span>
-                </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-300 text-gray-900">
-                  <span className="w-3.5 h-3.5 rounded bg-green-300"></span>
-                  <span>Selected</span>
-                </div>
-              </div>
 
-              {/* Mobile-friendly cards (Sheet 1) */}
-              <div className="sm:hidden space-y-4">
-                {generateTimeSlots().map((timeSlot) => (
-                  <div key={timeSlot.id} className="rounded-lg ring-1 ring-gray-200 overflow-hidden">
-                    <div className="bg-gray-100 px-4 py-2 text-sm font-medium">{timeSlot.display}</div>
-                    <div className="grid grid-cols-2 gap-2 p-3">
-                      {courts.slice(0, 6).map((court) => {
+                {/* Mobile-friendly cards */}
+                <div className="sm:hidden space-y-4">
+                  {generateTimeSlots().map((timeSlot) => (
+                    <div key={timeSlot.id} className="rounded-lg ring-1 ring-gray-200 overflow-hidden">
+                      <div className="bg-gray-100 px-4 py-2 text-sm font-medium">{timeSlot.display}</div>
+                      <div className="grid grid-cols-2 gap-2 p-3">
+                        {sheetCourts.map((court) => {
                         const key = `COURT ${court.Court_Id}-${timeSlot.display}`
                         const isSelected = selectedCells.has(key)
                         const status = getCellStatus(court.Court_Id, timeSlot.display).status
@@ -788,7 +965,7 @@ export function BookingPage() {
                      <thead>
                       <tr className="bg-gray-100 sticky top-0 z-10">
                         <th className="border border-gray-300 px-4 py-2 text-left text-xs sm:text-sm">TIME</th>
-                         {courts.slice(0, 6).map((court) => (
+                         {sheetCourts.map((court) => (
                           <th key={court.Court_Id} className="border border-gray-300 px-4 py-2 text-center text-xs sm:text-sm">
                              {court.Court_Name}
                            </th>
@@ -799,7 +976,7 @@ export function BookingPage() {
                       {generateTimeSlots().map((timeSlot, idx) => (
                         <tr key={timeSlot.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                           <td className="border border-gray-300 px-4 py-2 font-medium sticky left-0 bg-inherit text-xs sm:text-sm">{timeSlot.display}</td>
-                           {courts.slice(0, 6).map((court) => (
+                           {sheetCourts.map((court) => (
                              <td
                                key={`${timeSlot.display}-${court.Court_Id}`}
                               className={`border border-gray-300 px-1 sm:px-2 md:px-4 py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
@@ -823,95 +1000,9 @@ export function BookingPage() {
                    </table>
                  )}
                </div>
-            </div>
-          )}
-
-          {activeTab === 'Sheet 2' && (
-            <div>
-              {/* Legend (same as Sheet 1) */}
-              <div className="flex flex-wrap justify-center gap-4 mb-6 text-xs sm:text-sm">
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 ring-gray-300 bg-white">
-                  <span className="w-3.5 h-3.5 rounded bg-white ring-1 ring-gray-300"></span>
-                  <span>Available</span>
-                </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-600 text-white">
-                  <span className="w-3.5 h-3.5 rounded bg-gray-600"></span>
-                  <span>Reserved</span>
-                </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-yellow-400 text-black">
-                  <span className="w-3.5 h-3.5 rounded bg-yellow-400"></span>
-                  <span>Maintenance</span>
-                </div>
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-300 text-gray-900">
-                  <span className="w-3.5 h-3.5 rounded bg-green-300"></span>
-                  <span>Selected</span>
-                </div>
               </div>
-
-              {/* Court Selection Table - Courts 7-12 (Tablet/Desktop) */}
-              <div className="hidden sm:block overflow-x-auto rounded-lg ring-1 ring-gray-200 shadow-sm">
-                {loading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Loading courts...</p>
-                  </div>
-                ) : error ? (
-                  <div className="text-center py-8">
-                    <p className="text-red-600">{error}</p>
-                    <button 
-                      onClick={() => window.location.reload()} 
-                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : loadingAvailability ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Loading availability data...</p>
-                  </div>
-                ) : (
-                  <table className="w-full border-collapse" role="grid">
-                    <thead>
-                      <tr className="bg-gray-100 sticky top-0 z-10">
-                        <th className="border border-gray-300 px-4 py-2 text-left text-xs sm:text-sm">TIME</th>
-                        {courts.slice(6, 12).map((court) => (
-                          <th key={court.Court_Id} className="border border-gray-300 px-4 py-2 text-center text-xs sm:text-sm">
-                            {court.Court_Name}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                     <tbody>
-                       {generateTimeSlots().map((timeSlot, idx) => (
-                         <tr key={timeSlot.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                           <td className="border border-gray-300 px-4 py-2 font-medium sticky left-0 bg-inherit text-xs sm:text-sm">{timeSlot.display}</td>
-                           {courts.slice(6, 12).map((court) => (
-                            <td
-                               key={`${timeSlot.display}-${court.Court_Id}`}
-                               className={`border border-gray-300 px-1 sm:px-2 md:px-4 py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
-                               onClick={() => court.Status === 'Available' ? handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price) : undefined}
-                            >
-                              {(() => {
-                                const key = `COURT ${court.Court_Id}-${timeSlot.display}`
-                                const isSelected = selectedCells.has(key)
-                                const forceTransparent = isSelected || court.Status !== 'Available'
-                                return (
-                                   <span className={`inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs md:text-sm ${forceTransparent ? 'bg-transparent text-black' : 'bg-white/80 text-gray-900'}`}>
-                                    {court.Price}.00 php
-                                  </span>
-                                )
-                              })()}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          )}
+            )
+          })()}
 
           {activeTab === 'Rent an racket' && (
             <div>
@@ -1166,7 +1257,13 @@ export function BookingPage() {
                   Back
                 </button>
                 <button
-                  onClick={() => setShowBookingDetailsModal(true)}
+                  onClick={() => {
+                    if (courtBookings.length === 0 && equipmentBookings.length > 0) {
+                      setShowEquipmentGuard(true)
+                      return
+                    }
+                    setShowBookingDetailsModal(true)
+                  }}
                    className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium"
                 >
                    Proceed to Payment
@@ -1218,12 +1315,77 @@ export function BookingPage() {
       <BookingDetailsModal
         isOpen={showBookingDetailsModal}
         onClose={() => setShowBookingDetailsModal(false)}
-        onProceedToPayment={() => setCurrentStep(3)}
+        onProceedToPayment={() => {
+          if (courtBookings.length === 0 && equipmentBookings.length > 0) {
+            setShowEquipmentGuard(true)
+            return
+          }
+          // Generate reference number when proceeding to payment step
+          const refNumber = Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
+          setReferenceNumber(refNumber)
+          setCurrentStep(3)
+        }}
         courtBookings={courtBookings}
         equipmentBookings={equipmentBookings}
         totalAmount={totalAmount}
         selectedDate={selectedDate}
       />
+
+      {/* Guard Modal: require court before equipment */}
+      {showEquipmentGuard && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-blue-600 text-white px-6 py-4 font-semibold">Action needed</div>
+            <div className="p-6 space-y-3">
+              <p className="text-gray-800 font-medium">Please book a court before renting equipment.</p>
+              <p className="text-gray-600 text-sm">Select a date and time slot for a court first, then you can add racket rentals.</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <button onClick={() => setShowEquipmentGuard(false)} className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Got it</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Reservation Modal */}
+      {showDuplicateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-red-600 text-white px-6 py-4 font-semibold flex items-center space-x-2">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>Duplicate Reservation Detected</span>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-start space-x-3">
+                <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-gray-800 font-medium mb-2">Unable to Process Reservation</p>
+                  <p className="text-gray-600 text-sm">
+                    {duplicateMessage || 'You have already booked a court for the same date and time. Please choose a different date, time, or court.'}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> To avoid duplicate bookings, you cannot book the same court for the same date and time slot again.
+                </p>
+              </div>
+              <div className="flex justify-end">
+                <button 
+                  onClick={() => setShowDuplicateModal(false)} 
+                  className="px-6 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors font-medium"
+                >
+                  I Understand
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

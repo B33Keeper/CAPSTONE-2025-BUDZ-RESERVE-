@@ -303,4 +303,43 @@ export class ReservationsService {
         return PaymentMethod.GCASH; // Default fallback
     }
   }
+
+  async checkDuplicateReservation(
+    userId: number,
+    courtId: number,
+    date: string,
+    startTime: string,
+    endTime: string,
+  ): Promise<{ isDuplicate: boolean; message?: string }> {
+    try {
+      // Parse the date string
+      const reservationDate = new Date(date);
+      reservationDate.setHours(0, 0, 0, 0);
+
+      // Check if user has an existing reservation with the same court, date, and time
+      const existingReservation = await this.reservationsRepository.findOne({
+        where: {
+          User_ID: userId,
+          Court_ID: courtId,
+          Reservation_Date: reservationDate,
+          Start_Time: startTime,
+          End_Time: endTime,
+          Status: ReservationStatus.CONFIRMED,
+        },
+      });
+
+      if (existingReservation) {
+        return {
+          isDuplicate: true,
+          message: 'You have already booked this court for the same date and time.',
+        };
+      }
+
+      return { isDuplicate: false };
+    } catch (error) {
+      console.error('Error checking duplicate reservation:', error);
+      // Return false on error to allow booking (fail-safe)
+      return { isDuplicate: false };
+    }
+  }
 }

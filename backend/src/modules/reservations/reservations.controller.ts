@@ -68,6 +68,24 @@ export class ReservationsController {
     return this.reservationsService.getAvailability(courtId, date);
   }
 
+  @Post('check-duplicate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Check for duplicate reservation by user' })
+  @ApiResponse({ status: 200, description: 'Duplicate check completed' })
+  checkDuplicate(
+    @Body() checkDto: { courtId: number; date: string; startTime: string; endTime: string },
+    @Request() req: any,
+  ) {
+    return this.reservationsService.checkDuplicateReservation(
+      req.user.id,
+      checkDto.courtId,
+      checkDto.date,
+      checkDto.startTime,
+      checkDto.endTime,
+    );
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

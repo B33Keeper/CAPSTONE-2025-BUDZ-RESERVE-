@@ -28,6 +28,49 @@ let PaymentsController = class PaymentsController {
     findAll() {
         return this.paymentsService.findAll();
     }
+    async getSalesReport(period) {
+        try {
+            console.log('========================================');
+            console.log('[SalesReport Controller] Endpoint called!');
+            console.log(`[SalesReport Controller] Period received: ${period}`);
+            console.log('========================================');
+            const periodValue = period || 'daily';
+            const now = new Date();
+            let startDate;
+            let endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+            switch (periodValue) {
+                case 'daily':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+                    break;
+                case 'weekly':
+                    const dayOfWeek = now.getDay();
+                    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysToMonday, 0, 0, 0);
+                    break;
+                case 'monthly':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+                    break;
+                case 'quarterly':
+                    const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+                    startDate = new Date(now.getFullYear(), quarterStartMonth, 1, 0, 0, 0);
+                    break;
+                case 'yearly':
+                    startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+                    break;
+                default:
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            }
+            console.log(`[SalesReport Controller] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+            const result = await this.paymentsService.getSalesReport(startDate, endDate);
+            console.log(`[SalesReport Controller] Found ${result.data.length} records, summary:`, result.summary);
+            return result;
+        }
+        catch (error) {
+            console.error('[SalesReport Controller] ERROR:', error);
+            console.error('[SalesReport Controller] Error stack:', error.stack);
+            throw error;
+        }
+    }
     findOne(id) {
         return this.paymentsService.findOne(id);
     }
@@ -57,6 +100,17 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], PaymentsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('sales-report'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get sales report' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Sales report retrieved successfully' }),
+    __param(0, (0, common_1.Query)('period')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], PaymentsController.prototype, "getSalesReport", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

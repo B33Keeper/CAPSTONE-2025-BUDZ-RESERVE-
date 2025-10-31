@@ -2,19 +2,40 @@ import React, { useState } from 'react'
 import { MapPin, Phone, Send } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
+import { useAuthStore } from '@/store/authStore'
+import api from '@/lib/api'
+import toast from 'react-hot-toast'
 
 export function ContactSection() {
   const { ref, controls } = useScrollAnimation()
+  const { user, isAuthenticated } = useAuthStore()
   const [formData, setFormData] = useState({
     name: '',
     message: '',
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log('Form submitted:', formData)
-    setFormData({ name: '', message: '' })
+    
+    setIsSubmitting(true)
+    try {
+      const payload = {
+        name: isAuthenticated && user ? user.name : formData.name,
+        message: formData.message,
+        user_id: isAuthenticated && user ? user.id : undefined,
+      }
+
+      await api.post('/suggestions', payload)
+      
+      toast.success('Thank you for your suggestion! We appreciate your feedback.')
+      setFormData({ name: '', message: '' })
+    } catch (error: any) {
+      console.error('Error submitting suggestion:', error)
+      toast.error(error.response?.data?.message || 'Failed to submit suggestion. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -69,19 +90,21 @@ export function ContactSection() {
             Enter your suggestions here in order for us to improve our services
           </motion.p>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="form-group">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
-              <input
-                type="text"
-                name="name"
-                placeholder="Enter your full name"
-                value={formData.name}
-                onChange={handleChange}
-                autoComplete="name"
-                required
-                className="w-full p-3 sm:p-4 border-2 border-gray-200 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-gray-300"
-              />
-            </div>
+            {!isAuthenticated && (
+              <div className="form-group">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  autoComplete="name"
+                  required
+                  className="w-full p-3 sm:p-4 border-2 border-gray-200 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-gray-300"
+                />
+              </div>
+            )}
             <div className="form-group">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Your Message</label>
               <textarea
@@ -96,11 +119,12 @@ export function ContactSection() {
             </div>
             <button
               type="submit"
-              className="send-btn bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-4 px-6 sm:px-10 rounded-xl cursor-pointer text-base sm:text-lg font-semibold transition-all duration-300 mx-auto hover:from-blue-700 hover:to-blue-800 hover:-translate-y-1 hover:shadow-xl flex items-center space-x-2 sm:space-x-3 w-full justify-center"
+              disabled={isSubmitting}
+              className="send-btn bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-4 px-6 sm:px-10 rounded-xl cursor-pointer text-base sm:text-lg font-semibold transition-all duration-300 mx-auto hover:from-blue-700 hover:to-blue-800 hover:-translate-y-1 hover:shadow-xl flex items-center space-x-2 sm:space-x-3 w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ boxShadow: '0 8px 25px rgba(59, 130, 246, 0.4)' }}
             >
-              <Send className="w-6 h-6" />
-              <span>Send Message</span>
+              <Send className={`w-6 h-6 ${isSubmitting ? 'animate-spin' : ''}`} />
+              <span>{isSubmitting ? 'Sending...' : 'Send Message'}</span>
             </button>
           </form>
         </motion.div>

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useActiveSection } from '@/hooks/useActiveSection'
-import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsModal'
 // Simple SVG icons to replace lucide-react
 const MenuIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -42,7 +41,6 @@ export function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isReservationsModalOpen, setIsReservationsModalOpen] = useState(false)
-  const [showTermsModal, setShowTermsModal] = useState(false)
   const { user, isAuthenticated, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -55,23 +53,14 @@ export function Header() {
     setIsProfileOpen(false)
   }
 
-  // Handle Terms and Conditions for Book Court
+  // Handle Book Court click - directly navigate to booking page
   const handleBookCourtClick = () => {
     if (!isAuthenticated) {
       alert('Please login to proceed on booking')
       navigate('/login')
       return
     }
-    setShowTermsModal(true)
-  }
-
-  const handleAcceptTerms = () => {
-    setShowTermsModal(false)
     navigate('/booking')
-  }
-
-  const handleCloseTerms = () => {
-    setShowTermsModal(false)
   }
 
   const scrollToSection = (sectionId: string) => {
@@ -484,12 +473,6 @@ export function Header() {
       onClose={() => setIsReservationsModalOpen(false)}
     />
 
-    {/* Terms and Conditions Modal */}
-    <TermsAndConditionsModal
-      isOpen={showTermsModal}
-      onClose={handleCloseTerms}
-      onAccept={handleAcceptTerms}
-    />
     </>
   )
 }

@@ -22,20 +22,25 @@ const email_receipt_service_1 = require("./email-receipt.service");
 const payments_service_1 = require("./payments.service");
 const payment_entity_1 = require("./entities/payment.entity");
 const reservation_entity_1 = require("../reservations/entities/reservation.entity");
+const equipment_rental_entity_1 = require("./entities/equipment-rental.entity");
+const equipment_rental_item_entity_1 = require("./entities/equipment-rental-item.entity");
+const equipment_entity_1 = require("../equipment/entities/equipment.entity");
 const courts_service_1 = require("../courts/courts.service");
 let WebhookController = WebhookController_1 = class WebhookController {
-    constructor(payMongoService, emailReceiptService, paymentsService, courtsService, reservationRepository, paymentRepository) {
+    constructor(payMongoService, emailReceiptService, paymentsService, courtsService, reservationRepository, paymentRepository, rentalRepository, rentalItemRepository, equipmentRepository) {
         this.payMongoService = payMongoService;
         this.emailReceiptService = emailReceiptService;
         this.paymentsService = paymentsService;
         this.courtsService = courtsService;
         this.reservationRepository = reservationRepository;
         this.paymentRepository = paymentRepository;
+        this.rentalRepository = rentalRepository;
+        this.rentalItemRepository = rentalItemRepository;
+        this.equipmentRepository = equipmentRepository;
         this.logger = new common_1.Logger(WebhookController_1.name);
     }
     async testWebhook(testData) {
-        this.logger.log('=== MANUAL WEBHOOK TEST ===');
-        this.logger.log('Test Data:', JSON.stringify(testData, null, 2));
+        this.logger.log('Processing test webhook');
         try {
             const mockWebhookEvent = {
                 data: {
@@ -79,8 +84,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
     }
     async handlePaymongoWebhook(body, signature) {
         try {
-            this.logger.log('=== PAYMONGO WEBHOOK RECEIVED ===');
-            this.logger.log('Full Payload:', JSON.stringify(body, null, 2));
+            this.logger.log('Paymongo webhook received');
             if (!this.verifyWebhookSignature(body, signature)) {
                 this.logger.warn('Invalid webhook signature');
                 return { success: false, message: 'Invalid signature' };
@@ -88,12 +92,36 @@ let WebhookController = WebhookController_1 = class WebhookController {
             const { data } = body;
             const eventType = data.attributes.type;
             const paymentData = data.attributes.data;
-            this.logger.log('Event Type:', eventType);
-            this.logger.log('Payment Data:', JSON.stringify(paymentData, null, 2));
-            this.logger.log(`Processing webhook event: ${eventType}`);
+            this.logger.log(`Processing ${eventType} event`);
             switch (eventType) {
                 case 'payment.paid':
                     await this.handlePaymentPaid(paymentData);
+                    break;
+                case 'checkout_session.payment.paid':
+                    if (paymentData && paymentData.type === 'checkout_session' && paymentData.attributes) {
+                        const csAttr = paymentData.attributes;
+                        let bookingDataFromSession;
+                        try {
+                            if (csAttr.metadata?.bookingData) {
+                                bookingDataFromSession = JSON.parse(csAttr.metadata.bookingData);
+                            }
+                        }
+                        catch { }
+                        let paymentId;
+                        const paymentsRel = csAttr.payments?.data ?? csAttr.payments ?? [];
+                        if (Array.isArray(paymentsRel) && paymentsRel.length > 0) {
+                            paymentId = paymentsRel[0]?.id;
+                        }
+                        if (!paymentId && csAttr.payment_intent?.id) {
+                            await this.handleCheckoutSessionPaid(data.id);
+                            break;
+                        }
+                        if (paymentId) {
+                            await this.handlePaymentPaid({ id: paymentId }, bookingDataFromSession);
+                            break;
+                        }
+                    }
+                    await this.handleCheckoutSessionPaid(data.id);
                     break;
                 case 'payment.failed':
                     await this.handlePaymentFailed(paymentData);
@@ -114,18 +142,62 @@ let WebhookController = WebhookController_1 = class WebhookController {
             return { success: false, message: 'Webhook processing failed' };
         }
     }
-    async handlePaymentPaid(paymentData) {
+    async handleCheckoutSessionPaid(checkoutSessionId) {
         try {
-            this.logger.log('Processing payment.paid event:', paymentData.id);
-            const payment = await this.payMongoService.getPayment(paymentData.id);
-            let reservationId = 0;
-            if (payment.attributes.metadata && payment.attributes.metadata.bookingData) {
+            this.logger.log(`Fetching checkout session ${checkoutSessionId} to resolve payment`);
+            const session = await this.payMongoService.getCheckoutSession(checkoutSessionId);
+            let bookingDataFromSession;
+            try {
+                const md = session?.attributes?.metadata;
+                if (md && md.bookingData) {
+                    bookingDataFromSession = JSON.parse(md.bookingData);
+                }
+            }
+            catch (e) {
+                this.logger.warn(`Failed to parse bookingData from checkout session ${checkoutSessionId}`);
+            }
+            let paymentId;
+            const attributes = session?.attributes ?? {};
+            const payments = attributes.payments?.data ?? attributes.payments ?? [];
+            if (Array.isArray(payments) && payments.length > 0) {
+                paymentId = payments[0]?.id;
+            }
+            if (!paymentId && attributes.payment_intent?.id) {
                 try {
-                    const bookingData = JSON.parse(payment.attributes.metadata.bookingData);
+                    const pi = await this.payMongoService.getPaymentIntent(attributes.payment_intent.id);
+                    const latestPaymentId = pi?.attributes?.latest_payment_id || pi?.attributes?.payments?.[0]?.id;
+                    if (latestPaymentId)
+                        paymentId = latestPaymentId;
+                }
+                catch (e) {
+                    this.logger.warn(`Could not resolve payment from payment_intent ${attributes.payment_intent?.id}`);
+                }
+            }
+            if (!paymentId) {
+                this.logger.warn(`No payment id found for checkout session ${checkoutSessionId}`);
+                return;
+            }
+            await this.handlePaymentPaid({ id: paymentId }, bookingDataFromSession);
+        }
+        catch (error) {
+            this.logger.error('Error handling checkout_session.payment.paid event:', error);
+        }
+    }
+    async handlePaymentPaid(paymentData, bookingDataOverride) {
+        try {
+            this.logger.log(`Processing payment: ${paymentData.id}`);
+            const payment = paymentData?.attributes
+                ? { id: paymentData.id, attributes: paymentData.attributes }
+                : await this.payMongoService.getPayment(paymentData.id);
+            let reservationId = 0;
+            const bookingDataRaw = payment.attributes?.metadata?.bookingData || (bookingDataOverride ? JSON.stringify(bookingDataOverride) : undefined);
+            if (bookingDataRaw) {
+                try {
+                    const bookingData = typeof bookingDataRaw === 'string' ? JSON.parse(bookingDataRaw) : bookingDataRaw;
                     const createdReservations = await this.createReservationFromPayment(payment, bookingData);
                     if (createdReservations.length > 0) {
                         reservationId = createdReservations[0].Reservation_ID;
-                        this.logger.log(`Created reservation ${reservationId} for payment ${payment.id}`);
+                        this.logger.log(`Created reservation ${reservationId}`);
                     }
                 }
                 catch (error) {
@@ -142,7 +214,18 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 status: payment.attributes.status === 'paid' ? payment_entity_1.PaymentStatus.COMPLETED : payment_entity_1.PaymentStatus.PENDING,
             });
             await this.paymentRepository.save(newPayment);
-            this.logger.log(`Created payment record ${newPayment.id} for Paymongo payment ${payment.id}`);
+            this.logger.log(`Created payment record ${newPayment.id}`);
+            try {
+                const effectiveBookingData = bookingDataOverride
+                    ? bookingDataOverride
+                    : (payment.attributes?.metadata?.bookingData ? JSON.parse(payment.attributes.metadata.bookingData) : undefined);
+                if (effectiveBookingData?.equipmentBookings?.length && reservationId) {
+                    await this.createEquipmentRentalsFromBooking(effectiveBookingData.userId, reservationId, effectiveBookingData.equipmentBookings);
+                }
+            }
+            catch (e) {
+                this.logger.error('Error saving equipment rentals:', e);
+            }
             await this.emailReceiptService.sendPaymentReceipt({
                 paymentId: payment.id,
                 amount: payment.attributes.amount,
@@ -161,31 +244,80 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 fee: payment.attributes.fee,
                 netAmount: payment.attributes.net_amount,
             });
-            this.logger.log(`Payment receipt sent for payment ${payment.id}`);
+            this.logger.log('Payment receipt sent');
         }
         catch (error) {
             this.logger.error('Error handling payment.paid event:', error);
         }
     }
+    parseHours(timeLabel) {
+        if (!timeLabel)
+            return 1;
+        const m = String(timeLabel).match(/(\d+)\s*(h|hr|hrs|hour)/i);
+        if (m)
+            return parseInt(m[1], 10);
+        const m2 = String(timeLabel).match(/(\d+)/);
+        return m2 ? parseInt(m2[1], 10) : 1;
+    }
+    async createEquipmentRentalsFromBooking(userId, reservationId, equipmentBookings) {
+        if (!reservationId || !userId)
+            return;
+        const rental = this.rentalRepository.create({
+            reservation_id: reservationId,
+            user_id: userId,
+            total_amount: 0,
+        });
+        const savedRental = await this.rentalRepository.save(rental);
+        let total = 0;
+        for (const b of equipmentBookings) {
+            const hours = this.parseHours(b.time);
+            const quantity = b.quantity && b.quantity > 0 ? b.quantity : 1;
+            let equipmentRow = await this.equipmentRepository.findOne({ where: { equipment_name: (0, typeorm_2.Like)(`%${b.equipment}%`) } });
+            if (!equipmentRow) {
+                equipmentRow = await this.equipmentRepository.findOne({ where: { equipment_name: b.equipment } });
+            }
+            const hourlyPrice = equipmentRow ? Number(equipmentRow.price) : Number(((b.subtotal || 0) / Math.max(1, hours * quantity)).toFixed(2)) || 0;
+            const subtotal = b.subtotal != null && b.subtotal > 0 ? Number(b.subtotal) : Number((hourlyPrice * hours * quantity).toFixed(2));
+            const item = this.rentalItemRepository.create({
+                rental_id: savedRental.id,
+                equipment_id: equipmentRow ? equipmentRow.id : 0,
+                quantity,
+                hours,
+                hourly_price: hourlyPrice,
+                subtotal,
+            });
+            await this.rentalItemRepository.save(item);
+            total += subtotal;
+        }
+        await this.rentalRepository.update(savedRental.id, { total_amount: Number(total.toFixed(2)) });
+        this.logger.log(`Saved equipment rental ${savedRental.id} with total ₱${total}`);
+    }
     async createReservationFromPayment(payment, bookingData) {
         const createdReservations = [];
         try {
             for (const courtBooking of bookingData.courtBookings || []) {
+                const courts = await this.courtsService.findAll();
+                const court = courts.find(c => c.Court_Name === courtBooking.court);
+                if (!court) {
+                    this.logger.error(`Court "${courtBooking.court}" not found for reservation.`);
+                    continue;
+                }
+                const [startTime, endTime] = this.parseScheduleToTimes(courtBooking.schedule);
                 const reservation = this.reservationRepository.create({
                     User_ID: bookingData.userId,
-                    Court_ID: 1,
+                    Court_ID: court.Court_Id,
                     Reservation_Date: new Date(bookingData.selectedDate),
-                    Start_Time: '09:00:00',
-                    End_Time: '10:00:00',
-                    Total_Amount: payment.attributes.amount / 100,
-                    Reference_Number: `REF${Date.now()}`,
+                    Start_Time: startTime,
+                    End_Time: endTime,
+                    Total_Amount: courtBooking.subtotal ?? payment.attributes.amount / 100,
+                    Reference_Number: bookingData.referenceNumber || `REF${Date.now()}`,
                     Paymongo_Reference_Number: payment.id,
                     Notes: `Payment via Paymongo - ${payment.id}`,
                     Status: reservation_entity_1.ReservationStatus.CONFIRMED,
                 });
-                const savedReservation = await this.reservationRepository.save(reservation);
-                createdReservations.push(savedReservation);
-                this.logger.log(`Created reservation ${savedReservation.Reservation_ID} for payment ${payment.id}`);
+                await this.reservationRepository.save(reservation);
+                createdReservations.push(reservation);
+                this.logger.log(`Created reservation ${reservation.Reservation_ID} for payment ${payment.id}`);
             }
         }
         catch (error) {
@@ -222,13 +354,12 @@ let WebhookController = WebhookController_1 = class WebhookController {
         }
     }
     verifyWebhookSignature(body, signature) {
-        this.logger.log('Webhook signature verification (disabled in test mode)');
-        this.logger.log('Secret key: whsk_MVahvXgqKjLYjdWyTe5Zbznv');
+        const _secret = process.env.PAYMONGO_WEBHOOK_SECRET || 'whsk_7Myz2HAE5CZ3Td5V2gvVwrim';
         return true;
     }
     async handleTestPayment(paymentData, testData) {
         try {
-            this.logger.log('Processing test payment:', paymentData.id);
+            this.logger.log('Processing test payment');
             let reservationId = 0;
             if (testData.bookingData) {
                 try {
@@ -346,10 +477,16 @@ exports.WebhookController = WebhookController = WebhookController_1 = __decorate
     (0, common_1.Controller)('webhook'),
     __param(4, (0, typeorm_1.InjectRepository)(reservation_entity_1.Reservation)),
     __param(5, (0, typeorm_1.InjectRepository)(payment_entity_1.Payment)),
+    __param(6, (0, typeorm_1.InjectRepository)(equipment_rental_entity_1.EquipmentRental)),
+    __param(7, (0, typeorm_1.InjectRepository)(equipment_rental_item_entity_1.EquipmentRentalItem)),
+    __param(8, (0, typeorm_1.InjectRepository)(equipment_entity_1.Equipment)),
     __metadata("design:paramtypes", [paymongo_service_1.PayMongoService,
         email_receipt_service_1.EmailReceiptService,
         payments_service_1.PaymentsService,
         courts_service_1.CourtsService,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository])
 ], WebhookController);

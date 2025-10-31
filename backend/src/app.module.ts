@@ -15,6 +15,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { TimeSlotsModule } from './modules/time-slots/time-slots.module';
 import { GalleryModule } from './modules/gallery/gallery.module';
+import { SuggestionsModule } from './modules/suggestions/suggestions.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -73,6 +74,7 @@ import { HealthController } from './health.controller';
     UploadModule,
     TimeSlotsModule,
     GalleryModule,
+    SuggestionsModule,
   ],
   controllers: [HealthController],
   providers: [],

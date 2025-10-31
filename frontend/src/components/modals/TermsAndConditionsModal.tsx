@@ -149,6 +149,23 @@ export function TermsAndConditionsModal({ isOpen, onClose, onAccept }: TermsAndC
                 </div>
               </div>
             </div>
+
+            {/* Equipment Rental Policy */}
+            <div className="bg-gradient-to-r from-teal-50 to-teal-100 border border-teal-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-teal-800 mb-3">7. Equipment Rental Usage</h3>
+                  <ul className="list-disc list-inside space-y-2 text-gray-700">
+                    <li>Rackets and any rented equipment are for use <strong>within the premises of Budz Badminton Court only</strong>.</li>
+                    <li>Removing rented equipment from the venue is strictly prohibited.</li>
+                    <li>Rented items must be returned in good condition at the end of your booked time.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Agreement Section */}

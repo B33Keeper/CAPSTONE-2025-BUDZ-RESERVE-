@@ -15,8 +15,11 @@ const court_entity_1 = require("../modules/courts/entities/court.entity");
 const equipment_entity_1 = require("../modules/equipment/entities/equipment.entity");
 const reservation_entity_1 = require("../modules/reservations/entities/reservation.entity");
 const payment_entity_1 = require("../modules/payments/entities/payment.entity");
+const equipment_rental_entity_1 = require("../modules/payments/entities/equipment-rental.entity");
+const equipment_rental_item_entity_1 = require("../modules/payments/entities/equipment-rental-item.entity");
 const time_slot_entity_1 = require("../modules/time-slots/entities/time-slot.entity");
 const gallery_entity_1 = require("../modules/gallery/entities/gallery.entity");
+const suggestion_entity_1 = require("../modules/suggestions/entities/suggestion.entity");
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -32,7 +35,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
                     username: configService.get('DB_USERNAME', 'root'),
                     password: configService.get('DB_PASSWORD', ''),
                     database: configService.get('DB_DATABASE', 'budz_reserve'),
-                    entities: [user_entity_1.User, court_entity_1.Court, equipment_entity_1.Equipment, reservation_entity_1.Reservation, payment_entity_1.Payment, time_slot_entity_1.TimeSlot, gallery_entity_1.Gallery],
+                    entities: [user_entity_1.User, court_entity_1.Court, equipment_entity_1.Equipment, reservation_entity_1.Reservation, payment_entity_1.Payment, equipment_rental_entity_1.EquipmentRental, equipment_rental_item_entity_1.EquipmentRentalItem, time_slot_entity_1.TimeSlot, gallery_entity_1.Gallery, suggestion_entity_1.Suggestion],
                     synchronize: configService.get('NODE_ENV') === 'development',
                     logging: configService.get('NODE_ENV') === 'development',
                     migrations: ['dist/database/migrations/*.js'],
