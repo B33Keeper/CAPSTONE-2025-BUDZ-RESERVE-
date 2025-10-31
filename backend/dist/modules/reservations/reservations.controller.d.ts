@@ -9,6 +9,15 @@ export declare class ReservationsController {
     findAll(): Promise<import("./entities/reservation.entity").Reservation[]>;
     findMyReservations(req: any): Promise<import("./entities/reservation.entity").Reservation[]>;
     getAvailability(courtId: number, date: string): Promise<any[]>;
+    checkDuplicate(checkDto: {
+        courtId: number;
+        date: string;
+        startTime: string;
+        endTime: string;
+    }, req: any): Promise<{
+        isDuplicate: boolean;
+        message?: string;
+    }>;
     findOne(id: number): Promise<import("./entities/reservation.entity").Reservation>;
     update(id: number, updateReservationDto: UpdateReservationDto): Promise<import("./entities/reservation.entity").Reservation>;
     remove(id: number): Promise<void>;

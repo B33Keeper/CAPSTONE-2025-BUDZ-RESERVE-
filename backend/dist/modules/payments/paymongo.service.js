@@ -349,6 +349,33 @@ let PayMongoService = PayMongoService_1 = class PayMongoService {
     }
     async createPaymongoCheckout(amount, currency = 'PHP', description, returnUrl, billingInfo, bookingData) {
         try {
+            const lineItems = [];
+            if (bookingData?.courtBookings?.length) {
+                const courtTotal = bookingData.courtBookings.reduce((sum, b) => sum + Number(b.subtotal || 0), 0);
+                lineItems.push({
+                    currency,
+                    amount: Math.round(courtTotal * 100),
+                    description: 'Court Reservation',
+                    name: 'Court Reservation',
+                    quantity: 1,
+                });
+            }
+            if (bookingData?.equipmentBookings?.length) {
+                for (const eq of bookingData.equipmentBookings) {
+                    const eqSubtotal = Number(eq.subtotal || 0);
+                    const qty = Number(eq.quantity || 1);
+                    const unit = qty > 0 ? Math.round((eqSubtotal / qty) * 100) : Math.round(eqSubtotal * 100);
+                    if (eqSubtotal > 0) {
+                        lineItems.push({
+                            currency,
+                            amount: unit,
+                            description: `Rent: ${eq.equipment} (${eq.time || '1 hr'})`,
+                            name: `Rent: ${eq.equipment}`,
+                            quantity: qty,
+                        });
+                    }
+                }
+            }
             const response = await fetch(`${this.baseUrl}/checkout_sessions`, {
                 method: 'POST',
                 headers: {
@@ -364,15 +391,15 @@ let PayMongoService = PayMongoService_1 = class PayMongoService {
                                 email: 'customer@example.com',
                                 phone: '09123456789'
                             },
-                            line_items: [
+                            line_items: (lineItems.length > 0 ? lineItems : [
                                 {
                                     currency: currency,
                                     amount: Math.round(amount * 100),
                                     description: description || 'Badminton Court Booking',
                                     name: 'Court Reservation',
-                                    quantity: 1
+                                    quantity: 1,
                                 }
-                            ],
+                            ]),
                             payment_method_types: ['gcash', 'grab_pay', 'paymaya', 'card'],
                             send_email_receipt: true,
                             show_description: true,

@@ -14,6 +14,7 @@ import { PaymentFailedPage } from '@/pages/PaymentFailedPage'
 import AdminDashboard from '@/pages/AdminDashboard'
 import AdminManageCourts from '@/pages/AdminManageCourts'
 import AdminManageRackets from '@/pages/AdminManageRackets'
+import AdminSalesReport from '@/pages/AdminSalesReport'
 import AdminViewSuggestions from '@/pages/AdminViewSuggestions'
 import UploadPhoto from '@/pages/UploadPhoto'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -77,6 +78,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminManageRackets />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/admin/sales-report" 
+          element={
+            <ProtectedRoute>
+              <AdminSalesReport />
             </ProtectedRoute>
           }
         />

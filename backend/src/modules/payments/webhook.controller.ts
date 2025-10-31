@@ -1,11 +1,14 @@
 import { Controller, Post, Body, Headers, Logger, HttpCode, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { PayMongoService } from './paymongo.service';
 import { EmailReceiptService } from './email-receipt.service';
 import { PaymentsService } from './payments.service';
 import { Payment, PaymentMethod, PaymentStatus } from './entities/payment.entity';
 import { Reservation, ReservationStatus } from '../reservations/entities/reservation.entity';
+import { EquipmentRental } from './entities/equipment-rental.entity';
+import { EquipmentRentalItem } from './entities/equipment-rental-item.entity';
+import { Equipment } from '../equipment/entities/equipment.entity';
 import { CourtsService } from '../courts/courts.service';
 
 interface PaymongoWebhookEvent {
@@ -38,6 +41,12 @@ export class WebhookController {
     private readonly reservationRepository: Repository<Reservation>,
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
+    @InjectRepository(EquipmentRental)
+    private readonly rentalRepository: Repository<EquipmentRental>,
+    @InjectRepository(EquipmentRentalItem)
+    private readonly rentalItemRepository: Repository<EquipmentRentalItem>,
+    @InjectRepository(Equipment)
+    private readonly equipmentRepository: Repository<Equipment>,
   ) {}
 
   @Post('test-webhook')
@@ -117,6 +126,36 @@ export class WebhookController {
         case 'payment.paid':
           await this.handlePaymentPaid(paymentData);
           break;
+        case 'checkout_session.payment.paid':
+          // Prefer using the checkout session payload embedded in the webhook to avoid API fetch/mode issues
+          if (paymentData && paymentData.type === 'checkout_session' && paymentData.attributes) {
+            const csAttr: any = paymentData.attributes;
+            let bookingDataFromSession: any | undefined;
+            try {
+              if (csAttr.metadata?.bookingData) {
+                bookingDataFromSession = JSON.parse(csAttr.metadata.bookingData);
+              }
+            } catch {}
+
+            // Extract payment id from relationships
+            let paymentId: string | undefined;
+            const paymentsRel = csAttr.payments?.data ?? csAttr.payments ?? [];
+            if (Array.isArray(paymentsRel) && paymentsRel.length > 0) {
+              paymentId = paymentsRel[0]?.id;
+            }
+            if (!paymentId && csAttr.payment_intent?.id) {
+              // Fall back to API if necessary
+              await this.handleCheckoutSessionPaid(data.id);
+              break;
+            }
+            if (paymentId) {
+              await this.handlePaymentPaid({ id: paymentId }, bookingDataFromSession);
+              break;
+            }
+          }
+          // Fallback to fetching by id
+          await this.handleCheckoutSessionPaid(data.id);
+          break;
         case 'payment.failed':
           await this.handlePaymentFailed(paymentData);
           break;
@@ -137,18 +176,70 @@ export class WebhookController {
     }
   }
 
-  private async handlePaymentPaid(paymentData: any) {
+  private async handleCheckoutSessionPaid(checkoutSessionId: string) {
+    try {
+      this.logger.log(`Fetching checkout session ${checkoutSessionId} to resolve payment`);
+      const session = await this.payMongoService.getCheckoutSession(checkoutSessionId);
+
+      // Extract booking data from checkout session metadata (Checkout stores it here, not on payment)
+      let bookingDataFromSession: any | undefined;
+      try {
+        const md = (session as any)?.attributes?.metadata;
+        if (md && md.bookingData) {
+          bookingDataFromSession = JSON.parse(md.bookingData);
+        }
+      } catch (e) {
+        this.logger.warn(`Failed to parse bookingData from checkout session ${checkoutSessionId}`);
+      }
+
+      // Try to resolve payment id from the checkout session payload
+      // Prefer payments list if present; otherwise, derive from payment_intent last payment
+      let paymentId: string | undefined;
+      const attributes: any = (session as any)?.attributes ?? {};
+
+      // payments may be an array of relationships
+      const payments = (attributes as any).payments?.data ?? (attributes as any).payments ?? [];
+      if (Array.isArray(payments) && payments.length > 0) {
+        paymentId = payments[0]?.id;
+      }
+
+      // Fallback: get from payment_intent latest payment
+      if (!paymentId && attributes.payment_intent?.id) {
+        try {
+          const pi = await this.payMongoService.getPaymentIntent(attributes.payment_intent.id);
+          const latestPaymentId = (pi as any)?.attributes?.latest_payment_id || (pi as any)?.attributes?.payments?.[0]?.id;
+          if (latestPaymentId) paymentId = latestPaymentId;
+        } catch (e) {
+          this.logger.warn(`Could not resolve payment from payment_intent ${attributes.payment_intent?.id}`);
+        }
+      }
+
+      if (!paymentId) {
+        this.logger.warn(`No payment id found for checkout session ${checkoutSessionId}`);
+        return;
+      }
+
+      // Reuse existing flow using the payment id, passing booking data from session if payment metadata lacks it
+      await this.handlePaymentPaid({ id: paymentId }, bookingDataFromSession);
+    } catch (error) {
+      this.logger.error('Error handling checkout_session.payment.paid event:', error);
+    }
+  }
+
+  private async handlePaymentPaid(paymentData: any, bookingDataOverride?: any) {
     try {
       this.logger.log(`Processing payment: ${paymentData.id}`);
-
-      // Get full payment details from Paymongo
-      const payment = await this.payMongoService.getPayment(paymentData.id);
+      // Prefer payment details from webhook payload; fallback to API fetch
+      const payment = paymentData?.attributes
+        ? { id: paymentData.id, attributes: paymentData.attributes }
+        : await this.payMongoService.getPayment(paymentData.id);
       
-      // Create reservation FIRST if booking data is in metadata
+      // Create reservation FIRST if booking data is in metadata or provided by caller (checkout session)
       let reservationId = 0;
-      if (payment.attributes.metadata && payment.attributes.metadata.bookingData) {
+      const bookingDataRaw = payment.attributes?.metadata?.bookingData || (bookingDataOverride ? JSON.stringify(bookingDataOverride) : undefined);
+      if (bookingDataRaw) {
         try {
-          const bookingData = JSON.parse(payment.attributes.metadata.bookingData);
+          const bookingData = typeof bookingDataRaw === 'string' ? JSON.parse(bookingDataRaw) : bookingDataRaw;
           const createdReservations = await this.createReservationFromPayment(payment, bookingData);
           
           // Get the first created reservation ID
@@ -173,6 +264,22 @@ export class WebhookController {
       });
       await this.paymentRepository.save(newPayment);
       this.logger.log(`Created payment record ${newPayment.id}`);
+      
+      // Persist equipment rentals if present in booking data
+      try {
+        const effectiveBookingData = bookingDataOverride
+          ? bookingDataOverride
+          : (payment.attributes?.metadata?.bookingData ? JSON.parse(payment.attributes.metadata.bookingData) : undefined);
+        if (effectiveBookingData?.equipmentBookings?.length && reservationId) {
+          await this.createEquipmentRentalsFromBooking(
+            effectiveBookingData.userId,
+            reservationId,
+            effectiveBookingData.equipmentBookings
+          );
+        }
+      } catch (e) {
+        this.logger.error('Error saving equipment rentals:', e);
+      }
       
       // Send detailed receipt email
       await this.emailReceiptService.sendPaymentReceipt({
@@ -200,29 +307,88 @@ export class WebhookController {
     }
   }
 
+  private parseHours(timeLabel: string): number {
+    if (!timeLabel) return 1;
+    const m = String(timeLabel).match(/(\d+)\s*(h|hr|hrs|hour)/i);
+    if (m) return parseInt(m[1], 10);
+    const m2 = String(timeLabel).match(/(\d+)/);
+    return m2 ? parseInt(m2[1], 10) : 1;
+  }
+
+  private async createEquipmentRentalsFromBooking(
+    userId: number,
+    reservationId: number,
+    equipmentBookings: Array<{ equipment: string; time: string; subtotal?: number; quantity?: number }>,
+  ) {
+    if (!reservationId || !userId) return;
+
+    const rental = this.rentalRepository.create({
+      reservation_id: reservationId,
+      user_id: userId,
+      total_amount: 0,
+    });
+    const savedRental = await this.rentalRepository.save(rental);
+
+    let total = 0;
+    for (const b of equipmentBookings) {
+      const hours = this.parseHours(b.time);
+      const quantity = b.quantity && b.quantity > 0 ? b.quantity : 1;
+
+      let equipmentRow = await this.equipmentRepository.findOne({ where: { equipment_name: Like(`%${b.equipment}%`) } });
+      if (!equipmentRow) {
+        equipmentRow = await this.equipmentRepository.findOne({ where: { equipment_name: b.equipment } });
+      }
+
+      const hourlyPrice = equipmentRow ? Number(equipmentRow.price) : Number(((b.subtotal || 0) / Math.max(1, hours * quantity)).toFixed(2)) || 0;
+      const subtotal = b.subtotal != null && b.subtotal > 0 ? Number(b.subtotal) : Number((hourlyPrice * hours * quantity).toFixed(2));
+
+      const item = this.rentalItemRepository.create({
+        rental_id: savedRental.id,
+        equipment_id: equipmentRow ? equipmentRow.id : 0,
+        quantity,
+        hours,
+        hourly_price: hourlyPrice,
+        subtotal,
+      });
+      await this.rentalItemRepository.save(item);
+      total += subtotal;
+    }
+
+    await this.rentalRepository.update(savedRental.id, { total_amount: Number(total.toFixed(2)) });
+    this.logger.log(`Saved equipment rental ${savedRental.id} with total ₱${total}`);
+  }
+
   private async createReservationFromPayment(payment: any, bookingData: any): Promise<Reservation[]> {
     const createdReservations: Reservation[] = [];
     try {
-      // Create reservation for each court booking
+      // Mirror test-webhook logic but using real booking data from metadata
       for (const courtBooking of bookingData.courtBookings || []) {
-        // For now, we'll create a simple reservation
-        // In a real implementation, you'd need to map court names to IDs
+        // Map court name to Court_ID
+        const courts = await this.courtsService.findAll();
+        const court = courts.find(c => c.Court_Name === courtBooking.court);
+        if (!court) {
+          this.logger.error(`Court "${courtBooking.court}" not found for reservation.`);
+          continue;
+        }
+
+        const [startTime, endTime] = this.parseScheduleToTimes(courtBooking.schedule);
+
         const reservation = this.reservationRepository.create({
           User_ID: bookingData.userId,
-          Court_ID: 1, // Default court ID - this should be mapped from court name
+          Court_ID: court.Court_Id,
           Reservation_Date: new Date(bookingData.selectedDate),
-          Start_Time: '09:00:00', // This should be parsed from schedule
-          End_Time: '10:00:00',   // This should be parsed from schedule
-          Total_Amount: payment.attributes.amount / 100, // Convert from centavos
-          Reference_Number: `REF${Date.now()}`,
+          Start_Time: startTime,
+          End_Time: endTime,
+          Total_Amount: courtBooking.subtotal ?? payment.attributes.amount / 100,
+          Reference_Number: bookingData.referenceNumber || `REF${Date.now()}`,
           Paymongo_Reference_Number: payment.id,
           Notes: `Payment via Paymongo - ${payment.id}`,
           Status: ReservationStatus.CONFIRMED,
         });
 
-        const savedReservation = await this.reservationRepository.save(reservation);
-        createdReservations.push(savedReservation);
-        this.logger.log(`Created reservation ${savedReservation.Reservation_ID} for payment ${payment.id}`);
+        await this.reservationRepository.save(reservation);
+        createdReservations.push(reservation);
+        this.logger.log(`Created reservation ${reservation.Reservation_ID} for payment ${payment.id}`);
       }
     } catch (error) {
       this.logger.error('Error creating reservation from payment:', error);
@@ -268,9 +434,8 @@ export class WebhookController {
   }
 
   private verifyWebhookSignature(body: any, signature: string): boolean {
-    // TODO: Implement proper webhook signature verification using the secret key
-    // Secret key: whsk_MVahvXgqKjLYjdWyTe5Zbznv
-    // For now, we'll accept all webhooks in test mode
+    // TEMP: accept all while diagnosing delivery; uses configured secret for future verification upgrades
+    const _secret = process.env.PAYMONGO_WEBHOOK_SECRET || 'whsk_7Myz2HAE5CZ3Td5V2gvVwrim';
     return true;
   }
 

@@ -15,14 +15,22 @@ var PaymentController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentController = void 0;
 const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
+const typeorm_2 = require("typeorm");
+const equipment_rental_entity_1 = require("./entities/equipment-rental.entity");
+const equipment_rental_item_entity_1 = require("./entities/equipment-rental-item.entity");
+const equipment_entity_1 = require("../equipment/entities/equipment.entity");
 const paymongo_service_1 = require("./paymongo.service");
 const email_receipt_service_1 = require("./email-receipt.service");
 const payments_service_1 = require("./payments.service");
 let PaymentController = PaymentController_1 = class PaymentController {
-    constructor(payMongoService, emailReceiptService, paymentsService) {
+    constructor(payMongoService, emailReceiptService, paymentsService, rentalRepository, rentalItemRepository, equipmentRepository) {
         this.payMongoService = payMongoService;
         this.emailReceiptService = emailReceiptService;
         this.paymentsService = paymentsService;
+        this.rentalRepository = rentalRepository;
+        this.rentalItemRepository = rentalItemRepository;
+        this.equipmentRepository = equipmentRepository;
         this.logger = new common_1.Logger(PaymentController_1.name);
     }
     async createPaymentIntent(body) {
@@ -59,6 +67,37 @@ let PaymentController = PaymentController_1 = class PaymentController {
                 success: false,
                 message: error.message || 'Failed to get payment intent',
             };
+        }
+    }
+    async getRentalsByReservation(reservationId) {
+        try {
+            const rental = await this.rentalRepository.findOne({ where: { reservation_id: Number(reservationId) } });
+            if (!rental) {
+                return { success: true, data: { items: [], total: 0 } };
+            }
+            const items = await this.rentalItemRepository.find({ where: { rental_id: rental.id } });
+            const equipmentMap = new Map();
+            for (const it of items) {
+                if (it.equipment_id && !equipmentMap.has(it.equipment_id)) {
+                    const eq = await this.equipmentRepository.findOne({ where: { id: it.equipment_id } });
+                    if (eq)
+                        equipmentMap.set(it.equipment_id, eq.equipment_name);
+                }
+            }
+            const dto = items.map((it) => ({
+                equipmentId: it.equipment_id,
+                equipmentName: equipmentMap.get(it.equipment_id) || 'Equipment',
+                quantity: it.quantity,
+                hours: it.hours,
+                hourlyPrice: Number(it.hourly_price),
+                subtotal: Number(it.subtotal),
+            }));
+            const total = dto.reduce((s, i) => s + i.subtotal, 0);
+            return { success: true, data: { items: dto, total } };
+        }
+        catch (error) {
+            this.logger.error('Error fetching rentals by reservation:', error);
+            return { success: false, message: 'Failed to fetch rentals' };
         }
     }
     async createPaymentMethod(body) {
@@ -340,6 +379,13 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], PaymentController.prototype, "getPaymentIntent", null);
 __decorate([
+    (0, common_1.Get)('rentals/by-reservation/:reservationId'),
+    __param(0, (0, common_1.Param)('reservationId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], PaymentController.prototype, "getRentalsByReservation", null);
+__decorate([
     (0, common_1.Post)('create-method'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -418,8 +464,14 @@ __decorate([
 ], PaymentController.prototype, "getReceipt", null);
 exports.PaymentController = PaymentController = PaymentController_1 = __decorate([
     (0, common_1.Controller)('payment'),
+    __param(3, (0, typeorm_1.InjectRepository)(equipment_rental_entity_1.EquipmentRental)),
+    __param(4, (0, typeorm_1.InjectRepository)(equipment_rental_item_entity_1.EquipmentRentalItem)),
+    __param(5, (0, typeorm_1.InjectRepository)(equipment_entity_1.Equipment)),
     __metadata("design:paramtypes", [paymongo_service_1.PayMongoService,
         email_receipt_service_1.EmailReceiptService,
-        payments_service_1.PaymentsService])
+        payments_service_1.PaymentsService,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository])
 ], PaymentController);
 //# sourceMappingURL=payment.controller.js.map

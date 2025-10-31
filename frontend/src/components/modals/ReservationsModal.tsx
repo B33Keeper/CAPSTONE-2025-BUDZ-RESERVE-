@@ -29,6 +29,7 @@ interface Reservation {
   }
   payments?: {
     payment_method: string
+    amount?: number
   }[]
 }
 
@@ -48,6 +49,7 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
   const [dateFilter, setDateFilter] = useState('')
   const [showDateFilter, setShowDateFilter] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
+  const [rentalsMap, setRentalsMap] = useState<Record<number, { items: { equipmentName: string; quantity: number; hours: number; subtotal: number }[]; total: number }>>({})
 
   const itemsPerPage = isMobile ? 5 : 7
 
@@ -57,8 +59,12 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
     
     setLoading(true)
     try {
+      console.log('[ReservationsModal] Fetching reservations for user:', user.id)
       const response = await api.get('/reservations/my-reservations')
-      let filteredReservations = response.data
+      console.log('[ReservationsModal] Raw response data:', response.data)
+      console.log('[ReservationsModal] Total reservations received:', response.data?.length || 0)
+      
+      let filteredReservations = response.data || []
 
       // Apply date filter if set
       if (dateFilter) {
@@ -71,20 +77,57 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
 
       // Filter by tab (current vs history)
       if (activeTab === 'current') {
+        const beforeTabFilter = filteredReservations.length
         filteredReservations = filteredReservations.filter((res: Reservation) => 
           res.Status === 'Confirmed' || res.Status === 'Pending'
         )
+        console.log(`[ReservationsModal] Tab filter (current): ${beforeTabFilter} → ${filteredReservations.length}`)
       } else {
+        const beforeTabFilter = filteredReservations.length
         filteredReservations = filteredReservations.filter((res: Reservation) => 
           res.Status === 'Completed' || res.Status === 'Cancelled'
         )
+        console.log(`[ReservationsModal] Tab filter (history): ${beforeTabFilter} → ${filteredReservations.length}`)
       }
 
+      console.log('[ReservationsModal] Final filtered reservations:', filteredReservations.length)
       setReservations(filteredReservations)
+      
+      // Fetch rentals for these reservations
+      try {
+        const entries: Record<number, any> = {}
+        await Promise.all(
+          filteredReservations.map(async (res: Reservation) => {
+            try {
+              const r = await api.get(`/payment/rentals/by-reservation/${res.Reservation_ID}`)
+              if (r.data && r.data.success && r.data.data) {
+                // Transform the data structure
+                const rentalData = r.data.data
+                entries[res.Reservation_ID] = {
+                  items: rentalData.items?.map((item: any) => ({
+                    equipmentName: item.equipmentName || item.equipment?.equipment_name || 'Equipment',
+                    quantity: item.quantity || 1,
+                    hours: item.hours || 1,
+                    subtotal: item.subtotal || 0
+                  })) || [],
+                  total: rentalData.total || 0
+                }
+              }
+            } catch (err) {
+              console.warn(`[ReservationsModal] Failed to fetch rentals for reservation ${res.Reservation_ID}:`, err)
+            }
+          })
+        )
+        setRentalsMap(entries)
+        console.log('[ReservationsModal] Rentals map:', entries)
+      } catch (err) {
+        console.error('[ReservationsModal] Error fetching rentals:', err)
+      }
       setTotalPages(Math.ceil(filteredReservations.length / itemsPerPage))
       setCurrentPage(1)
     } catch (error) {
-      console.error('Error fetching reservations:', error)
+      console.error('[ReservationsModal] Error fetching reservations:', error)
+      console.error('[ReservationsModal] Error details:', error.response?.data || error.message)
       toast.error('Failed to load reservations')
     } finally {
       setLoading(false)
@@ -95,7 +138,7 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
     if (isOpen) {
       fetchReservations()
     }
-  }, [isOpen, activeTab, dateFilter])
+  }, [isOpen, activeTab, dateFilter, user])
 
   // Handle receipt download/view
   const handleReceipt = async (reservation: Reservation) => {
@@ -199,16 +242,34 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
             </p>
             <div className="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"></div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-all duration-300 p-3 hover:bg-gray-100 rounded-xl group"
-            aria-label="Close reservations modal"
-            title="Close reservations modal"
-          >
-            <svg className="w-6 h-6 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={fetchReservations}
+              disabled={loading}
+              className="text-gray-400 hover:text-gray-600 transition-all duration-300 p-3 hover:bg-gray-100 rounded-xl group disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Refresh reservations"
+              title="Refresh reservations"
+            >
+              <svg 
+                className={`w-6 h-6 group-hover:scale-110 transition-transform duration-200 ${loading ? 'animate-spin' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-all duration-300 p-3 hover:bg-gray-100 rounded-xl group"
+              aria-label="Close reservations modal"
+              title="Close reservations modal"
+            >
+              <svg className="w-6 h-6 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -412,9 +473,9 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                         <ResponsiveTableHeaderCell className="font-bold text-gray-800">Date</ResponsiveTableHeaderCell>
                         <ResponsiveTableHeaderCell className="font-bold text-gray-800">Time</ResponsiveTableHeaderCell>
                         <ResponsiveTableHeaderCell hideOnMobile className="font-bold text-gray-800">Court no.</ResponsiveTableHeaderCell>
-                        <ResponsiveTableHeaderCell className="font-bold text-gray-800">Price</ResponsiveTableHeaderCell>
                         <ResponsiveTableHeaderCell hideOnMobile className="font-bold text-gray-800">Mode of Payment</ResponsiveTableHeaderCell>
-                        <ResponsiveTableHeaderCell className="font-bold text-gray-800">Action</ResponsiveTableHeaderCell>
+                        <ResponsiveTableHeaderCell className="font-bold text-gray-800">Racket Rent / Duration</ResponsiveTableHeaderCell>
+                        <ResponsiveTableHeaderCell className="font-bold text-gray-800">Price</ResponsiveTableHeaderCell>
                     </ResponsiveTableHeader>
                     <ResponsiveTableBody>
                       {currentReservations.map((reservation, index) => (
@@ -439,23 +500,34 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                                 <span>{reservation.court?.Court_Name || 'Unknown Court'}</span>
                               </div>
                           </ResponsiveTableCell>
-                            <ResponsiveTableCell className="font-bold text-green-600">₱{formatPrice(reservation.Total_Amount)}</ResponsiveTableCell>
                             <ResponsiveTableCell hideOnMobile className="text-gray-700">
                               <div className="flex items-center space-x-2">
                                 <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                                 <span>{getPaymentMethod(reservation)}</span>
                               </div>
                           </ResponsiveTableCell>
-                          <ResponsiveTableCell>
-                            <button
-                              onClick={() => handleReceipt(reservation)}
-                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-300 group"
-                              aria-label={`View receipt for reservation ${reservation.Reservation_ID}`}
-                              title={`View receipt for reservation ${reservation.Reservation_ID}`}
-                            >
-                                <Receipt className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
-                            </button>
+                          {/* Racket Rent / Duration column */}
+                          <ResponsiveTableCell className="text-gray-700">
+                            <div className="flex flex-col gap-1">
+                              {(() => {
+                                const r = rentalsMap[reservation.Reservation_ID]
+                                if (!r || !r.items || r.items.length === 0) {
+                                  return <span className="text-gray-400 text-sm">None</span>
+                                }
+                                return r.items.slice(0,3).map((it, idx) => (
+                                  <span key={idx} className="text-sm">{it.equipmentName} <span className="ml-1 inline-block px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">{it.hours}h{it.quantity>1?` x${it.quantity}`:''}</span></span>
+                                ))
+                              })()}
+                            </div>
                           </ResponsiveTableCell>
+                          {/* Price moved to the last column */}
+                            {(() => {
+                              const paid = (reservation.payments || []).reduce((s, p) => s + Number(p.amount || 0), 0)
+                              const display = paid > 0 ? paid : reservation.Total_Amount
+                              return (
+                                <ResponsiveTableCell className="font-bold text-green-600">₱{formatPrice(display)}</ResponsiveTableCell>
+                              )
+                            })()}
                         </ResponsiveTableRow>
                       ))}
                     </ResponsiveTableBody>

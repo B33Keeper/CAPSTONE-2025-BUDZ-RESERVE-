@@ -25,4 +25,8 @@ export declare class ReservationsService {
     private convertTo24Hour;
     private createPaymentRecord;
     private mapPaymentMethod;
+    checkDuplicateReservation(userId: number, courtId: number, date: string, startTime: string, endTime: string): Promise<{
+        isDuplicate: boolean;
+        message?: string;
+    }>;
 }

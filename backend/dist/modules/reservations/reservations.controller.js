@@ -38,6 +38,9 @@ let ReservationsController = class ReservationsController {
     getAvailability(courtId, date) {
         return this.reservationsService.getAvailability(courtId, date);
     }
+    checkDuplicate(checkDto, req) {
+        return this.reservationsService.checkDuplicateReservation(req.user.id, checkDto.courtId, checkDto.date, checkDto.startTime, checkDto.endTime);
+    }
     findOne(id) {
         return this.reservationsService.findOne(id);
     }
@@ -103,6 +106,18 @@ __decorate([
     __metadata("design:paramtypes", [Number, String]),
     __metadata("design:returntype", void 0)
 ], ReservationsController.prototype, "getAvailability", null);
+__decorate([
+    (0, common_1.Post)('check-duplicate'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Check for duplicate reservation by user' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Duplicate check completed' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], ReservationsController.prototype, "checkDuplicate", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

@@ -17,6 +17,9 @@ const webhook_controller_1 = require("./webhook.controller");
 const paymongo_service_1 = require("./paymongo.service");
 const email_receipt_service_1 = require("./email-receipt.service");
 const payment_entity_1 = require("./entities/payment.entity");
+const equipment_rental_entity_1 = require("./entities/equipment-rental.entity");
+const equipment_rental_item_entity_1 = require("./entities/equipment-rental-item.entity");
+const equipment_entity_1 = require("../equipment/entities/equipment.entity");
 const reservation_entity_1 = require("../reservations/entities/reservation.entity");
 const reservations_module_1 = require("../reservations/reservations.module");
 const courts_module_1 = require("../courts/courts.module");
@@ -26,7 +29,7 @@ exports.PaymentsModule = PaymentsModule;
 exports.PaymentsModule = PaymentsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([payment_entity_1.Payment, reservation_entity_1.Reservation]),
+            typeorm_1.TypeOrmModule.forFeature([payment_entity_1.Payment, reservation_entity_1.Reservation, equipment_rental_entity_1.EquipmentRental, equipment_rental_item_entity_1.EquipmentRentalItem, equipment_entity_1.Equipment]),
             reservations_module_1.ReservationsModule,
             courts_module_1.CourtsModule,
             mailer_1.MailerModule,

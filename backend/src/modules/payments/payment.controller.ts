@@ -1,4 +1,9 @@
 import { Controller, Post, Body, Get, Param, Logger, Put } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { EquipmentRental } from './entities/equipment-rental.entity';
+import { EquipmentRentalItem } from './entities/equipment-rental-item.entity';
+import { Equipment } from '../equipment/entities/equipment.entity';
 import { PayMongoService } from './paymongo.service';
 import { EmailReceiptService } from './email-receipt.service';
 import { PaymentsService } from './payments.service';
@@ -46,6 +51,12 @@ export class PaymentController {
     private readonly payMongoService: PayMongoService,
     private readonly emailReceiptService: EmailReceiptService,
     private readonly paymentsService: PaymentsService,
+    @InjectRepository(EquipmentRental)
+    private readonly rentalRepository: Repository<EquipmentRental>,
+    @InjectRepository(EquipmentRentalItem)
+    private readonly rentalItemRepository: Repository<EquipmentRentalItem>,
+    @InjectRepository(Equipment)
+    private readonly equipmentRepository: Repository<Equipment>,
   ) {}
 
   @Post('create-intent')
@@ -92,6 +103,39 @@ export class PaymentController {
         success: false,
         message: error.message || 'Failed to get payment intent',
       };
+    }
+  }
+
+  // Rentals by reservation (for My Reservations modal)
+  @Get('rentals/by-reservation/:reservationId')
+  async getRentalsByReservation(@Param('reservationId') reservationId: number) {
+    try {
+      const rental = await this.rentalRepository.findOne({ where: { reservation_id: Number(reservationId) } });
+      if (!rental) {
+        return { success: true, data: { items: [], total: 0 } };
+      }
+
+      const items = await this.rentalItemRepository.find({ where: { rental_id: rental.id } });
+      const equipmentMap = new Map<number, string>();
+      for (const it of items) {
+        if (it.equipment_id && !equipmentMap.has(it.equipment_id)) {
+          const eq = await this.equipmentRepository.findOne({ where: { id: it.equipment_id } });
+          if (eq) equipmentMap.set(it.equipment_id, eq.equipment_name);
+        }
+      }
+      const dto = items.map((it) => ({
+        equipmentId: it.equipment_id,
+        equipmentName: equipmentMap.get(it.equipment_id) || 'Equipment',
+        quantity: it.quantity,
+        hours: it.hours,
+        hourlyPrice: Number(it.hourly_price),
+        subtotal: Number(it.subtotal),
+      }));
+      const total = dto.reduce((s, i) => s + i.subtotal, 0);
+      return { success: true, data: { items: dto, total } };
+    } catch (error) {
+      this.logger.error('Error fetching rentals by reservation:', error);
+      return { success: false, message: 'Failed to fetch rentals' };
     }
   }
 

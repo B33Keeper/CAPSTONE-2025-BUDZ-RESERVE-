@@ -1,3 +1,7 @@
+import { Repository } from 'typeorm';
+import { EquipmentRental } from './entities/equipment-rental.entity';
+import { EquipmentRentalItem } from './entities/equipment-rental-item.entity';
+import { Equipment } from '../equipment/entities/equipment.entity';
 import { PayMongoService } from './paymongo.service';
 import { EmailReceiptService } from './email-receipt.service';
 import { PaymentsService } from './payments.service';
@@ -37,8 +41,11 @@ export declare class PaymentController {
     private readonly payMongoService;
     private readonly emailReceiptService;
     private readonly paymentsService;
+    private readonly rentalRepository;
+    private readonly rentalItemRepository;
+    private readonly equipmentRepository;
     private readonly logger;
-    constructor(payMongoService: PayMongoService, emailReceiptService: EmailReceiptService, paymentsService: PaymentsService);
+    constructor(payMongoService: PayMongoService, emailReceiptService: EmailReceiptService, paymentsService: PaymentsService, rentalRepository: Repository<EquipmentRental>, rentalItemRepository: Repository<EquipmentRentalItem>, equipmentRepository: Repository<Equipment>);
     createPaymentIntent(body: CreatePaymentIntentDto): Promise<{
         success: boolean;
         data?: PaymongoPaymentIntent;
@@ -48,6 +55,25 @@ export declare class PaymentController {
         success: boolean;
         data?: PaymongoPaymentIntent;
         message?: string;
+    }>;
+    getRentalsByReservation(reservationId: number): Promise<{
+        success: boolean;
+        data: {
+            items: {
+                equipmentId: number;
+                equipmentName: string;
+                quantity: number;
+                hours: number;
+                hourlyPrice: number;
+                subtotal: number;
+            }[];
+            total: number;
+        };
+        message?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        data?: undefined;
     }>;
     createPaymentMethod(body: {
         type: 'card' | 'gcash' | 'paymaya' | 'grab_pay';
