@@ -2,6 +2,8 @@
 
 A comprehensive badminton court booking system with full-stack React/NestJS implementation, Docker containerization, and Paymongo payment integration.
 
+---
+
 ## 🚨 CRITICAL: READ THIS FIRST!
 
 > **⚠️ PAYMENT SYSTEM WILL NOT WORK WITHOUT NGROK!**
@@ -17,33 +19,31 @@ A comprehensive badminton court booking system with full-stack React/NestJS impl
 > - ❌ Incomplete payment flow
 
 ---
+
+## 📋 WORKING PAGES AND FUNCTIONALITIES
+
+### 📅 Booking Page
+- Payment integration
+- Time constraint validation
+- Webhook integration
+
+### 🏸 Admin Manage Courts
+- Dynamic court management interface
+- Automatic sheet creation when the last sheet's court number is maxed/capped to "6"
+
+### 🏠 Home Page
+- "Get in Touch" section is now dynamic
+
+### 📊 Admin Sales Report
+- Proper UI/UX implementation
+- Dynamic reporting functionality
+
+### 💬 Admin View Suggestion
+- View suggestion is now dynamic
+
+### 🗄️ Database
+- Added `equipment_rentals` table
+- Added `equipment_rental_items` table
+- Exported the updated database named `database_export.sql`
+
 ---
-
-
-
-**WORKING PAGES AND FUNCIONALITIES:**
----
-*BOOKING PAGE
-   -->payment
-   -->time constraint
-   -->webhook
-
-*MANAGE COURTS
-   -->is now dynamic
-   -->automatic sheet creation if the last sheet's court number is maxed/capped to "6"
-
-
-*HOME PAGE
-   -->Get in Touch is now dynamic
-
-
-*ADMIN SALES REPORT
-   -->proper UI/UX and is now dynamic
-
-*ADMIN VIEW SUGGESTION
-   -->View suggestion is now dynamic
-
-*DATABASE
-   -->added equipment_rentals table
-   -->added equipment_rental_items table
-   -->exported the updated database named "database_export.sql"
