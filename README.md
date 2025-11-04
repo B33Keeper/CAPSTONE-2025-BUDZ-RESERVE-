@@ -27,6 +27,10 @@ A comprehensive badminton court booking system with full-stack React/NestJS impl
 - Time constraint validation
 - Webhook integration
 
+### 📊 remove individual side bars each admin page
+-- used the component feature of the react app
+-- the side bar is reusable in any page
+
 ### 🏸 Admin Manage Courts
 - Dynamic court management interface
 - Automatic sheet creation when the last sheet's court number is maxed/capped to "6"
@@ -40,6 +44,10 @@ A comprehensive badminton court booking system with full-stack React/NestJS impl
 
 ### 💬 Admin View Suggestion
 - View suggestion is now dynamic
+
+## 💬  Admin Announcement
+- Only the latest announcement is shown
+- added announcement history 
 
 ### 🗄️ Database
 - Added `equipment_rentals` table
