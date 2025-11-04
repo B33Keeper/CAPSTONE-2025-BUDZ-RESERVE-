@@ -100,6 +100,7 @@ const AdminDashboard = () => {
     { id: 'Sales Report', icon: 'chart', label: 'Sales Report' },
     { id: 'Create Reservations', icon: 'document', label: 'Create Reservations' },
     { id: 'View Suggestions', icon: 'envelope', label: 'View Suggestions' },
+    { id: 'Create Announcement', icon: 'announcement', label: 'Create Announcement' },
     { id: 'Upload photo', icon: 'picture', label: 'Upload photo' }
   ]
 
@@ -234,6 +235,8 @@ const AdminDashboard = () => {
                     navigate('/admin/create-reservations')
                   } else if (item.id === 'View Suggestions') {
                     navigate('/admin/view-suggestions')
+                  } else if (item.id === 'Create Announcement') {
+                    navigate('/admin/create-announcement')
                   } else if (item.id === 'Upload photo') {
                     navigate('/admin/upload-photo')
                   }
@@ -280,6 +283,11 @@ const AdminDashboard = () => {
                   {item.icon === 'envelope' && (
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                  )}
+                  {item.icon === 'announcement' && (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
                     </svg>
                   )}
                   {item.icon === 'picture' && (
@@ -331,6 +339,8 @@ const AdminDashboard = () => {
                     navigate('/admin/create-reservations')
                   } else if (item.id === 'View Suggestions') {
                     navigate('/admin/view-suggestions')
+                  } else if (item.id === 'Create Announcement') {
+                    navigate('/admin/create-announcement')
                   } else if (item.id === 'Upload photo') {
                     navigate('/admin/upload-photo')
                   }
@@ -376,6 +386,11 @@ const AdminDashboard = () => {
                   {item.icon === 'envelope' && (
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                  )}
+                  {item.icon === 'announcement' && (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
                     </svg>
                   )}
                   {item.icon === 'picture' && (

@@ -12,6 +12,7 @@ import { EquipmentRentalItem } from '../modules/payments/entities/equipment-rent
 import { TimeSlot } from '../modules/time-slots/entities/time-slot.entity';
 import { Gallery } from '../modules/gallery/entities/gallery.entity';
 import { Suggestion } from '../modules/suggestions/entities/suggestion.entity';
+import { Announcement } from '../modules/announcements/entities/announcement.entity';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { Suggestion } from '../modules/suggestions/entities/suggestion.entity';
         username: configService.get('DB_USERNAME', 'root'),
         password: configService.get('DB_PASSWORD', ''),
         database: configService.get('DB_DATABASE', 'budz_reserve'),
-        entities: [User, Court, Equipment, Reservation, Payment, EquipmentRental, EquipmentRentalItem, TimeSlot, Gallery, Suggestion],
+        entities: [User, Court, Equipment, Reservation, Payment, EquipmentRental, EquipmentRentalItem, TimeSlot, Gallery, Suggestion, Announcement],
         synchronize: configService.get('NODE_ENV') === 'development',
         logging: configService.get('NODE_ENV') === 'development',
         migrations: ['dist/database/migrations/*.js'],
