@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 import { apiServices } from '@/lib/apiServices'
+import AdminSidebar from '@/components/AdminSidebar'
 
 const AdminDashboard = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard')
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [userCount, setUserCount] = useState(0)
   const [courtCount, setCourtCount] = useState(0)
   const [availableCourtCount, setAvailableCourtCount] = useState(0)
@@ -93,15 +92,6 @@ const AdminDashboard = () => {
     return () => clearInterval(interval)
   }, [])
 
-  const sidebarItems = [
-    { id: 'Dashboard', icon: 'grid', label: 'Dashboard' },
-    { id: 'Manage Courts', icon: 'calendar', label: 'Manage Courts' },
-    { id: 'Manage Rackets', icon: 'racket', label: 'Manage Rackets' },
-    { id: 'Sales Report', icon: 'chart', label: 'Sales Report' },
-    { id: 'Create Reservations', icon: 'document', label: 'Create Reservations' },
-    { id: 'View Suggestions', icon: 'envelope', label: 'View Suggestions' },
-    { id: 'Upload photo', icon: 'picture', label: 'Upload photo' }
-  ]
 
   return (
     <div className="min-h-screen bg-gray-100 scroll-smooth">
@@ -197,217 +187,15 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      {/* Mobile Sidebar Overlay */}
-      {isMobileSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
-
       {/* Main Content with Sidebar */}
       <div className="flex">
-        {/* Desktop Sidebar */}
-        <div 
-          className={`hidden lg:block bg-white shadow-sm border-r border-gray-200 transition-all duration-300 ease-in-out sticky top-0 h-screen overflow-y-auto ${
-            isSidebarExpanded ? 'w-64' : 'w-16'
-          } hover:shadow-lg`}
-          style={{ backgroundColor: 'white' }}
-          onMouseEnter={() => setIsSidebarExpanded(true)}
-          onMouseLeave={() => setIsSidebarExpanded(false)}
-        >
-          {/* Navigation Items */}
-          <nav className="px-2 py-8 space-y-2">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.id === 'Dashboard') {
-                    navigate('/admin')
-                  } else if (item.id === 'Manage Courts') {
-                    navigate('/admin/manage-courts')
-                  } else if (item.id === 'Manage Rackets') {
-                    navigate('/admin/manage-rackets')
-                  } else if (item.id === 'Sales Report') {
-                    navigate('/admin/sales-report')
-                  } else if (item.id === 'Create Reservations') {
-                    navigate('/admin/create-reservations')
-                  } else if (item.id === 'View Suggestions') {
-                    navigate('/admin/view-suggestions')
-                  } else if (item.id === 'Upload photo') {
-                    navigate('/admin/upload-photo')
-                  }
-                  setActiveSidebarItem(item.id)
-                }}
-                className={`w-full flex items-center ${
-                  isSidebarExpanded ? 'space-x-3 px-4' : 'justify-center px-2'
-                } py-3 rounded-lg text-left transition-all duration-300 ease-in-out group ${
-                  activeSidebarItem === item.id
-                    ? 'bg-blue-100 text-blue-700 shadow-md transform scale-105'
-                    : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm hover:transform hover:scale-105'
-                }`}
-              >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  {item.icon === 'grid' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11 0h7v7h-7v-7zm0-11h7v7h-7V3z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'calendar' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                      <circle cx="16" cy="12" r="1"/>
-                    </svg>
-                  )}
-                  {item.icon === 'racket' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                      <path d="M12 6l-2 2 2 2 2-2-2-2zm0 8l-2 2 2 2 2-2-2-2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'chart' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'document' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                      <path d="M8 12h8v2H8V12zm0 4h8v2H8V16z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'envelope' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'picture' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                      <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/>
-                    </svg>
-                  )}
-                </div>
-                <span className={`font-medium transition-all duration-200 ${
-                  isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'
-                }`}>
-                  {item.label}
-                </span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Mobile Sidebar */}
-        <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-sm border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${
-          isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`} style={{ backgroundColor: 'white' }}>
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
-            <button
-              onClick={() => setIsMobileSidebarOpen(false)}
-              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <nav className="px-4 py-6 space-y-2">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.id === 'Dashboard') {
-                    navigate('/admin')
-                  } else if (item.id === 'Manage Courts') {
-                    navigate('/admin/manage-courts')
-                  } else if (item.id === 'Manage Rackets') {
-                    navigate('/admin/manage-rackets')
-                  } else if (item.id === 'Sales Report') {
-                    navigate('/admin/sales-report')
-                  } else if (item.id === 'Create Reservations') {
-                    navigate('/admin/create-reservations')
-                  } else if (item.id === 'View Suggestions') {
-                    navigate('/admin/view-suggestions')
-                  } else if (item.id === 'Upload photo') {
-                    navigate('/admin/upload-photo')
-                  }
-                  setActiveSidebarItem(item.id)
-                  setIsMobileSidebarOpen(false)
-                }}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                  activeSidebarItem === item.id
-                    ? 'bg-blue-100 text-blue-700 shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'
-                }`}
-              >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  {item.icon === 'grid' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11 0h7v7h-7v-7zm0-11h7v7h-7V3z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'calendar' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                      <circle cx="16" cy="12" r="1"/>
-                    </svg>
-                  )}
-                  {item.icon === 'racket' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                      <path d="M12 6l-2 2 2 2 2-2-2-2zm0 8l-2 2 2 2 2-2-2-2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'chart' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'document' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                      <path d="M8 12h8v2H8V12zm0 4h8v2H8V16z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'envelope' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'picture' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                      <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/>
-                    </svg>
-                  )}
-                </div>
-                <span className="font-medium">{item.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Mobile Menu Button */}
-        <div className="lg:hidden">
-          <button
-            onClick={() => setIsMobileSidebarOpen(true)}
-            className="fixed top-4 left-4 z-40 p-2 rounded-md bg-white shadow-sm border border-gray-200 text-gray-600 hover:bg-gray-100"
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
+        <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
           {/* Welcome Section */}
           <div className="mb-8">
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8 animate-slideDown">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-6 lg:space-y-0">
                 <div className="flex-1">
                   <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
@@ -422,7 +210,7 @@ const AdminDashboard = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-fadeInUp">
             {/* Daily Reservation */}
             <div className="bg-gray-800 text-white p-4 sm:p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:transform hover:scale-105 hover:-translate-y-1 group cursor-pointer">
               <div className="flex items-center justify-between">
@@ -531,7 +319,7 @@ const AdminDashboard = () => {
           </div>
 
           {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 animate-fadeInUp">
             {/* Monthly Overview Chart */}
             <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:transform hover:scale-105">
               <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">Monthly Overview</h3>
@@ -566,23 +354,18 @@ const AdminDashboard = () => {
                   <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-300 rounded group-hover:bg-green-400 transition-colors"></div>
                   <span className="text-xs sm:text-sm text-gray-600 group-hover:text-gray-800 transition-colors">Reservation</span>
                 </div>
-                <div className="flex items-center space-x-2 group cursor-pointer">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-300 rounded group-hover:bg-red-400 transition-colors"></div>
-                  <span className="text-xs sm:text-sm text-gray-600 group-hover:text-gray-800 transition-colors">Canceled</span>
-                </div>
               </div>
               
               <div className="flex items-center justify-center">
                 <div className="relative w-32 h-32 sm:w-48 sm:h-48 hover:scale-110 transition-transform duration-300 cursor-pointer">
                   {/* Pie Chart Circle */}
                   <div className="absolute inset-0 rounded-full border-4 sm:border-8 border-green-300 hover:border-green-400 transition-colors"></div>
-                  <div className="absolute inset-0 rounded-full border-4 sm:border-8 border-red-300 transform rotate-45 hover:border-red-400 transition-colors"></div>
                   
                   {/* Center Text */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
                       <div className="text-lg sm:text-2xl font-bold hover:text-green-600 transition-colors">120</div>
-                      <div className="text-xs sm:text-sm text-gray-600 hover:text-gray-800 transition-colors">Reservation</div>
+                      <div className="text-xs sm:text-sm text-gray-600 hover:text-gray-800 transition-colors">Racket Rented</div>
                     </div>
                   </div>
                 </div>

@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # MySQL Database
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0.37
     container_name: budz-reserve-mysql
     restart: unless-stopped
     environment:
@@ -72,7 +72,7 @@ services:
 
   # Nginx Reverse Proxy
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     container_name: budz-reserve-nginx
     restart: unless-stopped
     ports:

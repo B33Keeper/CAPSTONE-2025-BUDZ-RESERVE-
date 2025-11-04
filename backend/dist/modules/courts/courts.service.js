@@ -17,9 +17,11 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const court_entity_1 = require("./entities/court.entity");
+const reservation_entity_1 = require("../reservations/entities/reservation.entity");
 let CourtsService = class CourtsService {
-    constructor(courtsRepository) {
+    constructor(courtsRepository, reservationsRepository) {
         this.courtsRepository = courtsRepository;
+        this.reservationsRepository = reservationsRepository;
     }
     async create(createCourtDto) {
         const court = this.courtsRepository.create(createCourtDto);
@@ -46,6 +48,12 @@ let CourtsService = class CourtsService {
     }
     async remove(id) {
         const court = await this.findOne(id);
+        const reservationCount = await this.reservationsRepository.count({
+            where: { Court_ID: id },
+        });
+        if (reservationCount > 0) {
+            throw new common_1.BadRequestException(`Cannot delete court "${court.Court_Name}" because it has ${reservationCount} reservation(s) associated with it. Please delete or reassign the reservations first.`);
+        }
         await this.courtsRepository.remove(court);
     }
     async getAvailableCourts() {
@@ -67,6 +75,8 @@ exports.CourtsService = CourtsService;
 exports.CourtsService = CourtsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(court_entity_1.Court)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(reservation_entity_1.Reservation)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository])
 ], CourtsService);
 //# sourceMappingURL=courts.service.js.map

@@ -2,31 +2,21 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
-import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsModal'
-import { useState } from 'react'
+import toast from 'react-hot-toast'
 
 export function HeroSection() {
   const { isAuthenticated } = useAuthStore()
   const { ref, controls } = useScrollAnimation()
   const navigate = useNavigate()
-  const [showTermsModal, setShowTermsModal] = useState(false)
 
   const handleBookNowClick = (e: React.MouseEvent) => {
     e.preventDefault()
     if (isAuthenticated) {
-      setShowTermsModal(true)
+      navigate('/booking')
     } else {
-      navigate('/signup')
+      toast.error('Please login to proceed on booking')
+      navigate('/login?returnUrl=/booking')
     }
-  }
-
-  const handleAcceptTerms = () => {
-    setShowTermsModal(false)
-    navigate('/booking')
-  }
-
-  const handleCloseTerms = () => {
-    setShowTermsModal(false)
   }
 
   return (
@@ -340,13 +330,6 @@ export function HeroSection() {
           )}
         </motion.div>
       </motion.div>
-      
-      {/* Terms and Conditions Modal */}
-      <TermsAndConditionsModal
-        isOpen={showTermsModal}
-        onClose={handleCloseTerms}
-        onAccept={handleAcceptTerms}
-      />
     </section>
   )
 }

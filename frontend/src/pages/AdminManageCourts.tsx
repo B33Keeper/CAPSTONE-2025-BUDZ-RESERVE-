@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { apiServices, Court } from '@/lib/apiServices'
 import api from '@/lib/api'
+import AdminSidebar from '@/components/AdminSidebar'
 
 const AdminManageCourts = () => {
   console.log('[AdminManageCourts] Component rendering...')
   
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Manage Courts')
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [courts, setCourts] = useState<Court[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,10 +18,14 @@ const AdminManageCourts = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [newCourt, setNewCourt] = useState({
     Court_Name: '',
-    Status: 'Available' as 'Available' | 'Maintenance' | 'Unavailable',
+    Status: 'Available' as 'Available' | 'Maintenance',
     Price: 250
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showEditPriceModal, setShowEditPriceModal] = useState(false)
+  const [editingCourt, setEditingCourt] = useState<Court | null>(null)
+  const [editPrice, setEditPrice] = useState(0)
+  const [isUpdatingPrice, setIsUpdatingPrice] = useState(false)
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -84,15 +87,6 @@ const AdminManageCourts = () => {
     }
   }, [])
 
-  const sidebarItems = [
-    { id: 'Dashboard', icon: 'grid', label: 'Dashboard' },
-    { id: 'Manage Courts', icon: 'calendar', label: 'Manage Courts' },
-    { id: 'Manage Rackets', icon: 'racket', label: 'Manage Rackets' },
-    { id: 'Sales Report', icon: 'chart', label: 'Sales Report' },
-    { id: 'Create Reservations', icon: 'document', label: 'Create Reservations' },
-    { id: 'View Suggestions', icon: 'envelope', label: 'View Suggestions' },
-    { id: 'Upload photo', icon: 'picture', label: 'Upload photo' }
-  ]
 
   const handleStatusChange = async (courtId: number, newStatus: string) => {
     try {
@@ -107,28 +101,96 @@ const AdminManageCourts = () => {
   }
 
   const handleDeleteCourt = async (courtId: number) => {
-    if (!confirm('Are you sure you want to delete this court?')) {
+    const court = courts.find(c => c.Court_Id === courtId)
+    const courtName = court?.Court_Name || 'this court'
+    
+    if (!confirm(`Are you sure you want to delete ${courtName}?`)) {
       return
     }
 
     try {
       await api.delete(`/courts/${courtId}`)
       setCourts(courts.filter(court => court.Court_Id !== courtId))
+      alert(`${courtName} deleted successfully!`)
     } catch (error: any) {
       console.error('Error deleting court:', error)
-      alert('Failed to delete court. Please try again.')
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete court. Please try again.'
+      alert(errorMessage)
     }
   }
 
   const handleEditCourt = (courtId: number) => {
-    // TODO: Implement edit functionality
-    console.log('Edit court:', courtId)
+    const court = courts.find(c => c.Court_Id === courtId)
+    if (court) {
+      setEditingCourt(court)
+      setEditPrice(Number(court.Price) || 0)
+      setShowEditPriceModal(true)
+    }
+  }
+
+  const handleCloseEditPriceModal = () => {
+    setShowEditPriceModal(false)
+    setEditingCourt(null)
+    setEditPrice(0)
+  }
+
+  const handleUpdatePrice = async () => {
+    if (!editingCourt) return
+
+    if (editPrice <= 0) {
+      alert('Please enter a valid price greater than 0')
+      return
+    }
+
+    try {
+      setIsUpdatingPrice(true)
+      await api.patch(`/courts/${editingCourt.Court_Id}`, { Price: Number(editPrice) })
+      
+      // Refresh the courts list
+      const courtsData = await apiServices.getCourts()
+      const sortedCourts = courtsData.map(court => ({
+        ...court,
+        Price: Number(court.Price) || 0
+      })).sort((a, b) => a.Court_Id - b.Court_Id)
+      setCourts(sortedCourts)
+      
+      handleCloseEditPriceModal()
+      alert('Price updated successfully!')
+    } catch (error: any) {
+      console.error('Error updating price:', error)
+      alert(error.response?.data?.message || 'Failed to update price. Please try again.')
+    } finally {
+      setIsUpdatingPrice(false)
+    }
+  }
+
+  const getNextCourtNumber = (): string => {
+    if (courts.length === 0) {
+      return 'Court 1'
+    }
+    
+    // Extract numbers from existing court names
+    const courtNumbers = courts
+      .map(court => {
+        const match = court.Court_Name.match(/\d+/)
+        return match ? parseInt(match[0], 10) : 0
+      })
+      .filter(num => num > 0)
+    
+    if (courtNumbers.length === 0) {
+      return 'Court 1'
+    }
+    
+    // Find the highest number and add 1
+    const maxNumber = Math.max(...courtNumbers)
+    return `Court ${maxNumber + 1}`
   }
 
   const handleAddCourt = () => {
+    const nextCourtNumber = getNextCourtNumber()
     setShowAddModal(true)
     setNewCourt({
-      Court_Name: '',
+      Court_Name: nextCourtNumber,
       Status: 'Available',
       Price: 250
     })
@@ -280,217 +342,15 @@ const AdminManageCourts = () => {
         </div>
       </header>
 
-      {/* Mobile Sidebar Overlay */}
-      {isMobileSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
-
       {/* Main Content with Sidebar */}
       <div className="flex">
-        {/* Desktop Sidebar */}
-        <div 
-          className={`hidden lg:block bg-white shadow-sm border-r border-gray-200 transition-all duration-300 ease-in-out sticky top-0 h-screen overflow-y-auto ${
-            isSidebarExpanded ? 'w-64' : 'w-16'
-          } hover:shadow-lg`}
-          style={{ backgroundColor: 'white' }}
-          onMouseEnter={() => setIsSidebarExpanded(true)}
-          onMouseLeave={() => setIsSidebarExpanded(false)}
-        >
-          {/* Navigation Items */}
-          <nav className="px-2 py-8 space-y-2">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.id === 'Dashboard') {
-                    navigate('/admin')
-                  } else if (item.id === 'Manage Courts') {
-                    navigate('/admin/manage-courts')
-                  } else if (item.id === 'Manage Rackets') {
-                    navigate('/admin/manage-rackets')
-                  } else if (item.id === 'Sales Report') {
-                    navigate('/admin/sales-report')
-                  } else if (item.id === 'Create Reservations') {
-                    navigate('/admin/create-reservations')
-                  } else if (item.id === 'View Suggestions') {
-                    navigate('/admin/view-suggestions')
-                  } else if (item.id === 'Upload photo') {
-                    navigate('/admin/upload-photo')
-                  }
-                  setActiveSidebarItem(item.id)
-                }}
-                className={`w-full flex items-center ${
-                  isSidebarExpanded ? 'space-x-3 px-4' : 'justify-center px-2'
-                } py-3 rounded-lg text-left transition-all duration-300 ease-in-out group ${
-                  activeSidebarItem === item.id
-                    ? 'bg-blue-100 text-blue-700 shadow-md transform scale-105'
-                    : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm hover:transform hover:scale-105'
-                }`}
-              >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  {item.icon === 'grid' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11 0h7v7h-7v-7zm0-11h7v7h-7V3z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'calendar' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                      <circle cx="16" cy="12" r="1"/>
-                    </svg>
-                  )}
-                  {item.icon === 'racket' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                      <path d="M12 6l-2 2 2 2 2-2-2-2zm0 8l-2 2 2 2 2-2-2-2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'chart' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'document' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                      <path d="M8 12h8v2H8V12zm0 4h8v2H8V16z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'envelope' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'picture' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                      <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/>
-                    </svg>
-                  )}
-                </div>
-                <span className={`font-medium transition-all duration-200 ${
-                  isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'
-                }`}>
-                  {item.label}
-                </span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Mobile Sidebar */}
-        <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-sm border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${
-          isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`} style={{ backgroundColor: 'white' }}>
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
-            <button
-              onClick={() => setIsMobileSidebarOpen(false)}
-              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <nav className="px-4 py-6 space-y-2">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.id === 'Dashboard') {
-                    navigate('/admin')
-                  } else if (item.id === 'Manage Courts') {
-                    navigate('/admin/manage-courts')
-                  } else if (item.id === 'Manage Rackets') {
-                    navigate('/admin/manage-rackets')
-                  } else if (item.id === 'Sales Report') {
-                    navigate('/admin/sales-report')
-                  } else if (item.id === 'Create Reservations') {
-                    navigate('/admin/create-reservations')
-                  } else if (item.id === 'View Suggestions') {
-                    navigate('/admin/view-suggestions')
-                  } else if (item.id === 'Upload photo') {
-                    navigate('/admin/upload-photo')
-                  }
-                  setActiveSidebarItem(item.id)
-                  setIsMobileSidebarOpen(false)
-                }}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                  activeSidebarItem === item.id
-                    ? 'bg-blue-100 text-blue-700 shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'
-                }`}
-              >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  {item.icon === 'grid' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11 0h7v7h-7v-7zm0-11h7v7h-7V3z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'calendar' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                      <circle cx="16" cy="12" r="1"/>
-                    </svg>
-                  )}
-                  {item.icon === 'racket' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                      <path d="M12 6l-2 2 2 2 2-2-2-2zm0 8l-2 2 2 2 2-2-2-2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'chart' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'document' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                      <path d="M8 12h8v2H8V12zm0 4h8v2H8V16z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'envelope' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'picture' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                      <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/>
-                    </svg>
-                  )}
-                </div>
-                <span className="font-medium">{item.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Mobile Menu Button */}
-        <div className="lg:hidden">
-          <button
-            onClick={() => setIsMobileSidebarOpen(true)}
-            className="fixed top-4 left-4 z-40 p-2 rounded-md bg-white shadow-sm border border-gray-200 text-gray-600 hover:bg-gray-100"
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
+        <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
           {/* Header Section */}
           <div className="mb-8">
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8 animate-slideDown">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-6 lg:space-y-0">
                 <div className="flex-1">
                   <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
@@ -514,21 +374,27 @@ const AdminManageCourts = () => {
           </div>
 
           {/* Courts Table */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 text-white">
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 w-full animate-fadeInUp">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full table-auto">
+                <colgroup>
+                  <col className="w-[25%]" />
+                  <col className="w-[25%]" />
+                  <col className="w-[25%]" />
+                  <col className="w-[25%]" />
+                </colgroup>
+                <thead className="bg-gray-600 text-white">
                   <tr>
-                    <th className="px-6 py-6 text-left text-sm font-bold uppercase tracking-wider">Court No.</th>
-                    <th className="px-6 py-6 text-left text-sm font-bold uppercase tracking-wider">Court Status</th>
-                    <th className="px-6 py-6 text-left text-sm font-bold uppercase tracking-wider">Price</th>
-                    <th className="px-6 py-6 text-center text-sm font-bold uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Court No.</th>
+                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Court Status</th>
+                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Price</th>
+                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center">
+                      <td colSpan={4} className="px-6 py-12 text-center align-middle">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
                           <span className="text-gray-600">Loading courts...</span>
@@ -537,36 +403,37 @@ const AdminManageCourts = () => {
                     </tr>
                   ) : error ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-red-600">{error}</td>
+                      <td colSpan={4} className="px-6 py-12 text-center text-red-600 align-middle">{error}</td>
                     </tr>
                   ) : currentCourts.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500">No courts available</td>
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500 align-middle">No courts available</td>
                     </tr>
                   ) : (
                     currentCourts.map((court, index) => (
                       <tr key={court.Court_Id} className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="px-6 py-6 text-sm font-bold text-gray-900">{court.Court_Name}</td>
-                        <td className="px-6 py-6">
-                          <select 
-                            value={court.Status}
-                            onChange={(e) => handleStatusChange(court.Court_Id, e.target.value)}
-                            className={`px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                              court.Status === 'Available' ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' :
-                              'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200'
-                            }`}
-                          >
-                            <option value="Available">Available</option>
-                            <option value="Maintenance">Maintenance</option>
-                            <option value="Unavailable">Unavailable</option>
-                          </select>
+                        <td className="px-6 py-4 text-sm font-bold text-gray-900 align-middle text-center">{court.Court_Name}</td>
+                        <td className="px-6 py-4 align-middle text-center">
+                          <div className="flex justify-center">
+                            <select 
+                              value={court.Status}
+                              onChange={(e) => handleStatusChange(court.Court_Id, e.target.value)}
+                              className={`w-full max-w-[200px] px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center ${
+                                court.Status === 'Available' ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' :
+                                'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200'
+                              }`}
+                            >
+                              <option value="Available">Available</option>
+                              <option value="Maintenance">Maintenance</option>
+                            </select>
+                          </div>
                         </td>
-                        <td className="px-6 py-6 text-sm text-gray-900">
-                          <div className="flex items-center space-x-4">
-                            <span className="font-bold text-xl text-gray-800 bg-gray-100 px-4 py-2 rounded-xl">₱{Number(court.Price || 0).toFixed(2)}</span>
+                        <td className="px-6 py-4 text-center align-middle">
+                          <div className="flex items-center justify-center gap-3">
+                            <span className="font-bold text-lg text-gray-800 bg-gray-100 px-4 py-2 rounded-xl whitespace-nowrap">₱{Number(court.Price || 0).toFixed(2)}</span>
                             <button
                               onClick={() => handleEditCourt(court.Court_Id)}
-                              className="w-8 h-8 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl flex items-center justify-center hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-110 group"
+                              className="w-8 h-8 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl flex items-center justify-center hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-110 group flex-shrink-0"
                               title="Edit Court Price"
                             >
                               <svg className="w-5 h-5 text-blue-600 group-hover:text-blue-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -575,12 +442,12 @@ const AdminManageCourts = () => {
                             </button>
                           </div>
                         </td>
-                        <td className="px-6 py-6 text-center">
+                        <td className="px-6 py-4 text-center align-middle">
                           <button
                             onClick={() => handleDeleteCourt(court.Court_Id)}
-                            className="bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white px-6 py-3 rounded-xl text-sm font-bold hover:from-red-600 hover:via-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                            className="bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:from-red-600 hover:via-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                           >
-                            <span className="flex items-center space-x-2">
+                            <span className="flex items-center justify-center gap-2">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
@@ -633,6 +500,90 @@ const AdminManageCourts = () => {
         </main>
       </div>
 
+      {/* Edit Price Modal */}
+      {showEditPriceModal && editingCourt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Edit Court Price</h2>
+              <button
+                onClick={handleCloseEditPriceModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={isUpdatingPrice}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Court Name
+                </label>
+                <input
+                  type="text"
+                  value={editingCourt.Court_Name}
+                  disabled
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Current Price
+                </label>
+                <div className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-gray-100 text-gray-600 font-bold text-lg">
+                  ₱{Number(editingCourt.Price || 0).toFixed(2)}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  New Price (₱) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(Number(e.target.value) || 0)}
+                  placeholder="Enter new price"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  disabled={isUpdatingPrice}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={handleCloseEditPriceModal}
+                disabled={isUpdatingPrice}
+                className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdatePrice}
+                disabled={isUpdatingPrice || editPrice <= 0}
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {isUpdatingPrice ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Updating...</span>
+                  </>
+                ) : (
+                  <span>Update Price</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Court Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -653,7 +604,7 @@ const AdminManageCourts = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Court Name <span className="text-red-500">*</span>
+                  Court Number <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -677,7 +628,6 @@ const AdminManageCourts = () => {
                 >
                   <option value="Available">Available</option>
                   <option value="Maintenance">Maintenance</option>
-                  <option value="Unavailable">Unavailable</option>
                 </select>
               </div>
 

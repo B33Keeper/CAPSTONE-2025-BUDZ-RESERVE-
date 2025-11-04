@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -19,6 +19,7 @@ export function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const { login, isLoading } = useAuthStore()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const {
     register,
@@ -59,9 +60,15 @@ export function LoginPage() {
         localStorage.removeItem('rememberMe')
       }
       
+      // Check for returnUrl parameter (when user came from booking action)
+      const returnUrl = searchParams.get('returnUrl')
+      
       // Check if user is admin and redirect accordingly
       if (result?.user?.role === 'admin') {
         navigate('/admin')
+      } else if (returnUrl) {
+        // Redirect to the intended destination (booking page)
+        navigate(returnUrl)
       } else {
         navigate('/')
       }

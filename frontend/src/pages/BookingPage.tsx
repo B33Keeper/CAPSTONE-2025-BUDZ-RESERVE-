@@ -62,6 +62,7 @@ export function BookingPage() {
   const [referenceNumber, setReferenceNumber] = useState('')
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicateMessage, setDuplicateMessage] = useState('')
+  const [hasNavigatedMonth, setHasNavigatedMonth] = useState(false)
   
   const { user } = useAuthStore()
 
@@ -199,16 +200,6 @@ export function BookingPage() {
     }
     
     loadData()
-  }, [])
-
-  // Show Terms and Conditions modal when user first enters the booking page
-  useEffect(() => {
-    // Only show the modal if user is authenticated and hasn't accepted terms in this session
-    // You can add localStorage check here if you want to remember acceptance across sessions
-    const hasAcceptedTerms = localStorage.getItem('termsAccepted')
-    if (!hasAcceptedTerms) {
-      setShowTermsModal(true)
-    }
   }, [])
 
   // Load availability data when date is selected
@@ -414,7 +405,7 @@ export function BookingPage() {
     const isSelected = selectedCells.has(key)
 
     // Maintenance/Unavailable styles take precedence
-    if (courtStatus === 'Maintenance') return 'bg-white text-gray-900 cursor-not-allowed'
+    if (courtStatus === 'Maintenance') return 'bg-yellow-400 text-black cursor-not-allowed'
     if (courtStatus === 'Unavailable') return 'bg-gray-400 text-white cursor-not-allowed'
 
     // Selected vs available styles
@@ -430,6 +421,15 @@ export function BookingPage() {
     
     setDateError('')
     setTempSelectedDate(date)
+    
+    // Check if user has accepted terms for current session
+    if (user?.id) {
+      const termsAccepted = localStorage.getItem(`termsAccepted_${user.id}`)
+      if (!termsAccepted) {
+        // Show terms modal if not accepted yet
+        setShowTermsModal(true)
+      }
+    }
   }
 
   const handleProceedFromDateSelection = async () => {
@@ -472,6 +472,17 @@ export function BookingPage() {
       
       return { year: newYear, month: newMonth }
     })
+    
+    // Show terms modal when user navigates to a different month (only first time)
+    if (!hasNavigatedMonth) {
+      if (user?.id) {
+        const hasAcceptedTerms = localStorage.getItem(`termsAccepted_${user.id}`)
+        if (!hasAcceptedTerms) {
+          setShowTermsModal(true)
+        }
+      }
+      setHasNavigatedMonth(true)
+    }
   }
 
   // Navigate to next month
@@ -487,6 +498,17 @@ export function BookingPage() {
       
       return { year: newYear, month: newMonth }
     })
+    
+    // Show terms modal when user navigates to a different month (only first time)
+    if (!hasNavigatedMonth) {
+      if (user?.id) {
+        const hasAcceptedTerms = localStorage.getItem(`termsAccepted_${user.id}`)
+        if (!hasAcceptedTerms) {
+          setShowTermsModal(true)
+        }
+      }
+      setHasNavigatedMonth(true)
+    }
   }
 
 
@@ -498,8 +520,10 @@ export function BookingPage() {
 
   const handleAcceptTerms = () => {
     setShowTermsModal(false)
-    // Store acceptance in localStorage to remember across sessions (optional)
-    localStorage.setItem('termsAccepted', 'true')
+    // Store acceptance in localStorage with user ID to remember for current login session
+    if (user?.id) {
+      localStorage.setItem(`termsAccepted_${user.id}`, 'true')
+    }
   }
 
   // Helper function to parse schedule string to start and end times (24-hour format)
@@ -797,7 +821,7 @@ export function BookingPage() {
                                ? 'bg-green-600 text-white font-semibold shadow-[inset_0_2px_6px_rgba(0,0,0,0.2)] scale-105' 
                                : isAvailable 
                                  ? 'hover:bg-green-50 text-gray-900 hover:scale-105' 
-                                 : 'text-gray-300 opacity-40 cursor-not-allowed line-through'
+                                 : 'bg-gray-100 text-gray-600 cursor-not-allowed line-through border border-gray-300'
                            }`}
                            aria-selected={isSelected}
                            onClick={() => isAvailable && handleDateSelection(dateString, true)}
@@ -913,6 +937,7 @@ export function BookingPage() {
                         const isSelected = selectedCells.has(key)
                         const status = getCellStatus(court.Court_Id, timeSlot.display).status
                         const disabled = status === 'reserved' || status === 'maintenance' || court.Status !== 'Available'
+                        const isMaintenance = court.Status === 'Maintenance'
                         return (
                           <button
                             key={`${timeSlot.id}-${court.Court_Id}`}
@@ -921,7 +946,8 @@ export function BookingPage() {
                             disabled={disabled}
                             onClick={() => !disabled && handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price)}
                             className={`flex items-center justify-between px-3 py-2 rounded-md text-left text-xs border transition-colors
-                              ${disabled ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed' :
+                              ${isMaintenance ? 'bg-yellow-400 text-black border-yellow-500 cursor-not-allowed' :
+                              disabled ? 'bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed' :
                               isSelected ? 'bg-green-300 text-gray-900 border-green-400 ring-2 ring-green-500' :
                               'bg-white text-gray-900 border-gray-200 hover:bg-blue-50'}`}
                             title={`${court.Court_Name}${disabled ? ' (not available)' : ''}`}
