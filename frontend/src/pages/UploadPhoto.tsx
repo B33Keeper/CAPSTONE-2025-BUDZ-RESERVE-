@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import AdminSidebar from '@/components/AdminSidebar'
 
 const UploadPhoto = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Upload photo')
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [photos, setPhotos] = useState<any[]>([])
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -196,15 +195,6 @@ const UploadPhoto = () => {
     }
   }
 
-  const sidebarItems = [
-    { id: 'Dashboard', icon: 'grid', label: 'Dashboard' },
-    { id: 'Manage Courts', icon: 'calendar', label: 'Manage Courts' },
-    { id: 'Manage Rackets', icon: 'racket', label: 'Manage Rackets' },
-    { id: 'Sales Report', icon: 'chart', label: 'Sales Report' },
-    { id: 'Create Reservations', icon: 'document', label: 'Create Reservations' },
-    { id: 'View Suggestions', icon: 'envelope', label: 'View Suggestions' },
-    { id: 'Upload photo', icon: 'picture', label: 'Upload photo' }
-  ]
 
   return (
     <div className="min-h-screen bg-gray-100 scroll-smooth">
@@ -300,231 +290,30 @@ const UploadPhoto = () => {
         </div>
       </header>
 
-      {/* Mobile Sidebar Overlay */}
-      {isMobileSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
-
       {/* Main Content with Sidebar */}
       <div className="flex">
-        {/* Desktop Sidebar */}
-        <div 
-          className={`hidden lg:block bg-white shadow-sm border-r border-gray-200 transition-all duration-300 ease-in-out ${
-            isSidebarExpanded ? 'w-64' : 'w-16'
-          } hover:shadow-lg`}
-          onMouseEnter={() => setIsSidebarExpanded(true)}
-          onMouseLeave={() => setIsSidebarExpanded(false)}
-        >
-          {/* Navigation Items */}
-          <nav className="px-2 py-8 space-y-2">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.id === 'Dashboard') {
-                    navigate('/admin')
-                  } else if (item.id === 'Manage Courts') {
-                    navigate('/admin/manage-courts')
-                  } else if (item.id === 'Manage Rackets') {
-                    navigate('/admin/manage-rackets')
-                  } else if (item.id === 'Sales Report') {
-                    navigate('/admin/sales-report')
-                  } else if (item.id === 'Create Reservations') {
-                    navigate('/admin/create-reservations')
-                  } else if (item.id === 'View Suggestions') {
-                    navigate('/admin/view-suggestions')
-                  } else if (item.id === 'Upload photo') {
-                    navigate('/admin/upload-photo')
-                  }
-                  setActiveSidebarItem(item.id)
-                }}
-                className={`w-full flex items-center ${
-                  isSidebarExpanded ? 'space-x-3 px-4' : 'justify-center px-2'
-                } py-3 rounded-lg text-left transition-all duration-300 ease-in-out group ${
-                  activeSidebarItem === item.id
-                    ? 'bg-blue-100 text-blue-700 shadow-md transform scale-105'
-                    : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm hover:transform hover:scale-105'
-                }`}
-              >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  {item.icon === 'grid' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11 0h7v7h-7v-7zm0-11h7v7h-7V3z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'calendar' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                      <circle cx="16" cy="12" r="1"/>
-                    </svg>
-                  )}
-                  {item.icon === 'racket' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                      <path d="M12 6l-2 2 2 2 2-2-2-2zm0 8l-2 2 2 2 2-2-2-2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'chart' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'document' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                      <path d="M8 12h8v2H8V12zm0 4h8v2H8V16z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'envelope' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'picture' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                      <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/>
-                    </svg>
-                  )}
-                </div>
-                <span className={`font-medium transition-all duration-200 ${
-                  isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'
-                }`}>
-                  {item.label}
-                </span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Mobile Sidebar */}
-        <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-sm border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${
-          isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800">Menu</h2>
-            <button
-              onClick={() => setIsMobileSidebarOpen(false)}
-              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <nav className="px-4 py-6 space-y-2">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.id === 'Dashboard') {
-                    navigate('/admin')
-                  } else if (item.id === 'Manage Courts') {
-                    navigate('/admin/manage-courts')
-                  } else if (item.id === 'Manage Rackets') {
-                    navigate('/admin/manage-rackets')
-                  } else if (item.id === 'Sales Report') {
-                    navigate('/admin/sales-report')
-                  } else if (item.id === 'Create Reservations') {
-                    navigate('/admin/create-reservations')
-                  } else if (item.id === 'View Suggestions') {
-                    navigate('/admin/view-suggestions')
-                  } else if (item.id === 'Upload photo') {
-                    navigate('/admin/upload-photo')
-                  }
-                  setActiveSidebarItem(item.id)
-                  setIsMobileSidebarOpen(false)
-                }}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                  activeSidebarItem === item.id
-                    ? 'bg-blue-100 text-blue-700 shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'
-                }`}
-              >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  {item.icon === 'grid' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11 0h7v7h-7v-7zm0-11h7v7h-7V3z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'calendar' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                      <circle cx="16" cy="12" r="1"/>
-                    </svg>
-                  )}
-                  {item.icon === 'racket' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                      <path d="M12 6l-2 2 2 2 2-2-2-2zm0 8l-2 2 2 2 2-2-2-2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'chart' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'document' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                      <path d="M8 12h8v2H8V12zm0 4h8v2H8V16z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'envelope' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                    </svg>
-                  )}
-                  {item.icon === 'picture' && (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                      <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/>
-                    </svg>
-                  )}
-                </div>
-                <span className="font-medium">{item.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
+        <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
 
         {/* Main Content */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-8 overflow-x-hidden">
-          {/* Mobile Menu Button */}
-          <div className="lg:hidden mb-4 sm:mb-6">
-            <button
-              onClick={() => setIsMobileSidebarOpen(true)}
-              className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-white rounded-lg shadow-md text-gray-700 hover:bg-gray-50 transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95"
-            >
-              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              <span className="text-sm sm:text-base">Menu</span>
-            </button>
-          </div>
+        <main className="flex-1 p-3 sm:p-4 lg:p-8 overflow-x-hidden animate-fadeIn">
 
           {/* Page Header */}
           <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-                  Upload Photo
-                </h1>
-                <p className="text-gray-600 text-lg">
-                  Manage and organize your photo gallery
-                </p>
-              </div>
-              <div className="mt-4 sm:mt-0">
-                <button className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8 animate-slideDown">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-6 lg:space-y-0">
+                <div className="flex-1">
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
+                    Upload Photo
+                  </h1>
+                  <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+                    Manage and organize your photo gallery
+                  </p>
+                </div>
+                <button className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 w-full lg:w-auto font-medium">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  <span className="font-medium">Add Announcement</span>
+                  <span>Add Announcement</span>
                 </button>
               </div>
             </div>
@@ -537,59 +326,67 @@ const UploadPhoto = () => {
               <span className="ml-4 text-gray-600 text-lg">Loading photos...</span>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fadeInUp">
               {/* Existing Photos */}
-              {photos.map((photo) => (
-                <div
-                  key={photo.id}
-                  className="relative group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 overflow-hidden"
-                >
-                  <div className="aspect-w-4 aspect-h-3 bg-gray-100 rounded-t-xl overflow-hidden">
-                    <img
-                      src={photo.image_path}
-                      alt={photo.title}
-                      className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  
-                  {/* Category Badge */}
-                  <div className="absolute top-3 left-3">
-                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                      {photo.category}
-                    </span>
-                  </div>
-
-                  {/* Delete Button */}
-                  <button
-                    onClick={() => handleDeletePhoto(photo.id)}
-                    className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-all duration-200 opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100"
+              {photos.map((photo, index) => {
+                // Use the first image layout for both first and second images
+                const isFirstOrSecond = index === 0 || index === 1
+                const layoutClasses = isFirstOrSecond 
+                  ? "relative group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 overflow-hidden"
+                  : "relative group bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 overflow-hidden"
+                
+                return (
+                  <div
+                    key={photo.id}
+                    className={layoutClasses}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                    <div className="aspect-w-4 aspect-h-3 bg-gray-100 rounded-t-xl overflow-hidden">
+                      <img
+                        src={photo.image_path}
+                        alt={photo.title}
+                        className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                    </div>
+                    
+                    {/* Category Badge */}
+                    <div className="absolute top-3 left-3">
+                      <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                        {photo.category}
+                      </span>
+                    </div>
 
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 truncate mb-2">
-                      {photo.title}
-                    </h3>
-                    {photo.description && (
-                      <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                        {photo.description}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>Uploaded: {new Date(photo.created_at).toLocaleDateString()}</span>
-                      <div className="flex items-center space-x-1">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                        <span>Featured</span>
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => handleDeletePhoto(photo.id)}
+                      className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-all duration-200 opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate mb-2">
+                        {photo.title}
+                      </h3>
+                      {photo.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                          {photo.description}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>Uploaded: {new Date(photo.created_at).toLocaleDateString()}</span>
+                        <div className="flex items-center space-x-1">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                          <span>Featured</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
 
               {/* Upload Placeholder */}
               <div

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useActiveSection } from '@/hooks/useActiveSection'
+import toast from 'react-hot-toast'
 // Simple SVG icons to replace lucide-react
 const MenuIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,8 +57,8 @@ export function Header() {
   // Handle Book Court click - directly navigate to booking page
   const handleBookCourtClick = () => {
     if (!isAuthenticated) {
-      alert('Please login to proceed on booking')
-      navigate('/login')
+      toast.error('Please login to proceed on booking')
+      navigate('/login?returnUrl=/booking')
       return
     }
     navigate('/booking')
@@ -84,31 +85,33 @@ export function Header() {
   }
 
   const getNavButtonClasses = (sectionId: string) => {
-    const baseClasses = "transition-all duration-300 px-4 py-2 rounded-lg font-medium"
+    const baseClasses = "relative transition-all duration-300 px-4 py-2 rounded-lg font-medium group"
     const activeClasses = "text-blue-600 bg-blue-50 shadow-sm"
     const inactiveClasses = "text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
 
     // If we're on the booking page, don't highlight any section navigation
     if (location.pathname === '/booking') {
-      return `${baseClasses} ${inactiveClasses}`
+      return `${baseClasses} ${inactiveClasses} after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full`
     }
 
-    return `${baseClasses} ${activeSection === sectionId ? activeClasses : inactiveClasses}`
+    const isActive = activeSection === sectionId
+    return `${baseClasses} ${isActive ? activeClasses : inactiveClasses} ${!isActive ? 'after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full' : ''}`
   }
 
   const getBookCourtClasses = () => {
-    const baseClasses = "transition-all duration-300 px-4 py-2 rounded-lg font-medium"
+    const baseClasses = "relative transition-all duration-300 px-4 py-2 rounded-lg font-medium group"
     const activeClasses = "text-blue-600 bg-blue-50 shadow-sm"
     const inactiveClasses = "text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
 
-    return `${baseClasses} ${location.pathname === '/booking' ? activeClasses : inactiveClasses}`
+    const isActive = location.pathname === '/booking'
+    return `${baseClasses} ${isActive ? activeClasses : inactiveClasses} ${!isActive ? 'after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full' : ''}`
   }
 
 
   const handleManageQueueingClick = () => {
     if (!isAuthenticated) {
-      alert('Please login to proceed with booking')
-      navigate('/login')
+      toast.error('Please login to proceed with booking')
+      navigate('/login?returnUrl=/booking')
       return
     }
     // Add your manage queueing logic here
@@ -169,13 +172,13 @@ export function Header() {
               </button>
               <button
                 onClick={handleBookCourtClick}
-                className={isAuthenticated ? getBookCourtClasses() : "text-gray-700 hover:text-primary-600 transition-colors"}
+                className={isAuthenticated ? getBookCourtClasses() : "relative text-gray-700 hover:text-blue-600 transition-colors group after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full"}
               >
                 Book Court
               </button>
               <button
                 onClick={handleManageQueueingClick}
-                className="transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
+                className="relative transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 group after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full"
               >
                 Manage Queueing
               </button>
@@ -302,7 +305,7 @@ export function Header() {
                 <>
                   <Link
                     to="/login"
-                    className="transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
+                    className="relative transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 group after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full"
                   >
                     Login
                   </Link>

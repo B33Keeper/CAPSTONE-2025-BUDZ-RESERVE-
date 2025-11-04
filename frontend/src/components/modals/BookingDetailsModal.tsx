@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Calendar, Clock, MapPin, CreditCard, AlertCircle } from 'lucide-react'
+import { TermsAndConditionsModal } from './TermsAndConditionsModal'
 
 interface CourtBooking {
   court: string
@@ -33,6 +34,7 @@ export function BookingDetailsModal({
   selectedDate
 }: BookingDetailsModalProps) {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
 
   if (!isOpen) return null
 
@@ -42,6 +44,31 @@ export function BookingDetailsModal({
       onClose()
       onProceedToPayment()
     }
+  }
+
+  const handleTermsLinkClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setShowTermsModal(true)
+  }
+
+  const handleTermsModalClose = () => {
+    setShowTermsModal(false)
+  }
+
+  const handleTermsModalAccept = () => {
+    // Auto-check the terms checkbox when user accepts in modal
+    setAcceptedTerms(true)
+    setShowTermsModal(false)
+  }
+
+  // Handle checkbox change in BookingDetailsModal
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAcceptedTerms(e.target.checked)
+  }
+
+  // Handle checkbox change in Terms modal - sync with BookingDetailsModal checkbox
+  const handleTermsModalCheckboxChange = (accepted: boolean) => {
+    setAcceptedTerms(accepted)
   }
 
   return (
@@ -174,12 +201,15 @@ export function BookingDetailsModal({
               <input
                 type="checkbox"
                 checked={acceptedTerms}
-                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                onChange={handleCheckboxChange}
                 className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 text-center">
                 I have read and agree to the{' '}
-                <button className="text-blue-600 hover:text-blue-800 underline">
+                <button 
+                  onClick={handleTermsLinkClick}
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
                   Terms and Conditions
                 </button>
                 {' '}and understand the no cancellation policy.
@@ -210,6 +240,15 @@ export function BookingDetailsModal({
           </button>
         </div>
       </div>
+
+      {/* Terms and Conditions Modal */}
+      <TermsAndConditionsModal
+        isOpen={showTermsModal}
+        onClose={handleTermsModalClose}
+        onAccept={handleTermsModalAccept}
+        initialAccepted={acceptedTerms}
+        onAcceptedChange={handleTermsModalCheckboxChange}
+      />
     </div>
   )
 }

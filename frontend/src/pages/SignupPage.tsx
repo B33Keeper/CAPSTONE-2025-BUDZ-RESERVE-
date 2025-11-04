@@ -116,8 +116,8 @@ export function SignupPage() {
 
           {/* Sex Field - Full Width */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Sex</label>
-            <div className="flex space-x-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3 text-center">Sex</label>
+            <div className="flex space-x-6 justify-center">
               {['Male', 'Female'].map((sex) => (
                 <label key={sex} className="flex items-center">
                   <input
@@ -131,7 +131,7 @@ export function SignupPage() {
               ))}
             </div>
             {errors.sex && (
-              <p className="mt-1 text-sm text-red-600">{errors.sex.message}</p>
+              <p className="mt-1 text-sm text-red-600 text-center">{errors.sex.message}</p>
             )}
           </div>
 

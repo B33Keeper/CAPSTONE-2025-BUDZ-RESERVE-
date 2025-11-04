@@ -1,15 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Court, CourtStatus } from './entities/court.entity';
 import { CreateCourtDto } from './dto/create-court.dto';
 import { UpdateCourtDto } from './dto/update-court.dto';
+import { Reservation } from '../reservations/entities/reservation.entity';
 
 @Injectable()
 export class CourtsService {
   constructor(
     @InjectRepository(Court)
     private courtsRepository: Repository<Court>,
+    @InjectRepository(Reservation)
+    private reservationsRepository: Repository<Reservation>,
   ) {}
 
   async create(createCourtDto: CreateCourtDto): Promise<Court> {
@@ -43,6 +46,18 @@ export class CourtsService {
 
   async remove(id: number): Promise<void> {
     const court = await this.findOne(id);
+    
+    // Check if there are any reservations for this court
+    const reservationCount = await this.reservationsRepository.count({
+      where: { Court_ID: id },
+    });
+    
+    if (reservationCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete court "${court.Court_Name}" because it has ${reservationCount} reservation(s) associated with it. Please delete or reassign the reservations first.`
+      );
+    }
+    
     await this.courtsRepository.remove(court);
   }
 

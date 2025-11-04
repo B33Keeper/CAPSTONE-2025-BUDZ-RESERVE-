@@ -1,14 +1,37 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, CheckCircle, AlertCircle, Shield, CreditCard, Clock, RefreshCw } from 'lucide-react'
 
 interface TermsAndConditionsModalProps {
   isOpen: boolean
   onClose: () => void
   onAccept: () => void
+  initialAccepted?: boolean
+  onAcceptedChange?: (accepted: boolean) => void
 }
 
-export function TermsAndConditionsModal({ isOpen, onClose, onAccept }: TermsAndConditionsModalProps) {
-  const [accepted, setAccepted] = useState(false)
+export function TermsAndConditionsModal({ isOpen, onClose, onAccept, initialAccepted = false, onAcceptedChange }: TermsAndConditionsModalProps) {
+  const [accepted, setAccepted] = useState(initialAccepted)
+
+  // Sync the accepted state when initialAccepted prop changes
+  useEffect(() => {
+    setAccepted(initialAccepted)
+  }, [initialAccepted])
+
+  // Reset accepted state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setAccepted(initialAccepted)
+    }
+  }, [isOpen, initialAccepted])
+
+  // Notify parent when checkbox state changes
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newAccepted = e.target.checked
+    setAccepted(newAccepted)
+    if (onAcceptedChange) {
+      onAcceptedChange(newAccepted)
+    }
+  }
 
   if (!isOpen) return null
 
@@ -188,7 +211,7 @@ export function TermsAndConditionsModal({ isOpen, onClose, onAccept }: TermsAndC
                     <input
                       type="checkbox"
                       checked={accepted}
-                      onChange={(e) => setAccepted(e.target.checked)}
+                      onChange={handleCheckboxChange}
                       className="w-5 h-5 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all duration-200 group-hover:border-blue-400"
                     />
                     {accepted && (

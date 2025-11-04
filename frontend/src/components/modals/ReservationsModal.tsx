@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Calendar, Receipt, ChevronLeft, ChevronRight, Filter, Menu } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
@@ -41,6 +42,7 @@ interface ReservationsModalProps {
 export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
   const { user } = useAuthStore()
   const { isMobile } = useResponsive()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current')
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(false)
@@ -552,7 +554,10 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                         </p>
                         {!dateFilter && (
                           <button
-                            onClick={onClose}
+                            onClick={() => {
+                              onClose()
+                              navigate('/booking')
+                            }}
                             className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                           >
                             Book a Court

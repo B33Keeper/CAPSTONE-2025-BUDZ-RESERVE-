@@ -2,9 +2,11 @@ import { Repository } from 'typeorm';
 import { Court } from './entities/court.entity';
 import { CreateCourtDto } from './dto/create-court.dto';
 import { UpdateCourtDto } from './dto/update-court.dto';
+import { Reservation } from '../reservations/entities/reservation.entity';
 export declare class CourtsService {
     private courtsRepository;
-    constructor(courtsRepository: Repository<Court>);
+    private reservationsRepository;
+    constructor(courtsRepository: Repository<Court>, reservationsRepository: Repository<Reservation>);
     create(createCourtDto: CreateCourtDto): Promise<Court>;
     findAll(): Promise<Court[]>;
     findOne(id: number): Promise<Court>;

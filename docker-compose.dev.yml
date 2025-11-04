@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # MySQL Database
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0.37
     container_name: budz-reserve-mysql
     restart: unless-stopped
     environment:
@@ -78,7 +78,7 @@ services:
 
   # Nginx Reverse Proxy
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     container_name: budz-reserve-nginx
     restart: unless-stopped
     ports:
@@ -88,6 +88,25 @@ services:
     depends_on:
       - frontend
       - backend
+    networks:
+      - budz-reserve-network
+
+  # phpMyAdmin - Database Management Tool
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5.2
+    container_name: budz-reserve-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: budz_user
+      PMA_PASSWORD: budz_password
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "8080:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
     networks:
       - budz-reserve-network
 

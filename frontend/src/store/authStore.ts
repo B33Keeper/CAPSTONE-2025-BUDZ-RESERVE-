@@ -94,6 +94,11 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
+        // Clear terms acceptance when user logs out
+        const userId = get().user?.id
+        if (userId) {
+          localStorage.removeItem(`termsAccepted_${userId}`)
+        }
         set({
           user: null,
           isAuthenticated: false,

@@ -84,7 +84,19 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       const response = await api.patch('/users/profile', data)
       const updatedUser = response.data
       
-      // Update local state with the response from backend
+      // Preserve existing profile_picture if not included in response or if it's not a full URL
+      const currentProfilePicture = user?.profile_picture
+      const updatedProfilePicture = updatedUser.profile_picture
+      
+      // If response has profile_picture but it's not a full URL, convert it
+      if (updatedProfilePicture && !updatedProfilePicture.startsWith('http')) {
+        updatedUser.profile_picture = `http://localhost:3001${updatedProfilePicture}`
+      } else if (!updatedProfilePicture && currentProfilePicture) {
+        // If response doesn't include profile_picture, preserve the existing one
+        updatedUser.profile_picture = currentProfilePicture
+      }
+      
+      // Update local state with the response from backend (preserving profile picture)
       updateUser(updatedUser)
       toast.success('Profile updated successfully!')
     } catch (error: any) {
