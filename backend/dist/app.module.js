@@ -23,6 +23,7 @@ const upload_module_1 = require("./modules/upload/upload.module");
 const time_slots_module_1 = require("./modules/time-slots/time-slots.module");
 const gallery_module_1 = require("./modules/gallery/gallery.module");
 const suggestions_module_1 = require("./modules/suggestions/suggestions.module");
+const announcements_module_1 = require("./modules/announcements/announcements.module");
 const health_controller_1 = require("./health.controller");
 let AppModule = class AppModule {
 };
@@ -76,6 +77,7 @@ exports.AppModule = AppModule = __decorate([
             time_slots_module_1.TimeSlotsModule,
             gallery_module_1.GalleryModule,
             suggestions_module_1.SuggestionsModule,
+            announcements_module_1.AnnouncementsModule,
         ],
         controllers: [health_controller_1.HealthController],
         providers: [],
