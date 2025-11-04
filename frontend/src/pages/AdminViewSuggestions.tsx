@@ -201,7 +201,6 @@ const AdminViewSuggestions = () => {
               </>
             )}
           </div>
-        </main>
       </div>
 
       {/* View Message Modal */}
@@ -256,7 +255,6 @@ const AdminViewSuggestions = () => {
           </div>
         </div>
       )}
-      </div>
     </AdminLayout>
   )
 }

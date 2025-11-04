@@ -264,7 +264,6 @@ const AdminManageRackets = () => {
               </div>
             ))}
           </div>
-        </main>
       </div>
 
       {/* Edit Modal */}
@@ -462,7 +461,6 @@ const AdminManageRackets = () => {
           </div>
         </div>
       )}
-      </div>
     </AdminLayout>
   )
 }

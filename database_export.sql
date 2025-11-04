@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Oct 31, 2025 at 12:50 PM
+-- Generation Time: Nov 04, 2025 at 04:33 PM
 -- Server version: 8.0.43
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,34 @@ SET time_zone = "+00:00";
 --
 -- Database: `budz_reserve`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `announcements`
+--
+
+CREATE TABLE `announcements` (
+  `id` int NOT NULL,
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `content` text COLLATE utf8mb4_unicode_ci,
+  `image_url` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `announcement_type` enum('text','image') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'text',
+  `is_active` tinyint NOT NULL DEFAULT '1',
+  `created_by` int DEFAULT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `announcements`
+--
+
+INSERT INTO `announcements` (`id`, `title`, `content`, `image_url`, `announcement_type`, `is_active`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 'TEST', 'HGKJHUILUKHJOIUHIJ', '/uploads/announcements/1762263013751-717893656.jpg', 'image', 0, 8, '2025-11-04 13:30:13.799105', '2025-11-04 13:30:51.000000'),
+(2, 'TEST', 'BIRDIE PUSSY', NULL, 'text', 0, 8, '2025-11-04 13:30:51.681064', '2025-11-04 15:31:47.000000'),
+(3, 'sdf', 'asdf', '/uploads/announcements/1762270307933-801772428.png', 'image', 0, 8, '2025-11-04 15:31:48.087018', '2025-11-04 15:32:54.000000'),
+(4, 'sadfdf', 'afdfsdf', '/uploads/announcements/1762270374788-288289081.png', 'image', 1, 8, '2025-11-04 15:32:54.823914', '2025-11-04 15:32:54.823914');
 
 -- --------------------------------------------------------
 
@@ -400,6 +428,13 @@ INSERT INTO `users` (`id`, `name`, `age`, `sex`, `username`, `email`, `password`
 --
 
 --
+-- Indexes for table `announcements`
+--
+ALTER TABLE `announcements`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `FK_40bd4946a00669c5fb7e6d972f0` (`created_by`);
+
+--
 -- Indexes for table `courts`
 --
 ALTER TABLE `courts`
@@ -477,6 +512,12 @@ ALTER TABLE `users`
 --
 
 --
+-- AUTO_INCREMENT for table `announcements`
+--
+ALTER TABLE `announcements`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT for table `courts`
 --
 ALTER TABLE `courts`
@@ -545,6 +586,12 @@ ALTER TABLE `users`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `announcements`
+--
+ALTER TABLE `announcements`
+  ADD CONSTRAINT `FK_40bd4946a00669c5fb7e6d972f0` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `equipment_rental_items`
