@@ -86,7 +86,7 @@ let UsersService = class UsersService {
     async findOne(id) {
         const user = await this.usersRepository.findOne({
             where: { id },
-            select: ['id', 'name', 'username', 'email', 'age', 'sex', 'contact_number', 'profile_picture', 'is_active', 'created_at'],
+            select: ['id', 'name', 'username', 'email', 'age', 'sex', 'contact_number', 'profile_picture', 'is_active', 'role', 'created_at'],
         });
         if (!user) {
             throw new common_1.NotFoundException(`User with ID ${id} not found`);
