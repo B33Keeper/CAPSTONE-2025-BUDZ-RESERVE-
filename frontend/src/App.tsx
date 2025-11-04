@@ -16,12 +16,15 @@ import AdminManageCourts from '@/pages/AdminManageCourts'
 import AdminManageRackets from '@/pages/AdminManageRackets'
 import AdminSalesReport from '@/pages/AdminSalesReport'
 import AdminViewSuggestions from '@/pages/AdminViewSuggestions'
+import AdminCreateAnnouncement from '@/pages/AdminCreateAnnouncement'
+import AdminCreateReservations from '@/pages/AdminCreateReservations'
 import UploadPhoto from '@/pages/UploadPhoto'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { AnnouncementModal } from '@/components/modals/AnnouncementModal'
 import { Toaster } from 'react-hot-toast'
 
 function App() {
-  const { checkAuth } = useAuthStore()
+  const { checkAuth, isAuthenticated } = useAuthStore()
 
   useEffect(() => {
     checkAuth()
@@ -38,6 +41,9 @@ function App() {
 
   return (
     <>
+      {/* Announcement Modal - shows after login */}
+      {isAuthenticated && <AnnouncementModal />}
+      
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
@@ -94,6 +100,22 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminViewSuggestions />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/admin/create-announcement" 
+          element={
+            <ProtectedRoute>
+              <AdminCreateAnnouncement />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/admin/create-reservations" 
+          element={
+            <ProtectedRoute>
+              <AdminCreateReservations />
             </ProtectedRoute>
           }
         />
