@@ -29,7 +29,7 @@ export function ContactSection() {
       await api.post('/suggestions', payload)
       
       toast.success('Thank you for your suggestion! We appreciate your feedback.')
-      setFormData({ name: '', message: '' })
+    setFormData({ name: '', message: '' })
     } catch (error: any) {
       console.error('Error submitting suggestion:', error)
       toast.error(error.response?.data?.message || 'Failed to submit suggestion. Please try again.')
@@ -91,19 +91,19 @@ export function ContactSection() {
           </motion.p>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isAuthenticated && (
-              <div className="form-group">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  autoComplete="name"
-                  required
-                  className="w-full p-3 sm:p-4 border-2 border-gray-200 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-gray-300"
-                />
-              </div>
+            <div className="form-group">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
+              <input
+                type="text"
+                name="name"
+                placeholder="Enter your full name"
+                value={formData.name}
+                onChange={handleChange}
+                autoComplete="name"
+                required
+                className="w-full p-3 sm:p-4 border-2 border-gray-200 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-gray-300"
+              />
+            </div>
             )}
             <div className="form-group">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Your Message</label>
