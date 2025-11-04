@@ -53,7 +53,7 @@ const AdminSidebar = ({ activeItem, onItemChange }: AdminSidebarProps) => {
     } else if (itemId === 'Upload photo') {
       navigate('/admin/upload-photo')
     } else if (itemId === 'Add Announcement') {
-      // Add navigation logic here if needed
+      navigate('/admin/create-announcement')
     }
     
     if (onItemChange) {
@@ -133,7 +133,7 @@ const AdminSidebar = ({ activeItem, onItemChange }: AdminSidebarProps) => {
 
       {/* Desktop Sidebar */}
       <div 
-        className={`hidden md:block transition-all duration-300 ease-in-out sticky top-0 z-30 self-start h-screen overflow-y-auto border-r border-gray-200 bg-white shadow-sm scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent ${
+        className={`hidden md:block transition-all duration-300 ease-in-out sticky top-14 sm:top-16 z-30 self-start h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] overflow-y-auto border-r border-gray-200 bg-white shadow-sm scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent ${
           isSidebarExpanded ? 'w-64' : 'w-16'
         }`}
         onMouseEnter={() => setIsSidebarExpanded(true)}

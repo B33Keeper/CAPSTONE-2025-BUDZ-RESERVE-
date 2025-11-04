@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import AdminSidebar from '@/components/AdminSidebar'
+import { galleryApiService, GalleryItem, getImageUrl } from '@/lib/galleryApiService'
+import toast from 'react-hot-toast'
 
 const UploadPhoto = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Upload photo')
-  const [photos, setPhotos] = useState<any[]>([])
+  const [photos, setPhotos] = useState<GalleryItem[]>([])
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [dragOver, setDragOver] = useState(false)
@@ -14,8 +16,7 @@ const UploadPhoto = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadForm, setUploadForm] = useState({
     title: '',
-    description: '',
-    category: 'General'
+    description: ''
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
@@ -47,60 +48,32 @@ const UploadPhoto = () => {
     }
   }, [])
 
-  // Mock data for existing photos
+  // Fetch photos from API
   useEffect(() => {
-    const mockPhotos = [
-      {
-        id: 1,
-        title: 'Badminton Tournament 2024',
-        image_path: '/assets/img/home-page/GALLERY/IMAGE 1.jpg',
-        description: 'Annual badminton tournament with 50+ participants',
-        created_at: '2024-01-15',
-        category: 'Tournament'
-      },
-      {
-        id: 2,
-        title: 'Weekly Training Session',
-        image_path: '/assets/img/home-page/GALLERY/IMAGE 2.jpg',
-        description: 'Regular training session with professional coaches',
-        created_at: '2024-01-14',
-        category: 'Training'
-      },
-      {
-        id: 3,
-        title: 'Championship Finals',
-        image_path: '/assets/img/home-page/GALLERY/IMAGE 3.jpg',
-        description: 'Championship finals with top players',
-        created_at: '2024-01-13',
-        category: 'Competition'
-      },
-      {
-        id: 4,
-        title: 'Youth Development Program',
-        image_path: '/assets/img/home-page/GALLERY/IMAGE 4.jpg',
-        description: 'Training program for young badminton players',
-        created_at: '2024-01-12',
-        category: 'Youth'
-      },
-      {
-        id: 5,
-        title: 'Community Event',
-        image_path: '/assets/img/home-page/GALLERY/IMAGE 5.jpg',
-        description: 'Community badminton event for all ages',
-        created_at: '2024-01-11',
-        category: 'Community'
-      },
-      {
-        id: 6,
-        title: 'Professional Coaching',
-        image_path: '/assets/img/home-page/GALLERY/IMAGE 6.jpg',
-        description: 'One-on-one coaching sessions',
-        created_at: '2024-01-10',
-        category: 'Coaching'
+    const fetchPhotos = async () => {
+      try {
+        setLoading(true)
+        const galleryPhotos = await galleryApiService.getAll()
+        // Filter only active photos and sort by sort_order or created_at
+        const sortedPhotos = galleryPhotos
+          .filter(photo => photo.status === 'active')
+          .sort((a, b) => {
+            if (a.sort_order !== b.sort_order) {
+              return a.sort_order - b.sort_order
+            }
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          })
+        setPhotos(sortedPhotos)
+      } catch (error: any) {
+        console.error('Error fetching photos:', error)
+        toast.error('Failed to load photos')
+        setPhotos([])
+      } finally {
+        setLoading(false)
       }
-    ]
-    setPhotos(mockPhotos)
-    setLoading(false)
+    }
+
+    fetchPhotos()
   }, [])
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,30 +92,27 @@ const UploadPhoto = () => {
   }
 
   const handleFileUpload = async () => {
-    if (!selectedFile) return
+    if (!selectedFile || !uploadForm.title.trim()) {
+      toast.error('Please provide a title for the photo')
+      return
+    }
 
     setUploading(true)
     try {
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      const newPhoto = await galleryApiService.uploadImage(
+        selectedFile,
+        uploadForm.title,
+        uploadForm.description || undefined
+      )
 
-      const newPhoto = {
-        id: Date.now(),
-        title: uploadForm.title,
-        image_path: URL.createObjectURL(selectedFile),
-        description: uploadForm.description,
-        created_at: new Date().toISOString().split('T')[0],
-        category: uploadForm.category
-      }
-
-      setPhotos(prev => [...prev, newPhoto])
+      setPhotos(prev => [newPhoto, ...prev])
       setShowUploadModal(false)
       setSelectedFile(null)
-      setUploadForm({ title: '', description: '', category: 'General' })
-      alert('Photo uploaded successfully!')
-    } catch (error) {
+      setUploadForm({ title: '', description: '' })
+      toast.success('Photo uploaded successfully!')
+    } catch (error: any) {
       console.error('Upload failed:', error)
-      alert('Upload failed. Please try again.')
+      toast.error(error.response?.data?.message || 'Upload failed. Please try again.')
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -154,16 +124,24 @@ const UploadPhoto = () => {
   const handleModalClose = () => {
     setShowUploadModal(false)
     setSelectedFile(null)
-    setUploadForm({ title: '', description: '', category: 'General' })
+    setUploadForm({ title: '', description: '' })
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
   }
 
   const handleDeletePhoto = async (id: number) => {
-    if (confirm('Are you sure you want to delete this photo?')) {
+    if (!confirm('Are you sure you want to delete this photo?')) {
+      return
+    }
+
+    try {
+      await galleryApiService.delete(id)
       setPhotos(prev => prev.filter(photo => photo.id !== id))
-      alert('Photo deleted successfully!')
+      toast.success('Photo deleted successfully!')
+    } catch (error: any) {
+      console.error('Delete failed:', error)
+      toast.error(error.response?.data?.message || 'Failed to delete photo. Please try again.')
     }
   }
 
@@ -300,21 +278,13 @@ const UploadPhoto = () => {
           {/* Page Header */}
           <div className="mb-8">
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8 animate-slideDown">
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-6 lg:space-y-0">
-                <div className="flex-1">
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
-                    Upload Photo
-                  </h1>
-                  <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
-                    Manage and organize your photo gallery
-                  </p>
-                </div>
-                <button className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 w-full lg:w-auto font-medium">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  <span>Add Announcement</span>
-                </button>
+              <div>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
+                  Upload Photo
+                </h1>
+                <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+                  Manage and organize your photo gallery
+                </p>
               </div>
             </div>
           </div>
@@ -342,18 +312,19 @@ const UploadPhoto = () => {
                   >
                     <div className="aspect-w-4 aspect-h-3 bg-gray-100 rounded-t-xl overflow-hidden">
                       <img
-                        src={photo.image_path}
+                        src={getImageUrl(photo.image_path)}
                         alt={photo.title}
                         className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition-transform duration-300"
+                        onError={(e) => {
+                          // Fallback to original path if constructed URL fails
+                          if (e.currentTarget.src !== photo.image_path) {
+                            e.currentTarget.src = photo.image_path;
+                          }
+                        }}
                       />
                     </div>
                     
                     {/* Category Badge */}
-                    <div className="absolute top-3 left-3">
-                      <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                        {photo.category}
-                      </span>
-                    </div>
 
                     {/* Delete Button */}
                     <button
@@ -376,12 +347,14 @@ const UploadPhoto = () => {
                       )}
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <span>Uploaded: {new Date(photo.created_at).toLocaleDateString()}</span>
-                        <div className="flex items-center space-x-1">
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                          <span>Featured</span>
-                        </div>
+                        {photo.status === 'active' && (
+                          <div className="flex items-center space-x-1">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                            <span>Active</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -532,25 +505,6 @@ const UploadPhoto = () => {
                   />
                 </div>
 
-                {/* Category Field */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category
-                  </label>
-                  <select
-                    value={uploadForm.category}
-                    onChange={(e) => setUploadForm(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="General">General</option>
-                    <option value="Tournament">Tournament</option>
-                    <option value="Training">Training</option>
-                    <option value="Competition">Competition</option>
-                    <option value="Youth">Youth</option>
-                    <option value="Community">Community</option>
-                    <option value="Coaching">Coaching</option>
-                  </select>
-                </div>
               </div>
             </div>
 

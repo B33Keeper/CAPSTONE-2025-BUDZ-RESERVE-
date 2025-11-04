@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: mysql:3306
--- Generation Time: Nov 04, 2025 at 03:23 PM
--- Server version: 8.0.44
+-- Generation Time: Nov 04, 2025 at 07:31 PM
+-- Server version: 8.0.37
 -- PHP Version: 8.3.26
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -20,6 +20,34 @@ SET time_zone = "+00:00";
 --
 -- Database: `budz_reserve`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `announcements`
+--
+
+CREATE TABLE `announcements` (
+  `id` int NOT NULL,
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `content` text COLLATE utf8mb4_unicode_ci,
+  `image_url` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `announcement_type` enum('text','image') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'text',
+  `is_active` tinyint NOT NULL DEFAULT '1',
+  `created_by` int DEFAULT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `announcements`
+--
+
+INSERT INTO `announcements` (`id`, `title`, `content`, `image_url`, `announcement_type`, `is_active`, `created_by`, `created_at`, `updated_at`) VALUES
+(2, 'Queueing Schedule', NULL, '/uploads/announcements/1762278216805-87989781.jpg', 'image', 0, 8, '2025-11-04 17:43:36.872851', '2025-11-04 17:49:43.000000'),
+(3, 'Queueing Schedule', NULL, '/uploads/announcements/1762278583346-669654582.jpg', 'image', 0, 8, '2025-11-04 17:49:43.374438', '2025-11-04 17:58:49.000000'),
+(4, 'Queueing Schedule', NULL, '/uploads/announcements/1762278596052-718407516.jpg', 'image', 1, 8, '2025-11-04 17:49:56.092527', '2025-11-04 19:09:46.000000'),
+(5, 'We are Close', 'We are close this upcoming november 1', NULL, 'text', 0, 8, '2025-11-04 17:58:49.981190', '2025-11-04 17:58:59.000000');
 
 -- --------------------------------------------------------
 
@@ -41,9 +69,9 @@ CREATE TABLE `courts` (
 --
 
 INSERT INTO `courts` (`Court_Id`, `Court_Name`, `Status`, `Price`, `Created_at`, `Updated_at`) VALUES
-(1, 'Court 1', 'Maintenance', 250.00, '2025-10-14 20:57:26.558877', '2025-11-04 09:50:16.000000'),
+(1, 'Court 1', 'Available', 280.00, '2025-10-14 20:57:26.558877', '2025-11-04 15:47:54.000000'),
 (2, 'Court 2', 'Maintenance', 250.00, '2025-10-14 20:57:26.558877', '2025-11-04 09:31:09.000000'),
-(3, 'Court 3', 'Maintenance', 250.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
+(3, 'Court 3', 'Available', 250.00, '2025-10-14 20:57:26.558877', '2025-11-04 15:47:57.000000'),
 (4, 'Court 4', 'Maintenance', 220.00, '2025-10-14 20:57:26.558877', '2025-11-04 09:31:11.000000'),
 (5, 'Court 5', 'Available', 250.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
 (6, 'Court 6', 'Available', 250.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
@@ -54,8 +82,7 @@ INSERT INTO `courts` (`Court_Id`, `Court_Name`, `Status`, `Price`, `Created_at`,
 (11, 'Court 11', 'Available', 250.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
 (12, 'Court 12', 'Available', 350.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
 (13, 'Court 13', 'Available', 250.00, '2025-10-31 10:48:29.719865', '2025-11-04 09:50:38.000000'),
-(15, 'Court 14', 'Available', 250.00, '2025-11-04 13:12:07.429142', '2025-11-04 13:12:07.429142'),
-(16, 'Court 15', 'Available', 250.00, '2025-11-04 13:12:10.285804', '2025-11-04 13:12:10.285804');
+(15, 'Court 14', 'Available', 250.00, '2025-11-04 13:12:07.429142', '2025-11-04 13:12:07.429142');
 
 -- --------------------------------------------------------
 
@@ -179,7 +206,9 @@ INSERT INTO `gallery` (`id`, `title`, `description`, `image_path`, `status`, `so
 (3, 'Group Photo 3', 'Client group photo from competition', '/assets/img/home-page/GALLERY/IMAGE 3.jpg', 'active', 3, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189'),
 (4, 'Group Photo 4', 'Client group photo from match', '/assets/img/home-page/GALLERY/IMAGE 4.jpg', 'active', 4, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189'),
 (5, 'Group Photo 5', 'Client group photo from championship', '/assets/img/home-page/GALLERY/IMAGE 5.jpg', 'active', 5, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189'),
-(6, 'Group Photo 6', 'Client group photo from finals', '/assets/img/home-page/GALLERY/IMAGE 6.jpg', 'active', 6, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189');
+(6, 'Group Photo 6', 'Client group photo from finals', '/assets/img/home-page/GALLERY/IMAGE 6.jpg', 'active', 6, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189'),
+(8, 'Ivan Louis Cielo', 'Singles A Badminton Champion', '/uploads/gallery/1762284209691-651939627.jpg', 'active', 0, '2025-11-04 19:23:29.707899', '2025-11-04 19:23:29.707899'),
+(9, 'Best Player Nga pala', 'Malakas Magbadminton at lumamon ng mcdo', '/uploads/gallery/1762284542373-469226335.png', 'active', 0, '2025-11-04 19:29:02.396578', '2025-11-04 19:29:02.396578');
 
 -- --------------------------------------------------------
 
@@ -319,7 +348,8 @@ INSERT INTO `reservations` (`Reservation_ID`, `User_ID`, `Court_ID`, `Reservatio
 (162, 1, 11, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 250.00, 'REF1761878685150', 'pay_aEAQhkY7acsRqEyiV1U9dQ17', 'Payment via Paymongo - pay_aEAQhkY7acsRqEyiV1U9dQ17', '2025-10-31 02:44:45.154408', '2025-10-31 02:44:45.154408'),
 (163, 1, 1, '2025-11-25', '02:00:00', '03:00:00', 'Confirmed', 250.00, 'REF1761880103946', 'pay_cHWzQisrsfeu8rPsXiWzPFic', 'Payment via Paymongo - pay_cHWzQisrsfeu8rPsXiWzPFic', '2025-10-31 03:08:23.971190', '2025-10-31 03:08:23.971190'),
 (164, 1, 1, '2026-01-01', '11:00:00', '12:00:00', 'Confirmed', 250.00, 'REF1761880689009', 'pay_jXPVqN7b5F8qKJvuRZVCqAE5', 'Payment via Paymongo - pay_jXPVqN7b5F8qKJvuRZVCqAE5', '2025-10-31 03:18:09.017559', '2025-10-31 03:18:09.017559'),
-(165, 1, 13, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 500.00, '1761908647381S9QLE', 'pay_sxTigqvKzPHcr9krJsZWosPf', 'Payment via Paymongo - pay_sxTigqvKzPHcr9krJsZWosPf', '2025-10-31 11:04:43.772428', '2025-10-31 11:04:43.772428');
+(165, 1, 13, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 500.00, '1761908647381S9QLE', 'pay_sxTigqvKzPHcr9krJsZWosPf', 'Payment via Paymongo - pay_sxTigqvKzPHcr9krJsZWosPf', '2025-10-31 11:04:43.772428', '2025-10-31 11:04:43.772428'),
+(166, 8, 1, '2025-11-05', '11:00:00', '13:30:00', 'Pending', 280.00, 'REF176228118014113', NULL, 'dasd', '2025-11-04 18:33:00.178309', '2025-11-04 18:33:00.178309');
 
 -- --------------------------------------------------------
 
@@ -348,7 +378,9 @@ INSERT INTO `suggestions` (`id`, `name`, `message`, `user_id`, `created_at`, `up
 (6, 'Ivan Louis Cielo', 'fsnddddddddddddddddddddddddddddddddddddddddddddddddddxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', 9, '2025-11-04 09:49:19.784668', '2025-11-04 09:49:19.784668'),
 (7, 'Ivan Louis Cielo', 'dfsefddddddddddddddddddddddddddddddddd', 9, '2025-11-04 09:58:25.028382', '2025-11-04 09:58:25.028382'),
 (8, 'Ivan Louis Cielo', 'dfsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss', 9, '2025-11-04 09:58:30.303531', '2025-11-04 09:58:30.303531'),
-(9, 'Ivan Louis Cielo', 'dfssssssssssssssssssssssssss', 9, '2025-11-04 09:58:33.450477', '2025-11-04 09:58:33.450477');
+(9, 'Ivan Louis Cielo', 'dfssssssssssssssssssssssssss', 9, '2025-11-04 09:58:33.450477', '2025-11-04 09:58:33.450477'),
+(10, 'Ivan Louis Cielo', 'hjibi jimnjk,l', 9, '2025-11-04 15:47:07.473153', '2025-11-04 15:47:07.473153'),
+(11, 'Filbert', 'oknoio p,[', NULL, '2025-11-04 15:47:16.240546', '2025-11-04 15:47:16.240546');
 
 -- --------------------------------------------------------
 
@@ -407,6 +439,13 @@ INSERT INTO `users` (`id`, `name`, `age`, `sex`, `username`, `email`, `password`
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `announcements`
+--
+ALTER TABLE `announcements`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `FK_40bd4946a00669c5fb7e6d972f0` (`created_by`);
 
 --
 -- Indexes for table `courts`
@@ -486,6 +525,12 @@ ALTER TABLE `users`
 --
 
 --
+-- AUTO_INCREMENT for table `announcements`
+--
+ALTER TABLE `announcements`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
 -- AUTO_INCREMENT for table `courts`
 --
 ALTER TABLE `courts`
@@ -513,7 +558,7 @@ ALTER TABLE `equipment_rental_items`
 -- AUTO_INCREMENT for table `gallery`
 --
 ALTER TABLE `gallery`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `migrations`
@@ -531,13 +576,13 @@ ALTER TABLE `payments`
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `Reservation_ID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=166;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=167;
 
 --
 -- AUTO_INCREMENT for table `suggestions`
 --
 ALTER TABLE `suggestions`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `time_slots`
@@ -554,6 +599,12 @@ ALTER TABLE `users`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `announcements`
+--
+ALTER TABLE `announcements`
+  ADD CONSTRAINT `FK_40bd4946a00669c5fb7e6d972f0` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `equipment_rental_items`
