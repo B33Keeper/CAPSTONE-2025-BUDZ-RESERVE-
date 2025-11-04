@@ -120,8 +120,9 @@ async function bootstrap() {
   const host = '0.0.0.0';
   await app.listen(port, host);
 
-  console.log(`🚀 Application is running on: http://${host}:${port}`);
-  console.log(`📚 API Documentation: http://${host}:${port}/${apiPrefix}/docs`);
+  // Use localhost for console output since 0.0.0.0 is not accessible in browsers
+  console.log(`🚀 Application is running on: http://localhost:${port}`);
+  console.log(`📚 API Documentation: http://localhost:${port}/${apiPrefix}/docs`);
 }
 
 bootstrap();

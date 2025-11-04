@@ -41,8 +41,24 @@ services:
       DB_DATABASE: ${MYSQL_DATABASE:-budz_reserve}
       JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-in-production}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       PORT: 3001
+      API_PREFIX: ${API_PREFIX:-api}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      PAYMONGO_SECRET_KEY: ${PAYMONGO_SECRET_KEY:-sk_test_your_paymongo_secret_key_here}
+      PAYMONGO_PUBLIC_KEY: ${PAYMONGO_PUBLIC_KEY:-pk_test_your_paymongo_public_key_here}
+      PAYMONGO_WEBHOOK_SECRET: ${PAYMONGO_WEBHOOK_SECRET:-whsk_your_webhook_secret_here}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@budzreserve.com}
+      UPLOAD_DEST: ./uploads
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-5242880}
+      THROTTLE_TTL: ${THROTTLE_TTL:-60}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-10}
     ports:
       - "3001:3001"
     volumes:
@@ -63,6 +79,7 @@ services:
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
       VITE_APP_NAME: ${VITE_APP_NAME:-Budz Reserve}
+      NODE_ENV: production
     ports:
       - "3000:3000"
     depends_on:

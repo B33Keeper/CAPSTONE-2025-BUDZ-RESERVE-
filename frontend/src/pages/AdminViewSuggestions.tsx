@@ -57,12 +57,17 @@ const AdminViewSuggestions = () => {
             message: suggestion.message.length > 30 
               ? suggestion.message.substring(0, 30) + '...' 
               : suggestion.message,
-            fullMessage: suggestion.message
+            fullMessage: suggestion.message,
+            created_at: suggestion.created_at // Preserve original date for sorting
           }
         })
         
-        // Sort suggestions by ID in ascending order (lowest ID first, so ID 1 appears at top)
-        const sortedSuggestions = formattedSuggestions.sort((a, b) => a.id - b.id)
+        // Sort suggestions by created_at in ascending order (oldest first, latest at bottom)
+        const sortedSuggestions = formattedSuggestions.sort((a, b) => {
+          const dateA = new Date(a.created_at).getTime()
+          const dateB = new Date(b.created_at).getTime()
+          return dateA - dateB // Ascending order (oldest first)
+        })
         
         setSuggestions(sortedSuggestions)
       } catch (error: any) {

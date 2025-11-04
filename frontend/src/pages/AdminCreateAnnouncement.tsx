@@ -1,11 +1,15 @@
-import { useState, useRef } from 'react'
-import { AdminLayout } from '@/components/AdminLayout'
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { AnnouncementHistoryModal } from '@/components/modals/AnnouncementHistoryModal'
+import AdminSidebar from '@/components/AdminSidebar'
 import toast from 'react-hot-toast'
 
 export default function AdminCreateAnnouncement() {
   const [showAnnouncementHistory, setShowAnnouncementHistory] = useState(false)
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [activeSidebarItem, setActiveSidebarItem] = useState('Add Announcement')
   const [announcementType, setAnnouncementType] = useState<'text' | 'image'>('text')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -13,6 +17,34 @@ export default function AdminCreateAnnouncement() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
+
+  // Helper function to format role
+  const formatRole = (role?: string) => {
+    if (!role) return 'User'
+    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
+  }
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -112,14 +144,111 @@ export default function AdminCreateAnnouncement() {
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-100 scroll-smooth">
+      {/* Custom Scrollbar Styles */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+          transition: background 0.3s ease;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        ::-webkit-scrollbar-corner {
+          background: #f1f5f9;
+        }
+        /* Firefox scrollbar */
+        * {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 #f1f5f9;
+        }
+      ` }} />
+      
       <AnnouncementHistoryModal 
         isOpen={showAnnouncementHistory} 
         onClose={() => setShowAnnouncementHistory(false)} 
       />
-      <AdminLayout activeSidebarItem="Create Announcement">
-        <div className="flex-1 min-h-screen">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 overflow-visible backdrop-blur-sm bg-white/95">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 overflow-visible">
+          <div className="flex justify-between items-center h-14 sm:h-16 relative">
+            {/* Logo */}
+            <div className="flex items-center">
+              <img 
+                src="/assets/icons/BBC ICON.png" 
+                alt="BBC Logo" 
+                className="h-12 w-12 sm:h-16 sm:w-16 lg:h-24 lg:w-24 object-contain hover:scale-105 transition-transform duration-200" 
+              />
+            </div>
+
+            {/* Right Side - Admin Profile */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                  className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <img
+                    src={user?.profile_picture || '/assets/img/home-page/Ellipse 1.png'}
+                    alt="Profile"
+                    className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-gray-200"
+                  />
+                  <div className="text-left hidden sm:block">
+                    <div className="text-xs sm:text-sm font-medium text-gray-900">{user?.name || user?.username || 'User'}</div>
+                    <div className="text-xs text-gray-500">{formatRole(user?.role)}</div>
+                  </div>
+                  <svg 
+                    className={`w-3 h-3 sm:w-4 sm:h-4 text-gray-400 ${showUserDropdown ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showUserDropdown && (
+                  <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
+                       style={{
+                         position: 'absolute',
+                         top: '100%',
+                         right: '0',
+                         marginTop: '0.5rem'
+                       }}>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center space-x-2 px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content with Sidebar */}
+      <div className="flex">
+        <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
+        
+        {/* Main Content */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
+          <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8">
               <div className="flex justify-between items-center mb-6">
                 <div>
@@ -287,15 +416,7 @@ export default function AdminCreateAnnouncement() {
                   )}
 
                   {/* Submit Button */}
-                  <div className="flex justify-end space-x-4 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => window.history.back()}
-                      className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={isSubmitting}
-                    >
-                      Cancel
-                    </button>
+                  <div className="flex justify-center pt-4">
                     <button
                       type="submit"
                       className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
@@ -312,11 +433,10 @@ export default function AdminCreateAnnouncement() {
                     </button>
                   </div>
                 </form>
-              </div>
             </div>
           </div>
-        
-      </AdminLayout>
-    </>
+        </main>
+      </div>
+    </div>
   )
 }
