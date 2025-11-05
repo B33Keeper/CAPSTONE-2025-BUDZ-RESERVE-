@@ -209,7 +209,7 @@ export function PaymentSummaryStep({
           </div>
         </div>
         <p className="text-sm text-gray-600 text-center">
-          Send your payment to <strong>Dragonsmash Badminton Center</strong>
+          Send Your payment to <strong>Budz Badminton Court</strong>
         </p>
       </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 
 const AdminManageRackets = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
@@ -592,6 +593,7 @@ const AdminManageRackets = () => {
           </div>
         </div>
       )}
+      <AdminFooter />
     </div>
   )
 }

@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 interface EquipmentRental {
   equipmentName: string
@@ -38,6 +41,8 @@ const AdminSalesReport = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
   const [searchQuery, setSearchQuery] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -48,13 +53,12 @@ const AdminSalesReport = () => {
     return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
   }
 
-  const handleDownload = () => {
-    // TODO: Implement download functionality
-    console.log('Download report')
-  }
-
-  const handlePeriodChange = (period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly') => {
-    setSelectedPeriod(period)
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP',
+      minimumFractionDigits: 2,
+    }).format(price)
   }
 
   const periods = [
@@ -64,6 +68,146 @@ const AdminSalesReport = () => {
     { value: 'quarterly', label: 'Quarterly' },
     { value: 'yearly', label: 'Yearly' },
   ]
+
+  const handleDownload = () => {
+    try {
+      // Use the same filtered data that's displayed in the table
+      const dataToExport = filteredData
+      
+      if (dataToExport.length === 0) {
+        alert('No data available to download')
+        return
+      }
+
+      // Create new PDF document
+      const doc = new jsPDF()
+      
+      // Generate filename with period and date
+      const date = new Date().toISOString().split('T')[0]
+      const periodLabel = periods.find(p => p.value === selectedPeriod)?.label || 'Daily'
+      
+      // Add title
+      doc.setFontSize(18)
+      doc.text('Sales Report', 14, 20)
+      
+      // Add period and date info
+      doc.setFontSize(11)
+      let yPos = 30
+      doc.text(`Period: ${periodLabel}`, 14, yPos)
+      yPos += 6
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, yPos)
+      
+      if (dateFrom || dateTo) {
+        yPos += 6
+        const dateRange = dateFrom && dateTo 
+          ? `${new Date(dateFrom).toLocaleDateString()} - ${new Date(dateTo).toLocaleDateString()}`
+          : dateFrom 
+          ? `From: ${new Date(dateFrom).toLocaleDateString()}`
+          : `To: ${new Date(dateTo).toLocaleDateString()}`
+        doc.text(`Date Range: ${dateRange}`, 14, yPos)
+      }
+      
+      if (searchQuery) {
+        yPos += 6
+        doc.text(`Filtered by: "${searchQuery}"`, 14, yPos)
+      }
+
+      // Prepare table data
+      const tableData = dataToExport.map(item => {
+        // Format equipment rentals
+        const equipmentInfo = item.equipmentRentals && item.equipmentRentals.length > 0
+          ? item.equipmentRentals.map(rental => 
+              `${rental.equipmentName} (Qty: ${rental.quantity}, ${rental.hours}h)`
+            ).join('; ')
+          : 'None'
+
+        return [
+          item.reservationId.toString(),
+          item.customerName,
+          item.courtName,
+          item.time,
+          item.date,
+          item.paymentMethod,
+          equipmentInfo,
+          formatPrice(item.price),
+          item.status.toUpperCase()
+        ]
+      })
+
+      // Add table using autoTable
+      autoTable(doc, {
+        head: [['Reservation ID', 'Customer Name', 'Court Name', 'Time', 'Date', 'Payment Method', 'Racket Rent / Duration', 'Price', 'Status']],
+        body: tableData,
+        startY: yPos + 8,
+        styles: { 
+          fontSize: 7,
+          cellPadding: 1.5,
+          overflow: 'linebreak',
+          cellWidth: 'wrap'
+        },
+        headStyles: { 
+          fillColor: [66, 139, 202], 
+          textColor: 255, 
+          fontStyle: 'bold',
+          fontSize: 7,
+          halign: 'center'
+        },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        columnStyles: {
+          0: { cellWidth: 16, halign: 'center' }, // Reservation ID
+          1: { cellWidth: 25, halign: 'left' }, // Customer Name
+          2: { cellWidth: 16, halign: 'center' }, // Court Name
+          3: { cellWidth: 20, halign: 'center' }, // Time
+          4: { cellWidth: 20, halign: 'center' }, // Date
+          5: { cellWidth: 18, halign: 'center' }, // Payment Method
+          6: { cellWidth: 32, halign: 'left', overflow: 'linebreak' }, // Racket Rent / Duration - wrap text
+          7: { cellWidth: 18, halign: 'right' }, // Price
+          8: { cellWidth: 16, halign: 'center' } // Status
+        },
+        margin: { 
+          left: 10,
+          right: 10,
+          top: searchQuery ? 48 : 42
+        },
+        tableWidth: 'wrap',
+        overflow: 'linebreak'
+      })
+
+      // Calculate summary from filtered data
+      const filteredSummary = dataToExport.reduce(
+        (acc, item) => {
+          acc.totalReservations += 1
+          acc.totalIncome += item.price
+          if (item.status === 'cancelled') {
+            acc.totalCancellations += 1
+          }
+          return acc
+        },
+        { totalReservations: 0, totalIncome: 0, totalCancellations: 0 }
+      )
+
+      // Add summary section
+      const finalY = (doc as any).lastAutoTable?.finalY || doc.internal.pageSize.height - 40
+      doc.setFontSize(12)
+      doc.text('Summary', 14, finalY + 15)
+      
+      doc.setFontSize(10)
+      doc.text(`Total Reservations: ${filteredSummary.totalReservations}`, 14, finalY + 25)
+      doc.text(`Total Income: ${formatPrice(filteredSummary.totalIncome)}`, 14, finalY + 32)
+      doc.text(`Total Cancellations: ${filteredSummary.totalCancellations}`, 14, finalY + 39)
+
+      // Save the PDF
+      const filename = `Sales_Report_${periodLabel}_${date}.pdf`
+      doc.save(filename)
+    } catch (error) {
+      console.error('Error downloading report:', error)
+      alert('Failed to download report. Please try again.')
+    }
+  }
+
+  const handlePeriodChange = (period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly') => {
+    setSelectedPeriod(period)
+  }
 
   const handleLogout = () => {
     logout()
@@ -112,18 +256,111 @@ const AdminSalesReport = () => {
   }, [selectedPeriod])
 
 
-  // Pagination
-  // Filter data by search query
+  // Reset pagination when search query or date filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, dateFrom, dateTo])
+
+  // Helper function to parse date string to Date object
+  const parseDate = (dateString: string): Date | null => {
+    if (!dateString) return null
+    // Try to parse common date formats
+    // Format: "October 31, 2025" or "January 1, 2026"
+    const months: { [key: string]: string } = {
+      'january': '01', 'february': '02', 'march': '03', 'april': '04',
+      'may': '05', 'june': '06', 'july': '07', 'august': '08',
+      'september': '09', 'october': '10', 'november': '11', 'december': '12'
+    }
+    
+    const parts = dateString.toLowerCase().split(',').map(s => s.trim())
+    if (parts.length === 2) {
+      const monthDay = parts[0].split(' ')
+      const month = months[monthDay[0]]
+      const day = monthDay[1]
+      const year = parts[1]
+      if (month && day && year) {
+        return new Date(`${year}-${month}-${day.padStart(2, '0')}`)
+      }
+    }
+    
+    // Try parsing as ISO date
+    const isoDate = new Date(dateString)
+    if (!isNaN(isoDate.getTime())) {
+      return isoDate
+    }
+    
+    return null
+  }
+
+  // Filter data by search query and date range
   const filteredData = salesData.filter(item => {
+    // Filter by date range
+    if (dateFrom || dateTo) {
+      const itemDate = parseDate(item.date)
+      if (itemDate) {
+        const fromDate = dateFrom ? new Date(dateFrom) : null
+        const toDate = dateTo ? new Date(dateTo) : null
+        
+        // Set time to start of day for fromDate
+        if (fromDate) {
+          fromDate.setHours(0, 0, 0, 0)
+        }
+        
+        // Set time to end of day for toDate
+        if (toDate) {
+          toDate.setHours(23, 59, 59, 999)
+        }
+        
+        // Set time to start of day for itemDate for comparison
+        const itemDateStart = new Date(itemDate)
+        itemDateStart.setHours(0, 0, 0, 0)
+        
+        if (fromDate && itemDateStart < fromDate) return false
+        if (toDate && itemDateStart > toDate) return false
+      } else {
+        // If we can't parse the date but filters are set, exclude it
+        return false
+      }
+    }
+    
+    // Filter by search query
     if (!searchQuery) return true
     const query = searchQuery.toLowerCase()
-    return (
-      item.customerName.toLowerCase().includes(query) ||
-      item.courtName.toLowerCase().includes(query) ||
-      item.paymentMethod.toLowerCase().includes(query) ||
-      item.time.toLowerCase().includes(query) ||
-      item.date.toLowerCase().includes(query)
-    )
+    
+    // Search in customer name
+    if (item.customerName.toLowerCase().includes(query)) return true
+    
+    // Search in court name
+    if (item.courtName.toLowerCase().includes(query)) return true
+    
+    // Search in payment method
+    if (item.paymentMethod.toLowerCase().includes(query)) return true
+    
+    // Search in time
+    if (item.time.toLowerCase().includes(query)) return true
+    
+    // Search in date
+    if (item.date.toLowerCase().includes(query)) return true
+    
+    // Search in reservation ID
+    if (item.reservationId.toString().includes(query)) return true
+    
+    // Search in price (as number and formatted)
+    const priceStr = item.price.toString()
+    const formattedPrice = formatPrice(item.price).toLowerCase()
+    if (priceStr.includes(query) || formattedPrice.includes(query)) return true
+    
+    // Search in equipment rentals
+    if (item.equipmentRentals && item.equipmentRentals.length > 0) {
+      const hasMatchingEquipment = item.equipmentRentals.some(rental => 
+        rental.equipmentName.toLowerCase().includes(query) ||
+        rental.quantity.toString().includes(query) ||
+        rental.hours.toString().includes(query)
+      )
+      if (hasMatchingEquipment) return true
+    }
+    
+    return false
   })
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage)
@@ -137,14 +374,6 @@ const AdminSalesReport = () => {
       setCurrentPage(1)
     }
   }, [filteredData, currentPage, totalPages])
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
-      minimumFractionDigits: 2,
-    }).format(price)
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 scroll-smooth">
@@ -250,20 +479,49 @@ const AdminSalesReport = () => {
           </div>
 
           {/* Controls Section - Outside the header card */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
-            {/* Download Report Button - Left */}
-            <button
-              onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download Report
-            </button>
+          <div className="flex flex-col gap-4 mb-6">
+            {/* Single Row: Date Filter, Period Buttons, Download Button, and Search Filter */}
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+              {/* Left Side: Date Filter */}
+              <div className="flex items-center gap-3 bg-white rounded-lg border border-gray-300 p-2 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <label className="text-sm font-medium text-gray-700">From:</label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">To:</label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                  />
+                </div>
+                {(dateFrom || dateTo) && (
+                  <button
+                    onClick={() => {
+                      setDateFrom('')
+                      setDateTo('')
+                    }}
+                    className="ml-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+                    title="Clear date filter"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
-            {/* Period Segmented Buttons - Centered */}
-            <div className="flex-1 flex justify-center">
+              {/* Center: Period Buttons */}
               <div className="flex items-center gap-0 bg-white border border-gray-300 rounded-md p-0.5">
                 {periods.map((period) => (
                   <button
@@ -279,25 +537,39 @@ const AdminSalesReport = () => {
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Search Bar - Right */}
-            <div className="relative flex-1 max-w-md">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search sales data..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
-              />
-              <svg 
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              {/* Right Side: Download Button and Search Filter */}
+              <div className="flex items-center gap-4">
+                {/* Download Report Button */}
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download Report
+                </button>
+
+                {/* Search Bar */}
+                <div className="relative w-full sm:w-auto sm:max-w-md">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search sales data..."
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                  />
+                  <svg 
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -313,21 +585,43 @@ const AdminSalesReport = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-gray-50 border-b-2 border-gray-200">
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CUSTOMER</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">COURT #</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">TIME</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">DATE</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PAYMENT</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">RACKET RENT / DURATION</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">PRICE</th>
+                      <tr className="border-b-2 border-gray-200" style={{ backgroundColor: '#475569' }}>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">CUSTOMER</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">COURT #</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">TIME</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">DATE</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">PAYMENT</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">RACKET RENT / DURATION</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">PRICE</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredData.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                            No sales data available for the selected period
+                            {searchQuery || dateFrom || dateTo ? (
+                              <div>
+                                <p className="text-lg font-medium mb-2">No results found</p>
+                                <p className="text-sm text-gray-400">
+                                  {searchQuery && (dateFrom || dateTo) ? (
+                                    <>
+                                      No sales data matches your search "{searchQuery}" and date range
+                                    </>
+                                  ) : searchQuery ? (
+                                    <>No sales data matches your search "{searchQuery}"</>
+                                  ) : (
+                                    <>
+                                      No sales data found for the selected date range
+                                      {dateFrom && dateTo && (
+                                        <> ({new Date(dateFrom).toLocaleDateString()} - {new Date(dateTo).toLocaleDateString()})</>
+                                      )}
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                            ) : (
+                              'No sales data available for the selected period'
+                            )}
                           </td>
                         </tr>
                       ) : (
@@ -385,8 +679,13 @@ const AdminSalesReport = () => {
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm text-gray-600 mb-1">Total Reservations</div>
-                        <div className="text-2xl font-bold text-gray-900">{summary.totalReservations}</div>
+                        <div className="text-sm text-gray-600 mb-1">
+                          Total Reservations
+                          {(dateFrom || dateTo || searchQuery) && (
+                            <span className="text-xs text-gray-400 ml-2">(Filtered)</span>
+                          )}
+                        </div>
+                        <div className="text-2xl font-bold text-gray-900">{filteredData.length}</div>
                       </div>
                     </div>
                   </div>
@@ -400,8 +699,15 @@ const AdminSalesReport = () => {
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm text-gray-600 mb-1">Total Income</div>
-                        <div className="text-2xl font-bold text-green-600">{formatPrice(summary.totalIncome)}</div>
+                        <div className="text-sm text-gray-600 mb-1">
+                          Total Income
+                          {(dateFrom || dateTo || searchQuery) && (
+                            <span className="text-xs text-gray-400 ml-2">(Filtered)</span>
+                          )}
+                        </div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {formatPrice(filteredData.reduce((sum, item) => sum + item.price, 0))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -438,6 +744,7 @@ const AdminSalesReport = () => {
           </div>
         </main>
       </div>
+      <AdminFooter />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 import { apiServices } from '@/lib/apiServices'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 
 const AdminDashboard = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
@@ -11,6 +12,8 @@ const AdminDashboard = () => {
   const [userCount, setUserCount] = useState(0)
   const [courtCount, setCourtCount] = useState(0)
   const [availableCourtCount, setAvailableCourtCount] = useState(0)
+  const [dailyReservations, setDailyReservations] = useState(0)
+  const [dailySales, setDailySales] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const navigate = useNavigate()
@@ -42,6 +45,15 @@ const AdminDashboard = () => {
     }
   }, [])
 
+  // Format price for display
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP',
+      minimumFractionDigits: 2,
+    }).format(price)
+  }
+
   // Fetch dashboard data from API
   const fetchDashboardData = async (isRefresh = false) => {
     try {
@@ -53,22 +65,44 @@ const AdminDashboard = () => {
       
       console.log('Fetching dashboard data...')
       
+      // Get today's date range for daily data
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      
       // Fetch all data in parallel
-      const [userCountData, courtCountData, availableCourtCountData] = await Promise.all([
+      const [userCountData, courtCountData, availableCourtCountData, salesReportData, reservationsData] = await Promise.all([
         api.get('/users/count'),
         apiServices.getCourtCount(),
-        apiServices.getAvailableCourtCount()
+        apiServices.getAvailableCourtCount(),
+        api.get('/payments/sales-report?period=daily'),
+        api.get('/reservations')
       ])
+      
+      // Calculate daily reservations (reservations created today)
+      const todayReservations = reservationsData.data.filter((reservation: any) => {
+        const reservationDate = new Date(reservation.Created_at)
+        reservationDate.setHours(0, 0, 0, 0)
+        return reservationDate.getTime() === today.getTime()
+      })
+      
+      // Get daily sales from sales report
+      const dailySalesAmount = salesReportData.data?.summary?.totalIncome || 0
       
       console.log('Dashboard data response:', {
         userCount: userCountData.data,
         courtCount: courtCountData,
-        availableCourtCount: availableCourtCountData
+        availableCourtCount: availableCourtCountData,
+        dailyReservations: todayReservations.length,
+        dailySales: dailySalesAmount
       })
       
       setUserCount(userCountData.data)
       setCourtCount(courtCountData)
       setAvailableCourtCount(availableCourtCountData)
+      setDailyReservations(todayReservations.length)
+      setDailySales(dailySalesAmount)
       setLoading(false)
       setRefreshing(false)
     } catch (error: any) {
@@ -216,12 +250,20 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Daily Reservation</p>
-                  <p className="text-2xl sm:text-3xl font-bold group-hover:text-green-300 transition-colors">120</p>
+                  <p className="text-2xl sm:text-3xl font-bold group-hover:text-green-300 transition-colors">
+                    {loading ? (
+                      <div className="flex items-center space-x-1 sm:space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-6 sm:w-6 border-b-2 border-white"></div>
+                        <span className="text-sm sm:text-base">Loading...</span>
+                      </div>
+                    ) : (
+                      dailyReservations
+                    )}
+                  </p>
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center group-hover:bg-green-400 transition-colors group-hover:scale-110 flex-shrink-0">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                    <path d="M10 12l2 2 4-4m-6 4l-2-2 2-2 2 2-2 2z" fill="white"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                   </svg>
                 </div>
               </div>
@@ -282,12 +324,20 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Daily Sales</p>
-                  <p className="text-2xl sm:text-3xl font-bold group-hover:text-yellow-300 transition-colors">₱5,863.00</p>
+                  <p className="text-2xl sm:text-3xl font-bold group-hover:text-yellow-300 transition-colors">
+                    {loading ? (
+                      <div className="flex items-center space-x-1 sm:space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-6 sm:w-6 border-b-2 border-white"></div>
+                        <span className="text-sm sm:text-base">Loading...</span>
+                      </div>
+                    ) : (
+                      formatPrice(dailySales)
+                    )}
+                  </p>
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-500 rounded-full flex items-center justify-center group-hover:bg-yellow-500 transition-colors group-hover:scale-110 flex-shrink-0">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    <path d="M12 6l-2 2 2 2 2-2-2-2zm0 8l-2 2 2 2 2-2-2-2z" fill="white"/>
                   </svg>
                 </div>
               </div>
@@ -431,10 +481,7 @@ const AdminDashboard = () => {
                   <span className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-orange-700 transition-colors text-center">Manage Rackets</span>
                 </button>
 
-                {/* Empty placeholder for centering second row on large screens */}
-                <div className="hidden lg:block"></div>
-                
-                {/* Sales Report - Centered in second row */}
+                {/* Sales Report */}
                 <button
                   onClick={() => navigate('/admin/sales-report')}
                   className="flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl hover:from-yellow-100 hover:to-amber-100 transition-all duration-300 hover:scale-105 hover:shadow-lg border-2 border-yellow-200 hover:border-yellow-400 group"
@@ -477,6 +524,7 @@ const AdminDashboard = () => {
           </div>
         </main>
       </div>
+      <AdminFooter />
     </div>
   )
 }

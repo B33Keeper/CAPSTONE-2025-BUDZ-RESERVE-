@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import { apiServices, Court } from '@/lib/apiServices'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 import toast from 'react-hot-toast'
 
 export default function AdminCreateReservations() {
@@ -364,6 +365,7 @@ export default function AdminCreateReservations() {
           </div>
         </main>
       </div>
+      <AdminFooter />
     </div>
   )
 }

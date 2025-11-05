@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 
 const AdminViewSuggestions = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
@@ -401,6 +402,7 @@ const AdminViewSuggestions = () => {
           </div>
         </div>
       )}
+      <AdminFooter />
     </div>
   )
 }
