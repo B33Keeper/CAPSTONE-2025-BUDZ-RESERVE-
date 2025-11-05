@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 import { galleryApiService, GalleryItem, getImageUrl } from '@/lib/galleryApiService'
 import toast from 'react-hot-toast'
 
@@ -539,6 +540,7 @@ const UploadPhoto = () => {
           </div>
         </div>
       )}
+      <AdminFooter />
     </div>
   )
 }

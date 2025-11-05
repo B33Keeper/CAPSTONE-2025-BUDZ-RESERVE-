@@ -81,7 +81,7 @@ services:
       VITE_APP_NAME: ${VITE_APP_NAME:-Budz Reserve}
       NODE_ENV: production
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       - backend
     networks:

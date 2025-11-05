@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import { apiServices, Court } from '@/lib/apiServices'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 
 const AdminManageCourts = () => {
   console.log('[AdminManageCourts] Component rendering...')
@@ -674,6 +675,7 @@ const AdminManageCourts = () => {
           </div>
         </div>
       )}
+      <AdminFooter />
     </div>
   )
 }

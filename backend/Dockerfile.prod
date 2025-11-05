@@ -8,8 +8,8 @@ RUN apk add --no-cache mysql-client
 # Copy package files
 COPY backend/package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install all dependencies (including devDependencies for build)
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY backend/ .
@@ -25,13 +25,17 @@ WORKDIR /app
 # Install system dependencies
 RUN apk add --no-cache mysql-client
 
-# Copy built application
+# Copy package files
+COPY backend/package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy built application from builder
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
 
 # Create uploads directory
-RUN mkdir -p uploads/avatars uploads/general
+RUN mkdir -p uploads/avatars uploads/general uploads/announcements uploads/gallery
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
