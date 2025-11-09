@@ -8,12 +8,13 @@ interface SidebarItem {
   indented: boolean
 }
 
-interface AdminSidebarProps {
-  activeItem: string
+export interface AdminSidebarProps {
+  activeItem?: string
   onItemChange?: (itemId: string) => void
+  onExpandedChange?: (expanded: boolean) => void
 }
 
-const AdminSidebar = ({ activeItem, onItemChange }: AdminSidebarProps) => {
+export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpandedChange }: AdminSidebarProps) {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const navigate = useNavigate()
@@ -25,6 +26,13 @@ const AdminSidebar = ({ activeItem, onItemChange }: AdminSidebarProps) => {
     }, 500)
     return () => clearTimeout(timer)
   }, [])
+
+  // Notify parent when expansion changes
+  useEffect(() => {
+    if (onExpandedChange) {
+      onExpandedChange(isSidebarExpanded)
+    }
+  }, [isSidebarExpanded, onExpandedChange])
 
   const sidebarItems: SidebarItem[] = [
     { id: 'Dashboard', icon: 'grid', label: 'Dashboard', indented: false },

@@ -7,7 +7,7 @@ export declare class ReservationsController {
     create(createReservationDto: CreateReservationDto, req: any): Promise<import("./entities/reservation.entity").Reservation>;
     createFromPayment(paymentData: any): Promise<import("./entities/reservation.entity").Reservation[]>;
     createWithCash(body: {
-        userId: number;
+        customerName: string;
         bookingData: any;
     }, req: any): Promise<{
         reservations: import("./entities/reservation.entity").Reservation[];

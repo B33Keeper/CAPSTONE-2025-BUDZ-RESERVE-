@@ -30,7 +30,7 @@ let ReservationsController = class ReservationsController {
         return this.reservationsService.createFromPayment(paymentData);
     }
     createWithCash(body, req) {
-        return this.reservationsService.createWithCashPayment(body.userId, body.bookingData);
+        return this.reservationsService.createWithCashPayment(body.customerName, body.bookingData);
     }
     findAll() {
         return this.reservationsService.findAll();

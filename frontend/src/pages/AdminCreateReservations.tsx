@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type JSX } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { apiServices, Court, Equipment, TimeSlot } from '@/lib/apiServices'
@@ -23,6 +23,8 @@ interface EquipmentBooking {
 interface CellStatus {
   status: 'available' | 'reserved' | 'maintenance' | 'selected'
 }
+
+type CellDisplayState = 'available' | 'selected' | 'reserved' | 'maintenance' | 'unavailable'
 
 export default function AdminCreateReservations() {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
@@ -69,12 +71,18 @@ export default function AdminCreateReservations() {
                      equipmentBookings.reduce((sum, booking) => sum + Number(booking.subtotal), 0)
 
   const steps = [
-    { id: 0, name: 'Enter Customer Name', active: currentStep === 0 },
-    { id: 1, name: 'Select a date', active: currentStep === 1 },
-    { id: 2, name: 'Select time & court no.', active: currentStep === 2 },
-    { id: 3, name: 'Payment', active: currentStep === 3 },
-    { id: 4, name: 'completed', active: currentStep === 4 },
+    { id: 0, name: 'Enter customer name', hint: 'Identify the walk-in guest' },
+    { id: 1, name: 'Select a date', hint: 'Pick their play day' },
+    { id: 2, name: 'Select time & court no.', hint: 'Reserve the slot' },
+    { id: 3, name: 'Payment', hint: 'Confirm cash payment' },
+    { id: 4, name: 'Completed', hint: 'Reservation recorded' }
   ]
+
+  const getStepState = (stepId: number): 'completed' | 'current' | 'upcoming' => {
+    if (stepId < currentStep) return 'completed'
+    if (stepId === currentStep) return 'current'
+    return 'upcoming'
+  }
 
   const courtsPerSheet = 6
   const numberOfSheets = Math.ceil(courts.length / courtsPerSheet)
@@ -327,15 +335,141 @@ export default function AdminCreateReservations() {
     }
   }
 
-  const getCellClassName = (courtId: number, timeLabel: string, courtStatus?: string) => {
-    const key = `COURT ${courtId}-${timeLabel}`
-    const isSelected = selectedCells.has(key)
+  const formatCurrency = (value: number | string) => {
+    const amount = Number(value)
+    if (Number.isNaN(amount)) return value
+    return `₱${amount.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`
+  }
 
-    if (courtStatus === 'Maintenance') return 'bg-yellow-400 text-black cursor-not-allowed'
-    if (courtStatus === 'Unavailable') return 'bg-gray-400 text-white cursor-not-allowed'
+  const getDateDisplayDetails = (dateString: string) => {
+    if (!dateString) return null
+    const dateObj = new Date(dateString)
+    if (Number.isNaN(dateObj.getTime())) return null
 
-    if (isSelected) return 'bg-green-300 text-black ring-2 ring-green-500'
-    return 'bg-white text-gray-900 hover:bg-blue-50 cursor-pointer'
+    return {
+      dayName: dateObj.toLocaleDateString('en-US', { weekday: 'long' }),
+      formattedDate: dateObj.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      })
+    }
+  }
+
+  const deriveCellDisplayState = (cellStatus: CellStatus['status'], courtStatus?: string): CellDisplayState => {
+    if (courtStatus === 'Maintenance') return 'maintenance'
+    if (courtStatus === 'Unavailable') return 'unavailable'
+    if (cellStatus === 'maintenance') return 'maintenance'
+    if (cellStatus === 'selected') return 'selected'
+    if (cellStatus === 'reserved') return 'reserved'
+    return 'available'
+  }
+
+  const cellDisplayConfig: Record<
+    CellDisplayState,
+    {
+      containerClass: string
+      priceClass: string
+      helperText: string
+      helperClass: string
+      badge: { text: string; className: string; icon: JSX.Element }
+    }
+  > = {
+    available: {
+      containerClass:
+        'border border-slate-200 bg-white text-gray-900 shadow-sm hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg cursor-pointer',
+      priceClass: 'text-base sm:text-lg font-semibold text-gray-900',
+      helperText: 'Per hour rate',
+      helperClass: 'text-[10px] sm:text-xs font-medium text-slate-500',
+      badge: {
+        text: 'Tap to reserve',
+        className: 'bg-slate-100 text-slate-700 border border-slate-200 shadow-sm',
+        icon: (
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        )
+      }
+    },
+    selected: {
+      containerClass:
+        'border border-emerald-300 bg-emerald-50/80 text-emerald-900 shadow-inner ring-2 ring-emerald-400 cursor-pointer',
+      priceClass: 'text-base sm:text-lg font-semibold text-emerald-700',
+      helperText: 'Tap again to remove',
+      helperClass: 'text-[10px] sm:text-xs font-medium text-emerald-600',
+      badge: {
+        text: 'Selected slot',
+        className: 'bg-emerald-200/90 text-emerald-900 border border-emerald-300 shadow-sm',
+        icon: (
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+        )
+      }
+    },
+    reserved: {
+      containerClass:
+        'border border-gray-500 bg-gray-700 text-white shadow-inner cursor-not-allowed',
+      priceClass: 'text-base sm:text-lg font-semibold text-white',
+      helperText: 'Already booked',
+      helperClass: 'text-[10px] sm:text-xs text-gray-200',
+      badge: {
+        text: 'Reserved',
+        className: 'bg-gray-600 text-white border border-gray-500 shadow-sm',
+        icon: (
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="5" y="11" width="14" height="10" rx="2" />
+            <path d="M8 11V7a4 4 0 118 0v4" />
+          </svg>
+        )
+      }
+    },
+    maintenance: {
+      containerClass:
+        'border border-amber-200 bg-amber-50/90 text-amber-900 cursor-not-allowed',
+      priceClass: 'text-base sm:text-lg font-semibold text-amber-800',
+      helperText: 'Temporarily unavailable',
+      helperClass: 'text-[10px] sm:text-xs text-amber-700',
+      badge: {
+        text: 'Under maintenance',
+        className: 'bg-amber-200/80 text-amber-900 border border-amber-300',
+        icon: (
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L2.82 18a1 1 0 00.86 1.5h16.64a1 1 0 00.86-1.5L13.71 3.86a1 1 0 00-1.72 0z" />
+            <path d="M12 9v4m0 4h.01" />
+          </svg>
+        )
+      }
+    },
+    unavailable: {
+      containerClass:
+        'border border-slate-300 bg-slate-100 text-slate-600 cursor-not-allowed',
+      priceClass: 'text-base sm:text-lg font-semibold text-slate-600',
+      helperText: 'Not bookable',
+      helperClass: 'text-[10px] sm:text-xs text-slate-500',
+      badge: {
+        text: 'Unavailable',
+        className: 'bg-slate-200 text-slate-700 border border-slate-300',
+        icon: (
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14" />
+          </svg>
+        )
+      }
+    }
+  }
+
+  const renderStatusBadge = (state: CellDisplayState) => {
+    const { badge } = cellDisplayConfig[state]
+    return (
+      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] sm:text-xs font-medium ${badge.className}`}>
+        {badge.icon}
+        <span className="tracking-tight">{badge.text}</span>
+      </span>
+    )
   }
 
   const handleDateSelection = (date: string, isAvailable: boolean) => {
@@ -579,29 +713,80 @@ export default function AdminCreateReservations() {
         
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
           <div className="bg-white rounded-lg shadow-lg p-6 mx-auto" style={{ maxWidth: 'calc(72rem + 400px)' }}>
-            <div className="bg-gray-200 px-6 py-4 rounded-t-lg -mx-6 -mt-6 mb-6">
-              <div className="flex items-center justify-center space-x-4 flex-wrap">
-                {steps.map((step, index) => (
-                  <div key={step.id} className="flex items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      step.active ? 'bg-blue-600 text-white' : 
-                      'bg-gray-300 text-gray-600'
-                    }`}>
-                      {step.id}
+            <div className="bg-gradient-to-r from-slate-100 via-white to-slate-100 px-4 py-5 sm:px-6 rounded-t-lg -mx-6 -mt-6 mb-6">
+              <ol className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-6">
+                {steps.map((step, index) => {
+                  const state = getStepState(step.id)
+                  const isLast = index === steps.length - 1
+                  const isCompleted = state === 'completed'
+                  const isCurrent = state === 'current'
+
+                  const stateStyles: Record<typeof state, {
+                    circle: string
+                    title: string
+                    hint: string
+                    icon?: JSX.Element
+                  }> = {
+                    completed: {
+                      circle: 'bg-emerald-500 text-white shadow-md shadow-emerald-200',
+                      title: 'text-emerald-600',
+                      hint: 'text-emerald-500',
+                      icon: (
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      )
+                    },
+                    current: {
+                      circle: 'bg-blue-600 text-white shadow-lg shadow-blue-200',
+                      title: 'text-blue-700',
+                      hint: 'text-blue-500'
+                    },
+                    upcoming: {
+                      circle: 'bg-white text-slate-400 border border-slate-200',
+                      title: 'text-slate-500',
+                      hint: 'text-slate-400'
+                    }
+                  }
+
+                  const styles = stateStyles[state]
+
+                  return (
+                    <li key={step.id} className="flex flex-1 flex-col items-start gap-3 sm:flex-row sm:items-center">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-300 sm:h-10 sm:w-10 ${styles.circle}`}
+                          aria-current={isCurrent ? 'step' : undefined}
+                        >
+                          {styles.icon ?? step.id + 1}
                     </div>
-                    <span className={`ml-2 text-sm ${
-                      step.active ? 'text-blue-600 font-medium' : 'text-gray-500'
-                    }`}>
-                      {step.name}
-                    </span>
-                    {index < steps.length - 1 && (
-                      <div className={`w-12 h-0.5 mx-4 ${
-                        step.active ? 'bg-blue-600' : 'bg-gray-300'
-                      }`} />
-                    )}
+                        <div>
+                          <p className={`text-sm font-semibold tracking-tight sm:text-base whitespace-nowrap ${styles.title}`}>{step.name}</p>
+                          <p className={`text-xs font-medium sm:text-sm whitespace-nowrap ${styles.hint}`}>{step.hint}</p>
                   </div>
-                ))}
               </div>
+
+                      {!isLast && (
+                        <div className="ml-12 hidden flex-1 sm:flex">
+                          <div
+                            className={`h-1 w-full rounded-full transition-all duration-300 ${
+                              isCompleted ? 'bg-emerald-300' : isCurrent ? 'bg-blue-400' : 'bg-slate-200'
+                            }`}
+                          />
+                        </div>
+                      )}
+
+                      {!isLast && (
+                        <div
+                          className={`ml-4 h-8 w-px self-stretch sm:hidden ${
+                            isCompleted ? 'bg-emerald-200' : isCurrent ? 'bg-blue-200' : 'bg-slate-200'
+                          }`}
+                        />
+                      )}
+                    </li>
+                  )
+                })}
+              </ol>
             </div>
 
             {currentStep === 0 && (
@@ -754,9 +939,38 @@ export default function AdminCreateReservations() {
                 </div>
                 
                 {tempSelectedDate && (
-                  <div className="mt-4 p-3 bg-green-50 ring-1 ring-green-200 rounded-lg text-center">
-                    <span className="text-sm text-green-800 font-medium">Selected date:</span>
-                    <span className="ml-2 text-sm text-green-700">{tempSelectedDate}</span>
+                  <div className="mt-4 flex justify-center">
+                    {(() => {
+                      const tempDateDetails = getDateDisplayDetails(tempSelectedDate)
+                      const dayLabel = tempDateDetails?.dayName ?? null
+                      const formattedDate = tempDateDetails?.formattedDate ?? tempSelectedDate
+                      const dayInitial = (dayLabel ?? tempSelectedDate).charAt(0) || 'D'
+
+                      return (
+                        <div className="flex max-w-lg flex-col gap-3 rounded-2xl border border-emerald-200 bg-white/90 px-5 py-4 text-center shadow-[0_20px_45px_-20px_rgba(6,148,67,0.45)] ring-1 ring-emerald-100 backdrop-blur">
+                          <div className="flex items-center justify-center gap-3 text-emerald-600">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200">
+                              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" />
+                                <path d="M16 2v4" />
+                                <path d="M8 2v4" />
+                                <path d="M3 10h18" />
+                                <path d="M9.5 16.5l1.5 1.5 4-4" />
+                              </svg>
+                            </span>
+                            <span className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-500">
+                              Selected Date
+                            </span>
+                          </div>
+                          <p className="text-lg font-semibold text-emerald-700">
+                            <span className="mr-2 rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                              {dayLabel || dayInitial}
+                            </span>
+                            {formattedDate}
+                          </p>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
                 
@@ -808,11 +1022,43 @@ export default function AdminCreateReservations() {
                   </div>
                 </div>
 
-                <div className="text-center mb-6">
-                  <p className="text-lg font-semibold">Selected date: {selectedDate}</p>
+                <div className="mb-6 flex justify-center">
+                  {(() => {
+                    const selectedDateDetails = getDateDisplayDetails(selectedDate)
+                    const dayLabel = selectedDateDetails?.dayName ?? null
+                    const formattedDate = selectedDateDetails?.formattedDate ?? selectedDate
+                    const dayInitial = (dayLabel ?? selectedDate).charAt(0) || 'D'
+
+                    return (
+                      <div className="flex max-w-lg flex-col gap-3 rounded-2xl border border-blue-200 bg-white/90 px-5 py-4 text-center shadow-[0_20px_45px_-20px_rgba(37,99,235,0.45)] ring-1 ring-blue-100 backdrop-blur">
+                        <div className="flex items-center justify-center gap-3 text-blue-600">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200">
+                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="4" width="18" height="18" rx="2" />
+                              <path d="M16 2v4" />
+                              <path d="M8 2v4" />
+                              <path d="M3 10h18" />
+                              <path d="M9.5 16.5l1.5 1.5 4-4" />
+                            </svg>
+                          </span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-500">
+                            Selected Date
+                          </span>
+                        </div>
+                        <p className="text-lg font-semibold text-blue-700">
+                          <span className="mr-2 rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold uppercase tracking-wide text-blue-600">
+                            {dayLabel || dayInitial}
+                          </span>
+                          {formattedDate}
+                        </p>
                   {customerName && (
-                    <p className="text-sm text-gray-600">For: {customerName.trim()}</p>
+                          <p className="text-xs font-medium uppercase tracking-[0.25em] text-blue-500">
+                            For: <span className="text-blue-700 normal-case tracking-normal ml-1 font-semibold">{customerName.trim()}</span>
+                          </p>
                   )}
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {isSheetTab(activeTab) && (() => {
@@ -821,23 +1067,86 @@ export default function AdminCreateReservations() {
                   
                   return (
                     <div>
-                      <div className="flex flex-wrap justify-center gap-4 mb-6 text-xs sm:text-sm">
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full ring-1 ring-gray-300 bg-white">
-                          <span className="w-3.5 h-3.5 rounded bg-white ring-1 ring-gray-300"></span>
-                          <span>Available</span>
+                      <div className="mb-6 flex flex-wrap justify-center gap-3 text-xs sm:text-sm">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-white px-3 py-1.5 shadow-sm">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-50 text-green-600 ring-1 ring-green-400">
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                          </span>
+                          <span className="font-medium text-gray-700">Available</span>
                         </div>
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-600 text-white">
-                          <span className="w-3.5 h-3.5 rounded bg-gray-600"></span>
-                          <span>Reserved</span>
+                        <div className="inline-flex items-center gap-2 rounded-full border border-gray-500 bg-gray-700 px-3 py-1.5 text-white shadow-sm">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-600 text-white">
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="11" width="18" height="11" rx="2" />
+                              <path d="M7 11V7a5 5 0 0110 0v4" />
+                            </svg>
+                          </span>
+                          <span className="font-medium">Reserved</span>
                         </div>
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-yellow-400 text-black">
-                          <span className="w-3.5 h-3.5 rounded bg-yellow-400"></span>
-                          <span>Maintenance</span>
+                        <div className="inline-flex items-center gap-2 rounded-full border border-yellow-500 bg-yellow-300 px-3 py-1.5 text-black shadow-sm">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-yellow-400 text-yellow-900">
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 3h2l.4 2M5 7h14l1 5H4l1-5z" />
+                              <path d="M7 13v6h10v-6" />
+                              <path d="M10 17h4" />
+                            </svg>
+                          </span>
+                          <span className="font-medium">Maintenance</span>
                         </div>
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-300 text-gray-900">
-                          <span className="w-3.5 h-3.5 rounded bg-green-300"></span>
-                          <span>Selected</span>
+                        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400 bg-green-200 px-3 py-1.5 text-gray-900 shadow-sm">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white">
+                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 17l5 3-1.9-5.9L19 9l-6-.2L12 3l-1 5.8L5 9l3.9 5.1L7 20z" />
+                            </svg>
+                          </span>
+                          <span className="font-medium">Selected</span>
                         </div>
+                      </div>
+
+                      <div className="sm:hidden space-y-4">
+                        {generateTimeSlots().map((timeSlot) => (
+                          <div key={timeSlot.id} className="rounded-xl ring-1 ring-gray-200 overflow-hidden shadow-sm">
+                            <div className="bg-gray-100 px-4 py-3 text-sm font-semibold text-slate-700">{timeSlot.display}</div>
+                            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3 p-4">
+                              {sheetCourts.map((court) => {
+                                const slotStatus = getCellStatus(court.Court_Id, timeSlot.display).status
+                                const displayState = deriveCellDisplayState(slotStatus, court.Status)
+                                const config = cellDisplayConfig[displayState]
+                                const canInteract = displayState === 'available' || displayState === 'selected'
+                                const ariaLabel = `${court.Court_Name} at ${timeSlot.display} - ${config.badge.text}`
+
+                                return (
+                                  <button
+                                    key={`${timeSlot.id}-${court.Court_Id}`}
+                                    type="button"
+                                    aria-pressed={displayState === 'selected'}
+                                    aria-label={ariaLabel}
+                                    disabled={!canInteract}
+                                    onClick={() =>
+                                      canInteract && handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price)
+                                    }
+                                    className={`flex flex-col gap-2 rounded-xl px-3 py-3 text-left text-xs transition-all duration-200 ${config.containerClass} disabled:cursor-not-allowed disabled:opacity-85 disabled:shadow-none disabled:transform-none ${
+                                      canInteract
+                                        ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 active:scale-[0.99]'
+                                        : 'opacity-95'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-sm font-semibold text-gray-900">{court.Court_Name}</span>
+                                      {renderStatusBadge(displayState)}
+                                    </div>
+                                    <div className="flex items-end justify-between gap-2">
+                                      <span className={config.priceClass}>{formatCurrency(court.Price)}</span>
+                                      <span className={config.helperClass}>{config.helperText}</span>
+                                    </div>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ))}
                       </div>
 
                       <div className="hidden sm:block overflow-x-auto rounded-lg ring-1 ring-gray-200 shadow-sm">
@@ -877,24 +1186,40 @@ export default function AdminCreateReservations() {
                               {generateTimeSlots().map((timeSlot, idx) => (
                                 <tr key={timeSlot.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                   <td className="border border-gray-300 px-4 py-2 font-medium sticky left-0 bg-inherit text-xs sm:text-sm">{timeSlot.display}</td>
-                                  {sheetCourts.map((court) => (
+                                  {sheetCourts.map((court) => {
+                                    const slotStatus = getCellStatus(court.Court_Id, timeSlot.display).status
+                                    const displayState = deriveCellDisplayState(slotStatus, court.Status)
+                                    const config = cellDisplayConfig[displayState]
+                                    const canInteract = displayState === 'available' || displayState === 'selected'
+                                    const ariaLabel = `${court.Court_Name} at ${timeSlot.display} - ${config.badge.text}`
+
+                                    return (
                                     <td
                                       key={`${timeSlot.display}-${court.Court_Id}`}
-                                      className={`border border-gray-300 px-1 sm:px-2 md:px-4 py-2 text-center ${getCellClassName(court.Court_Id, timeSlot.display, court.Status)}`}
-                                      onClick={() => court.Status === 'Available' ? handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price) : undefined}
-                                    >
-                                      {(() => {
-                                        const key = `COURT ${court.Court_Id}-${timeSlot.display}`
-                                        const isSelected = selectedCells.has(key)
-                                        const showBadge = court.Status === 'Available' && !isSelected
-                                        return (
-                                          <span className={`inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-xs md:text-sm ${showBadge ? 'bg-white/80 text-gray-900' : 'bg-transparent text-black'}`}>
-                                            {court.Price}.00 php
-                                          </span>
-                                        )
-                                      })()}
+                                        className="border border-gray-300 px-1 sm:px-2 md:px-3 py-3 text-center align-middle"
+                                      >
+                                        <button
+                                          type="button"
+                                          aria-label={ariaLabel}
+                                          aria-pressed={displayState === 'selected'}
+                                          disabled={!canInteract}
+                                          onClick={() =>
+                                            canInteract && handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price)
+                                          }
+                                          className={`group flex w-full flex-col items-center gap-2 rounded-xl px-3 py-3 text-[10px] font-medium transition-all duration-200 sm:text-xs ${config.containerClass} disabled:cursor-not-allowed disabled:opacity-85 disabled:shadow-none disabled:transform-none ${
+                                            canInteract
+                                              ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1'
+                                              : 'opacity-95'
+                                          }`}
+                                        >
+                                          <span className="sr-only">{court.Court_Name}</span>
+                                          <span className={config.priceClass}>{formatCurrency(court.Price)}</span>
+                                          <span className={config.helperClass}>{config.helperText}</span>
+                                          {renderStatusBadge(displayState)}
+                                        </button>
                                     </td>
-                                  ))}
+                                    )
+                                  })}
                                 </tr>
                               ))}
                             </tbody>

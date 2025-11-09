@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
@@ -14,6 +14,10 @@ const AdminDashboard = () => {
   const [availableCourtCount, setAvailableCourtCount] = useState(0)
   const [dailyReservations, setDailyReservations] = useState(0)
   const [dailySales, setDailySales] = useState(0)
+  const [dailyRacketRentals, setDailyRacketRentals] = useState(0)
+  const [monthlyReservationData, setMonthlyReservationData] = useState<{ label: string; count: number; monthIndex: number }[]>([])
+  const [maxMonthlyReservation, setMaxMonthlyReservation] = useState(0)
+  const [yearlyReservationTotal, setYearlyReservationTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const navigate = useNavigate()
@@ -54,8 +58,120 @@ const AdminDashboard = () => {
     }).format(price)
   }
 
+  const extractReservationAmount = useCallback((reservation: any) => {
+    if (!reservation) return 0
+
+    const payments = Array.isArray(reservation.payments)
+      ? reservation.payments.reduce((sum: number, payment: any) => {
+          const amount = Number(payment?.amount ?? 0)
+          return sum + (isNaN(amount) ? 0 : amount)
+        }, 0)
+      : 0
+
+    if (payments > 0) {
+      return payments
+    }
+
+    const possibleFields = [
+      reservation.Total_Amount,
+      reservation.total_amount,
+      reservation.totalAmount,
+      reservation.Total,
+      reservation.amount,
+      reservation.TotalAmount
+    ]
+
+    for (const field of possibleFields) {
+      const numeric = Number(field)
+      if (!isNaN(numeric) && numeric > 0) {
+        return numeric
+      }
+    }
+
+    return 0
+  }, [])
+
+  const calculateDailySalesFromReservations = useCallback((reservations: any[]) => {
+    if (!Array.isArray(reservations)) return 0
+
+    return reservations.reduce((sum, reservation) => {
+      const status = reservation?.Status?.toLowerCase?.() ?? ''
+      if (status === 'cancelled') {
+        return sum
+      }
+
+      const amount = extractReservationAmount(reservation)
+      return sum + amount
+    }, 0)
+  }, [extractReservationAmount])
+
+  const extractRacketRentalCount = useCallback((reservation: any) => {
+    if (!reservation) return 0
+
+    const rentalsArray = Array.isArray(reservation.rentals)
+      ? reservation.rentals
+      : Array.isArray(reservation.equipmentRentals)
+        ? reservation.equipmentRentals
+        : Array.isArray(reservation.equipment)
+          ? reservation.equipment
+          : []
+
+    if (rentalsArray.length > 0) {
+      const totalFromRentals = rentalsArray.reduce((sum: number, rental: any) => {
+        const quantity = Number(
+          rental?.quantity ??
+          rental?.Quantity ??
+          rental?.qty ??
+          rental?.count ??
+          0
+        )
+        return sum + (isNaN(quantity) ? 0 : quantity)
+      }, 0)
+
+      if (totalFromRentals > 0) {
+        return totalFromRentals
+      }
+    }
+
+    const possibleFields = [
+      reservation.total_racket_rented,
+      reservation.Total_Racket_Rented,
+      reservation.racket_rented,
+      reservation.racketRented,
+      reservation.racket_count,
+      reservation.racketCount,
+      reservation.Racket_Count,
+      reservation.equipment_quantity,
+      reservation.equipmentQuantity,
+      reservation.racket_quantity,
+      reservation.Racket_Quantity
+    ]
+
+    for (const field of possibleFields) {
+      const numeric = Number(field)
+      if (!isNaN(numeric) && numeric > 0) {
+        return numeric
+      }
+    }
+
+    return 0
+  }, [])
+
+  const calculateDailyRacketRentals = useCallback((reservations: any[]) => {
+    if (!Array.isArray(reservations)) return 0
+
+    return reservations.reduce((sum, reservation) => {
+      const status = reservation?.Status?.toLowerCase?.() ?? ''
+      if (status === 'cancelled') {
+        return sum
+      }
+
+      return sum + extractRacketRentalCount(reservation)
+    }, 0)
+  }, [extractRacketRentalCount])
+
   // Fetch dashboard data from API
-  const fetchDashboardData = async (isRefresh = false) => {
+  const fetchDashboardData = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true)
@@ -80,29 +196,62 @@ const AdminDashboard = () => {
         api.get('/reservations')
       ])
       
-      // Calculate daily reservations (reservations created today)
-      const todayReservations = reservationsData.data.filter((reservation: any) => {
-        const reservationDate = new Date(reservation.Created_at)
+      // Calculate daily reservations (reservations created today) and monthly breakdown
+      const monthsAccumulator = Array.from({ length: 12 }, () => 0)
+      const currentYear = today.getFullYear()
+      const safeReservations: any[] = Array.isArray(reservationsData.data) ? reservationsData.data : []
+
+      const todayReservations = safeReservations.filter((reservation: any) => {
+        const createdAt = reservation.Created_at || reservation.created_at || reservation.Reservation_Date
+        if (!createdAt) return false
+        const reservationDate = new Date(createdAt)
+        if (isNaN(reservationDate.getTime())) return false
         reservationDate.setHours(0, 0, 0, 0)
+
+        if (reservationDate.getFullYear() === currentYear) {
+          const monthIndex = reservationDate.getMonth()
+          monthsAccumulator[monthIndex] = (monthsAccumulator[monthIndex] || 0) + 1
+        }
+
         return reservationDate.getTime() === today.getTime()
       })
       
-      // Get daily sales from sales report
+      // Get daily sales from sales report with reservation fallback
       const dailySalesAmount = salesReportData.data?.summary?.totalIncome || 0
+      const fallbackDailySales = calculateDailySalesFromReservations(todayReservations)
+      const finalDailySales = dailySalesAmount > 0 ? dailySalesAmount : fallbackDailySales
+      const totalDailyRacketRentals = calculateDailyRacketRentals(todayReservations)
+      
+      const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      const monthlyData = monthLabels.map((label, index) => ({
+        label,
+        count: monthsAccumulator[index] || 0,
+        monthIndex: index
+      }))
+      const yearlyTotal = monthsAccumulator.reduce((sum, value) => sum + value, 0)
       
       console.log('Dashboard data response:', {
         userCount: userCountData.data,
         courtCount: courtCountData,
         availableCourtCount: availableCourtCountData,
         dailyReservations: todayReservations.length,
-        dailySales: dailySalesAmount
+        dailySales: finalDailySales,
+        fallbackDailySales,
+        dailySalesAmount,
+        monthlyData,
+        yearlyTotal,
+        totalDailyRacketRentals
       })
       
       setUserCount(userCountData.data)
       setCourtCount(courtCountData)
       setAvailableCourtCount(availableCourtCountData)
       setDailyReservations(todayReservations.length)
-      setDailySales(dailySalesAmount)
+      setDailySales(finalDailySales)
+      setDailyRacketRentals(totalDailyRacketRentals)
+      setMonthlyReservationData(monthlyData)
+      setMaxMonthlyReservation(Math.max(...monthsAccumulator, 0))
+      setYearlyReservationTotal(yearlyTotal)
       setLoading(false)
       setRefreshing(false)
     } catch (error: any) {
@@ -111,11 +260,11 @@ const AdminDashboard = () => {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [calculateDailyRacketRentals, calculateDailySalesFromReservations])
 
   useEffect(() => {
     fetchDashboardData()
-  }, [])
+  }, [fetchDashboardData])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -124,7 +273,35 @@ const AdminDashboard = () => {
     }, 30000) // 30 seconds
 
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchDashboardData])
+
+  useEffect(() => {
+    let midnightTimer: ReturnType<typeof setTimeout>
+
+    const scheduleMidnightRefresh = () => {
+      const now = new Date()
+      const nextMidnight = new Date(now)
+      nextMidnight.setHours(24, 0, 0, 0)
+      const msUntilMidnight = nextMidnight.getTime() - now.getTime()
+
+      midnightTimer = setTimeout(async () => {
+        setDailyReservations(0)
+        setDailySales(0)
+        setDailyRacketRentals(0)
+
+        await fetchDashboardData(true)
+        scheduleMidnightRefresh()
+      }, Math.max(msUntilMidnight, 0))
+    }
+
+    scheduleMidnightRefresh()
+
+    return () => {
+      if (midnightTimer) {
+        clearTimeout(midnightTimer)
+      }
+    }
+  }, [fetchDashboardData])
 
 
   return (
@@ -250,16 +427,16 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Daily Reservation</p>
-                  <p className="text-2xl sm:text-3xl font-bold group-hover:text-green-300 transition-colors">
+                  <div className="text-2xl sm:text-3xl font-bold group-hover:text-green-300 transition-colors">
                     {loading ? (
-                      <div className="flex items-center space-x-1 sm:space-x-2">
+                      <div className="flex items-center space-x-1 sm:space-x-2 text-white">
                         <div className="animate-spin rounded-full h-4 w-4 sm:h-6 sm:w-6 border-b-2 border-white"></div>
                         <span className="text-sm sm:text-base">Loading...</span>
                       </div>
                     ) : (
-                      dailyReservations
+                      <span>{dailyReservations}</span>
                     )}
-                  </p>
+                  </div>
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center group-hover:bg-green-400 transition-colors group-hover:scale-110 flex-shrink-0">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -324,16 +501,16 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Daily Sales</p>
-                  <p className="text-2xl sm:text-3xl font-bold group-hover:text-yellow-300 transition-colors">
+                  <div className="text-2xl sm:text-3xl font-bold group-hover:text-yellow-300 transition-colors">
                     {loading ? (
-                      <div className="flex items-center space-x-1 sm:space-x-2">
+                      <div className="flex items-center space-x-1 sm:space-x-2 text-white">
                         <div className="animate-spin rounded-full h-4 w-4 sm:h-6 sm:w-6 border-b-2 border-white"></div>
                         <span className="text-sm sm:text-base">Loading...</span>
                       </div>
                     ) : (
-                      formatPrice(dailySales)
+                      <span>{formatPrice(dailySales)}</span>
                     )}
-                  </p>
+                  </div>
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-500 rounded-full flex items-center justify-center group-hover:bg-yellow-500 transition-colors group-hover:scale-110 flex-shrink-0">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -348,16 +525,16 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Total Users</p>
-                  <p className="text-2xl sm:text-3xl font-bold group-hover:text-blue-300 transition-colors">
+                  <div className="text-2xl sm:text-3xl font-bold group-hover:text-blue-300 transition-colors">
                     {loading ? (
-                      <div className="flex items-center space-x-1 sm:space-x-2">
+                      <div className="flex items-center space-x-1 sm:space-x-2 text-white">
                         <div className="animate-spin rounded-full h-4 w-4 sm:h-6 sm:w-6 border-b-2 border-white"></div>
                         <span className="text-sm sm:text-base">Loading...</span>
                       </div>
                     ) : (
-                      `${userCount}`
+                      <span>{userCount}</span>
                     )}
-                  </p>
+                  </div>
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-500 rounded-full flex items-center justify-center group-hover:bg-blue-500 transition-colors group-hover:scale-110 flex-shrink-0">
                   <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -371,52 +548,174 @@ const AdminDashboard = () => {
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-fadeInUp">
             {/* Monthly Overview Chart */}
-            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:transform hover:scale-105">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">Monthly Overview</h3>
-              <div className="h-48 sm:h-64 flex items-end justify-between space-x-1 overflow-x-auto">
-                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month) => (
-                  <div key={month} className="flex flex-col items-center flex-1 group min-w-0">
-                    <div className="relative">
-                      <div 
-                        className="bg-gradient-to-t from-blue-500 to-blue-400 w-4 sm:w-6 rounded-t hover:from-blue-600 hover:to-blue-500 transition-all duration-300 cursor-pointer group-hover:scale-110"
-                        style={{ height: `${Math.random() * 120 + 20}px` }}
-                      ></div>
-                      {/* Dotted lines extending from top of bars */}
-                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-px h-full border-l-2 border-dotted border-gray-400 group-hover:border-blue-400 transition-colors"></div>
-                      {/* Tooltip on hover */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap z-10">
-                        {Math.floor(Math.random() * 100 + 50)} reservations
-                      </div>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white via-blue-50 to-indigo-100 p-6 sm:p-8 shadow-lg transition-all duration-500 hover:shadow-2xl">
+              <div className="absolute inset-x-0 -top-32 h-64 bg-gradient-to-b from-blue-200/60 to-transparent blur-3xl"></div>
+              <div className="absolute -bottom-20 -right-10 h-48 w-48 rounded-full bg-blue-200/40 blur-2xl"></div>
+              <div className="relative z-10">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.35em] text-blue-500/80">Monthly Overview</p>
+                    <h3 className="text-2xl font-semibold text-slate-800">Reservation Trends</h3>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Tracking confirmed reservations for {new Date().getFullYear()}.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 bg-white/90 px-4 py-2 rounded-full shadow-sm ring-1 ring-blue-100">
+                    <div className="text-left">
+                      <p className="text-xs uppercase tracking-[0.25em] text-blue-500">Total</p>
+                      <p className="text-lg font-semibold text-slate-800">{yearlyReservationTotal}</p>
                     </div>
-                    <span className="text-xs text-gray-600 mt-2 group-hover:text-gray-800 transition-colors">{month}</span>
+                    <div className="h-10 w-px bg-gradient-to-b from-transparent via-blue-200 to-transparent"></div>
+                    <div className="text-left">
+                      <p className="text-xs uppercase tracking-[0.25em] text-blue-500">Average</p>
+                      <p className="text-lg font-semibold text-slate-800">
+                        {monthlyReservationData.length > 0
+                          ? Math.round(
+                              monthlyReservationData.reduce((sum, item) => sum + item.count, 0) /
+                                monthlyReservationData.length
+                            )
+                          : 0}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative mt-4">
+                  <div className="flex items-end gap-3 sm:gap-4 h-52 sm:h-60 px-2 sm:px-4">
+                    {monthlyReservationData.map(({ label, count }, index) => {
+                      const maxValue = maxMonthlyReservation || 1
+                      const heightPercentage = Math.max(6, (count / maxValue) * 100)
+                      const isCurrentMonth = new Date().getMonth() === index
+                      return (
+                        <div key={label} className="relative flex-1 min-w-[2.5rem]">
+                          <div
+                            className={`group flex h-full flex-col justify-end rounded-full bg-gradient-to-t from-blue-500/30 via-blue-400/70 to-blue-500 ${
+                              isCurrentMonth ? 'shadow-[0_10px_30px_-12px_rgba(59,130,246,0.6)]' : 'opacity-80'
+                            } transition-all duration-300 hover:scale-105`}
+                            style={{ height: `${heightPercentage}%` }}
+                          >
+                            <div className="relative">
+                              <div className="absolute inset-x-0 -top-8 flex justify-center">
+                                <div className="scale-0 rounded-full bg-blue-600 px-2 py-1 text-xs font-semibold text-white shadow-md transition-all duration-200 group-hover:scale-100">
+                                  {count} reservations
+                                </div>
+                              </div>
+                              <div className="absolute inset-x-0 -top-3 flex justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                                <div className="h-2 w-2 rotate-45 bg-blue-600"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-3 text-center text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+                            {label}
+                          </div>
+                          {isCurrentMonth && (
+                            <div className="absolute -top-6 inset-x-0 flex justify-center">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-blue-600 shadow-sm ring-1 ring-blue-100">
+                                Current
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {monthlyReservationData.length === 0 && (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <p className="text-sm text-slate-500">No reservation data recorded for this year yet.</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {monthlyReservationData
+                      .filter((item) => item.count > 0)
+                      .slice(0, 4)
+                      .map(({ label, count }) => (
+                        <div
+                          key={`summary-${label}`}
+                          className="flex items-center gap-3 rounded-2xl bg-white/90 px-3 py-2 shadow-sm ring-1 ring-blue-100"
+                        >
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-600">
+                            {count}
+                          </span>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.2em] text-blue-400">Reservations</p>
+                            <p className="text-sm font-semibold text-slate-700">{label}</p>
+                          </div>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Pie Chart */}
-            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 hover:transform hover:scale-105">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">Reservation Status</h3>
-              
-              {/* Legend */}
-              <div className="flex justify-center space-x-4 sm:space-x-6 mb-3 sm:mb-4">
-                <div className="flex items-center space-x-2 group cursor-pointer">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-300 rounded group-hover:bg-green-400 transition-colors"></div>
-                  <span className="text-xs sm:text-sm text-gray-600 group-hover:text-gray-800 transition-colors">Reservation</span>
                 </div>
               </div>
               
-              <div className="flex items-center justify-center">
-                <div className="relative w-32 h-32 sm:w-48 sm:h-48 hover:scale-110 transition-transform duration-300 cursor-pointer">
-                  {/* Pie Chart Circle */}
-                  <div className="absolute inset-0 rounded-full border-4 sm:border-8 border-green-300 hover:border-green-400 transition-colors"></div>
-                  
-                  {/* Center Text */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-lg sm:text-2xl font-bold hover:text-green-600 transition-colors">120</div>
-                      <div className="text-xs sm:text-sm text-gray-600 hover:text-gray-800 transition-colors">Racket Rented</div>
+            {/* Daily Racket Rented */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500/10 via-white to-indigo-100/30 p-6 sm:p-8 shadow-lg transition-all duration-500 hover:shadow-2xl">
+              <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-emerald-400/30 blur-3xl"></div>
+              <div className="absolute -left-20 bottom-0 h-44 w-44 rounded-full bg-indigo-300/20 blur-2xl"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.3em] text-emerald-600/90">Daily</p>
+                    <h3 className="text-xl sm:text-2xl font-semibold text-slate-800">Racket Rentals</h3>
+                  </div>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-emerald-200">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Live Update
+                  </span>
+                </div>
+                <div className="flex flex-col items-center justify-center gap-4 py-4">
+                  <div className="relative flex h-44 w-44 items-center justify-center">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-emerald-300/20 to-emerald-500/40 blur-md"></div>
+                    <svg className="h-full w-full" viewBox="0 0 120 120">
+                      <defs>
+                        <linearGradient id="racketGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#22c55e" />
+                          <stop offset="100%" stopColor="#0ea5e9" />
+                        </linearGradient>
+                      </defs>
+                      {(() => {
+                        const circumference = 2 * Math.PI * 52
+                        const clampedValue = Math.min(Math.max(dailyRacketRentals, 0), 100)
+                        const progress = circumference - (clampedValue / 100) * circumference
+                        return (
+                          <>
+                            <circle
+                              cx="60"
+                              cy="60"
+                              r="52"
+                              fill="none"
+                              stroke="rgba(34,197,94,0.15)"
+                              strokeWidth="10"
+                            ></circle>
+                            <circle
+                              cx="60"
+                              cy="60"
+                              r="52"
+                              fill="none"
+                              stroke="url(#racketGradient)"
+                              strokeWidth="10"
+                              strokeLinecap="round"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={progress}
+                              className="transition-all duration-700 ease-out"
+                            ></circle>
+                          </>
+                        )
+                      })()}
+                    </svg>
+                    <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white/80 text-center shadow-inner">
+                      <div className="text-4xl font-bold text-slate-800">{dailyRacketRentals}</div>
+                      <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-500">Rackets Rented</p>
+                      <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-600">
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 3h18M3 7h18M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"></path>
+                          <path d="M14 15l-3 3l-2-2"></path>
+                        </svg>
+                        {dailyReservations} bookings
+                      </span>
                     </div>
+                  </div>
+                  <div className="text-center text-sm text-slate-600">
+                    Tracking all rackets rented today across confirmed reservations.
                   </div>
                 </div>
               </div>

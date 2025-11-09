@@ -260,7 +260,7 @@ const AdminViewSuggestions = () => {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto w-full">
+                <div className="hidden md:block overflow-x-auto w-full">
                   <table className="w-full table-auto">
                     <colgroup>
                       <col className="w-[16.67%]" />
@@ -311,6 +311,43 @@ const AdminViewSuggestions = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="md:hidden space-y-4 px-4 py-6 bg-gray-50">
+                  {currentSuggestions.map((suggestion) => (
+                    <div
+                      key={suggestion.id}
+                      className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-lg"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-semibold uppercase tracking-widest text-blue-500">
+                          #{suggestion.id}
+                        </span>
+                        <span className="text-xs font-medium text-gray-500">
+                          {suggestion.date} • {suggestion.time}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900 mb-2">{suggestion.user}</h3>
+                      <p className="text-sm text-gray-600 mb-4">{suggestion.message}</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <button
+                          onClick={() => handleViewSuggestion(suggestion)}
+                          className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02]"
+                        >
+                          View Message
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSuggestion(suggestion.id)}
+                          className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Pagination */}

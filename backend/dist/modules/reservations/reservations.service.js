@@ -1,10 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -16,21 +49,24 @@ exports.ReservationsService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
+const bcrypt = __importStar(require("bcryptjs"));
 const reservation_entity_1 = require("./entities/reservation.entity");
 const payment_entity_1 = require("../payments/entities/payment.entity");
 const equipment_rental_entity_1 = require("../payments/entities/equipment-rental.entity");
 const equipment_rental_item_entity_1 = require("../payments/entities/equipment-rental-item.entity");
 const equipment_entity_1 = require("../equipment/entities/equipment.entity");
+const user_entity_1 = require("../users/entities/user.entity");
 const courts_service_1 = require("../courts/courts.service");
 const equipment_service_1 = require("../equipment/equipment.service");
 const paymongo_service_1 = require("../payments/paymongo.service");
 let ReservationsService = class ReservationsService {
-    constructor(reservationsRepository, paymentRepository, equipmentRentalRepository, equipmentRentalItemRepository, equipmentRepository, courtsService, equipmentService, payMongoService) {
+    constructor(reservationsRepository, paymentRepository, equipmentRentalRepository, equipmentRentalItemRepository, equipmentRepository, userRepository, courtsService, equipmentService, payMongoService) {
         this.reservationsRepository = reservationsRepository;
         this.paymentRepository = paymentRepository;
         this.equipmentRentalRepository = equipmentRentalRepository;
         this.equipmentRentalItemRepository = equipmentRentalItemRepository;
         this.equipmentRepository = equipmentRepository;
+        this.userRepository = userRepository;
         this.courtsService = courtsService;
         this.equipmentService = equipmentService;
         this.payMongoService = payMongoService;
@@ -281,8 +317,32 @@ let ReservationsService = class ReservationsService {
             return { isDuplicate: false };
         }
     }
-    async createWithCashPayment(userId, bookingData) {
+    async getOrCreateGuestUser(customerName) {
+        let user = await this.userRepository.findOne({
+            where: { name: (0, typeorm_2.Like)(`%${customerName}%`) },
+        });
+        if (!user) {
+            const username = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+            const email = `${username}@walkin.local`;
+            const randomPassword = `Guest${Date.now()}${Math.random().toString(36).substr(2, 9)}!@#`;
+            const hashedPassword = await bcrypt.hash(randomPassword, 12);
+            user = this.userRepository.create({
+                name: customerName,
+                username: username,
+                email: email,
+                password: hashedPassword,
+                role: 'user',
+                is_active: true,
+                is_verified: false,
+            });
+            user = await this.userRepository.save(user);
+        }
+        return user;
+    }
+    async createWithCashPayment(customerName, bookingData) {
         try {
+            const user = await this.getOrCreateGuestUser(customerName);
+            const userId = user.id;
             const { selectedDate, courtBookings, equipmentBookings, referenceNumber } = bookingData;
             const reservations = [];
             let totalAmount = 0;
@@ -301,7 +361,7 @@ let ReservationsService = class ReservationsService {
                     End_Time: endTime,
                     Total_Amount: courtBooking.subtotal,
                     Reference_Number: referenceNumber || `REF${Date.now()}`,
-                    Notes: 'Payment via Cash',
+                    Notes: `Payment via Cash - Walk-in customer: ${customerName}`,
                     Status: reservation_entity_1.ReservationStatus.CONFIRMED,
                 });
                 const savedReservation = await this.reservationsRepository.save(reservation);
@@ -319,7 +379,7 @@ let ReservationsService = class ReservationsService {
                 payment_method: payment_entity_1.PaymentMethod.CASH,
                 transaction_id: `CASH${Date.now()}${Math.floor(Math.random() * 1000)}`,
                 reference_number: referenceNumber || reservations[0].Reference_Number,
-                notes: 'Payment received in cash',
+                notes: `Payment received in cash - Walk-in customer: ${customerName}`,
                 status: payment_entity_1.PaymentStatus.COMPLETED,
             });
             const savedPayment = await this.paymentRepository.save(payment);
@@ -374,7 +434,9 @@ exports.ReservationsService = ReservationsService = __decorate([
     __param(2, (0, typeorm_1.InjectRepository)(equipment_rental_entity_1.EquipmentRental)),
     __param(3, (0, typeorm_1.InjectRepository)(equipment_rental_item_entity_1.EquipmentRentalItem)),
     __param(4, (0, typeorm_1.InjectRepository)(equipment_entity_1.Equipment)),
+    __param(5, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
