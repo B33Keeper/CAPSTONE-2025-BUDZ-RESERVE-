@@ -55,6 +55,19 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
 
   const itemsPerPage = isMobile ? 5 : 7
 
+  // Determine if reservation has already ended
+  const isReservationEnded = (reservation: Reservation) => {
+    try {
+      const endDateTime = new Date(`${reservation.Reservation_Date}T${reservation.End_Time}`)
+      if (isNaN(endDateTime.getTime())) return false
+      const now = new Date()
+      return endDateTime < now
+    } catch (error) {
+      console.warn('[ReservationsModal] Failed to parse reservation end time:', error)
+      return false
+    }
+  }
+
   // Fetch reservations
   const fetchReservations = async () => {
     if (!user) return
@@ -81,13 +94,13 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
       if (activeTab === 'current') {
         const beforeTabFilter = filteredReservations.length
         filteredReservations = filteredReservations.filter((res: Reservation) => 
-          res.Status === 'Confirmed' || res.Status === 'Pending'
+          (res.Status === 'Confirmed' || res.Status === 'Pending') && !isReservationEnded(res)
         )
         console.log(`[ReservationsModal] Tab filter (current): ${beforeTabFilter} → ${filteredReservations.length}`)
       } else {
         const beforeTabFilter = filteredReservations.length
         filteredReservations = filteredReservations.filter((res: Reservation) => 
-          res.Status === 'Completed' || res.Status === 'Cancelled'
+          res.Status === 'Completed' || res.Status === 'Cancelled' || isReservationEnded(res)
         )
         console.log(`[ReservationsModal] Tab filter (history): ${beforeTabFilter} → ${filteredReservations.length}`)
       }
@@ -548,9 +561,9 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                             <span className="text-white text-sm font-bold">!</span>
                           </div>
                         </div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-3">No reservations found</h3>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-3">No reservation found</h3>
                         <p className="text-gray-600 text-lg mb-6 max-w-md">
-                          {dateFilter ? 'No reservations found for the selected date.' : 'You have no reservations yet. Start by booking a court!'}
+                          {dateFilter ? 'No reservations found for the selected date.' : 'You have no upcoming reservations yet. Start by booking a court!'}
                         </p>
                         {!dateFilter && (
                           <button
