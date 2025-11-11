@@ -20,11 +20,12 @@ export function ResponsiveTable({ children, className = '' }: ResponsiveTablePro
 
 interface ResponsiveTableHeaderProps {
   children: ReactNode
+  className?: string
 }
 
-export function ResponsiveTableHeader({ children }: ResponsiveTableHeaderProps) {
+export function ResponsiveTableHeader({ children, className = '' }: ResponsiveTableHeaderProps) {
   return (
-    <thead className="bg-gray-100 sticky top-0 z-10">
+    <thead className={`bg-gray-100 sticky top-0 z-10 ${className}`}>
       <tr>
         {children}
       </tr>

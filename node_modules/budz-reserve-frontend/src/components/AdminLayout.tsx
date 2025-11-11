@@ -1,12 +1,12 @@
 import { ReactNode, useState } from 'react'
-import AdminSidebar from './AdminSidebar'
+import AdminSidebar from '@/components/AdminSidebar'
 import { AdminHeader } from './AdminHeader'
 
 interface AdminLayoutProps {
   children: ReactNode
   title?: string
   subtitle?: string
-  extraButtons?: React.ReactNode
+  extraButtons?: ReactNode
   activeSidebarItem?: string
 }
 
@@ -50,7 +50,7 @@ export function AdminLayout({
       
       {/* Sidebar - Fixed and Sticky */}
       <AdminSidebar 
-        activeItem={activeSidebarItem} 
+        activeItem={activeSidebarItem ?? 'Dashboard'} 
         onExpandedChange={setIsSidebarExpanded}
       />
 

@@ -13,6 +13,7 @@ import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { CourtsService } from '../courts/courts.service';
 import { EquipmentService } from '../equipment/equipment.service';
 import { PayMongoService } from '../payments/paymongo.service';
+import { PaymongoQrPhCode } from '../payments/types/paymongo.types';
 
 @Injectable()
 export class ReservationsService {
@@ -74,9 +75,45 @@ export class ReservationsService {
       User_ID: userId,
       Total_Amount: totalAmount,
       Reference_Number: referenceNumber,
+      Is_Admin_Created: false,
     });
 
     return this.reservationsRepository.save(reservation);
+  }
+
+  async getEquipmentAvailabilityByDate(dateInput: string, startTime?: string, hoursParam?: number) {
+    if (!dateInput) {
+      throw new BadRequestException('Date parameter is required to fetch equipment availability.');
+    }
+
+    const reservationDate = this.formatDateOnly(dateInput);
+    const equipmentList = await this.equipmentRepository.find({ order: { equipment_name: 'ASC' } });
+    const targetStartTime = startTime && /^\d{2}:\d{2}(:\d{2})?$/.test(startTime) ? this.ensureTimeFormat(startTime) : null;
+    const targetHours = hoursParam && hoursParam > 0 ? hoursParam : null;
+
+    const availability = [];
+    for (const equipment of equipmentList) {
+      let reserved = 0;
+      if (targetStartTime && targetHours) {
+        reserved = await this.getReservedQuantityForRange(equipment.id, reservationDate, targetStartTime, targetHours);
+      } else {
+        reserved = await this.getReservedQuantityForRange(equipment.id, reservationDate, null, null);
+      }
+      const available = Math.max(equipment.stocks - reserved, 0);
+
+      availability.push({
+        id: equipment.id,
+        equipment_name: equipment.equipment_name,
+        image_path: equipment.image_path,
+        price: Number(equipment.price),
+        total_stocks: equipment.stocks,
+        reserved,
+        available,
+        status: available > 0 ? 'Available' : 'Unavailable',
+      });
+    }
+
+    return availability;
   }
 
   async findAll(): Promise<Reservation[]> {
@@ -88,7 +125,7 @@ export class ReservationsService {
 
   async findByUser(userId: number): Promise<Reservation[]> {
     return this.reservationsRepository.find({
-      where: { User_ID: userId },
+      where: { User_ID: userId, Is_Admin_Created: false },
       relations: ['court', 'payments'],
       order: { Created_at: 'DESC' },
     });
@@ -202,8 +239,27 @@ export class ReservationsService {
         actualPaymentMethod = 'gcash'; // Default fallback
       }
 
+      const sortedCourtBookings = Array.isArray(bookingData.courtBookings)
+        ? [...bookingData.courtBookings].sort((a, b) =>
+            this.compareScheduleStartTimes(a?.schedule ?? '', b?.schedule ?? ''),
+          )
+        : [];
+
+      const fallbackEquipmentStart =
+        bookingData.equipmentStartTime ||
+        this.getEarliestStartTimeFromBookings(sortedCourtBookings) ||
+        this.getEarliestStartTimeFromBookings(bookingData.courtBookings || []);
+
+      if (bookingData.equipmentBookings?.length) {
+        await this.ensureEquipmentAvailabilityForDate(
+          bookingData.selectedDate,
+          bookingData.equipmentBookings,
+          fallbackEquipmentStart,
+        );
+      }
+
       // Create reservations for each court booking
-      for (const courtBooking of bookingData.courtBookings || []) {
+      for (const courtBooking of sortedCourtBookings) {
         // Find court by name (you might need to adjust this based on your court data)
         const courts = await this.courtsService.findAll();
         const court = courts.find(c => c.Court_Name === courtBooking.court);
@@ -234,6 +290,7 @@ export class ReservationsService {
           Paymongo_Reference_Number: actualPaymentId,
           Notes: `Payment via Paymongo - ${actualPaymentId}`,
           Status: ReservationStatus.CONFIRMED,
+          Is_Admin_Created: false,
         });
 
         const savedReservation = await this.reservationsRepository.save(reservation);
@@ -241,6 +298,15 @@ export class ReservationsService {
 
         // Create payment record for this reservation
         await this.createPaymentRecord(savedReservation, actualPaymentId, amount, bookingData, actualPaymentMethod);
+
+        if (bookingData.equipmentBookings?.length) {
+          await this.createEquipmentRentalsFromBooking(
+            bookingData.userId,
+            savedReservation,
+            bookingData.equipmentBookings,
+            fallbackEquipmentStart,
+          );
+        }
       }
 
       return reservations;
@@ -314,6 +380,10 @@ export class ReservationsService {
         return PaymentMethod.BANKING;
       case 'cash':
         return PaymentMethod.CASH;
+      case 'qrph':
+      case 'qr_ph':
+      case 'qr_philippines':
+        return PaymentMethod.QRPH;
       default:
         return PaymentMethod.GCASH; // Default fallback
     }
@@ -358,91 +428,123 @@ export class ReservationsService {
     }
   }
 
-  private async getOrCreateGuestUser(customerName: string): Promise<User> {
-    // Try to find existing user with this exact name (case-insensitive)
-    let user = await this.userRepository.findOne({
-      where: { name: Like(`%${customerName}%`) },
-    });
+  private async getOrCreateGuestUser(
+    customerName: string,
+    customerEmail?: string,
+    customerContact?: string,
+  ): Promise<User> {
+    const sanitizedName = customerName?.trim() || 'Walk-in Customer';
+    const sanitizedEmail = customerEmail?.trim() || '';
+    const sanitizedContact = customerContact?.trim() || '';
 
-    // If not found, create a guest user
-    if (!user) {
-      const username = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      const email = `${username}@walkin.local`;
-      
-      // Generate a random password for guest users (they won't use it)
-      const randomPassword = `Guest${Date.now()}${Math.random().toString(36).substr(2, 9)}!@#`;
-      const hashedPassword = await bcrypt.hash(randomPassword, 12);
-      
-      user = this.userRepository.create({
-        name: customerName,
-        username: username,
-        email: email,
-        password: hashedPassword,
-        role: 'user',
-        is_active: true,
-        is_verified: false,
+    let user: User | null = null;
+
+    if (sanitizedEmail) {
+      user = await this.userRepository.findOne({
+        where: { email: sanitizedEmail },
       });
-      
-      user = await this.userRepository.save(user);
     }
 
-    return user;
-  }
+    if (!user) {
+      user = await this.userRepository.findOne({
+        where: { name: Like(`%${sanitizedName}%`) },
+      });
+    }
 
-  async createWithCashPayment(customerName: string, bookingData: any): Promise<{ reservations: Reservation[]; payment: Payment }> {
-    try {
-      // Get or create guest user for walk-in customer
-      const user = await this.getOrCreateGuestUser(customerName);
-      const userId = user.id;
+    if (user) {
+      let requiresUpdate = false;
 
-      const { selectedDate, courtBookings, equipmentBookings, referenceNumber } = bookingData;
-      const reservations: Reservation[] = [];
-      let totalAmount = 0;
-
-      // Create reservations for each court booking
-      for (const courtBooking of courtBookings || []) {
-        const courts = await this.courtsService.findAll();
-        const court = courts.find(c => c.Court_Name === courtBooking.court);
-        
-        if (!court) {
-          throw new BadRequestException(`Court "${courtBooking.court}" not found`);
-        }
-
-        const [startTime, endTime] = this.parseScheduleToTimes(courtBooking.schedule);
-
-        const reservation = this.reservationsRepository.create({
-          User_ID: userId,
-          Court_ID: court.Court_Id,
-          Reservation_Date: new Date(selectedDate),
-          Start_Time: startTime,
-          End_Time: endTime,
-          Total_Amount: courtBooking.subtotal,
-          Reference_Number: referenceNumber || `REF${Date.now()}`,
-          Notes: `Payment via Cash - Walk-in customer: ${customerName}`,
-          Status: ReservationStatus.CONFIRMED,
-        });
-
-        const savedReservation = await this.reservationsRepository.save(reservation);
-        reservations.push(savedReservation);
-        totalAmount += courtBooking.subtotal;
-
-        // Create equipment rentals for this reservation if equipment bookings exist
-        if (equipmentBookings && equipmentBookings.length > 0) {
-          await this.createEquipmentRentalsFromBooking(userId, savedReservation.Reservation_ID, equipmentBookings);
-          // Add equipment total to amount
-          const equipmentTotal = equipmentBookings.reduce((sum: number, b: any) => sum + Number(b.subtotal || 0), 0);
-          totalAmount += equipmentTotal;
-        }
+      if (
+        sanitizedEmail &&
+        sanitizedEmail !== user.email &&
+        (!user.email || user.email.trim() === '' || user.email.endsWith('@walkin.local'))
+      ) {
+        user.email = sanitizedEmail;
+        requiresUpdate = true;
       }
 
-      // Create payment record with cash payment method
+      if (sanitizedContact && sanitizedContact !== (user.contact_number || '')) {
+        user.contact_number = sanitizedContact;
+        requiresUpdate = true;
+      }
+
+      if (requiresUpdate) {
+        user = await this.userRepository.save(user);
+      }
+
+      return user;
+    }
+
+    const username = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    let emailForUser = sanitizedEmail;
+
+    if (emailForUser) {
+      const existingWithEmail = await this.userRepository.findOne({
+        where: { email: emailForUser },
+      });
+      if (existingWithEmail) {
+        emailForUser = '';
+      }
+    }
+
+    if (!emailForUser) {
+      emailForUser = `${username}@walkin.local`;
+    }
+
+    const randomPassword = `Guest${Date.now()}${Math.random().toString(36).substr(2, 9)}!@#`;
+    const hashedPassword = await bcrypt.hash(randomPassword, 12);
+
+    const newUser = this.userRepository.create({
+      name: sanitizedName,
+      username,
+      email: emailForUser,
+      password: hashedPassword,
+      role: 'user',
+      is_active: true,
+      is_verified: false,
+      ...(sanitizedContact ? { contact_number: sanitizedContact } : {}),
+    });
+
+    return this.userRepository.save(newUser);
+  }
+
+  async createWithCashPayment(
+    customerName: string,
+    bookingData: any,
+    customerContact?: string,
+    customerEmail?: string,
+  ): Promise<{ reservations: Reservation[]; payment: Payment }> {
+    try {
+      const sanitizedName = customerName?.trim() || 'Walk-in Customer';
+      const sanitizedContact = customerContact?.trim();
+      const sanitizedEmail = customerEmail?.trim();
+
+      const { reservations, totalAmount, referenceNumber } =
+        await this.createWalkInReservationsAndRentals(
+          sanitizedName,
+          bookingData,
+          'Payment via Cash',
+          sanitizedContact,
+          sanitizedEmail,
+        );
+
+      if (!reservations.length) {
+        throw new BadRequestException('No reservations were created for this booking.');
+      }
+
+      const customerDetailsNote = this.buildCustomerDetailsNote(
+        sanitizedName,
+        sanitizedContact,
+        sanitizedEmail,
+      );
+
       const payment = this.paymentRepository.create({
         reservation_id: reservations[0].Reservation_ID,
         amount: totalAmount,
         payment_method: PaymentMethod.CASH,
         transaction_id: `CASH${Date.now()}${Math.floor(Math.random() * 1000)}`,
         reference_number: referenceNumber || reservations[0].Reference_Number,
-        notes: `Payment received in cash - Walk-in customer: ${customerName}`,
+        notes: `Payment received in cash - ${customerDetailsNote}`,
         status: PaymentStatus.COMPLETED,
       });
 
@@ -450,19 +552,399 @@ export class ReservationsService {
 
       return { reservations, payment: savedPayment };
     } catch (error) {
-      throw new BadRequestException(`Failed to create reservation with cash payment: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to create reservation with cash payment: ${error.message}`,
+      );
+    }
+  }
+
+  async generateQrPhPreview(
+    customerName: string,
+    qrDetails?: { notes?: string; mobileNumber?: string; kind?: 'instore' | 'dynamic' | string },
+  ): Promise<{ qrData: PaymongoQrPhCode }> {
+    try {
+      const sanitizedName = customerName?.trim() || 'Walk-in Customer';
+      const effectiveNotes =
+        qrDetails?.notes?.trim() || `Reservation - ${sanitizedName}`;
+
+      const qrData = await this.payMongoService.generateQrPhStaticCode({
+        mobileNumber: qrDetails?.mobileNumber,
+        notes: effectiveNotes,
+        kind: qrDetails?.kind || 'instore',
+      });
+
+      return { qrData };
+    } catch (error) {
+      throw new BadRequestException(`Failed to generate QR Ph code preview: ${error.message}`);
+    }
+  }
+
+  async createWithQrPhPayment(
+    customerName: string,
+    bookingData: any,
+    customerContact?: string,
+    customerEmail?: string,
+    qrDetails?: { notes?: string; mobileNumber?: string; kind?: 'instore' | 'dynamic' | string },
+    existingQrData?: PaymongoQrPhCode,
+  ): Promise<{ reservations: Reservation[]; payment: Payment; qrData: PaymongoQrPhCode }> {
+    try {
+      const sanitizedName = customerName?.trim() || 'Walk-in Customer';
+      const sanitizedContact = customerContact?.trim();
+      const sanitizedEmail = customerEmail?.trim();
+
+      const { reservations, totalAmount, referenceNumber } =
+        await this.createWalkInReservationsAndRentals(
+          sanitizedName,
+          bookingData,
+          'Payment via PayMongo QR Ph',
+          sanitizedContact,
+          sanitizedEmail,
+        );
+
+      if (!reservations.length) {
+        throw new BadRequestException('No reservations were created for this booking.');
+      }
+
+      const effectiveNotes =
+        qrDetails?.notes ||
+        existingQrData?.attributes?.notes ||
+        `Reservation ${referenceNumber || reservations[0].Reference_Number} - ${sanitizedName}`;
+
+      const qrData =
+        existingQrData && existingQrData.id
+          ? existingQrData
+          : await this.payMongoService.generateQrPhStaticCode({
+              mobileNumber: qrDetails?.mobileNumber,
+              notes: effectiveNotes,
+              kind: qrDetails?.kind || existingQrData?.attributes?.kind || 'instore',
+            });
+
+      const customerDetailsNote = this.buildCustomerDetailsNote(
+        sanitizedName,
+        sanitizedContact,
+        sanitizedEmail,
+      );
+
+      const payment = this.paymentRepository.create({
+        reservation_id: reservations[0].Reservation_ID,
+        amount: totalAmount,
+        payment_method: PaymentMethod.QRPH,
+        transaction_id: qrData.id,
+        reference_number: referenceNumber || reservations[0].Reference_Number,
+        notes: `Pay via QR Ph code generated (${qrData.id}). ${
+          qrData.attributes.notes ? `Notes: ${qrData.attributes.notes}. ` : ''
+        }${customerDetailsNote}`,
+        status: PaymentStatus.PENDING,
+      });
+
+      const savedPayment = await this.paymentRepository.save(payment);
+
+      return { reservations, payment: savedPayment, qrData };
+    } catch (error) {
+      throw new BadRequestException(
+        `Failed to create reservation with QR Ph payment: ${error.message}`,
+      );
+    }
+  }
+
+  private async createWalkInReservationsAndRentals(
+    customerName: string,
+    bookingData: any,
+    reservationNotePrefix: string,
+    customerContact?: string,
+    customerEmail?: string,
+  ): Promise<{
+    reservations: Reservation[];
+    totalAmount: number;
+    referenceNumber: string;
+  }> {
+    const bookingCustomerDetails = bookingData?.customerDetails ?? {};
+    const bookingContact =
+      typeof bookingCustomerDetails?.contactNumber === 'string'
+        ? bookingCustomerDetails.contactNumber
+        : typeof bookingCustomerDetails?.contact === 'string'
+        ? bookingCustomerDetails.contact
+        : typeof bookingCustomerDetails?.phone === 'string'
+        ? bookingCustomerDetails.phone
+        : '';
+    const bookingEmail =
+      typeof bookingCustomerDetails?.email === 'string'
+        ? bookingCustomerDetails.email
+        : typeof bookingCustomerDetails?.emailAddress === 'string'
+        ? bookingCustomerDetails.emailAddress
+        : '';
+
+    const effectiveContact = (customerContact ?? bookingContact)?.trim() || undefined;
+    const effectiveEmail = (customerEmail ?? bookingEmail)?.trim() || undefined;
+
+    const user = await this.getOrCreateGuestUser(customerName, effectiveEmail, effectiveContact);
+    const userId = user.id;
+
+    const { selectedDate, courtBookings, equipmentBookings, referenceNumber, equipmentStartTime } =
+      bookingData;
+
+    const reservations: Reservation[] = [];
+    let totalAmount = 0;
+
+    const sortedCourtBookings = Array.isArray(courtBookings)
+      ? [...courtBookings].sort((a, b) =>
+          this.compareScheduleStartTimes(a?.schedule ?? '', b?.schedule ?? ''),
+        )
+      : [];
+
+    if (!sortedCourtBookings.length) {
+      throw new BadRequestException('At least one court booking is required to create a reservation.');
+    }
+
+    const customerDetailsNote = this.buildCustomerDetailsNote(
+      customerName,
+      effectiveContact,
+      effectiveEmail,
+    );
+
+    const fallbackEquipmentStart =
+      equipmentStartTime ||
+      this.getEarliestStartTimeFromBookings(sortedCourtBookings) ||
+      this.getEarliestStartTimeFromBookings(courtBookings || []);
+
+    if (equipmentBookings && equipmentBookings.length > 0) {
+      await this.ensureEquipmentAvailabilityForDate(
+        selectedDate,
+        equipmentBookings,
+        fallbackEquipmentStart,
+      );
+    }
+
+    let equipmentHandled = false;
+    let effectiveReferenceNumber = referenceNumber || '';
+
+    for (const courtBooking of sortedCourtBookings) {
+      const courts = await this.courtsService.findAll();
+      const court = courts.find((c) => c.Court_Name === courtBooking.court);
+
+      if (!court) {
+        throw new BadRequestException(`Court "${courtBooking.court}" not found`);
+      }
+
+      const [startTime, endTime] = this.parseScheduleToTimes(courtBooking.schedule);
+
+      const reservation = this.reservationsRepository.create({
+        User_ID: userId,
+        Court_ID: court.Court_Id,
+        Reservation_Date: new Date(selectedDate),
+        Start_Time: startTime,
+        End_Time: endTime,
+        Total_Amount: courtBooking.subtotal,
+        Reference_Number: referenceNumber || `REF${Date.now()}`,
+        Notes: `${reservationNotePrefix} - ${customerDetailsNote}`,
+        Status: ReservationStatus.CONFIRMED,
+        Is_Admin_Created: true,
+      });
+
+      const savedReservation = await this.reservationsRepository.save(reservation);
+      reservations.push(savedReservation);
+      totalAmount += Number(courtBooking.subtotal || 0);
+
+      if (!effectiveReferenceNumber) {
+        effectiveReferenceNumber = savedReservation.Reference_Number;
+      }
+
+      if (!equipmentHandled && equipmentBookings && equipmentBookings.length > 0) {
+        await this.createEquipmentRentalsFromBooking(
+          userId,
+          savedReservation,
+          equipmentBookings,
+          fallbackEquipmentStart,
+        );
+        equipmentHandled = true;
+
+        const equipmentTotal = equipmentBookings.reduce(
+          (sum: number, b: any) => sum + Number(b.subtotal || 0),
+          0,
+        );
+        totalAmount += equipmentTotal;
+      }
+    }
+
+    return {
+      reservations,
+      totalAmount,
+      referenceNumber:
+        effectiveReferenceNumber || referenceNumber || reservations[0].Reference_Number,
+    };
+  }
+
+  private buildCustomerDetailsNote(
+    customerName: string,
+    customerContact?: string,
+    customerEmail?: string,
+  ): string {
+    const details: string[] = [`Walk-in customer: ${customerName}`];
+
+    const trimmedContact = customerContact?.trim();
+    const trimmedEmail = customerEmail?.trim();
+
+    if (trimmedContact) {
+      details.push(`Contact: ${trimmedContact}`);
+    }
+
+    if (trimmedEmail) {
+      details.push(`Email: ${trimmedEmail}`);
+    }
+
+    return details.join(' | ');
+  }
+
+  private formatDateOnly(dateInput: string | Date): string {
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : new Date(dateInput);
+    if (isNaN(date.getTime())) {
+      throw new BadRequestException('Invalid reservation date for equipment availability.');
+    }
+
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private async getReservedQuantityForRange(
+    equipmentId: number,
+    reservationDate: string,
+    startTime: string | null,
+    hours: number | null,
+    excludeReservationId?: number,
+  ): Promise<number> {
+    const query = this.equipmentRentalItemRepository
+      .createQueryBuilder('item')
+      .innerJoin(EquipmentRental, 'rental', 'rental.id = item.rental_id')
+      .innerJoin(Reservation, 'reservation', 'reservation.Reservation_ID = rental.reservation_id')
+      .where('item.equipment_id = :equipmentId', { equipmentId })
+      .andWhere('reservation.Reservation_Date = :reservationDate', { reservationDate })
+      .andWhere('reservation.Status IN (:...statuses)', {
+        statuses: [ReservationStatus.CONFIRMED, ReservationStatus.PENDING, ReservationStatus.COMPLETED],
+      });
+
+    if (excludeReservationId) {
+      query.andWhere('reservation.Reservation_ID != :excludeReservationId', { excludeReservationId });
+    }
+
+    const rows = await query
+      .select([
+        'item.quantity AS item_quantity',
+        'item.hours AS item_hours',
+        'reservation.Start_Time AS reservation_start',
+      ])
+      .getRawMany<{ item_quantity: string; item_hours: string; reservation_start: string }>();
+
+    if (!startTime || !hours) {
+      return rows.reduce((sum, row) => sum + Number(row.item_quantity ?? 0), 0);
+    }
+
+    const targetStart = this.timeStringToMinutes(startTime);
+    const targetEnd = targetStart + hours * 60;
+
+    return rows.reduce((sum, row) => {
+      const existingStart = this.timeStringToMinutes(row.reservation_start);
+      const existingHours = Number(row.item_hours ?? 0);
+      const existingEnd = existingStart + existingHours * 60;
+
+      return this.timeRangesOverlap(targetStart, targetEnd, existingStart, existingEnd)
+        ? sum + Number(row.item_quantity ?? 0)
+        : sum;
+    }, 0);
+  }
+
+  private async ensureEquipmentAvailabilityForDate(
+    dateInput: string | Date,
+    equipmentBookings: Array<{ equipment: string; time: string; subtotal?: number; quantity?: number; startTime?: string }>,
+    defaultStartTime?: string | null,
+    excludeReservationId?: number,
+  ) {
+    if (!equipmentBookings || equipmentBookings.length === 0) return;
+
+    const reservationDate = this.formatDateOnly(dateInput);
+    const normalizedDefaultStart = defaultStartTime ? this.ensureTimeFormat(defaultStartTime) : null;
+
+    const uniqueNames = Array.from(
+      new Set(
+        equipmentBookings
+          .map((booking) => booking.equipment)
+          .filter((name): name is string => Boolean(name && name.trim().length > 0)),
+      ),
+    );
+
+    const equipmentRows =
+      uniqueNames.length > 0
+        ? await this.equipmentRepository.find({
+            where: uniqueNames.map((name) => ({ equipment_name: Like(`%${name}%`) })),
+          })
+        : [];
+
+    for (const booking of equipmentBookings) {
+      const quantity = booking.quantity && booking.quantity > 0 ? booking.quantity : 1;
+
+      let equipmentRow =
+        equipmentRows.find((row) => row.equipment_name.toLowerCase() === booking.equipment.toLowerCase()) ??
+        equipmentRows.find((row) => row.equipment_name.toLowerCase().includes(booking.equipment.toLowerCase()));
+
+      if (!equipmentRow) {
+        const fallbackRow = await this.equipmentRepository.findOne({ where: { equipment_name: booking.equipment } });
+        if (fallbackRow) {
+          equipmentRow = fallbackRow;
+        }
+      }
+
+      if (!equipmentRow) {
+        throw new BadRequestException(`Equipment "${booking.equipment}" not found.`);
+      }
+
+      const bookingHours = this.parseHours(booking.time);
+      const bookingStartTime = this.ensureTimeFormat(booking.startTime ?? normalizedDefaultStart);
+
+      if (!bookingStartTime) {
+        throw new BadRequestException(
+          `Missing start time for equipment rental of ${equipmentRow.equipment_name}. Please select a court schedule first.`,
+        );
+      }
+
+      const reservedQuantity = await this.getReservedQuantityForRange(
+        equipmentRow.id,
+        reservationDate,
+        bookingStartTime,
+        bookingHours,
+        excludeReservationId,
+      );
+
+      const remaining = equipmentRow.stocks - reservedQuantity;
+
+      if (remaining < quantity) {
+        throw new BadRequestException(
+          `Not enough stock for ${equipmentRow.equipment_name} on ${reservationDate} at ${bookingStartTime}. ` +
+            `Remaining: ${Math.max(remaining, 0)}`,
+        );
+      }
     }
   }
 
   private async createEquipmentRentalsFromBooking(
     userId: number,
-    reservationId: number,
-    equipmentBookings: Array<{ equipment: string; time: string; subtotal?: number; quantity?: number }>,
+    reservation: Reservation,
+    equipmentBookings: Array<{ equipment: string; time: string; subtotal?: number; quantity?: number; startTime?: string }>,
+    defaultStartTime?: string | null,
   ) {
-    if (!reservationId || !userId || !equipmentBookings || equipmentBookings.length === 0) return;
+    if (!reservation?.Reservation_ID || !userId || !equipmentBookings || equipmentBookings.length === 0) return;
+
+    const normalizedDefaultStart = defaultStartTime ? this.ensureTimeFormat(defaultStartTime) : null;
+
+    await this.ensureEquipmentAvailabilityForDate(
+      reservation.Reservation_Date,
+      equipmentBookings,
+      normalizedDefaultStart,
+      reservation.Reservation_ID,
+    );
 
     const rental = this.equipmentRentalRepository.create({
-      reservation_id: reservationId,
+      reservation_id: reservation.Reservation_ID,
       user_id: userId,
       total_amount: 0,
     });
@@ -475,7 +957,36 @@ export class ReservationsService {
 
       let equipmentRow = await this.equipmentRepository.findOne({ where: { equipment_name: Like(`%${b.equipment}%`) } });
       if (!equipmentRow) {
-        equipmentRow = await this.equipmentRepository.findOne({ where: { equipment_name: b.equipment } });
+        const fallbackRow = await this.equipmentRepository.findOne({ where: { equipment_name: b.equipment } });
+        if (fallbackRow) {
+          equipmentRow = fallbackRow;
+        }
+      }
+
+      if (equipmentRow) {
+        const reservationDate = this.formatDateOnly(reservation.Reservation_Date);
+        const bookingStartTime = this.ensureTimeFormat(b.startTime ?? normalizedDefaultStart);
+        if (!bookingStartTime) {
+          throw new BadRequestException(
+            `Missing start time for equipment rental of ${equipmentRow.equipment_name}. Please select a court schedule first.`,
+          );
+        }
+
+        const reservedQuantity = await this.getReservedQuantityForRange(
+          equipmentRow.id,
+          reservationDate,
+          bookingStartTime,
+          hours,
+          reservation.Reservation_ID,
+        );
+        const remaining = equipmentRow.stocks - reservedQuantity;
+
+        if (remaining < quantity) {
+          throw new BadRequestException(
+            `Not enough stock for ${equipmentRow.equipment_name} on ${reservationDate} at ${bookingStartTime}. ` +
+              `Remaining: ${Math.max(remaining, 0)}`,
+          );
+        }
       }
 
       const hourlyPrice = equipmentRow ? Number(equipmentRow.price) : Number(((b.subtotal || 0) / Math.max(1, hours * quantity)).toFixed(2)) || 0;
@@ -494,6 +1005,54 @@ export class ReservationsService {
     }
 
     await this.equipmentRentalRepository.update(savedRental.id, { total_amount: Number(total.toFixed(2)) });
+  }
+
+  private ensureTimeFormat(time?: string | null): string | null {
+    if (!time) return null;
+    const parts = time.split(':');
+    if (parts.length === 2) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+    }
+    if (parts.length === 3) {
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:${parts[2].padStart(2, '0')}`;
+    }
+    return null;
+  }
+
+  private timeStringToMinutes(time: string | null | undefined): number {
+    if (!time) return 0;
+    const [hours = '0', minutes = '0'] = time.split(':');
+    return Number(hours) * 60 + Number(minutes);
+  }
+
+  private timeRangesOverlap(
+    startA: number,
+    endA: number,
+    startB: number,
+    endB: number,
+  ): boolean {
+    return Math.max(startA, startB) < Math.min(endA, endB);
+  }
+
+  private compareScheduleStartTimes(scheduleA: string, scheduleB: string): number {
+    const [startA] = this.parseScheduleToTimes(scheduleA);
+    const [startB] = this.parseScheduleToTimes(scheduleB);
+    return this.timeStringToMinutes(startA) - this.timeStringToMinutes(startB);
+  }
+
+  private getEarliestStartTimeFromBookings(
+    courtBookings: Array<{ schedule: string }> | undefined | null,
+  ): string | null {
+    if (!courtBookings || courtBookings.length === 0) return null;
+    let earliest: string | null = null;
+    for (const booking of courtBookings) {
+      if (!booking?.schedule) continue;
+      const [startTime] = this.parseScheduleToTimes(booking.schedule);
+      if (!earliest || this.timeStringToMinutes(startTime) < this.timeStringToMinutes(earliest)) {
+        earliest = startTime;
+      }
+    }
+    return earliest;
   }
 
   private parseHours(time: string): number {

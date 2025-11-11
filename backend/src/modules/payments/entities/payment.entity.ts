@@ -15,6 +15,7 @@ export enum PaymentMethod {
   GRABPAY = 'GrabPay',
   BANKING = 'Online Banking',
   CASH = 'Cash',
+  QRPH = 'QR Ph',
 }
 
 export enum PaymentStatus {

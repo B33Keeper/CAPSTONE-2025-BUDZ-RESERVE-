@@ -176,7 +176,7 @@ export class PaymentsService {
         customerName: reservation.user?.name || 'Unknown',
         courtName: reservation.court?.Court_Name || 'Unknown',
         time: `${formatTime(reservation.Start_Time)}-${formatTime(reservation.End_Time)}`,
-        date: formatDate(reservation.Reservation_Date),
+        date: formatDate(payment.created_at || reservation.Reservation_Date),
         paymentMethod: payment.payment_method || 'Unknown',
         price: amount,
         status: isCancelled ? 'cancelled' : 'completed',

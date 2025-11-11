@@ -15,7 +15,6 @@ export interface Equipment {
   equipment_name: string
   stocks: number
   price: number
-  description?: string
   status: string
   image_path: string
   created_at: string

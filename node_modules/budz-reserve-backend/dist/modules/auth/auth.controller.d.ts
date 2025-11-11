@@ -46,5 +46,17 @@ export declare class AuthController {
     }>;
     resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{
         message: string;
+        access_token: string;
+        user: {
+            id: number;
+            username: string;
+            email: string;
+            name: string;
+            age: number;
+            sex: import("../users/entities/user.entity").Gender;
+            contact_number: string;
+            profile_picture: string;
+            role: string;
+        };
     }>;
 }
