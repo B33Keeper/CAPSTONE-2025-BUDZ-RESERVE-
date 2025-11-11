@@ -28,13 +28,6 @@ interface CellStatus {
 export function BookingPage() {
   const [selectedDate, setSelectedDate] = useState('')
   const [tempSelectedDate, setTempSelectedDate] = useState('')
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const today = new Date()
-    return {
-      year: today.getFullYear(),
-      month: today.getMonth()
-    }
-  })
   // Default to first sheet, but will be updated when courts are loaded
   const [activeTab, setActiveTab] = useState('Sheet 1')
   const [racketQuantity, setRacketQuantity] = useState(0)
@@ -62,7 +55,31 @@ export function BookingPage() {
   const [referenceNumber, setReferenceNumber] = useState('')
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicateMessage, setDuplicateMessage] = useState('')
-  const [hasNavigatedMonth, setHasNavigatedMonth] = useState(false)
+  const [isTermsAccepted, setIsTermsAccepted] = useState(false)
+  
+  const DATE_WINDOW_DAYS = 28
+  const today = new Date()
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const selectionWindowEnd = new Date(startOfToday)
+  selectionWindowEnd.setDate(selectionWindowEnd.getDate() + (DATE_WINDOW_DAYS - 1))
+  const selectionWindowEndLabel = selectionWindowEnd.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  })
+  const selectionWindowMonthLabel = (() => {
+    const startMonth = startOfToday.toLocaleDateString('en-US', { month: 'long' })
+    const startYear = startOfToday.getFullYear()
+    const endMonth = selectionWindowEnd.toLocaleDateString('en-US', { month: 'long' })
+    const endYear = selectionWindowEnd.getFullYear()
+    if (startYear === endYear) {
+      if (startMonth === endMonth) {
+        return `${startMonth} ${startYear}`
+      }
+      return `${startMonth}-${endMonth} ${startYear}`
+    }
+    return `${startMonth} ${startYear} - ${endMonth} ${endYear}`
+  })()
   
   const { user } = useAuthStore()
 
@@ -77,6 +94,15 @@ export function BookingPage() {
     { id: 3, name: 'Select payment method.', hint: 'Confirm your payment' },
     { id: 4, name: 'Completed', hint: 'Booking finalized' }
   ]
+
+  useEffect(() => {
+    if (user?.id) {
+      const accepted = localStorage.getItem(`termsAccepted_${user.id}`) === 'true'
+      setIsTermsAccepted(accepted)
+    } else {
+      setIsTermsAccepted(false)
+    }
+  }, [user?.id])
 
   const getStepState = (stepId: number): 'completed' | 'current' | 'upcoming' => {
     if (stepId < currentStep) return 'completed'
@@ -112,12 +138,10 @@ export function BookingPage() {
     // Check if selected date is today
     let isToday = false
     if (selectedDate) {
-      try {
-        const selectedDateObj = new Date(selectedDate)
+      const selectedDateObj = parseDateString(selectedDate)
+      if (selectedDateObj) {
         const selectedDateOnly = new Date(selectedDateObj.getFullYear(), selectedDateObj.getMonth(), selectedDateObj.getDate())
         isToday = selectedDateOnly.getTime() === today.getTime()
-      } catch (error) {
-        console.error('Error parsing selected date:', error)
       }
     }
     
@@ -415,10 +439,27 @@ export function BookingPage() {
     })}`
   }
 
+  const parseDateString = (dateString: string): Date | null => {
+    if (!dateString) return null
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const [year, month, day] = dateString.split('-').map(Number)
+      return new Date(year, month - 1, day)
+    }
+
+    const parsed = new Date(dateString)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed
+    }
+
+    return null
+  }
+
   const getDateDisplayDetails = (dateString: string) => {
     if (!dateString) return null
-    const dateObj = new Date(dateString)
-    if (Number.isNaN(dateObj.getTime())) return null
+
+    const dateObj = parseDateString(dateString)
+    if (!dateObj) return null
 
     return {
       dayName: dateObj.toLocaleDateString('en-US', { weekday: 'long' }),
@@ -547,7 +588,7 @@ export function BookingPage() {
 
   const handleDateSelection = (date: string, isAvailable: boolean) => {
     if (!isAvailable) {
-      setDateError('Cannot select a past date. Please choose a current or future date.')
+      setDateError(`Selected date is outside the available booking window. Please choose a date on or before ${selectionWindowEndLabel}.`)
       return
     }
     
@@ -556,11 +597,14 @@ export function BookingPage() {
     
     // Check if user has accepted terms for current session
     if (user?.id) {
-      const termsAccepted = localStorage.getItem(`termsAccepted_${user.id}`)
+      const termsAccepted = localStorage.getItem(`termsAccepted_${user.id}`) === 'true'
+      setIsTermsAccepted(termsAccepted)
       if (!termsAccepted) {
         // Show terms modal if not accepted yet
         setShowTermsModal(true)
       }
+    } else {
+      setIsTermsAccepted(false)
     }
   }
 
@@ -569,6 +613,13 @@ export function BookingPage() {
       setDateError('Please select a date before proceeding.')
       return
     }
+
+    if (!isTermsAccepted) {
+      setDateError('Please accept the Terms and Conditions to proceed.')
+      setShowTermsModal(true)
+      return
+    }
+
     setSelectedDate(tempSelectedDate)
     setCurrentStep(2)
     
@@ -580,69 +631,18 @@ export function BookingPage() {
     setCurrentStep(step)
   }
 
-  // Generate dates for selected month
-
-  // Navigate to previous month
-  const goToPreviousMonth = () => {
-    const today = new Date()
-    const currentYear = today.getFullYear()
-    const currentMonth = today.getMonth()
-    
-    setSelectedMonth(prev => {
-      let newMonth = prev.month - 1
-      let newYear = prev.year
-      
-      if (newMonth < 0) {
-        newMonth = 11
-        newYear -= 1
-      }
-      
-      // Don't allow going to past months
-      if (newYear < currentYear || (newYear === currentYear && newMonth < currentMonth)) {
-        return prev
-      }
-      
-      return { year: newYear, month: newMonth }
-    })
-    
-    // Show terms modal when user navigates to a different month (only first time)
-    if (!hasNavigatedMonth) {
-      if (user?.id) {
-        const hasAcceptedTerms = localStorage.getItem(`termsAccepted_${user.id}`)
-        if (!hasAcceptedTerms) {
-          setShowTermsModal(true)
-        }
-      }
-      setHasNavigatedMonth(true)
-    }
+  const formatDateToISODate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
-  // Navigate to next month
-  const goToNextMonth = () => {
-    setSelectedMonth(prev => {
-      let newMonth = prev.month + 1
-      let newYear = prev.year
-      
-      if (newMonth > 11) {
-        newMonth = 0
-        newYear += 1
-      }
-      
-      return { year: newYear, month: newMonth }
-    })
-    
-    // Show terms modal when user navigates to a different month (only first time)
-    if (!hasNavigatedMonth) {
-      if (user?.id) {
-        const hasAcceptedTerms = localStorage.getItem(`termsAccepted_${user.id}`)
-        if (!hasAcceptedTerms) {
-          setShowTermsModal(true)
-        }
-      }
-      setHasNavigatedMonth(true)
-    }
-  }
-
+  const dateOptions = Array.from({ length: DATE_WINDOW_DAYS }, (_, index) => {
+    const date = new Date(startOfToday)
+    date.setDate(startOfToday.getDate() + index)
+    return date
+  })
 
   const isRacketBooked = (racket: string) => {
     return equipmentBookings.some(booking => booking.equipment === racket)
@@ -656,6 +656,8 @@ export function BookingPage() {
     if (user?.id) {
       localStorage.setItem(`termsAccepted_${user.id}`, 'true')
     }
+    setIsTermsAccepted(true)
+    setDateError('')
   }
 
   // Helper function to parse schedule string to start and end times (24-hour format)
@@ -702,7 +704,11 @@ export function BookingPage() {
     }
 
     // Parse selected date to YYYY-MM-DD format
-    const dateObj = new Date(selectedDate)
+    const dateObj = parseDateString(selectedDate)
+    if (!dateObj) {
+      console.error('Invalid selected date format', selectedDate)
+      return { isDuplicate: false, message: '' }
+    }
     const formattedDate = dateObj.toISOString().split('T')[0]
 
     // Check each court booking for duplicates
@@ -925,140 +931,59 @@ export function BookingPage() {
                {/* Date Selection Header */}
                <div className="bg-gray-600 text-white px-6 py-4 rounded-t-lg -mx-6 -mt-6 mb-6 shadow">
                  <h2 className="text-base sm:text-lg font-semibold">Select from the available dates below</h2>
-                 <p className="text-blue-100 text-xs sm:text-sm mt-1">Choose a date to proceed to time and court selection</p>
+                <p className="text-blue-100 text-xs sm:text-sm mt-1">
+                  Choose a date to proceed to court and time selection
+                </p>
                </div>
                
-               {/* Month Selector */}
-               <div className="flex items-center justify-center mb-6">
-                 <button
-                   onClick={goToPreviousMonth}
-                   className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-50 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                   disabled={(() => {
-                     const today = new Date()
-                     const currentYear = today.getFullYear()
-                     const currentMonth = today.getMonth()
-                     return selectedMonth.year <= currentYear && selectedMonth.month <= currentMonth
-                   })()}
-                 >
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                   </svg>
-                 </button>
-                 
-                 <div className="mx-6 text-center">
-                   <h3 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-                     {new Date(selectedMonth.year, selectedMonth.month, 1).toLocaleDateString('en-US', { 
-                       month: 'long', 
-                       year: 'numeric' 
-                     })}
-                   </h3>
-                   <p className="text-xs text-gray-500">Tap a date to continue</p>
-                 </div>
-                 
-                 <button
-                   onClick={goToNextMonth}
-                   className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white shadow hover:bg-blue-50 text-gray-700"
-                 >
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                   </svg>
-                 </button>
-               </div>
-               
-               {/* Date Selection Grid */}
-               <div className="bg-white rounded-lg ring-1 ring-gray-200 overflow-hidden">
-                 <div className="grid grid-cols-7 bg-gray-50">
-                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                     <div key={day} className="p-3 text-center text-xs sm:text-sm font-semibold text-gray-600">
-                       {day}
-                     </div>
-                   ))}
-                 </div>
-                 
-                 <div className="grid grid-cols-7">
-                   {(() => {
-                     const firstDayOfMonth = new Date(selectedMonth.year, selectedMonth.month, 1)
-                     const lastDayOfMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0)
-                     const firstDayWeekday = firstDayOfMonth.getDay()
-                     const daysInMonth = lastDayOfMonth.getDate()
-                     const today = new Date()
-                     
-                     const items: JSX.Element[] = []
-                     for (let i = 0; i < firstDayWeekday; i++) {
-                       items.push(<div key={`empty-${i}`} className="h-12 sm:h-16 border-t border-gray-100" />)
-                     }
-                     for (let day = 1; day <= daysInMonth; day++) {
-                       const date = new Date(selectedMonth.year, selectedMonth.month, day)
-                       const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate())
-                       const isAvailable = !isPast
-                       const isToday = date.toDateString() === today.toDateString()
-                       const label = new Date(selectedMonth.year, selectedMonth.month, 1).toLocaleDateString('en-US', { month: 'long' })
-                       const dateString = `${label} ${day}, ${selectedMonth.year}`
-                       const isSelected = tempSelectedDate === dateString
-                       
-                       items.push(
-                         <button
-                           key={day}
-                           type="button"
-                           className={`relative h-12 sm:h-14 w-12 sm:w-14 mx-auto my-2 border-t border-gray-100 flex items-center justify-center rounded-full transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
-                             isSelected 
-                               ? 'bg-green-600 text-white font-semibold shadow-[inset_0_2px_6px_rgba(0,0,0,0.2)] scale-105' 
-                               : isAvailable 
-                                 ? 'hover:bg-green-50 text-gray-900 hover:scale-105' 
-                                 : 'bg-gray-100 text-gray-600 cursor-not-allowed line-through border border-gray-300'
-                           }`}
-                           aria-selected={isSelected}
-                           onClick={() => isAvailable && handleDateSelection(dateString, true)}
-                           disabled={!isAvailable}
-                         >
-                           <span className="text-sm sm:text-base">{day}</span>
-                           {isToday && !isSelected && (
-                             <span className="absolute -bottom-1 block w-1.5 h-1.5 rounded-full bg-green-500" />
-                           )}
-                         </button>
-                       )
-                     }
-                     return items
-                   })()}
-                 </div>
-               </div>
-               
-               {/* Selected Date Display */}
-               {tempSelectedDate && (
-                <div className="mt-4 flex justify-center">
-                  {(() => {
-                    const tempDateDetails = getDateDisplayDetails(tempSelectedDate)
-                  const dayLabel = tempDateDetails?.dayName ?? null
-                    const formattedDate = tempDateDetails?.formattedDate ?? tempSelectedDate
-                  const dayInitial = (dayLabel ?? tempSelectedDate).charAt(0) || 'D'
-
+              {/* Rolling Date Selection */}
+              <div className="bg-white rounded-lg ring-1 ring-gray-200 p-4 sm:p-6">
+                <div className="mb-4 text-center">
+                  <span className="block text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-400">
+                    Upcoming {DATE_WINDOW_DAYS} days
+                  </span>
+                  <span className="mt-1 block text-lg sm:text-xl font-bold text-gray-800 tracking-tight">
+                    {selectionWindowMonthLabel}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
+                  {dateOptions.map((date) => {
+                    const isoDate = formatDateToISODate(date)
+                    const isSelected = tempSelectedDate === isoDate
+                    const isToday = date.toDateString() === today.toDateString()
+                    const monthLabel = date.toLocaleDateString('en-US', { month: 'short' })
+                    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' })
+                    
                     return (
-                      <div className="flex max-w-lg flex-col gap-3 rounded-2xl border border-emerald-200 bg-white/90 px-5 py-4 text-center shadow-[0_20px_45px_-20px_rgba(6,148,67,0.45)] ring-1 ring-emerald-100 backdrop-blur">
-                        <div className="flex items-center justify-center gap-3 text-emerald-600">
-                          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200">
-                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                              <rect x="3" y="4" width="18" height="18" rx="2" />
-                              <path d="M16 2v4" />
-                              <path d="M8 2v4" />
-                              <path d="M3 10h18" />
-                              <path d="M9.5 16.5l1.5 1.5 4-4" />
-                            </svg>
+                      <button
+                        key={isoDate}
+                        type="button"
+                        onClick={() => handleDateSelection(isoDate, true)}
+                        className={`relative flex flex-col items-center justify-center rounded-2xl border-2 px-4 py-4 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
+                            : 'border-orange-200 bg-white text-gray-900 shadow-sm hover:border-orange-400 hover:-translate-y-1 hover:shadow-lg'
+                        }`}
+                      >
+                        <span className="text-xs font-semibold uppercase tracking-wide text-orange-500">
+                          {monthLabel}
+                        </span>
+                        <span className="text-2xl sm:text-3xl font-bold leading-none mt-1">
+                          {date.getDate()}
+                        </span>
+                        <span className="mt-1 text-xs sm:text-sm font-medium text-gray-500">
+                          {dayOfWeek}
+                        </span>
+                        {isToday && (
+                          <span className="mt-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">
+                            Today
                           </span>
-                          <span className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-500">
-                            Selected Date
-                          </span>
-                        </div>
-                        <p className="text-lg font-semibold text-emerald-700">
-                          <span className="mr-2 rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-600">
-                            {dayLabel || dayInitial}
-                          </span>
-                          {formattedDate}
-                        </p>
-                      </div>
+                        )}
+                      </button>
                     )
-                  })()}
-                 </div>
-               )}
+                  })}
+                </div>
+              </div>
                
                {/* Error Message */}
                {dateError && (
@@ -1644,6 +1569,7 @@ export function BookingPage() {
         isOpen={showTermsModal}
         onClose={handleCloseTerms}
         onAccept={handleAcceptTerms}
+        initialAccepted={isTermsAccepted}
       />
 
       {/* Booking Details Modal */}

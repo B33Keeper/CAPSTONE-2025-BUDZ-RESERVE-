@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 
@@ -16,11 +16,35 @@ export function AnnouncementModal() {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
+  const lastUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    // Don't show announcement modal for admin users
-    if (user?.role === 'admin') {
+    // Reset state when user logs out
+    if (!user) {
+      if (lastUserIdRef.current) {
+        sessionStorage.removeItem(`announcement_shown_${lastUserIdRef.current}`)
+        lastUserIdRef.current = null
+      }
+      setAnnouncement(null)
+      setShowModal(false)
       setLoading(false)
+      return
+    }
+
+    lastUserIdRef.current = String(user.id)
+
+    // Don't show announcement modal for admin users
+    if (user.role === 'admin') {
+      setLoading(false)
+      return
+    }
+
+    const storageKey = `announcement_shown_${user.id}`
+    const hasSeenAnnouncement = sessionStorage.getItem(storageKey) === 'true'
+
+    if (hasSeenAnnouncement) {
+      setLoading(false)
+      setShowModal(false)
       return
     }
 
@@ -30,8 +54,10 @@ export function AnnouncementModal() {
         const response = await api.get('/announcements/latest')
         if (response.data) {
           setAnnouncement(response.data)
-          // Always show the modal when there's an active announcement (for non-admin users)
           setShowModal(true)
+          sessionStorage.setItem(storageKey, 'true')
+        } else {
+          setShowModal(false)
         }
       } catch (error) {
         console.error('Error fetching announcement:', error)

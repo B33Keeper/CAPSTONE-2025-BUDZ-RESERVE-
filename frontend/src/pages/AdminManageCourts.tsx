@@ -80,13 +80,17 @@ const AdminManageCourts = () => {
           0
         )
 
+        const inactiveStatuses = ['cancelled', 'canceled', 'completed', 'complete', 'done', 'finished', 'expired']
+        const maintenanceGuardWindowMs = 1000 * 60 * 60 * 24 * 7 // 7 days
+
         reservationsData
           .filter((reservation: Reservation) => {
             const reservationDateTime = new Date(`${reservation.Reservation_Date}T${reservation.Start_Time}`)
-            return (
-              reservationDateTime >= normalizedNow &&
-              reservation.Status?.toLowerCase() !== 'cancelled'
-            )
+            const status = reservation.Status?.toLowerCase() ?? ''
+            const isInactive = inactiveStatuses.includes(status)
+            const isWithinGuardWindow = reservationDateTime.getTime() - normalizedNow.getTime() <= maintenanceGuardWindowMs
+
+            return reservationDateTime >= normalizedNow && isWithinGuardWindow && !isInactive
           })
           .forEach((reservation: Reservation) => {
             const currentCount = upcomingMap.get(reservation.Court_ID) ?? 0

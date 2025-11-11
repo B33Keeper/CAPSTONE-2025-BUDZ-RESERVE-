@@ -6,20 +6,25 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2, ArrowLeft, CheckCircle } from 'lucide-react'
 import api from '@/lib/api'
+import { getErrorMessage } from '@/lib/errorUtils'
+import { PASSWORD_REGEX } from '@/lib/validation'
 
-const resetPasswordSchema = z.object({
-  newPassword: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/`~]).{8,}$/,
-      'Password must contain uppercase, lowercase, number, and special character'
-    ),
-  confirmPassword: z.string(),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-})
+const resetPasswordSchema = z
+  .object({
+    newPassword: z
+      .string({ required_error: 'New password is required' })
+      .min(8, 'Password must be at least 8 characters')
+      .max(128, 'Password must be at most 128 characters')
+      .regex(
+        PASSWORD_REGEX,
+        'Password must contain uppercase, lowercase, number, and special character'
+      ),
+    confirmPassword: z.string({ required_error: 'Please confirm your password' }),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
 
@@ -36,9 +41,18 @@ export function ResetPasswordPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    setError,
+    clearErrors,
+    formState: { errors, isSubmitting, isValid },
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
+    mode: 'onChange',
+    reValidateMode: 'onBlur',
+    defaultValues: {
+      newPassword: '',
+      confirmPassword: '',
+    },
+    shouldFocusError: true,
   })
 
   useEffect(() => {
@@ -54,8 +68,9 @@ export function ResetPasswordPage() {
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true)
+    clearErrors('root')
     try {
-      const response = await api.post('/auth/reset-password', {
+      await api.post('/auth/reset-password', {
         email,
         otp,
         newPassword: data.newPassword,
@@ -67,8 +82,10 @@ export function ResetPasswordPage() {
       setTimeout(() => {
         navigate('/login')
       }, 2000)
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to reset password')
+    } catch (error) {
+      const message = getErrorMessage(error, 'Failed to reset password')
+      setError('root', { type: 'manual', message })
+      toast.error(message)
     } finally {
       setIsLoading(false)
     }
@@ -192,11 +209,17 @@ export function ResetPasswordPage() {
             </ul>
           </div>
 
+          {errors.root && (
+            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {errors.root.message}
+            </div>
+          )}
+
           {/* Reset Password Button */}
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting || !isValid}
               className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 flex items-center justify-center"
             >
               {isLoading ? (

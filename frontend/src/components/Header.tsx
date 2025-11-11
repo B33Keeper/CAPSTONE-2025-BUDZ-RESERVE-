@@ -110,7 +110,7 @@ export function Header() {
 
   const handleManageQueueingClick = () => {
     if (!isAuthenticated) {
-      toast.error('Please login to proceed with booking')
+      toast.error('Login to proceed')
       navigate('/login?returnUrl=/booking')
       return
     }

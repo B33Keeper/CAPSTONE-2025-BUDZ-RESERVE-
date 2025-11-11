@@ -1,16 +1,52 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { getErrorMessage } from '@/lib/errorUtils'
 
-const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-})
+const loginSchema = z
+  .object({
+    username: z
+      .string({ required_error: 'Username is required' })
+      .trim()
+      .min(1, 'Username is required')
+      .max(50, 'Username must be at most 50 characters'),
+    password: z
+      .string({ required_error: 'Password is required' })
+      .superRefine((value, ctx) => {
+        const trimmed = value.trim()
+
+        if (trimmed.length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Password is required',
+          })
+          return
+        }
+
+        if (value.length < 6) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Password must be at least 6 characters',
+          })
+        }
+
+        if (value.length > 128) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Password must be at most 128 characters',
+          })
+        }
+      }),
+  })
+  .transform((data) => ({
+    ...data,
+    username: data.username.trim(),
+  }))
 
 type LoginFormData = z.infer<typeof loginSchema>
 
@@ -25,46 +61,71 @@ export function LoginPage() {
     register,
     handleSubmit,
     setValue,
-    formState: { errors },
+    setError,
+    clearErrors,
+    formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    mode: 'onChange',
+    reValidateMode: 'onBlur',
+    defaultValues: {
+      username: '',
+      password: '',
+    },
+    shouldFocusError: true,
   })
 
   // Load saved credentials on component mount
   useEffect(() => {
-    const savedUsername = localStorage.getItem('savedUsername')
-    const savedPassword = localStorage.getItem('savedPassword')
-    const savedRememberMe = localStorage.getItem('rememberMe') === 'true'
+    try {
+      const savedUsername = localStorage.getItem('savedUsername')
+      const savedPassword = localStorage.getItem('savedPassword')
+      const savedRememberMe = localStorage.getItem('rememberMe') === 'true'
 
-    if (savedUsername && savedPassword && savedRememberMe) {
-      setValue('username', savedUsername)
-      setValue('password', savedPassword)
-      setRememberMe(true)
+      if (savedUsername && savedPassword && savedRememberMe) {
+        setValue('username', savedUsername)
+        setValue('password', savedPassword)
+        setRememberMe(true)
+      }
+    } catch (error) {
+      const message = getErrorMessage(error, 'Unable to load saved credentials')
+      toast.error(message)
     }
   }, [setValue])
 
   const onSubmit = async (data: LoginFormData) => {
+    clearErrors('root')
+
     try {
-      const result = await login(data)
-      toast.success('Login successful!')
-      
-      // Save credentials if "Remember me" is checked
-      if (rememberMe) {
-        localStorage.setItem('savedUsername', data.username)
-        localStorage.setItem('savedPassword', data.password)
-        localStorage.setItem('rememberMe', 'true')
-      } else {
-        // Clear saved credentials if "Remember me" is unchecked
-        localStorage.removeItem('savedUsername')
-        localStorage.removeItem('savedPassword')
-        localStorage.removeItem('rememberMe')
+      const payload = {
+        username: data.username,
+        password: data.password,
       }
-      
+
+      const { user } = await login(payload)
+      toast.success('Login successful!')
+
+      // Save credentials if "Remember me" is checked
+      try {
+        if (rememberMe) {
+          localStorage.setItem('savedUsername', data.username)
+          localStorage.setItem('savedPassword', data.password)
+          localStorage.setItem('rememberMe', 'true')
+        } else {
+          // Clear saved credentials if "Remember me" is unchecked
+          localStorage.removeItem('savedUsername')
+          localStorage.removeItem('savedPassword')
+          localStorage.removeItem('rememberMe')
+        }
+      } catch (storageError) {
+        toast.error(getErrorMessage(storageError, 'Unable to update saved credentials'))
+      }
+
       // Check for returnUrl parameter (when user came from booking action)
       const returnUrl = searchParams.get('returnUrl')
-      
+
       // Check if user is admin and redirect accordingly
-      if (result?.user?.role === 'admin') {
+      if (user?.role === 'admin') {
         navigate('/admin')
       } else if (returnUrl) {
         // Redirect to the intended destination (booking page)
@@ -72,8 +133,16 @@ export function LoginPage() {
       } else {
         navigate('/')
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Login failed')
+    } catch (error) {
+      const message = getErrorMessage(error, 'Login failed')
+      setError('root', { type: 'manual', message })
+      toast.error(message)
+    }
+  }
+
+  const onInvalid = (formErrors: FieldErrors<LoginFormData>) => {
+    if (formErrors.username || formErrors.password) {
+      toast.error('Please fill in all required fields')
     }
   }
 
@@ -85,7 +154,7 @@ export function LoginPage() {
           <img src="/assets/icons/BBC ICON.png" alt="BBC Logo" className="h-32 mx-auto mb-4" />
         </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="space-y-6" onSubmit={handleSubmit(onSubmit, onInvalid)}>
           {/* Username Field */}
           <div>
             <div className="relative">
@@ -157,7 +226,7 @@ export function LoginPage() {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
               className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 flex items-center justify-center"
             >
               {isLoading ? (

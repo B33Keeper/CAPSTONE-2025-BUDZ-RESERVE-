@@ -157,18 +157,39 @@ const AdminDashboard = () => {
     return 0
   }, [])
 
-  const calculateDailyRacketRentals = useCallback((reservations: any[]) => {
-    if (!Array.isArray(reservations)) return 0
+  const calculateDailyRacketRentals = useCallback(
+    (reservations: any[], salesReportItems?: any[]) => {
+      let rentalTotal = 0
 
-    return reservations.reduce((sum, reservation) => {
-      const status = reservation?.Status?.toLowerCase?.() ?? ''
-      if (status === 'cancelled') {
-        return sum
+      if (Array.isArray(salesReportItems) && salesReportItems.length > 0) {
+        rentalTotal = salesReportItems.reduce((sum, item) => {
+          const rentals = Array.isArray(item?.equipmentRentals) ? item.equipmentRentals : []
+          if (rentals.length === 0) return sum
+
+          const rentalCount = rentals.reduce((innerSum: number, rental: any) => {
+            const quantity = Number(rental?.quantity ?? rental?.hours ?? 0)
+            return innerSum + (Number.isNaN(quantity) ? 0 : quantity)
+          }, 0)
+
+          return sum + rentalCount
+        }, 0)
       }
 
-      return sum + extractRacketRentalCount(reservation)
-    }, 0)
-  }, [extractRacketRentalCount])
+      if (rentalTotal > 0 || !Array.isArray(reservations)) {
+        return rentalTotal
+      }
+
+      return reservations.reduce((sum, reservation) => {
+        const status = reservation?.Status?.toLowerCase?.() ?? ''
+        if (status === 'cancelled') {
+          return sum
+        }
+
+        return sum + extractRacketRentalCount(reservation)
+      }, 0)
+    },
+    [extractRacketRentalCount]
+  )
 
   // Fetch dashboard data from API
   const fetchDashboardData = useCallback(async (isRefresh = false) => {
@@ -220,7 +241,8 @@ const AdminDashboard = () => {
       const dailySalesAmount = salesReportData.data?.summary?.totalIncome || 0
       const fallbackDailySales = calculateDailySalesFromReservations(todayReservations)
       const finalDailySales = dailySalesAmount > 0 ? dailySalesAmount : fallbackDailySales
-      const totalDailyRacketRentals = calculateDailyRacketRentals(todayReservations)
+      const reportItems = Array.isArray(salesReportData.data?.data) ? salesReportData.data.data : []
+      const totalDailyRacketRentals = calculateDailyRacketRentals(todayReservations, reportItems)
       
       const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
       const monthlyData = monthLabels.map((label, index) => ({
