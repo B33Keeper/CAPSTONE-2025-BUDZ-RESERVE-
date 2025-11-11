@@ -25,18 +25,11 @@ interface SalesReportItem {
   equipmentRentals?: EquipmentRental[]
 }
 
-interface SalesReportSummary {
-  totalReservations: number
-  totalIncome: number
-  totalCancellations: number
-}
-
 const AdminSalesReport = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Sales Report')
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>('daily')
   const [salesData, setSalesData] = useState<SalesReportItem[]>([])
-  const [summary, setSummary] = useState<SalesReportSummary>({ totalReservations: 0, totalIncome: 0, totalCancellations: 0 })
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
@@ -169,8 +162,7 @@ const AdminSalesReport = () => {
           right: 10,
           top: searchQuery ? 48 : 42
         },
-        tableWidth: 'wrap',
-        overflow: 'linebreak'
+        tableWidth: 'wrap'
       })
 
       // Calculate summary from filtered data
@@ -237,14 +229,12 @@ const AdminSalesReport = () => {
       console.log(`[SalesReport] Response:`, response.data)
       if (response.data) {
         setSalesData(response.data.data || [])
-        setSummary(response.data.summary || { totalReservations: 0, totalIncome: 0, totalCancellations: 0 })
         setCurrentPage(1) // Reset to first page when changing period
       }
     } catch (error: any) {
       console.error('Error fetching sales report:', error)
       console.error('Error details:', error.response?.data || error.message)
       setSalesData([])
-      setSummary({ totalReservations: 0, totalIncome: 0, totalCancellations: 0 })
     } finally {
       setLoading(false)
     }

@@ -5,13 +5,23 @@ import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
 
+interface Suggestion {
+  id: number
+  user: string
+  date: string
+  time: string
+  message: string
+  fullMessage: string
+  created_at: string
+}
+
 const AdminViewSuggestions = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('View Suggestions')
-  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
-  const [selectedSuggestion, setSelectedSuggestion] = useState<any>(null)
+  const [selectedSuggestion, setSelectedSuggestion] = useState<Suggestion | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
@@ -37,7 +47,7 @@ const AdminViewSuggestions = () => {
         const response = await api.get('/suggestions')
         
         // Transform backend data to match frontend format
-        const formattedSuggestions = response.data.map((suggestion: any) => {
+        const formattedSuggestions: Suggestion[] = response.data.map((suggestion: any) => {
           const date = new Date(suggestion.created_at)
           const formattedDate = date.toLocaleDateString('en-US', {
             month: 'numeric',
@@ -64,7 +74,7 @@ const AdminViewSuggestions = () => {
         })
         
         // Sort suggestions by created_at in ascending order (oldest first, latest at bottom)
-        const sortedSuggestions = formattedSuggestions.sort((a, b) => {
+        const sortedSuggestions = formattedSuggestions.sort((a: Suggestion, b: Suggestion) => {
           const dateA = new Date(a.created_at).getTime()
           const dateB = new Date(b.created_at).getTime()
           return dateA - dateB // Ascending order (oldest first)
@@ -97,7 +107,7 @@ const AdminViewSuggestions = () => {
   }, [])
 
 
-  const handleViewSuggestion = (suggestion: any) => {
+  const handleViewSuggestion = (suggestion: Suggestion) => {
     setSelectedSuggestion(suggestion)
     setShowModal(true)
   }
