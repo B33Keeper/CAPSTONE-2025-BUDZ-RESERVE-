@@ -111,11 +111,10 @@ export function Header() {
   const handleManageQueueingClick = () => {
     if (!isAuthenticated) {
       toast.error('Login to proceed')
-      navigate('/login?returnUrl=/booking')
+      navigate('/login?returnUrl=/queueing')
       return
     }
-    // Add your manage queueing logic here
-    console.log('Manage Queueing clicked')
+    navigate('/queueing')
   }
 
   // Close dropdown when clicking outside
