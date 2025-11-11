@@ -20,6 +20,7 @@ interface AuthState {
   isLoading: boolean
   login: (credentials: { username: string; password: string }) => Promise<{ user: User; access_token: string }>
   register: (userData: RegisterData) => Promise<{ user: User; access_token: string }>
+  authenticate: (payload: { user: User; access_token: string }) => void
   logout: () => void
   checkAuth: () => Promise<void>
   updateUser: (userData: Partial<User>) => void
@@ -71,6 +72,20 @@ export const useAuthStore = create<AuthState>()(
 
           throw new Error(error.response?.data?.message || 'Login failed')
         }
+      },
+
+      authenticate: ({ user, access_token }) => {
+        const normalizedUser = { ...user }
+        if (normalizedUser.profile_picture && !normalizedUser.profile_picture.startsWith('http')) {
+          normalizedUser.profile_picture = `http://localhost:3001${normalizedUser.profile_picture}`
+        }
+
+        localStorage.setItem('access_token', access_token)
+        set({
+          user: normalizedUser,
+          isAuthenticated: true,
+          isLoading: false,
+        })
       },
 
       register: async (userData) => {
