@@ -6,6 +6,8 @@ import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
 
+type FeedbackType = 'success' | 'error' | 'info'
+
 const AdminManageRackets = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Manage Rackets')
@@ -18,9 +20,146 @@ const AdminManageRackets = () => {
   const [rackets, setRackets] = useState<Equipment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [initialRacketData, setInitialRacketData] = useState<Record<string, string | number>>({})
+  const [feedbackModal, setFeedbackModal] = useState<{
+    open: boolean
+    type: FeedbackType
+    title: string
+    message: string
+  }>({
+    open: false,
+    type: 'info',
+    title: '',
+    message: ''
+  })
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean
+    title: string
+    message: string
+    confirmLabel?: string
+    onConfirm: (() => Promise<void> | void) | null
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    confirmLabel: 'Confirm',
+    onConfirm: null
+  })
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const clearFieldError = (field: string) => {
+    setFormErrors(prev => {
+      if (!prev[field]) return prev
+      const { [field]: _removed, ...rest } = prev
+      return rest
+    })
+  }
+
+  interface SanitizedRacket {
+    equipment_name: string
+    price: number
+    stocks: number
+    status: string
+  }
+
+  const sanitizeRacketForComparison = (data: any): SanitizedRacket => {
+    const priceValue = Number(data?.price)
+    const stockValue = Number(data?.stocks)
+
+    return {
+      equipment_name: (data?.equipment_name ?? '').trim(),
+      price: Number.isFinite(priceValue) ? Math.round(priceValue * 100) / 100 : 0,
+      stocks: Number.isFinite(stockValue) ? Math.max(0, Math.floor(stockValue)) : 0,
+      status: data?.status ?? 'Available'
+    }
+  }
+
+  const validateRacket = (
+    data: SanitizedRacket,
+    { isAdd, hasImage }: { isAdd: boolean; hasImage: boolean }
+  ) => {
+    const errors: Record<string, string> = {}
+
+    if (!data.equipment_name) {
+      errors.equipment_name = 'Equipment name is required.'
+    }
+
+    if (!Number.isFinite(data.price) || data.price <= 0) {
+      errors.price = 'Price must be greater than 0.'
+    }
+
+    if (!Number.isInteger(data.stocks) || data.stocks < 0) {
+      errors.stocks = 'Stock must be a whole number greater than or equal to 0.'
+    }
+
+    if (isAdd && !hasImage) {
+      errors.image = 'Please upload a racket image.'
+    }
+
+    return errors
+  }
+
+  const openFeedbackModal = (type: FeedbackType, title: string, message: string) => {
+    setFeedbackModal({
+      open: true,
+      type,
+      title,
+      message
+    })
+  }
+
+  const closeFeedbackModal = () => {
+    setFeedbackModal(prev => ({
+      ...prev,
+      open: false
+    }))
+  }
+
+  const closeConfirmModal = () => {
+    setConfirmModal(prev => ({
+      ...prev,
+      open: false,
+      onConfirm: null
+    }))
+  }
+
+  const feedbackStyleMap: Record<
+    FeedbackType,
+    { border: string; iconWrapper: string; iconColor: string; titleColor: string }
+  > = {
+    success: {
+      border: 'border-green-200',
+      iconWrapper: 'bg-green-100',
+      iconColor: 'text-green-600',
+      titleColor: 'text-green-700'
+    },
+    error: {
+      border: 'border-red-200',
+      iconWrapper: 'bg-red-100',
+      iconColor: 'text-red-600',
+      titleColor: 'text-red-700'
+    },
+    info: {
+      border: 'border-blue-200',
+      iconWrapper: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      titleColor: 'text-blue-700'
+    }
+  }
+
+  const feedbackIconPathMap: Record<FeedbackType, string> = {
+    success: 'M5 13l4 4L19 7',
+    error: 'M6 18L18 6M6 6l12 12',
+    info: 'M13 16h-1v-4h-1m1-4h.01'
+  }
+
+  const feedbackStyle = feedbackStyleMap[feedbackModal.type]
+  const feedbackIconPath = feedbackIconPathMap[feedbackModal.type]
 
   // Helper function to format role
   const formatRole = (role?: string) => {
@@ -67,24 +206,29 @@ const AdminManageRackets = () => {
     }
   }, [])
 
-
-  const handleDeleteRacket = async (racketId: number) => {
-    const racket = rackets.find(r => r.id === racketId)
-    const racketName = racket?.equipment_name || 'this racket'
-    
-    if (!confirm(`Are you sure you want to delete ${racketName}?`)) {
-      return
-    }
-
+  const executeDeleteRacket = async (racketId: number, racketName: string) => {
     try {
       await api.delete(`/equipment/${racketId}`)
-      setRackets(rackets.filter(racket => racket.id !== racketId))
-      alert(`${racketName} deleted successfully!`)
+      setRackets(prev => prev.filter(racket => racket.id !== racketId))
+      openFeedbackModal('success', 'Racket deleted', `${racketName} has been removed successfully.`)
     } catch (error: any) {
       console.error('Error deleting equipment:', error)
       const errorMessage = error.response?.data?.message || error.message || 'Failed to delete equipment. Please try again.'
-      alert(errorMessage)
+      openFeedbackModal('error', 'Failed to delete racket', errorMessage)
     }
+  }
+
+  const handleDeleteRacket = (racketId: number) => {
+    const racket = rackets.find(r => r.id === racketId)
+    const racketName = racket?.equipment_name || 'this racket'
+
+    setConfirmModal({
+      open: true,
+      title: 'Delete Racket',
+      message: `Are you sure you want to delete ${racketName}? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: () => executeDeleteRacket(racketId, racketName)
+    })
   }
 
   const handleEditRacket = (racketId: number) => {
@@ -93,12 +237,15 @@ const AdminManageRackets = () => {
       const imageUrl = racket.image_path?.startsWith('http') 
         ? racket.image_path 
         : `${window.location.origin}${racket.image_path}`
-      setEditingRacket({
+      const preparedRacket = {
         ...racket,
-        unit: 'Head Heavy',
-        weight: '4u',
-        tension: '25 lbs'
-      })
+        unit: racket.unit || 'Head Heavy',
+        weight: racket.weight || '4u',
+        tension: racket.tension || '25 lbs'
+      }
+      setFormErrors({})
+      setEditingRacket(preparedRacket)
+      setInitialRacketData(sanitizeRacketForComparison(preparedRacket))
       setImagePreview(imageUrl)
       setSelectedFile(null)
       setIsAddModal(false)
@@ -107,18 +254,20 @@ const AdminManageRackets = () => {
   }
 
   const handleAddRacket = () => {
-    setEditingRacket({
+    const newRacket = {
       id: Date.now(), // Temporary ID
       equipment_name: '',
       stocks: 0,
       price: 0,
-      description: '',
       status: 'Available',
       image_path: '',
       unit: 'Head Heavy',
       weight: '4u',
       tension: '25 lbs'
-    })
+    }
+    setFormErrors({})
+    setEditingRacket(newRacket)
+    setInitialRacketData(sanitizeRacketForComparison(newRacket))
     setImagePreview(null)
     setSelectedFile(null)
     setIsAddModal(true)
@@ -128,43 +277,52 @@ const AdminManageRackets = () => {
   const handleSaveRacket = async () => {
     if (!editingRacket) return
 
-    try {
-      if (isAddModal) {
-        // Add new equipment
-        const formData = new FormData()
-        formData.append('equipment_name', editingRacket.equipment_name || '')
-        formData.append('stocks', editingRacket.stocks?.toString() || '0')
-        formData.append('price', editingRacket.price?.toString() || '0')
-        formData.append('description', editingRacket.description || '')
-        formData.append('status', editingRacket.status || 'Available')
-        if (selectedFile) {
-          formData.append('image', selectedFile)
-        }
+    const sanitizedData = sanitizeRacketForComparison(editingRacket)
+    const validationErrors = validateRacket(sanitizedData, {
+      isAdd: isAddModal,
+      hasImage: Boolean(selectedFile || imagePreview)
+    })
 
+    setFormErrors(validationErrors)
+    if (Object.keys(validationErrors).length > 0) {
+      return
+    }
+
+    if (!isAddModal && initialRacketData) {
+      const hasChanges =
+        selectedFile ||
+        Object.entries(sanitizedData).some(([key, value]) => initialRacketData[key] !== value)
+
+      if (!hasChanges) {
+        openFeedbackModal('info', 'No changes made', 'No updates were detected. Adjust a field before saving.')
+        return
+      }
+    }
+
+    setIsSaving(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('equipment_name', sanitizedData.equipment_name)
+      formData.append('stocks', sanitizedData.stocks.toString())
+      formData.append('price', sanitizedData.price.toString())
+      formData.append('status', sanitizedData.status || 'Available')
+      if (selectedFile) {
+        formData.append('image', selectedFile)
+      }
+
+      if (isAddModal) {
         await api.post('/equipment', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         })
-        alert('Equipment added successfully!')
       } else {
-        // Update existing equipment
-        const formData = new FormData()
-        formData.append('equipment_name', editingRacket.equipment_name || '')
-        formData.append('stocks', editingRacket.stocks?.toString() || '0')
-        formData.append('price', editingRacket.price?.toString() || '0')
-        formData.append('description', editingRacket.description || '')
-        formData.append('status', editingRacket.status || 'Available')
-        if (selectedFile) {
-          formData.append('image', selectedFile)
-        }
-
         await api.patch(`/equipment/${editingRacket.id}`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         })
-        alert('Equipment updated successfully!')
       }
 
       // Refresh the equipment list
@@ -176,9 +334,20 @@ const AdminManageRackets = () => {
       setIsAddModal(false)
       setSelectedFile(null)
       setImagePreview(null)
+      setFormErrors({})
+      setInitialRacketData({})
+      openFeedbackModal(
+        'success',
+        isAddModal ? 'Racket added' : 'Racket updated',
+        `${sanitizedData.equipment_name || 'Equipment'} has been ${isAddModal ? 'added' : 'updated'} successfully.`
+      )
     } catch (error: any) {
       console.error('Error saving equipment:', error)
-      alert(error.response?.data?.message || 'Failed to save equipment. Please try again.')
+      const errorMessage =
+        error.response?.data?.message || error.response?.data?.error || 'Failed to save equipment. Please try again.'
+      openFeedbackModal('error', 'Failed to save racket', errorMessage)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -188,11 +357,14 @@ const AdminManageRackets = () => {
     setIsAddModal(false)
     setSelectedFile(null)
     setImagePreview(null)
+    setFormErrors({})
+    setInitialRacketData({})
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      clearFieldError('image')
       setSelectedFile(file)
       const reader = new FileReader()
       reader.onloadend = () => {
@@ -478,22 +650,20 @@ const AdminManageRackets = () => {
                     <input
                       type="text"
                       value={editingRacket.equipment_name || ''}
-                      onChange={(e) => setEditingRacket({...editingRacket, equipment_name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        clearFieldError('equipment_name')
+                        setEditingRacket({ ...editingRacket, equipment_name: e.target.value })
+                      }}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                        formErrors.equipment_name
+                          ? 'border-red-500 focus:ring-red-500'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                       placeholder="Enter equipment name"
                     />
-                  </div>
-
-                  {/* Description Field */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Description:</label>
-                    <textarea
-                      value={editingRacket.description || ''}
-                      onChange={(e) => setEditingRacket({...editingRacket, description: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter description"
-                      rows={3}
-                    />
+                    {formErrors.equipment_name && (
+                      <p className="mt-2 text-sm text-red-600">{formErrors.equipment_name}</p>
+                    )}
                   </div>
 
                   {/* Price Field */}
@@ -504,17 +674,30 @@ const AdminManageRackets = () => {
                       step="0.01"
                       min="0"
                       value={editingRacket.price || 0}
-                      onChange={(e) => setEditingRacket({...editingRacket, price: Number(e.target.value) || 0})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        clearFieldError('price')
+                        const value = Number(e.target.value)
+                        setEditingRacket({ ...editingRacket, price: Number.isNaN(value) ? 0 : value })
+                      }}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                        formErrors.price
+                          ? 'border-red-500 focus:ring-red-500'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                       placeholder="Enter price"
                     />
+                    {formErrors.price && (
+                      <p className="mt-2 text-sm text-red-600">{formErrors.price}</p>
+                    )}
                   </div>
 
                   {/* Image Upload Section */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Racket Image:</label>
                     <div 
-                      className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
+                        formErrors.image ? 'border-red-400 hover:border-red-500' : 'border-gray-300 hover:border-blue-400'
+                      }`}
                       onClick={() => document.getElementById('racket-image-upload')?.click()}
                     >
                       {imagePreview ? (
@@ -541,6 +724,9 @@ const AdminManageRackets = () => {
                         className="hidden"
                       />
                     </div>
+                    {formErrors.image && (
+                      <p className="mt-2 text-sm text-red-600">{formErrors.image}</p>
+                    )}
                   </div>
                 </div>
 
@@ -581,30 +767,30 @@ const AdminManageRackets = () => {
 
                   {/* Quantity/Stock Field */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2 text-center">Stock Quantity:</label>
-                    <div className="flex items-center justify-center space-x-4">
-                      <button
-                        type="button"
-                        onClick={() => setEditingRacket({...editingRacket, stocks: Math.max(0, (editingRacket.stocks || 0) - 1)})}
-                        className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                        </svg>
-                      </button>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 min-w-[4rem] text-center">
-                        <span className="text-xl font-bold text-gray-800">{editingRacket.stocks || 0}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setEditingRacket({...editingRacket, stocks: (editingRacket.stocks || 0) + 1})}
-                        className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors shadow-sm hover:shadow-md"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                      </button>
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Stock Quantity:</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={editingRacket.stocks ?? 0}
+                      onChange={(e) => {
+                        clearFieldError('stocks')
+                        const value = Number(e.target.value)
+                        setEditingRacket({
+                          ...editingRacket,
+                          stocks: Number.isNaN(value) ? 0 : Math.max(0, Math.floor(value))
+                        })
+                      }}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                        formErrors.stocks
+                          ? 'border-red-500 focus:ring-red-500'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
+                      placeholder="Enter stock quantity"
+                    />
+                    {formErrors.stocks && (
+                      <p className="mt-2 text-sm text-red-600">{formErrors.stocks}</p>
+                    )}
                   </div>
 
                   {/* Status Field */}
@@ -633,9 +819,12 @@ const AdminManageRackets = () => {
               </button>
               <button
                 onClick={handleSaveRacket}
-                className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-md hover:shadow-lg"
+                disabled={isSaving}
+                className={`px-8 py-3 bg-blue-500 text-white rounded-lg transition-colors font-medium shadow-md hover:shadow-lg ${
+                  isSaving ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-600'
+                }`}
               >
-                Confirm
+                {isSaving ? 'Saving...' : 'Confirm'}
               </button>
             </div>
           </div>
@@ -663,6 +852,80 @@ const AdminManageRackets = () => {
               className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.open && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-xl font-semibold text-gray-900">{confirmModal.title}</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">{confirmModal.message}</p>
+            </div>
+            <div className="px-6 pb-6 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  if (!isDeleting) {
+                    closeConfirmModal()
+                  }
+                }}
+                className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirmModal.onConfirm) return
+                  setIsDeleting(true)
+                  try {
+                    await confirmModal.onConfirm()
+                  } finally {
+                    setIsDeleting(false)
+                    closeConfirmModal()
+                  }
+                }}
+                disabled={isDeleting}
+                className={`px-5 py-2 rounded-lg text-white transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed ${
+                  confirmModal.confirmLabel === 'Delete'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isDeleting ? 'Processing...' : confirmModal.confirmLabel || 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackModal.open && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className={`bg-white rounded-2xl shadow-2xl border ${feedbackStyle.border} max-w-lg w-full`}>
+            <div className="p-6 space-y-5">
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${feedbackStyle.iconWrapper}`}>
+                  <svg className={`w-6 h-6 ${feedbackStyle.iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={feedbackIconPath} />
+                  </svg>
+                </div>
+                <h3 className={`text-xl font-semibold ${feedbackStyle.titleColor}`}>{feedbackModal.title}</h3>
+              </div>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">{feedbackModal.message}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={closeFeedbackModal}
+                  className="px-6 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

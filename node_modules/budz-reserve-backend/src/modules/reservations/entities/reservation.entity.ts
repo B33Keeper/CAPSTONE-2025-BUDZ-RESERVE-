@@ -58,6 +58,9 @@ export class Reservation {
   @Column({ type: 'text', nullable: true })
   Notes: string;
 
+  @Column({ type: 'boolean', default: false })
+  Is_Admin_Created: boolean;
+
   @CreateDateColumn()
   Created_at: Date;
 

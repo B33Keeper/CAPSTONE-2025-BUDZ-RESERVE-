@@ -16,6 +16,7 @@ const payment_entity_1 = require("../payments/entities/payment.entity");
 const equipment_rental_entity_1 = require("../payments/entities/equipment-rental.entity");
 const equipment_rental_item_entity_1 = require("../payments/entities/equipment-rental-item.entity");
 const equipment_entity_1 = require("../equipment/entities/equipment.entity");
+const user_entity_1 = require("../users/entities/user.entity");
 const paymongo_service_1 = require("../payments/paymongo.service");
 const courts_module_1 = require("../courts/courts.module");
 const equipment_module_1 = require("../equipment/equipment.module");
@@ -25,7 +26,7 @@ exports.ReservationsModule = ReservationsModule;
 exports.ReservationsModule = ReservationsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([reservation_entity_1.Reservation, payment_entity_1.Payment, equipment_rental_entity_1.EquipmentRental, equipment_rental_item_entity_1.EquipmentRentalItem, equipment_entity_1.Equipment]),
+            typeorm_1.TypeOrmModule.forFeature([reservation_entity_1.Reservation, payment_entity_1.Payment, equipment_rental_entity_1.EquipmentRental, equipment_rental_item_entity_1.EquipmentRentalItem, equipment_entity_1.Equipment, user_entity_1.User]),
             courts_module_1.CourtsModule,
             equipment_module_1.EquipmentModule,
         ],

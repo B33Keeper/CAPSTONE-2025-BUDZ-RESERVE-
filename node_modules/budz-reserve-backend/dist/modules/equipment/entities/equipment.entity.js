@@ -31,10 +31,6 @@ __decorate([
     __metadata("design:type", Number)
 ], Equipment.prototype, "price", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
-    __metadata("design:type", String)
-], Equipment.prototype, "description", void 0);
-__decorate([
     (0, typeorm_1.Column)({ default: 'Available' }),
     __metadata("design:type", String)
 ], Equipment.prototype, "status", void 0);

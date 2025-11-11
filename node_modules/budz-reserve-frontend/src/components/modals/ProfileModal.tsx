@@ -236,7 +236,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-blue-900/20 to-purple-900/20 backdrop-blur-md flex items-center justify-center z-50 p-2 sm:p-4"
+      className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-blue-900/20 to-purple-900/20 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto sm:overflow-hidden z-50 p-3 sm:p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose()
@@ -244,7 +244,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       }}
     >
       <div 
-        className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 w-full max-w-6xl h-[90vh] sm:h-[700px] flex flex-col sm:flex-row overflow-hidden animate-in slide-in-from-bottom-4 duration-500"
+        className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 w-full max-w-3xl sm:max-w-5xl lg:max-w-6xl flex flex-col sm:flex-row overflow-hidden max-h-[calc(100vh-1.5rem)] sm:max-h-[700px] sm:min-h-[620px] animate-in slide-in-from-bottom-4 duration-500"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Left Sidebar */}
@@ -256,7 +256,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-white rounded-full -translate-x-20 translate-y-20"></div>
           </div>
           {/* Profile Picture Section */}
-          <div className="p-6 text-center relative z-10">
+          <div className="p-5 sm:p-6 text-center relative z-10">
             <div className="flex justify-center mb-6">
               <div className="relative inline-block group">
                 <div className="relative">
@@ -322,10 +322,10 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
           {/* Navigation Section */}
           <div className="flex-1 p-6 relative z-10">
-            <nav className="space-y-4">
+            <nav className="flex flex-wrap gap-3 sm:flex-col sm:gap-0 sm:space-y-4">
               <button
                 onClick={() => setActiveTab('profile')}
-                className={`w-full flex items-center space-x-4 p-4 rounded-2xl transition-all duration-300 group relative overflow-hidden ${
+                className={`flex-1 min-w-[calc(50%-0.75rem)] sm:min-w-0 sm:w-full flex items-center space-x-4 p-4 rounded-2xl transition-all duration-300 group relative overflow-hidden ${
                   activeTab === 'profile'
                     ? 'bg-white/20 text-white shadow-xl backdrop-blur-sm border border-white/30'
                     : 'text-white/80 hover:bg-white/10 hover:text-white'
@@ -345,7 +345,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 
               <button
                 onClick={() => setActiveTab('password')}
-                className={`w-full flex items-center space-x-4 p-4 rounded-2xl transition-all duration-300 group relative overflow-hidden ${
+                className={`flex-1 min-w-[calc(50%-0.75rem)] sm:min-w-0 sm:w-full flex items-center space-x-4 p-4 rounded-2xl transition-all duration-300 group relative overflow-hidden ${
                   activeTab === 'password'
                     ? 'bg-white/20 text-white shadow-xl backdrop-blur-sm border border-white/30'
                     : 'text-white/80 hover:bg-white/10 hover:text-white'
@@ -382,11 +382,11 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         </div>
 
         {/* Right Content */}
-        <div className="w-full sm:w-2/3 p-4 sm:p-8 flex flex-col bg-gradient-to-br from-gray-50/50 to-white/80">
+        <div className="w-full sm:w-2/3 p-4 sm:p-8 flex flex-col bg-gradient-to-br from-gray-50/50 to-white/80 overflow-y-auto">
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-2 mb-4 sm:mb-8">
             <div className="relative">
-              <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
                 {activeTab === 'profile' ? 'My Profile' : 'Change Password'}
               </h2>
               <p className="text-sm text-gray-600 mt-2 font-medium">
@@ -404,26 +404,52 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             </button>
           </div>
 
+          {/* Mobile tab controls */}
+          <div className="sm:hidden grid grid-cols-2 gap-3 mb-6">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-300 ${
+                activeTab === 'profile'
+                  ? 'bg-blue-500 text-white shadow-lg'
+                  : 'bg-white/80 text-gray-700 border border-gray-200'
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span>Profile</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('password')}
+              className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-300 ${
+                activeTab === 'password'
+                  ? 'bg-indigo-500 text-white shadow-lg'
+                  : 'bg-white/80 text-gray-700 border border-gray-200'
+              }`}
+            >
+              <Lock className="w-4 h-4" />
+              <span>Password</span>
+            </button>
+          </div>
+
           {/* Content */}
-          <div className="flex-1 overflow-y-auto flex justify-center">
+          <div className="flex-1 flex justify-center">
             <div className="max-w-2xl w-full">
               {activeTab === 'profile' ? (
-                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-8 py-6">
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6 sm:space-y-8 py-4 sm:py-6">
                   {/* Username Field */}
                   <div className="space-y-3">
-                    <label className="block text-sm font-bold text-gray-800 flex items-center">
+                    <label className="text-sm font-bold text-gray-800 flex items-center">
                       <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
                       Username
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none">
                         <div className="p-2 rounded-lg bg-blue-50 group-focus-within:bg-blue-100 transition-colors duration-300">
                           <User className="h-5 w-5 text-blue-500 group-focus-within:text-blue-600 transition-colors duration-200" />
                         </div>
                       </div>
                       <input
                         {...profileForm.register('name')}
-                        className="w-full pl-20 pr-6 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
+                        className="w-full pl-16 sm:pl-20 pr-6 py-4 sm:py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
                         placeholder="Enter your name"
                         autoComplete="name"
                       />
@@ -442,12 +468,12 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
                   {/* Email Field */}
                   <div className="space-y-3">
-                    <label className="block text-sm font-bold text-gray-800 flex items-center">
+                    <label className="text-sm font-bold text-gray-800 flex items-center">
                       <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
                       Email
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none">
                         <div className="p-2 rounded-lg bg-green-50 group-focus-within:bg-green-100 transition-colors duration-300">
                           <Mail className="h-5 w-5 text-green-500 group-focus-within:text-green-600 transition-colors duration-200" />
                         </div>
@@ -455,7 +481,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                       <input
                         {...profileForm.register('email')}
                         type="email"
-                        className="w-full pl-20 pr-6 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
+                        className="w-full pl-16 sm:pl-20 pr-6 py-4 sm:py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
                         placeholder="Enter your email"
                         autoComplete="email"
                       />
@@ -473,15 +499,15 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                   </div>
 
                   {/* Age and Sex Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
                     {/* Age Field */}
                     <div className="space-y-3">
-                      <label className="block text-sm font-bold text-gray-800 flex items-center">
+                      <label className="text-sm font-bold text-gray-800 flex items-center">
                         <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
                         Age
                       </label>
                       <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none">
                           <div className="p-2 rounded-lg bg-purple-50 group-focus-within:bg-purple-100 transition-colors duration-300">
                             <Calendar className="h-5 w-5 text-purple-500 group-focus-within:text-purple-600 transition-colors duration-200" />
                           </div>
@@ -489,7 +515,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         <input
                           {...profileForm.register('age', { valueAsNumber: true })}
                           type="number"
-                          className="w-full pl-20 pr-6 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
+                          className="w-full pl-16 sm:pl-20 pr-6 py-4 sm:py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
                           placeholder="Enter your age"
                         />
                       </div>
@@ -507,12 +533,12 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
                     {/* Sex Field */}
                     <div className="space-y-3">
-                      <label className="block text-sm font-bold text-gray-800 flex items-center">
+                      <label className="text-sm font-bold text-gray-800 flex items-center">
                         <div className="w-2 h-2 bg-pink-500 rounded-full mr-3"></div>
                         Gender
                       </label>
                       <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none">
                           <div className="p-2 rounded-lg bg-pink-50 group-focus-within:bg-pink-100 transition-colors duration-300">
                             <div className="w-5 h-5 flex items-center justify-center">
                               {user?.sex === 'Male' ? (
@@ -525,7 +551,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         </div>
                         <select
                           {...profileForm.register('sex')}
-                          className="w-full pl-20 pr-12 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg appearance-none cursor-pointer"
+                          className="w-full pl-16 sm:pl-20 pr-12 py-4 sm:py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg appearance-none cursor-pointer"
                         >
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
@@ -551,12 +577,12 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
                   {/* Contact Number Field */}
                   <div className="space-y-3">
-                    <label className="block text-sm font-bold text-gray-800 flex items-center">
+                    <label className="text-sm font-bold text-gray-800 flex items-center">
                       <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
                       Contact Number
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none">
                         <div className="p-2 rounded-lg bg-orange-50 group-focus-within:bg-orange-100 transition-colors duration-300">
                           <Phone className="h-5 w-5 text-orange-500 group-focus-within:text-orange-600 transition-colors duration-200" />
                         </div>
@@ -564,7 +590,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                       <input
                         {...profileForm.register('contact_number')}
                         type="tel"
-                        className="w-full pl-20 pr-6 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
+                        className="w-full pl-16 sm:pl-20 pr-6 py-4 sm:py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
                         placeholder="Enter your contact number"
                         autoComplete="tel"
                       />
@@ -582,7 +608,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                   </div>
                 </form>
               ) : (
-                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6 py-4">
+                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-5 sm:space-y-6 py-3 sm:py-4">
                   {/* Current Password */}
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700">
@@ -592,7 +618,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                       <input
                         {...passwordForm.register('currentPassword')}
                         type={showPasswords.current ? 'text' : 'password'}
-                        className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                        className="w-full px-4 py-3 sm:py-4 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
                         placeholder="Enter current password"
                         autoComplete="current-password"
                       />
@@ -634,7 +660,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                       <input
                         {...passwordForm.register('newPassword')}
                         type={showPasswords.new ? 'text' : 'password'}
-                        className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                        className="w-full px-4 py-3 sm:py-4 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
                         placeholder="Enter new password"
                         autoComplete="new-password"
                       />
@@ -676,7 +702,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                       <input
                         {...passwordForm.register('confirmPassword')}
                         type={showPasswords.confirm ? 'text' : 'password'}
-                        className="w-full px-4 py-4 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                        className="w-full px-4 py-3 sm:py-4 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
                         placeholder="Confirm new password"
                         autoComplete="new-password"
                       />
@@ -714,11 +740,11 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
           </div>
 
           {/* Save Button */}
-          <div className="flex justify-end pt-8 pb-6 border-t border-gray-200/50">
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-6 sm:pt-8 pb-5 sm:pb-6 border-t border-gray-200/50">
             <button
               onClick={activeTab === 'profile' ? profileForm.handleSubmit(onProfileSubmit) : passwordForm.handleSubmit(onPasswordSubmit)}
               disabled={isPasswordChanging}
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-4 rounded-2xl font-bold hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:hover:scale-100 w-full sm:w-auto min-h-[52px]"
             >
               {isPasswordChanging ? (
                 <>

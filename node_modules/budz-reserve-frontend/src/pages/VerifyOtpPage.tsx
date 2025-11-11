@@ -6,9 +6,16 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Loader2, ArrowLeft, CheckCircle } from 'lucide-react'
 import api from '@/lib/api'
+import { getErrorMessage } from '@/lib/errorUtils'
+import { OTP_REGEX } from '@/lib/validation'
 
 const verifyOtpSchema = z.object({
-  otp: z.string().min(6, 'OTP must be 6 digits').max(6, 'OTP must be 6 digits'),
+  otp: z.preprocess(
+    (value) => (typeof value === 'string' ? value.replace(/\s+/g, '') : value),
+    z
+      .string({ required_error: 'OTP is required' })
+      .regex(OTP_REGEX, 'OTP must be 6 digits')
+  ),
 })
 
 type VerifyOtpFormData = z.infer<typeof verifyOtpSchema>
@@ -23,13 +30,18 @@ export function VerifyOtpPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
-    watch,
+    setError,
+    clearErrors,
+    formState: { errors, isSubmitting, isValid },
   } = useForm<VerifyOtpFormData>({
     resolver: zodResolver(verifyOtpSchema),
+    mode: 'onChange',
+    reValidateMode: 'onBlur',
+    defaultValues: {
+      otp: '',
+    },
+    shouldFocusError: true,
   })
-
-  const otpValue = watch('otp')
 
   useEffect(() => {
     // Get email from navigation state
@@ -42,6 +54,7 @@ export function VerifyOtpPage() {
   }, [location.state, navigate])
 
   const onSubmit = async (data: VerifyOtpFormData) => {
+    clearErrors('root')
     setIsLoading(true)
     try {
       const response = await api.post('/auth/verify-otp', {
@@ -55,8 +68,10 @@ export function VerifyOtpPage() {
       setTimeout(() => {
         navigate('/reset-password', { state: { email, otp: data.otp } })
       }, 1500)
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Invalid OTP')
+    } catch (error) {
+      const message = getErrorMessage(error, 'Invalid OTP')
+      setError('root', { type: 'manual', message })
+      toast.error(message)
     } finally {
       setIsLoading(false)
     }
@@ -122,11 +137,17 @@ export function VerifyOtpPage() {
             )}
           </div>
 
+          {errors.root && (
+            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {errors.root.message}
+            </div>
+          )}
+
           {/* Verify OTP Button */}
           <div>
             <button
               type="submit"
-              disabled={isLoading || !otpValue || otpValue.length !== 6}
+              disabled={isLoading || isSubmitting || !isValid}
               className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (

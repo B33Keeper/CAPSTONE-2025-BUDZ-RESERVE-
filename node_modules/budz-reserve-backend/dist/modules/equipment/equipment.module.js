@@ -12,12 +12,13 @@ const typeorm_1 = require("@nestjs/typeorm");
 const equipment_service_1 = require("./equipment.service");
 const equipment_controller_1 = require("./equipment.controller");
 const equipment_entity_1 = require("./entities/equipment.entity");
+const upload_module_1 = require("../upload/upload.module");
 let EquipmentModule = class EquipmentModule {
 };
 exports.EquipmentModule = EquipmentModule;
 exports.EquipmentModule = EquipmentModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([equipment_entity_1.Equipment])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([equipment_entity_1.Equipment]), upload_module_1.UploadModule],
         controllers: [equipment_controller_1.EquipmentController],
         providers: [equipment_service_1.EquipmentService],
         exports: [equipment_service_1.EquipmentService],

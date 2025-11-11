@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymongoPaymentIntent, PaymongoPaymentMethod, PaymongoPayment } from './types/paymongo.types';
+import {
+  PaymongoPaymentIntent,
+  PaymongoPaymentMethod,
+  PaymongoPayment,
+  PaymongoQrPhCode,
+} from './types/paymongo.types';
 
 @Injectable()
 export class PayMongoService {
@@ -596,6 +601,45 @@ export class PayMongoService {
       };
     } catch (error) {
       this.logger.error('Error creating checkout session with source:', error);
+      throw error;
+    }
+  }
+
+  async generateQrPhStaticCode(params: {
+    mobileNumber?: string;
+    notes?: string;
+    kind?: 'instore' | 'dynamic' | string;
+  }): Promise<PaymongoQrPhCode> {
+    const { mobileNumber, notes, kind = 'instore' } = params || {};
+
+    try {
+      const response = await fetch(`${this.baseUrl}/qrph/generate`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${this.secretKey}:`).toString('base64')}`,
+          'Content-Type': 'application/json',
+          accept: 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            attributes: {
+              kind,
+              ...(mobileNumber ? { mobile_number: mobileNumber } : {}),
+              ...(notes ? { notes } : {}),
+            },
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(`PayMongo API error: ${result.errors?.[0]?.detail || 'Unknown error'}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logger.error('Error generating QR Ph static code:', error);
       throw error;
     }
   }

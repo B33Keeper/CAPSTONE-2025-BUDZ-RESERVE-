@@ -4,7 +4,8 @@ export declare enum PaymentMethod {
     MAYA = "Maya",
     GRABPAY = "GrabPay",
     BANKING = "Online Banking",
-    CASH = "Cash"
+    CASH = "Cash",
+    QRPH = "QR Ph"
 }
 export declare enum PaymentStatus {
     PENDING = "Pending",

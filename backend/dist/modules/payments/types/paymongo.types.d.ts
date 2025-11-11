@@ -87,3 +87,17 @@ export interface PaymongoPayment {
         };
     };
 }
+export interface PaymongoQrPhCode {
+    id: string;
+    type: 'code';
+    attributes: {
+        kind: string;
+        livemode: boolean;
+        mobile_number?: string;
+        notes?: string;
+        qr_image?: string;
+        created_at?: number;
+        updated_at?: number;
+        [key: string]: any;
+    };
+}

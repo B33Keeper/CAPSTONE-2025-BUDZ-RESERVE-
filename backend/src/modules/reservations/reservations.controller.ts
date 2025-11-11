@@ -46,8 +46,68 @@ export class ReservationsController {
   @ApiOperation({ summary: 'Create reservation with cash payment (Admin only)' })
   @ApiResponse({ status: 201, description: 'Reservation created successfully with cash payment' })
   @ApiResponse({ status: 400, description: 'Invalid reservation data' })
-  createWithCash(@Body() body: { customerName: string; bookingData: any }, @Request() req: any) {
-    return this.reservationsService.createWithCashPayment(body.customerName, body.bookingData);
+  createWithCash(
+    @Body()
+    body: {
+      customerName: string;
+      customerEmail?: string;
+      customerContact?: string;
+      bookingData: any;
+    },
+    @Request() req: any,
+  ) {
+    return this.reservationsService.createWithCashPayment(
+      body.customerName,
+      body.bookingData,
+      body.customerContact,
+      body.customerEmail,
+    );
+  }
+
+  @Post('admin/qrph/preview')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Generate QR Ph code preview (Admin only)' })
+  @ApiResponse({ status: 201, description: 'QR Ph code generated successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to generate QR code' })
+  generateQrPhPreview(
+    @Body()
+    body: {
+      customerName: string;
+      customerEmail?: string;
+      customerContact?: string;
+      qrDetails?: { notes?: string; mobileNumber?: string; kind?: 'instore' | 'dynamic' | string };
+    },
+  ) {
+    return this.reservationsService.generateQrPhPreview(body.customerName, body.qrDetails);
+  }
+
+  @Post('admin/qrph')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create reservation with QR Ph payment (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Reservation created successfully with QR Ph payment' })
+  @ApiResponse({ status: 400, description: 'Invalid reservation data' })
+  createWithQrPh(
+    @Body()
+    body: {
+      customerName: string;
+      customerEmail?: string;
+      customerContact?: string;
+      bookingData: any;
+      qrDetails?: { notes?: string; mobileNumber?: string; kind?: 'instore' | 'dynamic' | string };
+      existingQrData?: any;
+    },
+    @Request() req: any,
+  ) {
+    return this.reservationsService.createWithQrPhPayment(
+      body.customerName,
+      body.bookingData,
+      body.customerContact,
+      body.customerEmail,
+      body.qrDetails,
+      body.existingQrData,
+    );
   }
 
   @Get()

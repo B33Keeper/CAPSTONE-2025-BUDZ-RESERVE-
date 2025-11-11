@@ -11,6 +11,7 @@ import { VerifyOtpPage } from '@/pages/VerifyOtpPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { PaymentSuccessPage } from '@/pages/PaymentSuccessPage'
 import { PaymentFailedPage } from '@/pages/PaymentFailedPage'
+import { QueueingPage } from '@/pages/QueueingPage'
 import AdminDashboard from '@/pages/AdminDashboard'
 import AdminManageCourts from '@/pages/AdminManageCourts'
 import AdminManageRackets from '@/pages/AdminManageRackets'
@@ -124,6 +125,14 @@ function App() {
           element={
             <ProtectedRoute>
               <UploadPhoto />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/queueing"
+          element={
+            <ProtectedRoute>
+              <QueueingPage />
             </ProtectedRoute>
           }
         />

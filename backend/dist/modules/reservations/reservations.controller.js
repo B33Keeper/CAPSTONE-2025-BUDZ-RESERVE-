@@ -30,7 +30,13 @@ let ReservationsController = class ReservationsController {
         return this.reservationsService.createFromPayment(paymentData);
     }
     createWithCash(body, req) {
-        return this.reservationsService.createWithCashPayment(body.customerName, body.bookingData);
+        return this.reservationsService.createWithCashPayment(body.customerName, body.bookingData, body.customerContact, body.customerEmail);
+    }
+    generateQrPhPreview(body) {
+        return this.reservationsService.generateQrPhPreview(body.customerName, body.qrDetails);
+    }
+    createWithQrPh(body, req) {
+        return this.reservationsService.createWithQrPhPayment(body.customerName, body.bookingData, body.customerContact, body.customerEmail, body.qrDetails, body.existingQrData);
     }
     findAll() {
         return this.reservationsService.findAll();
@@ -91,6 +97,31 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], ReservationsController.prototype, "createWithCash", null);
+__decorate([
+    (0, common_1.Post)('admin/qrph/preview'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Generate QR Ph code preview (Admin only)' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'QR Ph code generated successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Failed to generate QR code' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ReservationsController.prototype, "generateQrPhPreview", null);
+__decorate([
+    (0, common_1.Post)('admin/qrph'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Create reservation with QR Ph payment (Admin only)' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Reservation created successfully with QR Ph payment' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid reservation data' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], ReservationsController.prototype, "createWithQrPh", null);
 __decorate([
     (0, common_1.Get)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

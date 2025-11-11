@@ -19,6 +19,7 @@ export declare class Reservation {
     Reference_Number: string;
     Paymongo_Reference_Number: string;
     Notes: string;
+    Is_Admin_Created: boolean;
     Created_at: Date;
     Updated_at: Date;
     user: User;

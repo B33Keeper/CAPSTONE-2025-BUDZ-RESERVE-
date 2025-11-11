@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { PaymongoPaymentIntent, PaymongoPaymentMethod, PaymongoPayment } from './types/paymongo.types';
+import { PaymongoPaymentIntent, PaymongoPaymentMethod, PaymongoPayment, PaymongoQrPhCode } from './types/paymongo.types';
 export declare class PayMongoService {
     private configService;
     private readonly logger;
@@ -84,4 +84,9 @@ export declare class PayMongoService {
         currency: string;
         status: "awaiting_payment_method" | "awaiting_next_action" | "processing" | "succeeded" | "awaiting_payment";
     }>;
+    generateQrPhStaticCode(params: {
+        mobileNumber?: string;
+        notes?: string;
+        kind?: 'instore' | 'dynamic' | string;
+    }): Promise<PaymongoQrPhCode>;
 }

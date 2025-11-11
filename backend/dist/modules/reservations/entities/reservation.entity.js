@@ -73,6 +73,10 @@ __decorate([
     __metadata("design:type", String)
 ], Reservation.prototype, "Notes", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'boolean', default: false }),
+    __metadata("design:type", Boolean)
+], Reservation.prototype, "Is_Admin_Created", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], Reservation.prototype, "Created_at", void 0);

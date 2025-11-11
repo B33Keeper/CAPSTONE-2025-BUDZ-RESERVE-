@@ -174,6 +174,23 @@ export class AuthService {
     // Remove OTP from store
     this.otpStore.delete(email);
 
-    return { message: 'Password reset successfully' };
+    const updatedUser = await this.usersService.findOne(user.id);
+    const payload = { username: updatedUser.username, sub: updatedUser.id };
+
+    return {
+      message: 'Password reset successfully',
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        age: updatedUser.age,
+        sex: updatedUser.sex,
+        contact_number: updatedUser.contact_number,
+        profile_picture: updatedUser.profile_picture,
+        role: updatedUser.role,
+      },
+    };
   }
 }

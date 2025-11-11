@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type JSX } from 'react'
+import { useState, useEffect, useMemo, useRef, type JSX } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { apiServices, Court, Equipment, TimeSlot } from '@/lib/apiServices'
@@ -30,6 +30,8 @@ export default function AdminCreateReservations() {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Create Reservations')
   const [customerName, setCustomerName] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
+  const [customerContact, setCustomerContact] = useState('')
   
   const [selectedDate, setSelectedDate] = useState('')
   const [tempSelectedDate, setTempSelectedDate] = useState('')
@@ -79,6 +81,22 @@ export default function AdminCreateReservations() {
   const [referenceNumber, setReferenceNumber] = useState('')
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false)
+  const [isConfirmingQrPayment, setIsConfirmingQrPayment] = useState(false)
+  const [qrPaymentConfirmed, setQrPaymentConfirmed] = useState(false)
+  const [qrNotes, setQrNotes] = useState('')
+  const [recentPaymentMethod, setRecentPaymentMethod] = useState<'cash' | 'qrph' | null>(null)
+  const [qrPaymentData, setQrPaymentData] = useState<{
+    id: string
+    type?: string
+    attributes?: {
+      qr_image?: string
+      notes?: string
+      kind?: string
+      mobile_number?: string
+      [key: string]: any
+    }
+  } | null>(null)
   
   const navigate = useNavigate()
   const { user: adminUser, logout } = useAuthStore()
@@ -87,8 +105,80 @@ export default function AdminCreateReservations() {
   const totalAmount = courtBookings.reduce((sum, booking) => sum + Number(booking.subtotal), 0) + 
                      equipmentBookings.reduce((sum, booking) => sum + Number(booking.subtotal), 0)
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const normalizedContactNumber = customerContact.replace(/\D/g, '')
+  const paymongoMobileNumber = useMemo(() => {
+    if (!normalizedContactNumber) return ''
+    if (normalizedContactNumber.startsWith('63')) {
+      return `+${normalizedContactNumber}`
+    }
+    if (normalizedContactNumber.startsWith('0')) {
+      return `+63${normalizedContactNumber.slice(1)}`
+    }
+    if (normalizedContactNumber.startsWith('9')) {
+      return `+63${normalizedContactNumber}`
+    }
+    return `+${normalizedContactNumber}`
+  }, [normalizedContactNumber])
+  const isCustomerDetailsValid =
+    customerName.trim().length > 0 &&
+    emailRegex.test(customerEmail.trim()) &&
+    normalizedContactNumber.length >= 7
+  const displayCustomerName = customerName.trim() || 'Walk-in Customer'
+
+  const resetReservationFlow = () => {
+    setCustomerName('')
+    setCustomerEmail('')
+    setCustomerContact('')
+    setSelectedDate('')
+    setTempSelectedDate('')
+    setActiveTab('Sheet 1')
+    setCourtBookings([])
+    setEquipmentBookings([])
+    setSelectedCells(new Set())
+    setFlippedCards(new Set())
+    setRacketQuantity(0)
+    setRacketTime(1)
+    setReferenceNumber('')
+    setQrNotes('')
+    setQrPaymentData(null)
+    setQrPaymentConfirmed(false)
+    setRecentPaymentMethod(null)
+    setCurrentStep(0)
+    setDateError('')
+    setShowEquipmentGuard(false)
+    setIsGeneratingQr(false)
+    setIsProcessingPayment(false)
+    setIsConfirmingQrPayment(false)
+    setLoadingAvailability(false)
+    setAvailabilityData(new Map())
+  }
+
+  const isQrFlow = recentPaymentMethod === 'qrph'
+  const isQrAwaitingConfirmation = isQrFlow && !qrPaymentConfirmed
+  const statusBadgeClass = isQrFlow
+    ? isQrAwaitingConfirmation
+      ? 'bg-white/20 text-yellow-200'
+      : 'bg-white/20 text-emerald-200'
+    : 'bg-white/20 text-emerald-200'
+  const statusBadgeLabel = isQrFlow
+    ? isQrAwaitingConfirmation
+      ? 'Status: Pending Payment'
+      : 'Status: Paid'
+    : 'Status: Paid'
+  const headerTitle = isQrFlow
+    ? isQrAwaitingConfirmation
+      ? 'QR Payment Generated!'
+      : 'QR Payment Confirmed!'
+    : 'Cash Payment Recorded!'
+  const headerSubtitle = isQrFlow
+    ? isQrAwaitingConfirmation
+      ? `The booking for ${displayCustomerName} is pending payment via PayMongo QR Ph. Share the code below with the customer to complete the transaction.`
+      : `The booking for ${displayCustomerName} has been recorded. Payment has been confirmed via QR Ph.`
+    : `The booking for ${displayCustomerName} has been successfully processed with cash payment.`
+
   const steps = [
-    { id: 0, name: 'Enter customer name', hint: 'Identify the walk-in guest' },
+    { id: 0, name: 'Customer details', hint: 'Identify and contact the guest' },
     { id: 1, name: 'Select a date', hint: 'Pick their play day' },
     { id: 2, name: 'Select time & court no.', hint: 'Reserve the slot' },
     { id: 3, name: 'Payment', hint: 'Confirm cash payment' },
@@ -99,6 +189,152 @@ export default function AdminCreateReservations() {
     if (stepId < currentStep) return 'completed'
     if (stepId === currentStep) return 'current'
     return 'upcoming'
+  }
+
+  const handleGenerateQrPayment = async () => {
+    if (!customerName || customerName.trim() === '') {
+      toast.error('Please enter customer name first')
+      return
+    }
+
+    if (!customerEmail || !emailRegex.test(customerEmail.trim())) {
+      toast.error('Please enter a valid customer email address')
+      return
+    }
+
+    if (!customerContact || normalizedContactNumber.length < 7) {
+      toast.error('Please enter a valid customer phone number')
+      return
+    }
+
+    if (courtBookings.length === 0) {
+      toast.error('Please select at least one court booking')
+      return
+    }
+
+    if (totalAmount === 0) {
+      toast.error('Total amount must be greater than zero to generate a QR code')
+      return
+    }
+
+    try {
+      setIsGeneratingQr(true)
+
+      let effectiveReferenceNumber = referenceNumber
+      if (!effectiveReferenceNumber) {
+        effectiveReferenceNumber =
+          Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
+        setReferenceNumber(effectiveReferenceNumber)
+      }
+
+      const effectiveNotes =
+        qrNotes.trim() ||
+        `Reservation ${effectiveReferenceNumber} - ${customerName.trim() || 'Walk-in Customer'}`
+
+      const response = await api.post('/reservations/admin/qrph/preview', {
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerContact: customerContact.trim(),
+        qrDetails: {
+          notes: effectiveNotes,
+          kind: 'instore',
+          ...(paymongoMobileNumber ? { mobileNumber: paymongoMobileNumber } : {})
+        }
+      })
+
+      if (response.data?.qrData) {
+        toast.success('QR Ph code generated. Await customer payment.')
+        setRecentPaymentMethod('qrph')
+        setQrPaymentData(response.data.qrData)
+        setQrPaymentConfirmed(false)
+        setCurrentStep(4)
+      } else {
+        toast.error('Failed to generate QR code preview. Please try again.')
+      }
+    } catch (error: any) {
+      console.error('Error generating QR Ph code:', error)
+      toast.error(error.response?.data?.message || 'Failed to generate QR code. Please try again.')
+    } finally {
+      setIsGeneratingQr(false)
+    }
+  }
+
+  const handleConfirmQrPayment = async () => {
+    if (!qrPaymentData?.id) {
+      toast.error('Generate a QR code first before confirming payment.')
+      return
+    }
+
+    if (courtBookings.length === 0) {
+      toast.error('Please select at least one court booking')
+      return
+    }
+
+    try {
+      setIsConfirmingQrPayment(true)
+
+      let effectiveReferenceNumber = referenceNumber
+      if (!effectiveReferenceNumber) {
+        effectiveReferenceNumber =
+          Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
+        setReferenceNumber(effectiveReferenceNumber)
+      }
+
+      const bookingData = {
+        selectedDate,
+        courtBookings: courtBookings.map(booking => ({
+          court: booking.court,
+          schedule: booking.schedule,
+          subtotal: booking.subtotal
+        })),
+        equipmentBookings: equipmentBookings.map(booking => ({
+          equipment: booking.equipment,
+          time: booking.time,
+          subtotal: booking.subtotal,
+          quantity: booking.quantity || 1
+        })),
+        referenceNumber: effectiveReferenceNumber
+      }
+
+      const existingNotes =
+        qrPaymentData.attributes?.notes ||
+        qrNotes.trim() ||
+        `Reservation ${effectiveReferenceNumber} - ${displayCustomerName}`
+
+      const response = await api.post('/reservations/admin/qrph', {
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerContact: customerContact.trim(),
+        bookingData,
+        qrDetails: {
+          notes: existingNotes,
+          kind: qrPaymentData.attributes?.kind || 'instore',
+          ...(paymongoMobileNumber ? { mobileNumber: paymongoMobileNumber } : {})
+        },
+        existingQrData: qrPaymentData
+      })
+
+      if (response.data) {
+        toast.success('Payment confirmed and reservation saved!')
+        setRecentPaymentMethod('qrph')
+        setQrPaymentData(response.data.qrData || qrPaymentData)
+        setReferenceNumber(
+          response.data.payment?.reference_number || effectiveReferenceNumber
+        )
+        setQrPaymentConfirmed(true)
+        setCurrentStep(4)
+      }
+    } catch (error: any) {
+      console.error('Error confirming QR Ph payment:', error)
+      toast.error(error.response?.data?.message || 'Failed to confirm payment. Please try again.')
+    } finally {
+      setIsConfirmingQrPayment(false)
+    }
+  }
+
+  const handleCancelQrPayment = () => {
+    toast('QR payment cancelled. Starting a new reservation.')
+    resetReservationFlow()
   }
 
   const courtsPerSheet = 6
@@ -552,6 +788,16 @@ export default function AdminCreateReservations() {
       return
     }
 
+    if (!customerEmail || !emailRegex.test(customerEmail.trim())) {
+      toast.error('Please enter a valid customer email address')
+      return
+    }
+
+    if (!customerContact || normalizedContactNumber.length < 7) {
+      toast.error('Please enter a valid customer phone number')
+      return
+    }
+
     if (courtBookings.length === 0) {
       toast.error('Please select at least one court booking')
       return
@@ -560,9 +806,11 @@ export default function AdminCreateReservations() {
     try {
       setIsProcessingPayment(true)
 
-      if (!referenceNumber) {
-        const refNumber = Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
-        setReferenceNumber(refNumber)
+      let effectiveReferenceNumber = referenceNumber
+      if (!effectiveReferenceNumber) {
+        effectiveReferenceNumber =
+          Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
+        setReferenceNumber(effectiveReferenceNumber)
       }
 
       const bookingData = {
@@ -578,16 +826,21 @@ export default function AdminCreateReservations() {
           subtotal: booking.subtotal,
           quantity: booking.quantity || 1
         })),
-        referenceNumber: referenceNumber || Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
+        referenceNumber: effectiveReferenceNumber
       }
 
       const response = await api.post('/reservations/admin/cash', {
         customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerContact: customerContact.trim(),
         bookingData
       })
 
       if (response.data) {
         toast.success('Reservation created successfully with cash payment!')
+        setRecentPaymentMethod('cash')
+        setQrPaymentData(null)
+        setQrPaymentConfirmed(true)
         setCurrentStep(4)
       }
     } catch (error: any) {
@@ -801,8 +1054,10 @@ export default function AdminCreateReservations() {
             {currentStep === 0 && (
               <div>
                 <div className="bg-gray-600 text-white px-6 py-4 rounded-t-lg -mx-6 -mt-6 mb-6 shadow">
-                  <h2 className="text-base sm:text-lg font-semibold">Enter Customer Name</h2>
-                  <p className="text-blue-100 text-xs sm:text-sm mt-1">Enter the name of the walk-in customer</p>
+                  <h2 className="text-base sm:text-lg font-semibold">Enter Customer Details</h2>
+                  <p className="text-blue-100 text-xs sm:text-sm mt-1">
+                    Provide the guest&apos;s contact information for confirmation and follow-up.
+                  </p>
                 </div>
 
                 <div>
@@ -822,10 +1077,58 @@ export default function AdminCreateReservations() {
                   </p>
                 </div>
 
-                {customerName && customerName.trim() && (
-                  <div className="mt-4 p-4 bg-green-50 ring-1 ring-green-200 rounded-lg">
-                    <div className="font-medium text-green-800">Customer Name:</div>
-                    <div className="text-green-700">{customerName.trim()}</div>
+                <div className="mt-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="name@example.com"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                      customerEmail && !emailRegex.test(customerEmail.trim())
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                    }`}
+                  />
+                  <p className="mt-2 text-sm text-gray-500">
+                    We&apos;ll send the reference details to this email for the guest&apos;s record.
+                  </p>
+                  {customerEmail && !emailRegex.test(customerEmail.trim()) && (
+                    <p className="mt-2 text-sm text-red-600">Please enter a valid email address.</p>
+                  )}
+                </div>
+
+                <div className="mt-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="09XXXXXXXXX"
+                    value={customerContact}
+                    onChange={(e) => setCustomerContact(e.target.value)}
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                      customerContact && normalizedContactNumber.length < 7
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                    }`}
+                  />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Enter a reachable number so we can confirm or update the booking.
+                  </p>
+                  {customerContact && normalizedContactNumber.length < 7 && (
+                    <p className="mt-2 text-sm text-red-600">Please enter a valid phone number.</p>
+                  )}
+                </div>
+
+                {isCustomerDetailsValid && (
+                  <div className="mt-4 p-4 bg-green-50 ring-1 ring-green-200 rounded-lg space-y-1">
+                    <div className="font-medium text-green-800">Customer Summary:</div>
+                    <div className="text-green-700 font-medium">{customerName.trim()}</div>
+                    <div className="text-green-700">{customerEmail.trim()}</div>
+                    <div className="text-green-700">{customerContact.trim()}</div>
                   </div>
                 )}
 
@@ -836,10 +1139,18 @@ export default function AdminCreateReservations() {
                         toast.error('Please enter customer name')
                         return
                       }
+                      if (!customerEmail || !emailRegex.test(customerEmail.trim())) {
+                        toast.error('Please enter a valid customer email address')
+                        return
+                      }
+                      if (!customerContact || normalizedContactNumber.length < 7) {
+                        toast.error('Please enter a valid customer phone number')
+                        return
+                      }
                       setCurrentStep(1)
                     }}
                     className="inline-flex items-center justify-center px-8 py-3 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!customerName || customerName.trim() === ''}
+                    disabled={!isCustomerDetailsValid}
                   >
                     Proceed
                   </button>
@@ -981,10 +1292,27 @@ export default function AdminCreateReservations() {
                           </span>
                           {formattedDate}
                         </p>
-                  {customerName && (
-                          <p className="text-xs font-medium uppercase tracking-[0.25em] text-blue-500">
-                            For: <span className="text-blue-700 normal-case tracking-normal ml-1 font-semibold">{customerName.trim()}</span>
-                          </p>
+                  {(customerName || customerEmail || customerContact) && (
+                          <div className="text-[11px] font-medium uppercase tracking-[0.25em] text-blue-500 space-y-1">
+                            {customerName && (
+                              <p>
+                                For:{' '}
+                                <span className="text-blue-700 normal-case tracking-normal ml-1 font-semibold">
+                                  {customerName.trim()}
+                                </span>
+                              </p>
+                            )}
+                            {customerEmail && (
+                              <p className="text-blue-700 normal-case tracking-normal">
+                                Email: <span className="font-semibold">{customerEmail.trim()}</span>
+                              </p>
+                            )}
+                            {customerContact && (
+                              <p className="text-blue-700 normal-case tracking-normal">
+                                Phone: <span className="font-semibold">{customerContact.trim()}</span>
+                              </p>
+                            )}
+                          </div>
                   )}
                       </div>
                     )
@@ -1417,8 +1745,24 @@ export default function AdminCreateReservations() {
                 <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">Booking Summary</h3>
                   <p className="text-sm text-gray-600">Date: <span className="font-medium">{selectedDate}</span></p>
-                  {customerName && (
-                    <p className="text-sm text-gray-600">For: <span className="font-medium">{customerName.trim()}</span></p>
+                  {(customerName || customerEmail || customerContact) && (
+                    <div className="mt-1 space-y-1 text-sm text-gray-600">
+                      {customerName && (
+                        <p>
+                          For: <span className="font-medium">{customerName.trim()}</span>
+                        </p>
+                      )}
+                      {customerEmail && (
+                        <p>
+                          Email: <span className="font-medium">{customerEmail.trim()}</span>
+                        </p>
+                      )}
+                      {customerContact && (
+                        <p>
+                          Phone: <span className="font-medium">{customerContact.trim()}</span>
+                        </p>
+                      )}
+                    </div>
                   )}
                   <div className="mt-4">
                     <h4 className="font-medium text-gray-700">Court Bookings:</h4>
@@ -1449,10 +1793,51 @@ export default function AdminCreateReservations() {
                   </div>
                 </div>
 
-                <div className="flex justify-center space-x-4 mt-8">
+                <div className="mt-6 p-4 sm:p-5 border border-blue-200 bg-blue-50/60 rounded-xl shadow-sm space-y-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-blue-900">PayMongo QR Ph Payment</h3>
+                    <p className="text-sm text-blue-700">
+                      Generate a QR Ph code for the customer to scan. The reservation will be saved with a pending payment status until PayMongo confirms the transaction.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-semibold text-blue-900 mb-2">
+                        QR Notes
+                      </label>
+                      <input
+                        type="text"
+                        value={qrNotes}
+                        onChange={(e) => setQrNotes(e.target.value)}
+                        placeholder="Reservation reference and customer name"
+                        className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
+                      />
+                      <p className="mt-2 text-xs text-blue-700">
+                        Leave blank to auto-fill with the reservation reference and customer name.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-blue-900 mb-2">
+                        Mobile Number Used For QR
+                      </label>
+                      <input
+                        type="text"
+                        value={paymongoMobileNumber}
+                        readOnly
+                        className="w-full px-4 py-3 border border-blue-200 rounded-lg bg-blue-100/70 text-blue-900 font-medium cursor-not-allowed"
+                        placeholder="+63XXXXXXXXXX"
+                      />
+                      <p className="mt-2 text-xs text-blue-700">
+                        Update the customer phone number above if this needs to change. PayMongo requires the mobile number in international format.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-center items-stretch gap-3 mt-8">
                   <button
                     onClick={() => handleBackToStep(2)}
-                    className="flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1473,24 +1858,188 @@ export default function AdminCreateReservations() {
                       <span>Payment Received (Cash)</span>
                     )}
                   </button>
+                  <button
+                    onClick={handleGenerateQrPayment}
+                    className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 justify-center"
+                    disabled={isGeneratingQr || totalAmount === 0}
+                  >
+                    {isGeneratingQr ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>Generating QR...</span>
+                      </>
+                    ) : (
+                      <span>Generate QR Payment</span>
+                    )}
+                  </button>
                 </div>
               </div>
             )}
 
             {currentStep === 4 && (
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Reservation Completed!</h2>
-                <p className="text-gray-600 mb-8">The booking for <span className="font-semibold">{customerName.trim()}</span> has been successfully processed with cash payment.</p>
-                <div className="text-gray-500">
-                  <p className="font-medium">Reference Number: <span className="text-blue-600">{referenceNumber}</span></p>
-                  <p className="font-medium">Total Amount: <span className="text-green-600">₱{totalAmount.toFixed(2)}</span></p>
+              <div className="py-12">
+                <div className="max-w-4xl mx-auto space-y-8">
+                  <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
+                    <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"></div>
+                    <div className="relative px-6 pt-10 pb-6 sm:px-10 sm:pt-12">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-white">
+                        <div>
+                          <p className="text-sm uppercase tracking-[0.35em] text-white/70 font-semibold">
+                            Reservation {isQrFlow ? (isQrAwaitingConfirmation ? 'Pending' : 'Completed') : 'Completed'}
+                          </p>
+                          <h2 className="text-3xl sm:text-4xl font-bold mt-2">
+                            {headerTitle}
+                          </h2>
+                        </div>
+                        <div className={`px-4 py-2 rounded-full text-sm font-medium shadow-lg ${statusBadgeClass}`}>
+                          {statusBadgeLabel}
+                        </div>
+                      </div>
+
+                      <div className="mt-8 rounded-2xl border border-slate-200 bg-white text-left shadow-lg">
+                        <div className="px-6 py-5 border-b border-slate-100">
+                          <p className="text-sm font-medium text-slate-500 uppercase tracking-wide">
+                            Booking Summary
+                          </p>
+                          <h3 className="mt-2 text-xl font-semibold text-slate-900">
+                            {displayCustomerName}
+                          </h3>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {headerSubtitle}
+                          </p>
+                        </div>
+
+                        <div className="px-6 py-6">
+                          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="rounded-xl bg-slate-50 px-4 py-3 border border-slate-100">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Reference Number
+                              </p>
+                              <p className="mt-1 text-sm font-semibold text-blue-600 break-all">
+                                {referenceNumber}
+                              </p>
+                            </div>
+                            <div className="rounded-xl bg-slate-50 px-4 py-3 border border-slate-100">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Total Amount
+                              </p>
+                              <p className="mt-1 text-lg font-bold text-emerald-600">
+                                ₱{totalAmount.toFixed(2)}
+                              </p>
+                            </div>
+                            <div className="rounded-xl bg-slate-50 px-4 py-3 border border-slate-100">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Payment Method
+                              </p>
+                              <p className="mt-1 text-sm font-semibold text-slate-800">
+                                {isQrFlow ? 'QR Ph (PayMongo)' : 'Cash'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                            <div className="rounded-xl border border-slate-100 px-4 py-3 bg-white">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Contact Email
+                              </p>
+                              <p className="mt-1 text-sm font-medium text-slate-800">
+                                {customerEmail.trim() || '—'}
+                              </p>
+                            </div>
+                            <div className="rounded-xl border border-slate-100 px-4 py-3 bg-white">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Contact Number
+                              </p>
+                              <p className="mt-1 text-sm font-medium text-slate-800">
+                                {customerContact.trim() || '—'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {isQrFlow && (
+                        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-6 py-5">
+                            <h4 className="text-lg font-semibold text-blue-900">PayMongo QR Code</h4>
+                            <p className="mt-2 text-sm text-blue-800">
+                              Ask the customer to scan this code using their QR Ph capable banking app. Payment will automatically reflect in PayMongo once completed.
+                            </p>
+                            {(qrPaymentData?.attributes?.notes || qrNotes) && (
+                              <div className="mt-4 rounded-lg border border-blue-200 bg-white/80 px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">
+                                  Notes
+                                </p>
+                                <p className="mt-1 text-sm text-blue-900">
+                                  {qrPaymentData?.attributes?.notes || qrNotes}
+                                </p>
+                              </div>
+                            )}
+                            {qrPaymentData?.id && (
+                              <p className="mt-4 text-xs text-blue-700">
+                                QR Code ID: <span className="font-medium">{qrPaymentData.id}</span>
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex justify-center">
+                            {qrPaymentData?.attributes?.qr_image ? (
+                              <div className="rounded-[2rem] border-4 border-white shadow-2xl bg-white/95 p-6">
+                                <img
+                                  src={qrPaymentData.attributes.qr_image}
+                                  alt="PayMongo QR Ph Code"
+                                  className="w-56 h-56 sm:w-64 sm:h-64 object-contain"
+                                />
+                              </div>
+                            ) : (
+                              <div className="rounded-2xl border border-dashed border-blue-300 bg-white/80 px-6 py-8 text-center text-blue-600">
+                                <p className="text-sm font-medium">
+                                  QR image unavailable. Please check the PayMongo dashboard for details.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {isQrAwaitingConfirmation && (
+                        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                          <button
+                            onClick={handleConfirmQrPayment}
+                            className="flex-1 inline-flex items-center justify-center rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                            disabled={isConfirmingQrPayment}
+                          >
+                            {isConfirmingQrPayment ? 'Recording Payment...' : 'Payment Received'}
+                          </button>
+                          <button
+                            onClick={handleCancelQrPayment}
+                            className="flex-1 inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-6 py-3 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50"
+                          >
+                            Cancel & Reset
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => navigate('/admin')}
+                      className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-300 transition-transform hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Back to Dashboard
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => navigate('/admin/dashboard')}
-                  className="mt-8 bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium"
-                >
-                  Go to Dashboard
-                </button>
               </div>
             )}
           </div>

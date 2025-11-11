@@ -19,6 +19,7 @@ var PaymentMethod;
     PaymentMethod["GRABPAY"] = "GrabPay";
     PaymentMethod["BANKING"] = "Online Banking";
     PaymentMethod["CASH"] = "Cash";
+    PaymentMethod["QRPH"] = "QR Ph";
 })(PaymentMethod || (exports.PaymentMethod = PaymentMethod = {}));
 var PaymentStatus;
 (function (PaymentStatus) {

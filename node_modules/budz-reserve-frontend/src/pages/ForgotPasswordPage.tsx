@@ -6,9 +6,14 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Loader2 } from 'lucide-react'
 import api from '@/lib/api'
+import { getErrorMessage } from '@/lib/errorUtils'
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z
+    .string({ required_error: 'Email is required' })
+    .trim()
+    .email('Please enter a valid email address')
+    .transform((value) => value.toLowerCase()),
 })
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>
@@ -20,20 +25,41 @@ export function ForgotPasswordPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    setError,
+    clearErrors,
+    formState: { errors, isSubmitting, isValid },
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
+    mode: 'onChange',
+    reValidateMode: 'onBlur',
+    defaultValues: {
+      email: '',
+    },
+    shouldFocusError: true,
   })
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
+    if (!data.email || data.email.trim() === '') {
+      setError('email', { type: 'manual', message: 'Enter your email address' })
+      return
+    }
+
+    if (!data.email.endsWith('@gmail.com')) {
+      setError('email', { type: 'manual', message: 'Please enter a valid Gmail address (e.g., example@gmail.com)' })
+      return
+    }
+
+    clearErrors('root')
     setIsLoading(true)
     try {
       const response = await api.post('/auth/forgot-password', data)
       
       toast.success(response.data.message || 'OTP sent to your email address!')
       navigate('/verify-otp', { state: { email: data.email } })
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to send OTP')
+    } catch (error) {
+      const message = getErrorMessage(error, 'Failed to send OTP')
+      setError('root', { type: 'manual', message })
+      toast.error(message)
     } finally {
       setIsLoading(false)
     }
@@ -77,11 +103,17 @@ export function ForgotPasswordPage() {
             )}
           </div>
 
+          {errors.root && (
+            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {errors.root.message}
+            </div>
+          )}
+
           {/* Send OTP Button */}
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
               className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 flex items-center justify-center"
             >
               {isLoading ? (

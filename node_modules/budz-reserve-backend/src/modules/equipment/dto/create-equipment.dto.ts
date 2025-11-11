@@ -1,23 +1,29 @@
-import { IsString, IsNumber, IsOptional, Length, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsNumber, IsOptional, Length, Min, Matches } from 'class-validator';
 
 export class CreateEquipmentDto {
   @IsString()
   @Length(1, 100)
   equipment_name: string;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   stocks: number;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   price: number;
 
   @IsOptional()
   @IsString()
-  description?: string;
+  status?: string;
 
   @IsOptional()
   @IsString()
-  status?: string;
+  @Matches(/^\/|https?:\/\//, {
+    message: 'image_path must be a relative path starting with "/" or a valid URL',
+  })
+  image_path?: string;
 }

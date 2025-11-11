@@ -8,24 +8,55 @@ import {
   Delete,
   UseGuards,
   ParseIntPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EquipmentService } from './equipment.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
+import { UploadService } from '../upload/upload.service';
 
 @ApiTags('equipment')
 @Controller('equipment')
 export class EquipmentController {
-  constructor(private readonly equipmentService: EquipmentService) {}
+  private readonly allowedImageMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+  constructor(
+    private readonly equipmentService: EquipmentService,
+    private readonly uploadService: UploadService,
+  ) {}
+
+  private validateImage(file: Express.Multer.File) {
+    if (!file) {
+      return;
+    }
+
+    if (!this.allowedImageMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException('Invalid file type. Only images are allowed.');
+    }
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create new equipment' })
   @ApiResponse({ status: 201, description: 'Equipment created successfully' })
-  create(@Body() createEquipmentDto: CreateEquipmentDto) {
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  async create(
+    @Body() createEquipmentDto: CreateEquipmentDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (file) {
+      this.validateImage(file);
+      const imagePath = await this.uploadService.uploadFile(file, 'equipments');
+      createEquipmentDto.image_path = imagePath;
+    }
+
     return this.equipmentService.create(createEquipmentDto);
   }
 
@@ -57,7 +88,32 @@ export class EquipmentController {
   @ApiOperation({ summary: 'Update equipment by ID' })
   @ApiResponse({ status: 200, description: 'Equipment updated successfully' })
   @ApiResponse({ status: 404, description: 'Equipment not found' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateEquipmentDto: UpdateEquipmentDto) {
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateEquipmentDto: UpdateEquipmentDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const existingEquipment = await this.equipmentService.findOne(id);
+
+    if (file) {
+      this.validateImage(file);
+
+      // Upload new image
+      const imagePath = await this.uploadService.uploadFile(file, 'equipments');
+      updateEquipmentDto.image_path = imagePath;
+
+      // Delete old image if it was stored locally and not the default asset
+      if (
+        existingEquipment.image_path &&
+        !existingEquipment.image_path.startsWith('http') &&
+        !existingEquipment.image_path.startsWith('/assets/')
+      ) {
+        await this.uploadService.deleteFile(existingEquipment.image_path);
+      }
+    }
+
     return this.equipmentService.update(id, updateEquipmentDto);
   }
 

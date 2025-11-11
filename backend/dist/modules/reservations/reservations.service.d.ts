@@ -10,6 +10,7 @@ import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { CourtsService } from '../courts/courts.service';
 import { EquipmentService } from '../equipment/equipment.service';
 import { PayMongoService } from '../payments/paymongo.service';
+import { PaymongoQrPhCode } from '../payments/types/paymongo.types';
 export declare class ReservationsService {
     private reservationsRepository;
     private paymentRepository;
@@ -22,6 +23,16 @@ export declare class ReservationsService {
     private payMongoService;
     constructor(reservationsRepository: Repository<Reservation>, paymentRepository: Repository<Payment>, equipmentRentalRepository: Repository<EquipmentRental>, equipmentRentalItemRepository: Repository<EquipmentRentalItem>, equipmentRepository: Repository<Equipment>, userRepository: Repository<User>, courtsService: CourtsService, equipmentService: EquipmentService, payMongoService: PayMongoService);
     create(createReservationDto: CreateReservationDto, userId: number): Promise<Reservation>;
+    getEquipmentAvailabilityByDate(dateInput: string, startTime?: string, hoursParam?: number): Promise<{
+        id: number;
+        equipment_name: string;
+        image_path: string;
+        price: number;
+        total_stocks: number;
+        reserved: number;
+        available: number;
+        status: string;
+    }[]>;
     findAll(): Promise<Reservation[]>;
     findByUser(userId: number): Promise<Reservation[]>;
     findOne(id: number): Promise<Reservation>;
@@ -38,10 +49,36 @@ export declare class ReservationsService {
         message?: string;
     }>;
     private getOrCreateGuestUser;
-    createWithCashPayment(customerName: string, bookingData: any): Promise<{
+    createWithCashPayment(customerName: string, bookingData: any, customerContact?: string, customerEmail?: string): Promise<{
         reservations: Reservation[];
         payment: Payment;
     }>;
+    generateQrPhPreview(customerName: string, qrDetails?: {
+        notes?: string;
+        mobileNumber?: string;
+        kind?: 'instore' | 'dynamic' | string;
+    }): Promise<{
+        qrData: PaymongoQrPhCode;
+    }>;
+    createWithQrPhPayment(customerName: string, bookingData: any, customerContact?: string, customerEmail?: string, qrDetails?: {
+        notes?: string;
+        mobileNumber?: string;
+        kind?: 'instore' | 'dynamic' | string;
+    }, existingQrData?: PaymongoQrPhCode): Promise<{
+        reservations: Reservation[];
+        payment: Payment;
+        qrData: PaymongoQrPhCode;
+    }>;
+    private createWalkInReservationsAndRentals;
+    private buildCustomerDetailsNote;
+    private formatDateOnly;
+    private getReservedQuantityForRange;
+    private ensureEquipmentAvailabilityForDate;
     private createEquipmentRentalsFromBooking;
+    private ensureTimeFormat;
+    private timeStringToMinutes;
+    private timeRangesOverlap;
+    private compareScheduleStartTimes;
+    private getEarliestStartTimeFromBookings;
     private parseHours;
 }

@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateEquipmentDto = void 0;
+const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 class CreateEquipmentDto {
 }
@@ -20,11 +21,13 @@ __decorate([
     __metadata("design:type", String)
 ], CreateEquipmentDto.prototype, "equipment_name", void 0);
 __decorate([
+    (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CreateEquipmentDto.prototype, "stocks", void 0);
 __decorate([
+    (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
@@ -33,10 +36,13 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
-], CreateEquipmentDto.prototype, "description", void 0);
+], CreateEquipmentDto.prototype, "status", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Matches)(/^\/|https?:\/\//, {
+        message: 'image_path must be a relative path starting with "/" or a valid URL',
+    }),
     __metadata("design:type", String)
-], CreateEquipmentDto.prototype, "status", void 0);
+], CreateEquipmentDto.prototype, "image_path", void 0);
 //# sourceMappingURL=create-equipment.dto.js.map
