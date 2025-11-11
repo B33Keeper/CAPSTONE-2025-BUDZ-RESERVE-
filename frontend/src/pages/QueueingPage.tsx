@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { QueueingShell } from '@/components/QueueingShell'
 
 const courts = [
   { id: 1, name: 'Court 1', status: 'available' },
@@ -6,165 +6,267 @@ const courts = [
   { id: 6, name: 'Court 6', status: 'available' },
 ]
 
-const players = [
-  { id: 1, name: 'Benito', skill: 'Beginner', gamesPlayed: 1, status: 'Available' },
-  { id: 2, name: 'Filber', skill: 'Beginner', gamesPlayed: 1, status: 'Available' },
-  { id: 3, name: 'Ivan', skill: 'Beginner', gamesPlayed: 1, status: 'Available' },
-  { id: 4, name: 'Patrick', skill: 'Beginner', gamesPlayed: 1, status: 'Available' },
+const matches = [
+  {
+    id: 1,
+    type: 'Doubles Match',
+    requestedAt: '01:46 PM',
+    teams: [
+      { name: 'Ivan', color: 'text-blue-400' },
+      { name: 'Filber', color: 'text-blue-400' },
+    ],
+    opponents: [
+      { name: 'Patrick', color: 'text-emerald-400' },
+      { name: 'Benito', color: 'text-emerald-400' },
+    ],
+  },
+  {
+    id: 2,
+    type: 'Singles Match',
+    requestedAt: '02:05 PM',
+    teams: [{ name: 'Anna', color: 'text-blue-400' }],
+    opponents: [{ name: 'Marco', color: 'text-emerald-400' }],
+  },
+  {
+    id: 3,
+    type: 'Doubles Match',
+    requestedAt: '02:22 PM',
+    teams: [
+      { name: 'Chris', color: 'text-blue-400' },
+      { name: 'Dani', color: 'text-blue-400' },
+    ],
+    opponents: [
+      { name: 'Lia', color: 'text-emerald-400' },
+      { name: 'Jude', color: 'text-emerald-400' },
+    ],
+  },
 ]
 
-const NavButton = ({ label, active = false }: { label: string; active?: boolean }) => (
-  <button
-    className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
-      active ? 'bg-white/15 text-white shadow-lg shadow-black/10' : 'text-white/80 hover:bg-white/10'
-    }`}
-    type="button"
-  >
-    {label}
-  </button>
-)
+const playerProfiles: Record<string, { sex: 'male' | 'female'; skill: string }> = {
+  Ivan: { sex: 'male', skill: 'Beginner' },
+  Filber: { sex: 'male', skill: 'Beginner' },
+  Patrick: { sex: 'male', skill: 'Beginner' },
+  Benito: { sex: 'male', skill: 'Beginner' },
+  Anna: { sex: 'female', skill: 'Intermediate' },
+  Marco: { sex: 'male', skill: 'Advanced' },
+  Chris: { sex: 'male', skill: 'Intermediate' },
+  Dani: { sex: 'male', skill: 'Intermediate' },
+  Lia: { sex: 'female', skill: 'Intermediate' },
+  Jude: { sex: 'male', skill: 'Advanced' },
+}
 
-const CourtCard = ({ name }: { name: string }) => (
-  <div className="relative rounded-2xl border border-white/5 bg-gradient-to-br from-white/5 via-white/[0.04] to-white/[0.02] shadow-xl shadow-black/30 backdrop-blur-sm overflow-hidden">
-    <div className="absolute inset-0 bg-[url('/assets/img/home-page/shuttle%20cock.png')] opacity-[0.04] bg-center bg-cover pointer-events-none" />
-    <div className="relative h-full flex flex-col">
-      <div className="flex items-center justify-between px-5 pt-4 pb-3">
-        <div className="flex items-center gap-2 text-white/90 font-semibold">
-          <span>{name}</span>
-          <div className="flex items-center gap-2 text-xs text-white/60">
-            <span className="cursor-pointer hover:text-white/80 transition-colors">&#9998;</span>
-            <span className="cursor-pointer hover:text-white/80 transition-colors">&#128295;</span>
-            <span className="cursor-pointer hover:text-red-200 transition-colors">&#128465;</span>
-          </div>
-        </div>
-        <span className="rounded-full border border-emerald-400/50 bg-emerald-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
-          Available
-        </span>
+function SexBadge({ sex }: { sex: 'male' | 'female' }) {
+  const baseClasses = 'flex h-6 w-6 items-center justify-center rounded-full shadow-inner'
+  const variantClasses =
+    sex === 'male'
+      ? 'bg-sky-500/20 text-sky-300'
+      : 'bg-pink-500/20 text-pink-300'
+
+  return (
+    <span className={`${baseClasses} ${variantClasses}`} aria-label={`${sex} player`} title={`${sex} player`}>
+      {sex === 'male' ? (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+          <path d="M13.5 2a.75.75 0 000 1.5h1.69l-3.2 3.2a4.5 4.5 0 10.884.884l3.2-3.2V6.5a.75.75 0 001.5 0V2.75A.75.75 0 0016.75 2H13.5zm-4 5a3 3 0 110 6 3 3 0 010-6z" />
+        </svg>
+      ) : (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+          <path d="M10 2a4.5 4.5 0 10.878 8.9l-.378.378H8.75a.75.75 0 000 1.5h1.25v1.25a.75.75 0 001.5 0V12.78l.378-.378A4.5 4.5 0 0010 2zm0 1.5a3 3 0 110 6 3 3 0 010-6z" />
+        </svg>
+      )}
+    </span>
+  )
+}
+
+function TeamPlayerCard({
+  player,
+  profile
+}: {
+  player: { name: string; color: string }
+  profile: { sex: 'male' | 'female'; skill: string }
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 text-center">
+      <div className="flex items-center justify-center gap-2">
+        <SexBadge sex={profile.sex} />
+        <span className={`text-base font-semibold ${player.color}`}>{player.name}</span>
       </div>
-      <div className="flex flex-1 flex-col items-center justify-center px-6 pb-8 text-center">
-        <p className="text-sm text-white/70 mb-6">Add players to start the game</p>
-        <button
-          type="button"
-          className="rounded-full bg-[#1E42FF] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-900/40 transition-transform hover:-translate-y-0.5 hover:bg-[#244dff]"
-        >
-          Add Players
-        </button>
-      </div>
+      <span className="rounded-full bg-white/12 px-3 py-0.5 text-xs font-medium uppercase tracking-wide text-white/60">
+        {profile.skill}
+      </span>
     </div>
-  </div>
-)
-
-const StatusBullet = ({ color }: { color: string }) => (
-  <span
-    className="inline-flex h-2.5 w-2.5 rounded-full"
-    style={{ backgroundColor: color }}
-  />
-)
+  )
+}
 
 export function QueueingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#12040a] via-[#11040a] to-[#08040a] text-white">
-      <header className="bg-[#d21d27] shadow-lg shadow-black/20">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-6">
-            <span className="text-2xl font-bold tracking-wide">ShuttleFlow</span>
-            <div className="hidden items-center gap-2 sm:flex">
-              <NavButton label="Court" active />
-              <NavButton label="Players" />
-              <NavButton label="Fees" />
-              <NavButton label="Settings" />
-            </div>
-          </div>
+    <QueueingShell activeTab="queue">
+      <section>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-2xl font-semibold text-white/90">Court Management</h1>
           <button
             type="button"
-            className="rounded-full bg-[#2663ff] px-4 py-2 text-sm font-semibold shadow-lg shadow-blue-900/40 transition-colors hover:bg-[#2d6dff]"
+            className="self-start rounded-full bg-[#2663ff] px-5 py-2 text-sm font-semibold shadow-lg shadow-blue-900/40 transition-colors hover:bg-[#2d6dff]"
           >
             + Add new court
           </button>
         </div>
-      </header>
-
-      <main className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-10">
-        <section>
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-white/90">Court Management</h1>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {courts.map((court) => (
-              <CourtCard key={court.id} name={`Court ${court.id}`} />
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-white/5 bg-white/[0.04] shadow-xl shadow-black/20 backdrop-blur-md">
-          <div className="border-b border-white/5 px-6 pb-4 pt-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <h2 className="text-xl font-semibold text-white/90">
-                Player List <span className="text-white/50">(4)</span>
-              </h2>
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-                <div className="relative w-full md:w-64">
-                  <input
-                    type="text"
-                    placeholder="Search by name..."
-                    className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/30 focus:bg-white/10"
-                  />
-                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-white/40">
-                    🔍
-                  </span>
+        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3">
+          {courts.map((court) => (
+            <div key={court.id} className="relative rounded-[20px] border border-white/18 bg-[#14070e] shadow-[0_14px_34px_rgba(0,0,0,0.45)]">
+              <div className="pointer-events-none">
+                <div className="absolute inset-0 rounded-[20px] border border-white/12" />
+                <div className="absolute inset-x-5 top-[36%] h-px bg-white/16" />
+                <div className="absolute inset-x-5 bottom-6 h-px bg-white/16" />
+                <div className="absolute top-[36%] bottom-6 left-[33%] w-px bg-white/16" />
+                <div className="absolute top-[36%] bottom-6 right-[33%] w-px bg-white/16" />
+                <div className="absolute top-[52%] bottom-6 left-1/2 w-px -translate-x-1/2 bg-white/16" />
+              </div>
+              <div className="relative flex items-start justify-between px-6 pt-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <span className="text-base">{`Court ${court.id}`}</span>
+                  <div className="flex items-center gap-2 text-white/80">
+                    <button
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+                      type="button"
+                      aria-label="Edit court"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                      >
+                        <path d="M16.862 3.487l3.651 3.651a1.5 1.5 0 010 2.122l-9.9 9.9-4.604 1.265 1.265-4.604 9.9-9.9a1.5 1.5 0 012.122 0z" />
+                        <path d="M13.95 6.4l3.651 3.651" />
+                        <path d="M5 21h14" />
+                      </svg>
+                    </button>
+                    <button
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 hover:text-red-300"
+                      type="button"
+                      aria-label="Delete court"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                      >
+                        <path d="M4 7h16" />
+                        <path d="M10 11v6" />
+                        <path d="M14 11v6" />
+                        <path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12" />
+                        <path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <select className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-white/30 focus:bg-white/10 md:w-44">
-                  <option value="all">All Players</option>
-                  <option value="waiting">Waiting</option>
-                  <option value="playing">Playing</option>
-                </select>
-                <select className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-white/30 focus:bg-white/10 md:w-40">
-                  <option value="name">Name</option>
-                  <option value="skill">Skill level</option>
-                  <option value="games">Games played</option>
-                </select>
+                <span className="rounded-full border border-emerald-500 bg-transparent px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
+                  AVAILABLE
+                </span>
+              </div>
+              <div className="relative flex flex-col items-center justify-center px-6 pb-12 pt-12 text-center">
+                <p className="mb-6 text-sm text-white/75">Add players to start the game</p>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-md bg-[#1F49FF] px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(31,73,255,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-[#2b57ff]"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  >
+                    <path d="M10 10a4 4 0 100-8 4 4 0 000 8zM2 17a6 6 0 1112 0H2zm13.25-7.75a.75.75 0 00-1.5 0V11h-1.75a.75.75 0 000 1.5h1.75v1.75a.75.75 0 001.5 0V12.5H17a.75.75 0 000-1.5h-1.75V9.25z" />
+                  </svg>
+                  Add Players
+                </button>
               </div>
             </div>
-          </div>
+          ))}
+        </div>
+      </section>
 
-          <div className="overflow-hidden px-6 pb-6">
-            <div className="overflow-x-auto rounded-2xl border border-white/5 bg-white/5">
-              <table className="min-w-full divide-y divide-white/10 text-sm">
-                <thead className="bg-white/8 text-left text-white/60">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold uppercase tracking-wide">Name</th>
-                    <th className="px-6 py-3 font-semibold uppercase tracking-wide">Skill Level</th>
-                    <th className="px-6 py-3 font-semibold uppercase tracking-wide">Games Played</th>
-                    <th className="px-6 py-3 font-semibold uppercase tracking-wide">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 bg-white/[0.02] text-white/80">
-                  {players.map((player) => (
-                    <Fragment key={player.id}>
-                      <tr className="transition-colors hover:bg-white/8">
-                        <td className="px-6 py-4 text-white">{player.name}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <StatusBullet color="#32d583" />
-                            <span>{player.skill}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">{player.gamesPlayed}</td>
-                        <td className="px-6 py-4">
-                          <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
-                            {player.status}
-                          </span>
-                        </td>
-                      </tr>
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
+      <section className="rounded-3xl border border-white/10 bg-white/[0.05] shadow-2xl shadow-black/30 backdrop-blur-lg">
+        <div className="border-b border-white/5 px-4 pb-4 pt-6 sm:px-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <h2 className="text-xl font-semibold text-white/90">
+              Pending Matches <span className="text-white/50">({matches.length})</span>
+            </h2>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+              <div className="relative w-full md:w-64">
+                <input
+                  type="text"
+                  placeholder="Search by name..."
+                  className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/30 focus:bg-white/10"
+                />
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-white/40">
+                  🔍
+                </span>
+              </div>
+              <select className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-white/30 focus:bg-white/10 md:w-44">
+                <option value="all">All Players</option>
+                <option value="waiting">Waiting</option>
+                <option value="playing">Playing</option>
+              </select>
             </div>
           </div>
-        </section>
-      </main>
-    </div>
+        </div>
+
+        <div className="grid gap-4 px-4 pb-6 sm:px-6 md:grid-cols-2 xl:grid-cols-3">
+          {matches.map((match) => (
+              <div
+                key={match.id}
+                className="rounded-3xl border border-white/12 bg-white/[0.08] p-6 text-white shadow-lg shadow-black/25 backdrop-blur-md transition-transform hover:-translate-y-1 hover:shadow-[0_24px_45px_rgba(0,0,0,0.35)]"
+              >
+                <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-between sm:text-left">
+                  <div>
+                    <span className="block text-sm uppercase tracking-wide text-white/60">#{match.id}</span>
+                    <span className="text-lg font-semibold">{match.type}</span>
+                  </div>
+                  <span className="text-sm text-white/60">Requested {match.requestedAt}</span>
+                </div>
+                <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-5 text-center text-white/90">
+                  <div className="grid gap-4 text-white/90 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
+                    <div className="flex w-full flex-col items-center gap-4">
+                      {match.teams.map((player) => {
+                        const profile = playerProfiles[player.name] ?? { sex: 'male', skill: 'Recreational' }
+                        return (
+                          <div key={player.name} className="flex w-full flex-col items-center gap-2">
+                            <TeamPlayerCard player={player} profile={profile} />
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <span className="mx-auto inline-flex items-center justify-center rounded-full bg-white/20 px-5 py-1.5 text-sm font-semibold text-white">
+                      vs
+                    </span>
+                    <div className="flex w-full flex-col items-center gap-4">
+                      {match.opponents.map((player) => {
+                        const profile = playerProfiles[player.name] ?? { sex: 'male', skill: 'Recreational' }
+                        return (
+                          <div key={player.name} className="flex w-full flex-col items-center gap-2">
+                            <TeamPlayerCard player={player} profile={profile} />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+          ))}
+        </div>
+      </section>
+    </QueueingShell>
   )
 }
 
