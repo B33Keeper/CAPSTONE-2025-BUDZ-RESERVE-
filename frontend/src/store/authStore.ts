@@ -18,8 +18,8 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (credentials: { username: string; password: string }) => Promise<void>
-  register: (userData: RegisterData) => Promise<void>
+  login: (credentials: { username: string; password: string }) => Promise<{ user: User; access_token: string }>
+  register: (userData: RegisterData) => Promise<{ user: User; access_token: string }>
   logout: () => void
   checkAuth: () => Promise<void>
   updateUser: (userData: Partial<User>) => void
@@ -64,6 +64,11 @@ export const useAuthStore = create<AuthState>()(
           return { user, access_token }
         } catch (error: any) {
           set({ isLoading: false })
+          const status = error.response?.status
+          if (status === 401) {
+            throw new Error('Wrong username or password')
+          }
+
           throw new Error(error.response?.data?.message || 'Login failed')
         }
       },
@@ -85,6 +90,8 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           })
+
+          return { user, access_token }
         } catch (error: any) {
           set({ isLoading: false })
           throw new Error(error.response?.data?.message || 'Registration failed')

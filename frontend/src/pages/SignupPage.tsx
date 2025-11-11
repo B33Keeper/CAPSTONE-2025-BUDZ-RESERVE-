@@ -6,31 +6,76 @@ import { z } from 'zod'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { getErrorMessage } from '@/lib/errorUtils'
+import { CONTACT_NUMBER_REGEX, PASSWORD_REGEX, USERNAME_REGEX } from '@/lib/validation'
 
-const signupSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  age: z.number().min(1, 'Age must be at least 1').max(120, 'Age must be less than 120'),
-  sex: z.enum(['Male', 'Female'], {
-    required_error: 'Please select a sex',
-  }),
-  username: z
-    .string()
-    .min(3, 'Username must be at least 3 characters')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
-  email: z.string().email('Please enter a valid email address'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/`~]).{8,}$/,
-      'Password must contain uppercase, lowercase, number, and special character'
-    ),
-  confirmPassword: z.string(),
-  contact_number: z.string().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-})
+const signupSchema = z
+  .object({
+    name: z
+      .string({ required_error: 'Name is required' })
+      .trim()
+      .min(2, 'Name must be at least 2 characters')
+      .max(100, 'Name must be at most 100 characters')
+      .refine((value) => /[A-Za-z]/.test(value), 'Name must contain letters'),
+    age: z
+      .preprocess(
+        (value) => {
+          if (typeof value === 'number' && Number.isNaN(value)) {
+            return undefined
+          }
+          return value
+        },
+        z
+          .number({
+            required_error: 'Age is required',
+            invalid_type_error: 'Age must be a valid number',
+          })
+          .int('Age must be a whole number')
+          .min(1, 'Age must be at least 1')
+          .max(120, 'Age must be less than or equal to 120')
+      ),
+    sex: z.enum(['Male', 'Female'], {
+      required_error: 'Please select a sex',
+    }),
+    username: z
+      .string({ required_error: 'Username is required' })
+      .trim()
+      .min(3, 'Username must be at least 3 characters')
+      .max(30, 'Username must be at most 30 characters')
+      .regex(USERNAME_REGEX, 'Username can only contain letters, numbers, and underscores'),
+    email: z
+      .string({ required_error: 'Email is required' })
+      .trim()
+      .email('Please enter a valid email address'),
+    password: z
+      .string({ required_error: 'Password is required' })
+      .min(8, 'Password must be at least 8 characters')
+      .max(128, 'Password must be at most 128 characters')
+      .regex(PASSWORD_REGEX, 'Password must contain uppercase, lowercase, number, and special character'),
+    confirmPassword: z.string({ required_error: 'Please confirm your password' }),
+    contact_number: z
+      .preprocess(
+        (value) => {
+          if (typeof value !== 'string') return value
+          const normalized = value.replace(/[\s-]/g, '').trim()
+          return normalized.length === 0 ? undefined : normalized
+        },
+        z
+          .string()
+          .regex(CONTACT_NUMBER_REGEX, 'Contact number must contain 10 to 15 digits and may start with +')
+      )
+      .optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
+  .transform((data) => ({
+    ...data,
+    name: data.name.trim(),
+    username: data.username.trim(),
+    email: data.email.trim().toLowerCase(),
+  }))
 
 type SignupFormData = z.infer<typeof signupSchema>
 
@@ -43,19 +88,43 @@ export function SignupPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    reset,
+    setError,
+    clearErrors,
+    formState: { errors, isValid, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
+    mode: 'onChange',
+    reValidateMode: 'onBlur',
+    defaultValues: {
+      name: '',
+      age: undefined,
+      sex: undefined,
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      contact_number: undefined,
+    },
+    shouldFocusError: true,
   })
 
   const onSubmit = async (data: SignupFormData) => {
+    clearErrors('root')
     try {
-      const { confirmPassword, ...userData } = data
-      await registerUser(userData)
+      const { confirmPassword, contact_number, ...userData } = data
+      const sanitizedData = {
+        ...userData,
+        contact_number: contact_number ?? undefined,
+      }
+      await registerUser(sanitizedData)
       toast.success('Account created successfully!')
+      reset()
       navigate('/')
-    } catch (error: any) {
-      toast.error(error.message || 'Registration failed')
+    } catch (error) {
+      const message = getErrorMessage(error, 'Registration failed')
+      setError('root', { type: 'manual', message })
+      toast.error(message)
     }
   }
 
@@ -262,13 +331,22 @@ export function SignupPage() {
                 placeholder="Contact Number (Optional)"
               />
             </div>
+            {errors.contact_number && (
+              <p className="mt-1 text-sm text-red-600">{errors.contact_number.message}</p>
+            )}
           </div>
+
+          {errors.root && (
+            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {errors.root.message}
+            </div>
+          )}
 
           {/* Create Account Button */}
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting || !isValid}
               className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 flex items-center justify-center"
             >
               {isLoading ? (
