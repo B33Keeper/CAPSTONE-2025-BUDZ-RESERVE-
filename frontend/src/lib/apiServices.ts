@@ -17,6 +17,9 @@ export interface Equipment {
   price: number
   status: string
   image_path: string
+  unit?: string
+  weight?: string
+  tension?: string
   created_at: string
   updated_at: string
 }

@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from 'react'
+import { useState, ChangeEvent, useMemo, useCallback } from 'react'
 import { QueueingShell } from '@/components/QueueingShell'
 
 type FeeFormState = {
@@ -17,29 +17,69 @@ type FeeRow = {
   label: string
   sex: 'male' | 'female'
   games: number
-  shuttleFees: string
-  courtFee: string
-  total: string
-  status: 'Unpaid' | 'Set Paid'
+  shuttleFee: number
+  courtFee: number
+  status: 'paid' | 'unpaid'
 }
 
-const feeRows: FeeRow[] = [
-  { label: 'Ivan', sex: 'male', games: 2, shuttleFees: '₱30.00', courtFee: '₱0.00', total: '₱30.00', status: 'Unpaid' },
-  { label: 'Filber', sex: 'male', games: 2, shuttleFees: '₱30.00', courtFee: '₱0.00', total: '₱30.00', status: 'Set Paid' },
-  { label: 'Patrick', sex: 'male', games: 2, shuttleFees: '₱30.00', courtFee: '₱0.00', total: '₱30.00', status: 'Set Paid' },
-  { label: 'Benito', sex: 'male', games: 2, shuttleFees: '₱30.00', courtFee: '₱0.00', total: '₱30.00', status: 'Set Paid' },
+const initialFeeRows: FeeRow[] = [
+  { label: 'Ivan', sex: 'male', games: 2, shuttleFee: 30, courtFee: 0, status: 'paid' },
+  { label: 'Filber', sex: 'male', games: 2, shuttleFee: 30, courtFee: 0, status: 'unpaid' },
+  { label: 'Patrick', sex: 'male', games: 2, shuttleFee: 30, courtFee: 0, status: 'unpaid' },
+  { label: 'Benito', sex: 'male', games: 2, shuttleFee: 30, courtFee: 0, status: 'unpaid' },
 ]
 
 export function QueueSettingsPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [feeForm, setFeeForm] = useState<FeeFormState>(initialFeeState)
+  const [rows, setRows] = useState<FeeRow[]>(initialFeeRows)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
     setFeeForm((prev) => ({ ...prev, [name]: value } as FeeFormState))
   }
 
-  const displayValue = (value: string) => `₱${Number(value || 0).toFixed(2)}`
+  const currencySymbol = useMemo(() => {
+    const match = feeForm.currency.match(/\(([^)]+)\)/)
+    return match ? match[1] : '₱'
+  }, [feeForm.currency])
+
+  const formatCurrency = useCallback(
+    (value: number) => `${currencySymbol}${Number.isFinite(value) ? value.toFixed(2) : '0.00'}`,
+    [currencySymbol]
+  )
+
+  const displayValue = useCallback((value: string) => formatCurrency(Number(value || 0)), [formatCurrency])
+
+  const totals = useMemo(() => {
+    return rows.reduce(
+      (acc, row) => {
+        const total = row.shuttleFee + row.courtFee
+        if (row.status === 'paid') {
+          acc.collected += total
+        } else {
+          acc.outstanding += total
+        }
+        return acc
+      },
+      { collected: 0, outstanding: 0 }
+    )
+  }, [rows])
+
+  const filteredRows = useMemo(() => {
+    if (!searchQuery.trim()) return rows
+    const query = searchQuery.toLowerCase()
+    return rows.filter((row) => row.label.toLowerCase().includes(query))
+  }, [rows, searchQuery])
+
+  const handleTogglePaymentStatus = useCallback((player: string) => {
+    setRows((prev) =>
+      prev.map((row) =>
+        row.label === player ? { ...row, status: row.status === 'paid' ? 'unpaid' : 'paid' } : row
+      )
+    )
+  }, [])
 
   return (
     <QueueingShell activeTab="settings">
@@ -157,23 +197,25 @@ export function QueueSettingsPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl bg-emerald-100/90 px-4 py-3 text-emerald-700">
                 <p className="text-xs uppercase tracking-wide">Collected</p>
-                <p className="mt-1 text-xl font-semibold">₱30.00</p>
+                <p className="mt-1 text-xl font-semibold">{formatCurrency(totals.collected)}</p>
               </div>
               <div className="rounded-xl bg-amber-100/90 px-4 py-3 text-amber-700">
                 <p className="text-xs uppercase tracking-wide">Outstanding</p>
-                <p className="mt-1 text-xl font-semibold">₱90.00</p>
+                <p className="mt-1 text-xl font-semibold">{formatCurrency(totals.outstanding)}</p>
               </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <input
                 type="text"
                 placeholder="Search players..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
                 className="w-full max-w-xs rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-xs text-white placeholder:text-white/60 outline-none transition focus:border-white/40 focus:bg-white/25"
               />
             </div>
             <div className="overflow-hidden rounded-xl border border-white/15">
               <div className="overflow-x-auto">
-                <table className="min-w-[640px] divide-y divide-white/20 text-xs">
+                <table className="w-full divide-y divide-white/20 text-xs">
                   <thead className="bg-white/15 uppercase tracking-wide text-white/70">
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold">Player</th>
@@ -185,8 +227,15 @@ export function QueueSettingsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/15 text-white/85">
-                    {feeRows.map((row) => (
-                      <tr key={row.label} className="bg-white/10 transition hover:bg-white/15">
+                  {filteredRows.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-6 text-center text-sm text-white/60">
+                        No players match the current search.
+                      </td>
+                    </tr>
+                  )}
+                  {filteredRows.map((row) => (
+                    <tr key={row.label} className="bg-white/10 transition hover:bg-white/15">
                         <td className="px-4 py-2 font-semibold text-white">
                           <div className="flex items-center gap-2">
                             <span
@@ -210,18 +259,36 @@ export function QueueSettingsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-2 text-center">{row.games}</td>
-                        <td className="px-4 py-2">{row.shuttleFees}</td>
-                        <td className="px-4 py-2">{row.courtFee}</td>
-                        <td className="px-4 py-2">{row.total}</td>
-                        <td className="px-4 py-2">
-                          {row.status === 'Unpaid' ? (
-                            <span className="rounded-md bg-white/30 px-4 py-1 text-[11px] font-semibold text-white/80">
-                              Unpaid
-                            </span>
+                        <td className="px-4 py-2">{formatCurrency(row.shuttleFee)}</td>
+                        <td className="px-4 py-2">{formatCurrency(row.courtFee)}</td>
+                        <td className="px-4 py-2">{formatCurrency(row.shuttleFee + row.courtFee)}</td>
+                        <td className="whitespace-nowrap px-4 py-2">
+                          {row.status === 'paid' ? (
+                            <div className="flex w-full items-center justify-end gap-2">
+                              <span className="rounded-md bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold text-emerald-200 shadow-inner">
+                                Paid
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePaymentStatus(row.label)}
+                                className="rounded-md border border-white/30 px-3 py-1 text-[11px] font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
+                              >
+                                Mark Unpaid
+                              </button>
+                            </div>
                           ) : (
-                            <button className="rounded-md bg-emerald-500 px-4 py-1 text-[11px] font-semibold text-white shadow hover:bg-emerald-600">
-                              Set Paid
-                            </button>
+                            <div className="flex w-full items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePaymentStatus(row.label)}
+                                className="rounded-md bg-emerald-500 px-4 py-1 text-[11px] font-semibold text-white shadow transition hover:bg-emerald-600"
+                              >
+                                Set Paid
+                              </button>
+                              <span className="rounded-md bg-white/25 px-3 py-1 text-[11px] font-semibold text-white/80 shadow-inner">
+                                Unpaid
+                              </span>
+                            </div>
                           )}
                         </td>
                       </tr>

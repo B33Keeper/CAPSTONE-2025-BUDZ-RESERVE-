@@ -21,7 +21,7 @@ const AdminManageRackets = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
-  const [initialRacketData, setInitialRacketData] = useState<Record<string, string | number>>({})
+  const [initialRacketData, setInitialRacketData] = useState<SanitizedRacket | null>(null)
   const [feedbackModal, setFeedbackModal] = useState<{
     open: boolean
     type: FeedbackType
@@ -60,11 +60,26 @@ const AdminManageRackets = () => {
     })
   }
 
+  const resolveApiBaseUrl = () => {
+    const explicitBase = typeof api.defaults.baseURL === 'string' ? api.defaults.baseURL : ''
+    if (explicitBase) {
+      return explicitBase.replace(/\/api\/?$/, '')
+    }
+    const envBase = (import.meta.env.VITE_API_URL as string | undefined) || ''
+    if (envBase) {
+      return envBase.replace(/\/api\/?$/, '')
+    }
+    return window.location.origin
+  }
+
   interface SanitizedRacket {
     equipment_name: string
     price: number
     stocks: number
     status: string
+    unit: string
+    weight: string
+    tension: string
   }
 
   const sanitizeRacketForComparison = (data: any): SanitizedRacket => {
@@ -75,8 +90,24 @@ const AdminManageRackets = () => {
       equipment_name: (data?.equipment_name ?? '').trim(),
       price: Number.isFinite(priceValue) ? Math.round(priceValue * 100) / 100 : 0,
       stocks: Number.isFinite(stockValue) ? Math.max(0, Math.floor(stockValue)) : 0,
-      status: data?.status ?? 'Available'
+      status: (data?.status ?? 'Available').trim(),
+      unit: (data?.unit ?? '').toString().trim(),
+      weight: (data?.weight ?? '').toString().trim(),
+      tension: (data?.tension ?? '').toString().trim()
     }
+  }
+
+  const sortRacketsByCreatedDate = (items: Equipment[]) => {
+    return [...items].sort((a, b) => {
+      const aDate = a.created_at ? new Date(a.created_at).getTime() : 0
+      const bDate = b.created_at ? new Date(b.created_at).getTime() : 0
+
+      if (aDate !== bDate) {
+        return aDate - bDate
+      }
+
+      return (a.id ?? 0) - (b.id ?? 0)
+    })
   }
 
   const validateRacket = (
@@ -179,7 +210,7 @@ const AdminManageRackets = () => {
         setLoading(true)
         setError(null)
         const equipmentData = await apiServices.getEquipment()
-        setRackets(equipmentData)
+        setRackets(sortRacketsByCreatedDate(equipmentData))
       } catch (error: any) {
         console.error('Error fetching equipment:', error)
         setError('Failed to load equipment. Please try again.')
@@ -234,14 +265,17 @@ const AdminManageRackets = () => {
   const handleEditRacket = (racketId: number) => {
     const racket = rackets.find(r => r.id === racketId)
     if (racket) {
-      const imageUrl = racket.image_path?.startsWith('http') 
-        ? racket.image_path 
-        : `${window.location.origin}${racket.image_path}`
+      const baseUrl = resolveApiBaseUrl()
+      const imageUrl = racket.image_path?.startsWith('http')
+        ? racket.image_path
+        : racket.image_path
+        ? `${baseUrl}${racket.image_path.startsWith('/') ? racket.image_path : `/${racket.image_path}`}`
+        : ''
       const preparedRacket = {
         ...racket,
-        unit: racket.unit || 'Head Heavy',
-        weight: racket.weight || '4u',
-        tension: racket.tension || '25 lbs'
+        unit: racket.unit ?? '',
+        weight: racket.weight ?? '',
+        tension: racket.tension ?? ''
       }
       setFormErrors({})
       setEditingRacket(preparedRacket)
@@ -257,13 +291,13 @@ const AdminManageRackets = () => {
     const newRacket = {
       id: Date.now(), // Temporary ID
       equipment_name: '',
-      stocks: 0,
-      price: 0,
-      status: 'Available',
+      stocks: null,
+      price: null,
+      status: '',
       image_path: '',
-      unit: 'Head Heavy',
-      weight: '4u',
-      tension: '25 lbs'
+      unit: '',
+      weight: '',
+      tension: ''
     }
     setFormErrors({})
     setEditingRacket(newRacket)
@@ -291,7 +325,9 @@ const AdminManageRackets = () => {
     if (!isAddModal && initialRacketData) {
       const hasChanges =
         selectedFile ||
-        Object.entries(sanitizedData).some(([key, value]) => initialRacketData[key] !== value)
+        Object.entries(sanitizedData).some(
+          ([key, value]) => initialRacketData[key as keyof SanitizedRacket] !== value
+        )
 
       if (!hasChanges) {
         openFeedbackModal('info', 'No changes made', 'No updates were detected. Adjust a field before saving.')
@@ -307,6 +343,9 @@ const AdminManageRackets = () => {
       formData.append('stocks', sanitizedData.stocks.toString())
       formData.append('price', sanitizedData.price.toString())
       formData.append('status', sanitizedData.status || 'Available')
+      formData.append('unit', sanitizedData.unit)
+      formData.append('weight', sanitizedData.weight)
+      formData.append('tension', sanitizedData.tension)
       if (selectedFile) {
         formData.append('image', selectedFile)
       }
@@ -327,7 +366,7 @@ const AdminManageRackets = () => {
 
       // Refresh the equipment list
       const equipmentData = await apiServices.getEquipment()
-      setRackets(equipmentData)
+      setRackets(sortRacketsByCreatedDate(equipmentData))
       
       setEditModalOpen(false)
       setEditingRacket(null)
@@ -335,7 +374,7 @@ const AdminManageRackets = () => {
       setSelectedFile(null)
       setImagePreview(null)
       setFormErrors({})
-      setInitialRacketData({})
+      setInitialRacketData(null)
       openFeedbackModal(
         'success',
         isAddModal ? 'Racket added' : 'Racket updated',
@@ -358,7 +397,7 @@ const AdminManageRackets = () => {
     setSelectedFile(null)
     setImagePreview(null)
     setFormErrors({})
-    setInitialRacketData({})
+    setInitialRacketData(null)
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -530,12 +569,14 @@ const AdminManageRackets = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8 animate-fadeInUp">
               {rackets.map((racket) => {
-                const imageUrl = racket.image_path?.startsWith('http') 
-                  ? racket.image_path 
-                  : `${window.location.origin}${racket.image_path || '/assets/img/equipments/racket.png'}`
+                const apiBaseUrl = resolveApiBaseUrl()
+                const normalizedPath = racket.image_path
+                  ? racket.image_path.startsWith('http')
+                    ? racket.image_path
+                    : `${apiBaseUrl}${racket.image_path.startsWith('/') ? racket.image_path : `/${racket.image_path}`}`
+                  : `${window.location.origin}/assets/img/equipments/racket.png`
+                const imageUrl = normalizedPath
                 const priceFormatted = `₱${Number(racket.price || 0).toFixed(2)}`
-                // Extract brand from equipment name (first word or common brands)
-                const brand = racket.equipment_name?.split(' ')[0] || 'Unknown'
                 
                 return (
                   <div key={racket.id} className="group bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:scale-105 hover:-translate-y-2">
@@ -591,17 +632,37 @@ const AdminManageRackets = () => {
                     {/* Stock Information */}
                     <div className="px-6 py-4 text-center bg-gradient-to-br from-blue-50 to-indigo-50">
                       <div className="space-y-3">
+                        <div className="bg-white rounded-xl p-3 shadow-sm border border-green-100">
+                          <p className="text-sm text-gray-600 mb-1">Price</p>
+                          <p className="text-xl font-bold text-green-600">{priceFormatted}</p>
+                        </div>
                         <div className="bg-white rounded-xl p-3 shadow-sm border border-blue-100">
                           <p className="text-sm text-gray-600 mb-1">Available Stock</p>
                           <p className="text-2xl font-bold text-blue-600">{racket.stocks}</p>
                         </div>
-                        <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-                          <p className="text-sm text-gray-600 mb-1">Brand</p>
-                          <p className="text-lg font-semibold text-gray-800">{brand}</p>
+                      </div>
+                    </div>
+
+                    {/* Specifications */}
+                    <div className="px-6 py-4 bg-white border-t border-gray-100">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div className="bg-blue-50/70 rounded-xl px-4 py-3 text-center border border-blue-100">
+                          <p className="text-xs text-blue-600 uppercase tracking-wide font-semibold">Unit</p>
+                          <p className="text-sm font-medium text-slate-800 mt-1 truncate">
+                            {racket.unit?.toString().trim() || '—'}
+                          </p>
                         </div>
-                        <div className="bg-white rounded-xl p-3 shadow-sm border border-green-100">
-                          <p className="text-sm text-gray-600 mb-1">Price</p>
-                          <p className="text-xl font-bold text-green-600">{priceFormatted}</p>
+                        <div className="bg-blue-50/70 rounded-xl px-4 py-3 text-center border border-blue-100">
+                          <p className="text-xs text-blue-600 uppercase tracking-wide font-semibold">Weight</p>
+                          <p className="text-sm font-medium text-slate-800 mt-1 truncate">
+                            {racket.weight?.toString().trim() || '—'}
+                          </p>
+                        </div>
+                        <div className="bg-blue-50/70 rounded-xl px-4 py-3 text-center border border-blue-100">
+                          <p className="text-xs text-blue-600 uppercase tracking-wide font-semibold">Tension</p>
+                          <p className="text-sm font-medium text-slate-800 mt-1 truncate">
+                            {racket.tension?.toString().trim() || '—'}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -673,11 +734,20 @@ const AdminManageRackets = () => {
                       type="number"
                       step="0.01"
                       min="0"
-                      value={editingRacket.price || 0}
+                      value={
+                        editingRacket.price === undefined ||
+                        editingRacket.price === null ||
+                        editingRacket.price === ''
+                          ? ''
+                          : editingRacket.price
+                      }
                       onChange={(e) => {
                         clearFieldError('price')
                         const value = Number(e.target.value)
-                        setEditingRacket({ ...editingRacket, price: Number.isNaN(value) ? 0 : value })
+                        setEditingRacket({
+                          ...editingRacket,
+                          price: Number.isNaN(value) ? null : value
+                        })
                       }}
                       className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
                         formErrors.price
@@ -737,9 +807,10 @@ const AdminManageRackets = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Unit:</label>
                     <input
                       type="text"
-                      value={editingRacket.unit}
+                      value={editingRacket.unit ?? ''}
                       onChange={(e) => setEditingRacket({...editingRacket, unit: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter unit"
                     />
                   </div>
 
@@ -748,9 +819,10 @@ const AdminManageRackets = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Weight:</label>
                     <input
                       type="text"
-                      value={editingRacket.weight}
+                      value={editingRacket.weight ?? ''}
                       onChange={(e) => setEditingRacket({...editingRacket, weight: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter weight"
                     />
                   </div>
 
@@ -759,9 +831,10 @@ const AdminManageRackets = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Tension:</label>
                     <input
                       type="text"
-                      value={editingRacket.tension}
+                      value={editingRacket.tension ?? ''}
                       onChange={(e) => setEditingRacket({...editingRacket, tension: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter tension"
                     />
                   </div>
 
@@ -772,13 +845,19 @@ const AdminManageRackets = () => {
                       type="number"
                       min="0"
                       step="1"
-                      value={editingRacket.stocks ?? 0}
+                      value={
+                        editingRacket.stocks === undefined ||
+                        editingRacket.stocks === null ||
+                        editingRacket.stocks === ''
+                          ? ''
+                          : editingRacket.stocks
+                      }
                       onChange={(e) => {
                         clearFieldError('stocks')
                         const value = Number(e.target.value)
                         setEditingRacket({
                           ...editingRacket,
-                          stocks: Number.isNaN(value) ? 0 : Math.max(0, Math.floor(value))
+                          stocks: Number.isNaN(value) ? null : Math.max(0, Math.floor(value))
                         })
                       }}
                       className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
@@ -797,10 +876,13 @@ const AdminManageRackets = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Status:</label>
                     <select
-                      value={editingRacket.status || 'Available'}
+                      value={editingRacket.status ?? ''}
                       onChange={(e) => setEditingRacket({...editingRacket, status: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
+                      <option value="" disabled>
+                        Select status
+                      </option>
                       <option value="Available">Available</option>
                       <option value="Unavailable">Unavailable</option>
                     </select>
