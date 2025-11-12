@@ -25,6 +25,25 @@ services:
       timeout: 20s
       retries: 10
 
+  # phpMyAdmin Database UI
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5.2.1
+    container_name: budz-reserve-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: password
+      UPLOAD_LIMIT: 256M
+    ports:
+      - "8080:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - budz-reserve-network
+
   # Backend API
   backend:
     build:
@@ -32,6 +51,7 @@ services:
       dockerfile: ./backend/Dockerfile.dev
     container_name: budz-reserve-backend
     restart: unless-stopped
+    command: sh -c "npm run start:container"
     environment:
       NODE_ENV: development
       DB_HOST: mysql
@@ -44,6 +64,9 @@ services:
       PORT: 3001
       CORS_ORIGIN: http://localhost:3000
       DISABLE_MAILER: "1"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "1000"
+      NODE_OPTIONS: "--max-old-space-size=4096"
     ports:
       - "3001:3001"
     volumes:
@@ -66,6 +89,9 @@ services:
     environment:
       VITE_API_URL: http://localhost:3001/api
       VITE_APP_NAME: Budz Reserve
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "1000"
+      NODE_OPTIONS: "--max-old-space-size=4096"
     ports:
       - "3000:3000"
     volumes:
@@ -88,25 +114,6 @@ services:
     depends_on:
       - frontend
       - backend
-    networks:
-      - budz-reserve-network
-
-  # phpMyAdmin - Database Management Tool
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:5.2
-    container_name: budz-reserve-phpmyadmin
-    restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: budz_user
-      PMA_PASSWORD: budz_password
-      MYSQL_ROOT_PASSWORD: password
-    ports:
-      - "8080:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
     networks:
       - budz-reserve-network
 

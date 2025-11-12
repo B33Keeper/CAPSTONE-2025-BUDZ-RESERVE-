@@ -12,8 +12,25 @@ export class EquipmentService {
     private equipmentRepository: Repository<Equipment>,
   ) {}
 
+  private normalizePayload<T extends Partial<Equipment>>(payload: T): T {
+    const normalizeString = (value?: string | null) => {
+      if (value === undefined) return undefined as any;
+      const trimmed = value?.toString().trim() ?? '';
+      return trimmed.length > 0 ? trimmed : null;
+    };
+
+    return {
+      ...payload,
+      unit: normalizeString(payload.unit as string | null),
+      weight: normalizeString(payload.weight as string | null),
+      tension: normalizeString(payload.tension as string | null),
+    };
+  }
+
   async create(createEquipmentDto: CreateEquipmentDto): Promise<Equipment> {
-    const equipment = this.equipmentRepository.create(createEquipmentDto);
+    const equipment = this.equipmentRepository.create(
+      this.normalizePayload(createEquipmentDto),
+    );
     return this.equipmentRepository.save(equipment);
   }
 
@@ -37,7 +54,7 @@ export class EquipmentService {
 
   async update(id: number, updateEquipmentDto: UpdateEquipmentDto): Promise<Equipment> {
     const equipment = await this.findOne(id);
-    await this.equipmentRepository.update(id, updateEquipmentDto);
+    await this.equipmentRepository.update(id, this.normalizePayload(updateEquipmentDto));
     return this.findOne(id);
   }
 

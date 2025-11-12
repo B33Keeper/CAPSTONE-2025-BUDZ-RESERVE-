@@ -26,6 +26,15 @@ export class Equipment {
   @Column({ type: 'varchar', length: 255, default: '/assets/img/equipments/racket.png' })
   image_path: string;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  unit: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  weight: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  tension: string | null;
+
   @CreateDateColumn()
   created_at: Date;
 

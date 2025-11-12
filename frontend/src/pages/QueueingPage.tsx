@@ -1,6 +1,13 @@
+import { useCallback, useMemo, useState } from 'react'
 import { QueueingShell } from '@/components/QueueingShell'
 
-const courts = [
+type CourtCard = {
+  id: number
+  name: string
+  status: 'available' | 'maintenance'
+}
+
+const initialCourts: CourtCard[] = [
   { id: 1, name: 'Court 1', status: 'available' },
   { id: 5, name: 'Court 5', status: 'available' },
   { id: 6, name: 'Court 6', status: 'available' },
@@ -98,6 +105,77 @@ function TeamPlayerCard({
 }
 
 export function QueueingPage() {
+  const [courts, setCourts] = useState<CourtCard[]>(initialCourts)
+  const [feedback, setFeedback] = useState<{
+    open: boolean
+    message: string
+    tone: 'success' | 'error'
+  }>({
+    open: false,
+    message: '',
+    tone: 'success'
+  })
+
+  const nextCourtNumber = useMemo(() => {
+    if (courts.length === 0) return 1
+    return Math.max(...courts.map((court) => court.id)) + 1
+  }, [courts])
+
+  const handleAddCourt = useCallback(() => {
+    const defaultName = `Court ${nextCourtNumber}`
+    const nameInput = window.prompt('Enter the new court name', defaultName)
+
+    if (!nameInput) return
+
+    const trimmedName = nameInput.trim()
+    if (!trimmedName) {
+      setFeedback({
+        open: true,
+        message: 'Court name cannot be empty.',
+        tone: 'error'
+      })
+      return
+    }
+
+    setCourts((prevCourts) => [
+      ...prevCourts,
+      {
+        id: nextCourtNumber,
+        name: trimmedName,
+        status: 'available'
+      }
+    ])
+
+    setFeedback({
+      open: true,
+      message: `${trimmedName} added successfully.`,
+      tone: 'success'
+    })
+  }, [nextCourtNumber])
+
+  const handleDeleteCourt = useCallback((courtId: number, courtName: string) => {
+    const confirmed = window.confirm(`Delete ${courtName}?`)
+    if (!confirmed) return
+
+    setCourts((prevCourts) => prevCourts.filter((court) => court.id !== courtId))
+  }, [])
+
+  const renderStatusBadge = (status: CourtCard['status']) => {
+    if (status === 'maintenance') {
+      return (
+        <span className="rounded-full border border-amber-400/60 bg-amber-500/5 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+          Maintenance
+        </span>
+      )
+    }
+
+    return (
+      <span className="rounded-full border border-emerald-500 bg-transparent px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
+        Available
+      </span>
+    )
+  }
+
   return (
     <QueueingShell activeTab="queue">
       <section>
@@ -105,6 +183,7 @@ export function QueueingPage() {
           <h1 className="text-2xl font-semibold text-white/90">Court Management</h1>
           <button
             type="button"
+            onClick={handleAddCourt}
             className="self-start rounded-full bg-[#2663ff] px-5 py-2 text-sm font-semibold shadow-lg shadow-blue-900/40 transition-colors hover:bg-[#2d6dff]"
           >
             + Add new court
@@ -123,7 +202,7 @@ export function QueueingPage() {
               </div>
               <div className="relative flex items-start justify-between px-6 pt-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <span className="text-base">{`Court ${court.id}`}</span>
+                  <span className="text-base">{court.name}</span>
                   <div className="flex items-center gap-2 text-white/80">
                     <button
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
@@ -148,6 +227,7 @@ export function QueueingPage() {
                     <button
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 hover:text-red-300"
                       type="button"
+                      onClick={() => handleDeleteCourt(court.id, court.name)}
                       aria-label="Delete court"
                     >
                       <svg
@@ -169,9 +249,7 @@ export function QueueingPage() {
                     </button>
                   </div>
                 </div>
-                <span className="rounded-full border border-emerald-500 bg-transparent px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
-                  AVAILABLE
-                </span>
+                {renderStatusBadge(court.status)}
               </div>
               <div className="relative flex flex-col items-center justify-center px-6 pb-12 pt-12 text-center">
                 <p className="mb-6 text-sm text-white/75">Add players to start the game</p>
@@ -266,6 +344,63 @@ export function QueueingPage() {
           ))}
         </div>
       </section>
+
+      {feedback.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-[#11050b] p-6 text-center shadow-[0_30px_50px_rgba(0,0,0,0.45)]">
+            <div
+              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
+                feedback.tone === 'success' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+              }`}
+            >
+              {feedback.tone === 'success' ? (
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+                  <path
+                    d="M9 12.75 11 14.75 15 10.75"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                  <path
+                    d="M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18Z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+                  <path
+                    d="M12 8v5m0 3h.01M12 3.75a8.25 8.25 0 1 1 0 16.5 8.25 8.25 0 0 1 0-16.5Z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </svg>
+              )}
+            </div>
+            <p className="mb-6 text-sm text-white/80">{feedback.message}</p>
+            <button
+              type="button"
+              onClick={() =>
+                setFeedback((prev) => ({
+                  ...prev,
+                  open: false
+                }))
+              }
+              className="inline-flex items-center justify-center rounded-full bg-white/10 px-6 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </QueueingShell>
   )
 }

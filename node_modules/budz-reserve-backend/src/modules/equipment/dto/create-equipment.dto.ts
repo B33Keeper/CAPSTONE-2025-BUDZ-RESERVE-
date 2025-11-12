@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsString, IsNumber, IsOptional, Length, Min, Matches } from 'class-validator';
+import { IsString, IsNumber, IsOptional, Length, Min, Matches, MaxLength } from 'class-validator';
 
 export class CreateEquipmentDto {
   @IsString()
@@ -26,4 +26,19 @@ export class CreateEquipmentDto {
     message: 'image_path must be a relative path starting with "/" or a valid URL',
   })
   image_path?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  unit?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  weight?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  tension?: string | null;
 }

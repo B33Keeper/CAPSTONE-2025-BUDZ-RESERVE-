@@ -83,6 +83,18 @@ export function BookingPage() {
   
   const { user } = useAuthStore()
 
+  const resolveApiBaseUrl = () => {
+    const explicitBase = typeof api.defaults.baseURL === 'string' ? api.defaults.baseURL : ''
+    if (explicitBase) {
+      return explicitBase.replace(/\/api\/?$/, '')
+    }
+    const envBase = (import.meta.env.VITE_API_URL as string | undefined) || ''
+    if (envBase) {
+      return envBase.replace(/\/api\/?$/, '')
+    }
+    return window.location.origin
+  }
+
 
   // Calculate total amount
   const totalAmount = courtBookings.reduce((sum, booking) => sum + Number(booking.subtotal), 0) + 
@@ -1322,7 +1334,19 @@ export function BookingPage() {
                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500"></div>
                                 <div className="relative w-full h-20 sm:h-24 md:h-32 bg-white rounded-lg shadow-sm overflow-hidden">
                             <img
-                              src={`${item.image_path || "/assets/img/equipments/racket.png"}?v=${Date.now()}`}
+                              src={(() => {
+                                const baseUrl = resolveApiBaseUrl()
+                                if (item.image_path) {
+                                  if (item.image_path.startsWith('http')) {
+                                    return item.image_path
+                                  }
+                                  const normalizedPath = item.image_path.startsWith('/')
+                                    ? item.image_path
+                                    : `/${item.image_path}`
+                                  return `${baseUrl}${normalizedPath}`
+                                }
+                                return '/assets/img/equipments/racket.png'
+                              })()}
                               alt={item.equipment_name}
                                     className="w-full h-full object-contain object-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-2"
                                     style={{
