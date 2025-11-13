@@ -1,9 +1,8 @@
-version: '3.8'
-
 services:
   # MySQL Database
   mysql:
-    image: mysql:8.0.37
+    image: mysql:8.4
+    platform: linux/amd64
     container_name: budz-reserve-mysql
     restart: unless-stopped
     environment:
@@ -11,6 +10,8 @@ services:
       MYSQL_DATABASE: budz_reserve
       MYSQL_USER: budz_user
       MYSQL_PASSWORD: budz_password
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
       - "3306:3306"
     volumes:
@@ -19,15 +20,21 @@ services:
       - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql
     networks:
       - budz-reserve-network
-    command: --default-authentication-plugin=mysql_native_password
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=200
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
-      timeout: 20s
-      retries: 10
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # phpMyAdmin Database UI
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:5.2.1
+    image: phpmyadmin/phpmyadmin:latest
+    platform: linux/amd64
     container_name: budz-reserve-phpmyadmin
     restart: unless-stopped
     environment:
@@ -36,6 +43,8 @@ services:
       PMA_USER: root
       PMA_PASSWORD: password
       UPLOAD_LIMIT: 256M
+      PMA_ARBITRARY: 1
+      MAX_EXECUTION_TIME: 600
     ports:
       - "8080:80"
     depends_on:
@@ -43,6 +52,12 @@ services:
         condition: service_healthy
     networks:
       - budz-reserve-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # Backend API
   backend:
@@ -51,6 +66,8 @@ services:
       dockerfile: ./backend/Dockerfile.dev
     container_name: budz-reserve-backend
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     command: sh -c "npm run start:container"
     environment:
       NODE_ENV: development
@@ -78,6 +95,12 @@ services:
         condition: service_healthy
     networks:
       - budz-reserve-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   # Frontend React App
   frontend:
@@ -86,6 +109,8 @@ services:
       dockerfile: ./frontend/Dockerfile.dev
     container_name: budz-reserve-frontend
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       VITE_API_URL: http://localhost:3001/api
       VITE_APP_NAME: Budz Reserve
@@ -104,7 +129,7 @@ services:
 
   # Nginx Reverse Proxy
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:alpine
     container_name: budz-reserve-nginx
     restart: unless-stopped
     ports:
@@ -116,6 +141,12 @@ services:
       - backend
     networks:
       - budz-reserve-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   mysql_data:

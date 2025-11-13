@@ -1,17 +1,13 @@
-import { useCallback, useMemo, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { QueueingShell } from '@/components/QueueingShell'
+import { apiServices, type QueueingCourtStatus } from '@/lib/apiServices'
 
 type CourtCard = {
   id: number
   name: string
-  status: 'available' | 'maintenance'
+  status: QueueingCourtStatus
 }
-
-const initialCourts: CourtCard[] = [
-  { id: 1, name: 'Court 1', status: 'available' },
-  { id: 5, name: 'Court 5', status: 'available' },
-  { id: 6, name: 'Court 6', status: 'available' },
-]
 
 const matches = [
   {
@@ -105,66 +101,174 @@ function TeamPlayerCard({
 }
 
 export function QueueingPage() {
-  const [courts, setCourts] = useState<CourtCard[]>(initialCourts)
-  const [feedback, setFeedback] = useState<{
+  const [courts, setCourts] = useState<CourtCard[]>([])
+  const [loadingCourts, setLoadingCourts] = useState(true)
+  const [courtsError, setCourtsError] = useState<string | null>(null)
+  const [isClearingCourts, setIsClearingCourts] = useState(false)
+  const [isSavingCourt, setIsSavingCourt] = useState(false)
+  const [isDeletingCourt, setIsDeletingCourt] = useState(false)
+  const [addCourtModal, setAddCourtModal] = useState<{
     open: boolean
-    message: string
-    tone: 'success' | 'error'
+    value: string
+    error: string
   }>({
     open: false,
-    message: '',
-    tone: 'success'
+    value: '',
+    error: ''
   })
-
+  const [courtToDelete, setCourtToDelete] = useState<{ id: number; name: string } | null>(null)
   const nextCourtNumber = useMemo(() => {
     if (courts.length === 0) return 1
     return Math.max(...courts.map((court) => court.id)) + 1
   }, [courts])
 
-  const handleAddCourt = useCallback(() => {
-    const defaultName = `Court ${nextCourtNumber}`
-    const nameInput = window.prompt('Enter the new court name', defaultName)
+  const loadCourts = useCallback(async () => {
+    try {
+      setLoadingCourts(true)
+      setCourtsError(null)
 
-    if (!nameInput) return
+      const courtsFromApi = await apiServices.getQueueingCourts()
+      const mappedCourts: CourtCard[] = courtsFromApi
+        .map((court) => ({
+          id: court.id,
+          name: court.name,
+          status: court.status
+        }))
+        .sort((a, b) => a.id - b.id)
 
-    const trimmedName = nameInput.trim()
-    if (!trimmedName) {
-      setFeedback({
-        open: true,
-        message: 'Court name cannot be empty.',
-        tone: 'error'
-      })
-      return
+      setCourts(mappedCourts)
+    } catch (error) {
+      console.error('[QueueingPage] Failed to load queueing courts:', error)
+      setCourtsError('Unable to load courts. Please try again.')
+    } finally {
+      setLoadingCourts(false)
     }
+  }, [])
 
-    setCourts((prevCourts) => [
-      ...prevCourts,
-      {
-        id: nextCourtNumber,
-        name: trimmedName,
-        status: 'available'
-      }
-    ])
+  useEffect(() => {
+    void loadCourts()
+  }, [loadCourts])
 
-    setFeedback({
+  const handleOpenAddCourtModal = useCallback(() => {
+    setAddCourtModal({
       open: true,
-      message: `${trimmedName} added successfully.`,
-      tone: 'success'
+      value: `Court ${nextCourtNumber}`,
+      error: ''
     })
   }, [nextCourtNumber])
 
-  const handleDeleteCourt = useCallback((courtId: number, courtName: string) => {
-    const confirmed = window.confirm(`Delete ${courtName}?`)
-    if (!confirmed) return
-
-    setCourts((prevCourts) => prevCourts.filter((court) => court.id !== courtId))
+  const handleCloseAddCourtModal = useCallback(() => {
+    setAddCourtModal((prev) => ({
+      ...prev,
+      open: false,
+      error: ''
+    }))
   }, [])
+
+  const handleSubmitAddCourt = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      const trimmedName = addCourtModal.value.trim()
+      if (!trimmedName) {
+        setAddCourtModal((prev) => ({
+          ...prev,
+          error: 'Court name cannot be empty.'
+        }))
+        return
+      }
+
+      try {
+        setIsSavingCourt(true)
+        const createdCourt = await apiServices.createQueueingCourt({
+          name: trimmedName,
+          status: 'available'
+        })
+
+        setCourts((prevCourts) =>
+          [...prevCourts, { id: createdCourt.id, name: createdCourt.name, status: createdCourt.status }].sort(
+            (a, b) => a.id - b.id
+          )
+        )
+
+        setAddCourtModal({
+          open: false,
+          value: '',
+          error: ''
+        })
+
+        toast.success(`${trimmedName} added successfully.`)
+      } catch (error) {
+        console.error('[QueueingPage] Failed to add queueing court:', error)
+        setAddCourtModal((prev) => ({
+          ...prev,
+          error: 'Failed to add the court. Please try again.'
+        }))
+      } finally {
+        setIsSavingCourt(false)
+      }
+    },
+    [addCourtModal.value]
+  )
+
+  const handlePromptDeleteCourt = useCallback((court: CourtCard) => {
+    setCourtToDelete({
+      id: court.id,
+      name: court.name
+    })
+  }, [])
+
+  const handleDeleteCourt = useCallback(async () => {
+    if (!courtToDelete) return
+
+    const { id, name } = courtToDelete
+
+    try {
+      setIsDeletingCourt(true)
+      await apiServices.deleteQueueingCourt(id)
+      setCourts((prevCourts) => prevCourts.filter((court) => court.id !== id))
+      toast.success(`${name} removed.`)
+    } catch (error) {
+      console.error('[QueueingPage] Failed to delete queueing court:', error)
+      toast.error(`Unable to delete ${name}. Please try again.`)
+    } finally {
+      setIsDeletingCourt(false)
+      setCourtToDelete(null)
+    }
+  }, [courtToDelete])
+
+  const [confirmClearModal, setConfirmClearModal] = useState(false)
+
+  const handleClearCourts = useCallback(async () => {
+    if (courts.length === 0 || isClearingCourts) return
+
+    try {
+      setIsClearingCourts(true)
+      await apiServices.clearQueueingCourts()
+      setCourts([])
+      toast.success('All queue courts removed.')
+    } catch (error) {
+      console.error('[QueueingPage] Failed to clear queue courts:', error)
+      toast.error('Unable to clear courts. Please try again.')
+    } finally {
+      setIsClearingCourts(false)
+      setConfirmClearModal(false)
+    }
+  }, [courts, isClearingCourts])
 
   const renderStatusBadge = (status: CourtCard['status']) => {
     if (status === 'maintenance') {
       return (
         <span className="rounded-full border border-amber-400/60 bg-amber-500/5 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
           Maintenance
+        </span>
+      )
+    }
+
+    if (status === 'unavailable') {
+      return (
+        <span className="rounded-full border border-rose-500/60 bg-rose-500/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-300">
+          Unavailable
         </span>
       )
     }
@@ -183,95 +287,124 @@ export function QueueingPage() {
           <h1 className="text-2xl font-semibold text-white/90">Court Management</h1>
           <button
             type="button"
-            onClick={handleAddCourt}
+            onClick={handleOpenAddCourtModal}
             className="self-start rounded-full bg-[#2663ff] px-5 py-2 text-sm font-semibold shadow-lg shadow-blue-900/40 transition-colors hover:bg-[#2d6dff]"
           >
             + Add new court
           </button>
         </div>
+        {courtsError && !loadingCourts && (
+          <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            {courtsError}
+          </div>
+        )}
         <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3">
-          {courts.map((court) => (
-            <div key={court.id} className="relative rounded-[20px] border border-white/18 bg-[#14070e] shadow-[0_14px_34px_rgba(0,0,0,0.45)]">
-              <div className="pointer-events-none">
-                <div className="absolute inset-0 rounded-[20px] border border-white/12" />
-                <div className="absolute inset-x-5 top-[36%] h-px bg-white/16" />
-                <div className="absolute inset-x-5 bottom-6 h-px bg-white/16" />
-                <div className="absolute top-[36%] bottom-6 left-[33%] w-px bg-white/16" />
-                <div className="absolute top-[36%] bottom-6 right-[33%] w-px bg-white/16" />
-                <div className="absolute top-[52%] bottom-6 left-1/2 w-px -translate-x-1/2 bg-white/16" />
-              </div>
-              <div className="relative flex items-start justify-between px-6 pt-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <span className="text-base">{court.name}</span>
-                  <div className="flex items-center gap-2 text-white/80">
+          {loadingCourts
+            ? Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`queueing-court-skeleton-${index}`}
+                  className="h-56 animate-pulse rounded-[20px] border border-white/12 bg-white/5"
+                />
+              ))
+            : courts.map((court) => (
+                <div key={court.id} className="relative rounded-[20px] border border-white/18 bg-[#14070e] shadow-[0_14px_34px_rgba(0,0,0,0.45)]">
+                  <div className="pointer-events-none">
+                    <div className="absolute inset-0 rounded-[20px] border border-white/12" />
+                    <div className="absolute inset-x-5 top-[36%] h-px bg-white/16" />
+                    <div className="absolute inset-x-5 bottom-6 h-px bg-white/16" />
+                    <div className="absolute top-[36%] bottom-6 left-[33%] w-px bg-white/16" />
+                    <div className="absolute top-[36%] bottom-6 right-[33%] w-px bg-white/16" />
+                    <div className="absolute top-[52%] bottom-6 left-1/2 w-px -translate-x-1/2 bg-white/16" />
+                  </div>
+                  <div className="relative flex items-start justify-between px-6 pt-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                      <span className="text-base">{court.name}</span>
+                      <div className="flex items-center gap-2 text-white/80">
+                        <button
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+                          type="button"
+                          aria-label="Edit court"
+                          disabled
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-4 w-4 opacity-40"
+                          >
+                            <path d="M16.862 3.487l3.651 3.651a1.5 1.5 0 010 2.122l-9.9 9.9-4.604 1.265 1.265-4.604 9.9-9.9a1.5 1.5 0 012.122 0z" />
+                            <path d="M13.95 6.4l3.651 3.651" />
+                            <path d="M5 21h14" />
+                          </svg>
+                        </button>
+                        <button
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+                          type="button"
+                          onClick={() => handlePromptDeleteCourt(court)}
+                          disabled={isDeletingCourt && courtToDelete?.id === court.id}
+                          aria-label="Delete court"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="h-4 w-4"
+                          >
+                            <path d="M4 7h16" />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                            <path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12" />
+                            <path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    {renderStatusBadge(court.status)}
+                  </div>
+                  <div className="relative flex flex-col items-center justify-center px-6 pb-12 pt-12 text-center">
+                    <p className="mb-6 text-sm text-white/75">Add players to start the game</p>
                     <button
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
                       type="button"
-                      aria-label="Edit court"
+                      className="inline-flex items-center gap-2 rounded-md bg-[#1F49FF] px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(31,73,255,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-[#2b57ff]"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
                         className="h-4 w-4"
+                        aria-hidden="true"
                       >
-                        <path d="M16.862 3.487l3.651 3.651a1.5 1.5 0 010 2.122l-9.9 9.9-4.604 1.265 1.265-4.604 9.9-9.9a1.5 1.5 0 012.122 0z" />
-                        <path d="M13.95 6.4l3.651 3.651" />
-                        <path d="M5 21h14" />
+                        <path d="M10 10a4 4 0 100-8 4 4 0 000 8zM2 17a6 6 0 1112 0H2zm13.25-7.75a.75.75 0 00-1.5 0V11h-1.75a.75.75 0 000 1.5h1.75v1.75a.75.75 0 001.5 0V12.5H17a.75.75 0 000-1.5h-1.75V9.25z" />
                       </svg>
-                    </button>
-                    <button
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 hover:text-red-300"
-                      type="button"
-                      onClick={() => handleDeleteCourt(court.id, court.name)}
-                      aria-label="Delete court"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4"
-                      >
-                        <path d="M4 7h16" />
-                        <path d="M10 11v6" />
-                        <path d="M14 11v6" />
-                        <path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12" />
-                        <path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" />
-                      </svg>
+                      Add Players
                     </button>
                   </div>
                 </div>
-                {renderStatusBadge(court.status)}
-              </div>
-              <div className="relative flex flex-col items-center justify-center px-6 pb-12 pt-12 text-center">
-                <p className="mb-6 text-sm text-white/75">Add players to start the game</p>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-md bg-[#1F49FF] px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(31,73,255,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-[#2b57ff]"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="h-4 w-4"
-                    aria-hidden="true"
-                  >
-                    <path d="M10 10a4 4 0 100-8 4 4 0 000 8zM2 17a6 6 0 1112 0H2zm13.25-7.75a.75.75 0 00-1.5 0V11h-1.75a.75.75 0 000 1.5h1.75v1.75a.75.75 0 001.5 0V12.5H17a.75.75 0 000-1.5h-1.75V9.25z" />
-                  </svg>
-                  Add Players
-                </button>
-              </div>
-            </div>
-          ))}
+              ))}
         </div>
+        {!loadingCourts && courts.length === 0 && !courtsError && (
+          <p className="mt-6 text-center text-sm text-white/60">No courts added yet.</p>
+        )}
+        {courts.length > 0 && !loadingCourts && (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setConfirmClearModal(true)}
+              disabled={isClearingCourts}
+              className="rounded-full bg-white/10 px-6 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Clear courts
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.05] shadow-2xl shadow-black/30 backdrop-blur-lg">
@@ -345,62 +478,119 @@ export function QueueingPage() {
         </div>
       </section>
 
-      {feedback.open && (
+      {addCourtModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-[#11050b] p-6 text-center shadow-[0_30px_50px_rgba(0,0,0,0.45)]">
-            <div
-              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
-                feedback.tone === 'success' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
-              }`}
-            >
-              {feedback.tone === 'success' ? (
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
-                  <path
-                    d="M9 12.75 11 14.75 15 10.75"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                  <path
-                    d="M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18Z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
-                  <path
-                    d="M12 8v5m0 3h.01M12 3.75a8.25 8.25 0 1 1 0 16.5 8.25 8.25 0 0 1 0-16.5Z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                </svg>
-              )}
-            </div>
-            <p className="mb-6 text-sm text-white/80">{feedback.message}</p>
-            <button
-              type="button"
-              onClick={() =>
-                setFeedback((prev) => ({
-                  ...prev,
-                  open: false
-                }))
-              }
-              className="inline-flex items-center justify-center rounded-full bg-white/10 px-6 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
-            >
-              Close
-            </button>
+          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-[#11050b] p-6 shadow-[0_30px_50px_rgba(0,0,0,0.45)]">
+            <h2 className="text-lg font-semibold text-white">Add new court</h2>
+            <p className="mt-1 text-sm text-white/70">Provide a name for the court you want to create.</p>
+
+            <form onSubmit={handleSubmitAddCourt} className="mt-5 space-y-5">
+              <div>
+                <label htmlFor="new-court-name" className="mb-2 block text-sm font-medium text-white/80">
+                  Court name
+                </label>
+                <input
+                  id="new-court-name"
+                  type="text"
+                  value={addCourtModal.value}
+                  onChange={(event) =>
+                    setAddCourtModal((prev) => ({
+                      ...prev,
+                      value: event.target.value,
+                      error: ''
+                    }))
+                  }
+                  className={`w-full rounded-xl border bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-white/40 focus:bg-white/10 ${
+                    addCourtModal.error ? 'border-rose-400/70 focus:border-rose-300' : 'border-white/15'
+                  }`}
+                  placeholder={`Court ${nextCourtNumber}`}
+                  autoFocus
+                />
+                {addCourtModal.error && <p className="mt-2 text-sm text-rose-300">{addCourtModal.error}</p>}
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleCloseAddCourtModal}
+                  disabled={isSavingCourt}
+                  className="rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingCourt}
+                  className="rounded-full bg-[#2663ff] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-900/40 transition-colors hover:bg-[#2d6dff] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingCourt ? 'Adding…' : 'Add court'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
+
+      {courtToDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-[#11050b] p-6 text-center shadow-[0_30px_50px_rgba(0,0,0,0.45)]">
+            <h3 className="text-lg font-semibold text-white">Remove court?</h3>
+            <p className="mt-2 text-sm text-white/70">
+              This will remove <span className="font-semibold text-white">{courtToDelete.name}</span> from queue courts.
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isDeletingCourt) return
+                  setCourtToDelete(null)
+                }}
+                disabled={isDeletingCourt}
+                className="rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteCourt()}
+                disabled={isDeletingCourt}
+                className="rounded-full bg-rose-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-900/30 transition hover:bg-rose-500/90 disabled:cursor-not-allowed disabled:bg-rose-500/60"
+              >
+                {isDeletingCourt ? 'Removing…' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmClearModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/20 bg-[#11050b] p-6 text-center shadow-[0_30px_50px_rgba(0,0,0,0.45)]">
+            <h3 className="text-lg font-semibold text-white">Remove courts?</h3>
+            <p className="mt-2 text-sm text-white/70">
+              This will remove all queue courts. Continue?
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmClearModal(false)}
+                disabled={isClearingCourts}
+                className="rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClearCourts}
+                disabled={isClearingCourts}
+                className="rounded-full bg-rose-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-900/30 transition hover:bg-rose-500/90 disabled:cursor-not-allowed disabled:bg-rose-500/60"
+              >
+                {isClearingCourts ? 'Removing…' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </QueueingShell>
   )
 }

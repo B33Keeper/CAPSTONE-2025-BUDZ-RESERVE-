@@ -3,8 +3,8 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: mysql:3306
--- Generation Time: Nov 11, 2025 at 01:55 PM
--- Server version: 8.0.37
+-- Generation Time: Nov 13, 2025 at 08:55 PM
+-- Server version: 8.4.7
 -- PHP Version: 8.3.26
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -29,25 +29,15 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `announcements` (
   `id` int NOT NULL,
-  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `content` text COLLATE utf8mb4_unicode_ci,
-  `image_url` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `announcement_type` enum('text','image') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'text',
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `image_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `announcement_type` enum('text','image') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'text',
   `is_active` tinyint NOT NULL DEFAULT '1',
   `created_by` int DEFAULT NULL,
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `announcements`
---
-
-INSERT INTO `announcements` (`id`, `title`, `content`, `image_url`, `announcement_type`, `is_active`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, 'TEST', 'HGKJHUILUKHJOIUHIJ', '/uploads/announcements/1762263013751-717893656.jpg', 'image', 0, 8, '2025-11-04 13:30:13.799105', '2025-11-04 13:30:51.000000'),
-(2, 'TEST', 'BIRDIE PUSSY', NULL, 'text', 0, 8, '2025-11-04 13:30:51.681064', '2025-11-04 15:31:47.000000'),
-(3, 'sdf', 'asdf', '/uploads/announcements/1762270307933-801772428.png', 'image', 0, 8, '2025-11-04 15:31:48.087018', '2025-11-04 15:32:54.000000'),
-(4, 'sadfdf', 'afdfsdf', '/uploads/announcements/1762270374788-288289081.png', 'image', 1, 8, '2025-11-04 15:32:54.823914', '2025-11-04 15:32:54.823914');
 
 -- --------------------------------------------------------
 
@@ -57,8 +47,8 @@ INSERT INTO `announcements` (`id`, `title`, `content`, `image_url`, `announcemen
 
 CREATE TABLE `courts` (
   `Court_Id` int NOT NULL,
-  `Court_Name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
-  `Status` enum('Available','Maintenance','Unavailable') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Available',
+  `Court_Name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `Status` enum('Available','Maintenance','Unavailable') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Available',
   `Price` decimal(10,2) NOT NULL DEFAULT '0.00',
   `Created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `Updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
@@ -91,26 +81,29 @@ INSERT INTO `courts` (`Court_Id`, `Court_Name`, `Status`, `Price`, `Created_at`,
 
 CREATE TABLE `equipments` (
   `id` int NOT NULL,
-  `equipment_name` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `equipment_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `stocks` int NOT NULL DEFAULT '0',
   `price` decimal(10,2) NOT NULL,
-  `status` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Available',
+  `status` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Available',
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  `image_path` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '/assets/img/equipments/racket.png'
+  `image_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '/assets/img/equipments/racket.png',
+  `unit` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `weight` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tension` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `equipments`
 --
 
-INSERT INTO `equipments` (`id`, `equipment_name`, `stocks`, `price`, `status`, `created_at`, `updated_at`, `image_path`) VALUES
-(1, 'Yonex GR 303', 1, 150.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-10 17:23:29.004213', '/public/assets/img/equipments/racket-dark-frame.png'),
-(2, 'Li-Ning Blaze 100', 15, 80.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-10 17:24:19.061869', '/public/assets/img/equipments/racket-removebg-preview.png'),
-(3, 'YONEX Arcsaber 7 Play', 25, 100.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-10 17:23:55.273751', '/public/assets/img/equipments/racket-white-silver.png'),
-(4, 'Victor Thruster', 30, 15.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-10 17:20:40.983389', '/public/assets/img/equipments/racket-silver-white.png'),
-(5, 'Apacs Power', 50, 20.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-11 12:05:56.000000', '/public/assets/img/equipments/racket-yellow-green.png'),
-(6, 'AlpSport', 10, 100.00, 'Available', '2025-11-07 04:47:49.382927', '2025-11-10 17:19:53.358455', '/public/assets/img/equipments/racket-black-red.png');
+INSERT INTO `equipments` (`id`, `equipment_name`, `stocks`, `price`, `status`, `created_at`, `updated_at`, `image_path`, `unit`, `weight`, `tension`) VALUES
+(1, 'Yonex GR 303', 1, 150.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:46:46.000000', '/uploads/equipments/1763066806085-104844781.png', 'Head Heavy', '5U', '30lbs'),
+(2, 'Li-Ning Blaze 100', 15, 80.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:47:24.000000', '/uploads/equipments/1763066844358-713667384.png', NULL, NULL, NULL),
+(3, 'YONEX Arcsaber 7 Play', 25, 100.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:47:29.000000', '/uploads/equipments/1763066849690-775455644.png', NULL, NULL, NULL),
+(4, 'Victor Thruster', 30, 15.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:47:35.000000', '/uploads/equipments/1763066855060-739408470.png', NULL, NULL, NULL),
+(5, 'Apacs Power', 50, 20.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:47:52.000000', '/uploads/equipments/1763066872053-315981378.png', NULL, NULL, NULL),
+(6, 'AlpSport', 10, 100.00, 'Available', '2025-11-07 04:47:49.382927', '2025-11-13 20:47:42.000000', '/uploads/equipments/1763066862024-19154608.png', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -224,7 +217,7 @@ INSERT INTO `gallery` (`id`, `title`, `description`, `image_path`, `status`, `so
 CREATE TABLE `migrations` (
   `id` int NOT NULL,
   `timestamp` bigint NOT NULL,
-  `name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -237,11 +230,11 @@ CREATE TABLE `payments` (
   `id` int NOT NULL,
   `reservation_id` int NOT NULL,
   `amount` decimal(10,2) NOT NULL,
-  `payment_method` enum('GCash','Maya','GrabPay','Online Banking','QR Ph','Cash') COLLATE utf8mb4_general_ci NOT NULL,
-  `status` enum('Pending','Completed','Failed','Cancelled') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pending',
-  `transaction_id` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `reference_number` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `notes` text COLLATE utf8mb4_general_ci,
+  `payment_method` enum('GCash','Maya','GrabPay','Online Banking','QR Ph','Cash') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `status` enum('Pending','Completed','Failed','Cancelled') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pending',
+  `transaction_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `reference_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -307,6 +300,57 @@ INSERT INTO `payments` (`id`, `reservation_id`, `amount`, `payment_method`, `sta
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `queueing_courts`
+--
+
+CREATE TABLE `queueing_courts` (
+  `id` int NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('available','maintenance','unavailable') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'available',
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `queueing_courts`
+--
+
+INSERT INTO `queueing_courts` (`id`, `name`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'Court 1', 'available', '2025-11-13 20:36:16.574890', '2025-11-13 20:36:16.574890'),
+(2, 'Court 2', 'available', '2025-11-13 20:36:18.190571', '2025-11-13 20:36:18.190571'),
+(3, 'Court 3', 'available', '2025-11-13 20:36:19.858695', '2025-11-13 20:36:19.858695');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `queue_players`
+--
+
+CREATE TABLE `queue_players` (
+  `id` int NOT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sex` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `skill` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `games_played` int NOT NULL DEFAULT '0',
+  `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'In Queue',
+  `last_played` date DEFAULT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `queue_players`
+--
+
+INSERT INTO `queue_players` (`id`, `name`, `sex`, `skill`, `games_played`, `status`, `last_played`, `created_at`, `updated_at`) VALUES
+(1, 'Ivan', 'male', 'Advanced', 0, 'In Queue', '2025-11-13', '2025-11-13 19:52:42.428358', '2025-11-13 19:52:42.428358'),
+(2, 'Cielo', 'male', 'Advanced', 0, 'In Queue', '2025-11-13', '2025-11-13 19:52:46.266655', '2025-11-13 19:52:46.266655'),
+(3, 'Levy', 'male', 'Advanced', 0, 'In Queue', '2025-11-13', '2025-11-13 19:53:10.299910', '2025-11-13 19:53:10.299910'),
+(4, 'Jersey', 'female', 'Intermediate', 0, 'In Queue', '2025-11-13', '2025-11-13 20:36:29.770452', '2025-11-13 20:36:29.770452');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `reservations`
 --
 
@@ -317,11 +361,11 @@ CREATE TABLE `reservations` (
   `Reservation_Date` date NOT NULL,
   `Start_Time` time NOT NULL,
   `End_Time` time NOT NULL,
-  `Status` enum('Pending','Confirmed','Cancelled','Completed') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pending',
+  `Status` enum('Pending','Confirmed','Cancelled','Completed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'Pending',
   `Total_Amount` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `Reference_Number` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `Paymongo_Reference_Number` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `Notes` text COLLATE utf8mb4_general_ci,
+  `Reference_Number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `Paymongo_Reference_Number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `Notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `Created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `Updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   `Is_Admin_Created` tinyint NOT NULL DEFAULT '0'
@@ -416,7 +460,8 @@ CREATE TABLE `suggestions` (
 
 INSERT INTO `suggestions` (`id`, `name`, `message`, `user_id`, `created_at`, `updated_at`) VALUES
 (1, 'Filbert', 'Filbertaafdfadf', 1, '2025-10-31 09:44:33.539769', '2025-10-31 09:44:33.539769'),
-(2, 'zhiky', 'TEST', NULL, '2025-10-31 09:45:28.340323', '2025-10-31 09:45:28.340323');
+(2, 'zhiky', 'TEST', NULL, '2025-10-31 09:45:28.340323', '2025-10-31 09:45:28.340323'),
+(3, 'Ivan Louis Cielo', 'dasdsa', 11, '2025-11-13 19:50:48.177958', '2025-11-13 19:50:48.177958');
 
 -- --------------------------------------------------------
 
@@ -440,22 +485,22 @@ CREATE TABLE `time_slots` (
 
 CREATE TABLE `users` (
   `id` int NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `age` int DEFAULT NULL,
-  `sex` enum('Male','Female','Other') COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `username` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `email` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
-  `password` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
-  `contact_number` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `profile_picture` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `sex` enum('Male','Female','Other') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `contact_number` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `profile_picture` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `is_active` tinyint NOT NULL DEFAULT '1',
   `is_verified` tinyint NOT NULL DEFAULT '0',
-  `verification_token` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `reset_password_token` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `verification_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `reset_password_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `reset_password_expires` timestamp NULL DEFAULT NULL,
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  `role` varchar(255) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'user'
+  `role` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'user'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -469,9 +514,10 @@ INSERT INTO `users` (`id`, `name`, `age`, `sex`, `username`, `email`, `password`
 (4, 'Ana Rodriguez', 25, 'Female', 'ana_rod', 'ana.rodriguez@email.com', '$2a$12$example.hash.3', '09345678901', NULL, 1, 1, NULL, NULL, NULL, '2025-10-15 13:04:01.282508', '2025-10-15 13:04:01.282508', 'user'),
 (5, 'Carlos Mendoza', 35, 'Male', 'carlos_m', 'carlos.mendoza@email.com', '$2a$12$example.hash.4', '09456789012', NULL, 1, 1, NULL, NULL, NULL, '2025-10-15 13:04:01.282508', '2025-10-15 13:04:01.282508', 'user'),
 (6, 'Test User', 25, 'Male', 'testuser123', 'test@example.com', '$2a$12$.WwM9bXnpZy64FA2SuqgaekM1KGNbXTThrieM9Og.Ct2uiteRJ/l.', '1234567890', NULL, 1, 0, NULL, NULL, NULL, '2025-10-15 14:51:31.468010', '2025-10-15 15:02:23.000000', 'user'),
-(8, 'Filbert', 21, 'Male', 'admin', 'ic.filbert.delacruz@cvsu.edu.ph', '$2a$12$hC.UO19unXNLKWr/hWsD6uTyvg8ENpp/.PTJcU8Px32tSJ6wlmSjK', '09498680515', NULL, 1, 0, NULL, NULL, NULL, '2025-10-31 01:22:24.615642', '2025-10-31 01:22:40.375057', 'admin'),
+(8, 'admin', 21, 'Male', 'admin', 'rockwell.barrientos1996@gmail.com', '$2a$12$yznI4LmuRWJfoTS6B2UA0e2w8CQYy/PlZhrh5fjiJRuka6jjbXLMm', '09498680515', NULL, 1, 0, NULL, NULL, NULL, '2025-10-31 01:22:24.615642', '2025-11-13 20:49:57.876332', 'admin'),
 (9, 'kukurikabu', NULL, NULL, 'guest_1762801511064_hyb2j', 'guest_1762801511064_hyb2j@walkin.local', '$2a$12$ws2m1tw2yrA/lS/xiU.58uMq./hZ5iw31QkOSbBcM0uoy2ybxVdki', NULL, NULL, 1, 0, NULL, NULL, NULL, '2025-11-10 19:05:11.779141', '2025-11-10 19:05:11.779141', 'user'),
-(10, 'POGI', NULL, NULL, 'guest_1762856699787_2dafn', 'baktolbomb@gmail.com', '$2a$12$TfvFWWt6ocE9N0ADY8E6Iu5dE1xcAT9bTvpeNge8b5LjiS7phsEdO', '09498680515', NULL, 1, 0, NULL, NULL, NULL, '2025-11-11 10:25:00.272395', '2025-11-11 10:25:00.272395', 'user');
+(10, 'POGI', NULL, NULL, 'guest_1762856699787_2dafn', 'baktolbomb@gmail.com', '$2a$12$TfvFWWt6ocE9N0ADY8E6Iu5dE1xcAT9bTvpeNge8b5LjiS7phsEdO', '09498680515', NULL, 1, 0, NULL, NULL, NULL, '2025-11-11 10:25:00.272395', '2025-11-11 10:25:00.272395', 'user'),
+(11, 'Ivan Louis Cielo', 22, 'Male', 'ivan', 'cieloivanlouis@gmail.com', '$2a$12$y3c6Xjzo4WG6w.95WmIo7uWdlKW.QQZqyaWM81dYw82fa9judyNba', '09366274094', '/uploads/avatars/1763065882845-613575116.jpg', 1, 0, NULL, NULL, NULL, '2025-11-13 19:50:17.012848', '2025-11-13 20:49:34.531289', 'user');
 
 --
 -- Indexes for dumped tables
@@ -527,6 +573,19 @@ ALTER TABLE `migrations`
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`id`),
   ADD KEY `FK_9ed5ff4942e09edfd44ee0ccf01` (`reservation_id`);
+
+--
+-- Indexes for table `queueing_courts`
+--
+ALTER TABLE `queueing_courts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `IDX_8998f10fcaf5371581be2dcc42` (`name`);
+
+--
+-- Indexes for table `queue_players`
+--
+ALTER TABLE `queue_players`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `reservations`
@@ -610,6 +669,18 @@ ALTER TABLE `payments`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=123;
 
 --
+-- AUTO_INCREMENT for table `queueing_courts`
+--
+ALTER TABLE `queueing_courts`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `queue_players`
+--
+ALTER TABLE `queue_players`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
@@ -619,7 +690,7 @@ ALTER TABLE `reservations`
 -- AUTO_INCREMENT for table `suggestions`
 --
 ALTER TABLE `suggestions`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `time_slots`
@@ -631,7 +702,7 @@ ALTER TABLE `time_slots`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- Constraints for dumped tables

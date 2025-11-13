@@ -28,6 +28,12 @@ const CalendarIcon = () => (
   </svg>
 )
 
+const MegaphoneIcon = () => (
+  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 8a5 5 0 010 8m-6.58 3.19A1 1 0 018 18V6a1 1 0 01.58-.91L19 1v22l-10.42-3.81zM5 10v4a1 1 0 01-1 1H3a1 1 0 01-1-1v-4a1 1 0 011-1h1a1 1 0 011 1z" />
+  </svg>
+)
+
 const LogOutIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -115,6 +121,10 @@ export function Header() {
       return
     }
     navigate('/queueing')
+  }
+
+  const triggerAnnouncementModal = () => {
+    window.dispatchEvent(new CustomEvent('open-announcement-modal'))
   }
 
   // Close dropdown when clicking outside
@@ -277,6 +287,22 @@ export function Header() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </button>
+
+                        <button
+                          onClick={() => {
+                            triggerAnnouncementModal()
+                            setIsProfileOpen(false)
+                          }}
+                          className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 group"
+                        >
+                          <div className="w-5 h-5 mr-3 text-gray-400 group-hover:text-blue-500 transition-colors duration-200">
+                            <MegaphoneIcon />
+                          </div>
+                          <span className="font-medium">View Announcement</span>
+                          <svg className="w-4 h-4 ml-auto text-gray-300 group-hover:text-blue-400 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
                       </div>
 
                       {/* Divider */}
@@ -424,6 +450,19 @@ export function Header() {
                       <CalendarIcon />
                     </div>
                     <span className="font-medium">My Reservations</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      triggerAnnouncementModal()
+                      setIsMenuOpen(false)
+                    }}
+                    className="flex items-center w-full px-3 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 group"
+                  >
+                    <div className="w-5 h-5 mr-3 text-gray-400 group-hover:text-blue-500 transition-colors duration-200">
+                      <MegaphoneIcon />
+                    </div>
+                    <span className="font-medium">View Announcement</span>
                   </button>
                   
                   <div className="border-t border-gray-100 mx-3"></div>

@@ -91,7 +91,7 @@ export function SignupPage() {
     reset,
     setError,
     clearErrors,
-    formState: { errors, isValid, isSubmitting },
+    formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     mode: 'onChange',
@@ -108,6 +108,10 @@ export function SignupPage() {
     },
     shouldFocusError: true,
   })
+
+  const handleInvalidSubmit = () => {
+    toast.error('Please fill out the required fields.')
+  }
 
   const onSubmit = async (data: SignupFormData) => {
     clearErrors('root')
@@ -136,7 +140,7 @@ export function SignupPage() {
           <img src="/assets/icons/BBC ICON.png" alt="BBC Logo" className="h-32 mx-auto mb-4" />
         </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="space-y-6" onSubmit={handleSubmit(onSubmit, handleInvalidSubmit)}>
           {/* First Row - Full Name and Age */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Full Name Field */}
@@ -346,7 +350,7 @@ export function SignupPage() {
           <div>
             <button
               type="submit"
-              disabled={isLoading || isSubmitting || !isValid}
+              disabled={isLoading || isSubmitting}
               className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 flex items-center justify-center"
             >
               {isLoading ? (

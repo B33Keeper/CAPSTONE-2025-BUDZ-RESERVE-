@@ -32,6 +32,28 @@ export interface TimeSlot {
   created_at: string
 }
 
+export interface QueuePlayer {
+  id: number
+  name: string
+  sex: 'male' | 'female'
+  skill: 'Beginner' | 'Intermediate' | 'Advanced'
+  gamesPlayed: number
+  status: 'In Queue' | 'Waiting'
+  createdAt: string
+  updatedAt: string
+  lastPlayed: string | null
+}
+
+export type QueueingCourtStatus = 'available' | 'maintenance' | 'unavailable'
+
+export interface QueueingCourt {
+  id: number
+  name: string
+  status: QueueingCourtStatus
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Reservation {
   Reservation_Id: number
   User_ID: number
@@ -75,6 +97,24 @@ export const apiServices = {
     return response.data
   },
 
+  async getQueueingCourts(): Promise<QueueingCourt[]> {
+    const response = await api.get('/queueing-courts')
+    return response.data
+  },
+
+  async createQueueingCourt(payload: { name: string; status?: QueueingCourtStatus }): Promise<QueueingCourt> {
+    const response = await api.post('/queueing-courts', payload)
+    return response.data
+  },
+
+  async deleteQueueingCourt(id: number): Promise<void> {
+    await api.delete(`/queueing-courts/${id}`)
+  },
+
+  async clearQueueingCourts(): Promise<void> {
+    await api.delete('/queueing-courts')
+  },
+
   // Equipment
   async getEquipment(): Promise<Equipment[]> {
     const response = await api.get('/equipment')
@@ -116,5 +156,39 @@ export const apiServices = {
   async createReservation(data: any) {
     const response = await api.post('/reservations', data)
     return response.data
+  },
+
+  // Queue Players
+  async getQueuePlayers(): Promise<QueuePlayer[]> {
+    const response = await api.get('/queue-players')
+    return response.data
+  },
+
+  async createQueuePlayer(data: {
+    name: string
+    sex: 'male' | 'female'
+    skill: 'Beginner' | 'Intermediate' | 'Advanced'
+    status?: 'In Queue' | 'Waiting'
+    lastPlayed?: string
+  }) {
+    const response = await api.post('/queue-players', data)
+    return response.data
+  },
+
+  async updateQueuePlayer(
+    id: number,
+    data: {
+      name: string
+      sex: 'male' | 'female'
+      skill: 'Beginner' | 'Intermediate' | 'Advanced'
+      status?: 'In Queue' | 'Waiting'
+    }
+  ) {
+    const response = await api.patch(`/queue-players/${id}`, data)
+    return response.data
+  },
+
+  async deleteQueuePlayer(id: number) {
+    await api.delete(`/queue-players/${id}`)
   }
 }

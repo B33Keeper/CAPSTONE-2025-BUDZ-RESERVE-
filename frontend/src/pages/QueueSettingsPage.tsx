@@ -223,13 +223,14 @@ export function QueueSettingsPage() {
                       <th className="px-4 py-3 text-left font-semibold">Shuttle Fees</th>
                       <th className="px-4 py-3 text-left font-semibold">Court Fee</th>
                       <th className="px-4 py-3 text-left font-semibold">Total</th>
-                      <th className="px-4 py-3 text-left font-semibold">Actions</th>
+                      <th className="px-4 py-3 text-left font-semibold">Status</th>
+                      <th className="px-4 py-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/15 text-white/85">
                   {filteredRows.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-6 text-center text-sm text-white/60">
+                      <td colSpan={7} className="px-4 py-6 text-center text-sm text-white/60">
                         No players match the current search.
                       </td>
                     </tr>
@@ -262,33 +263,34 @@ export function QueueSettingsPage() {
                         <td className="px-4 py-2">{formatCurrency(row.shuttleFee)}</td>
                         <td className="px-4 py-2">{formatCurrency(row.courtFee)}</td>
                         <td className="px-4 py-2">{formatCurrency(row.shuttleFee + row.courtFee)}</td>
-                        <td className="whitespace-nowrap px-4 py-2">
+                        <td className="px-4 py-2">
                           {row.status === 'paid' ? (
-                            <div className="flex w-full items-center justify-end gap-2">
-                              <span className="rounded-md bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold text-emerald-200 shadow-inner">
-                                Paid
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleTogglePaymentStatus(row.label)}
-                                className="rounded-md border border-white/30 px-3 py-1 text-[11px] font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
-                              >
-                                Mark Unpaid
-                              </button>
-                            </div>
+                            <span className="inline-flex items-center rounded-md bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold text-emerald-200 shadow-inner">
+                              Paid
+                            </span>
                           ) : (
-                            <div className="flex w-full items-center justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleTogglePaymentStatus(row.label)}
-                                className="rounded-md bg-emerald-500 px-4 py-1 text-[11px] font-semibold text-white shadow transition hover:bg-emerald-600"
-                              >
-                                Set Paid
-                              </button>
-                              <span className="rounded-md bg-white/25 px-3 py-1 text-[11px] font-semibold text-white/80 shadow-inner">
-                                Unpaid
-                              </span>
-                            </div>
+                            <span className="inline-flex items-center rounded-md bg-white/20 px-3 py-1 text-[11px] font-semibold text-white/80 shadow-inner">
+                              Unpaid
+                            </span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2 text-right">
+                          {row.status === 'paid' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePaymentStatus(row.label)}
+                              className="rounded-md border border-white/30 px-3 py-1 text-[11px] font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
+                            >
+                              Mark Unpaid
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePaymentStatus(row.label)}
+                              className="rounded-md bg-emerald-500 px-4 py-1 text-[11px] font-semibold text-white shadow transition hover:bg-emerald-600"
+                            >
+                              Set Paid
+                            </button>
                           )}
                         </td>
                       </tr>

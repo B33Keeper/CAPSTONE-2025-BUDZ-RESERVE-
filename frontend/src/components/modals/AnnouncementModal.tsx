@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 
@@ -17,6 +17,35 @@ export function AnnouncementModal() {
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const lastUserIdRef = useRef<string | null>(null)
+  const storageKeyRef = useRef<string | null>(null)
+
+  const fetchLatestAnnouncement = useCallback(
+    async ({ markAsSeen = true }: { markAsSeen?: boolean } = {}) => {
+      if (!user || user.role === 'admin') {
+        return
+      }
+
+      try {
+        setLoading(true)
+        const response = await api.get('/announcements/latest')
+        if (response.data) {
+          setAnnouncement(response.data)
+          setShowModal(true)
+          if (markAsSeen && storageKeyRef.current) {
+            sessionStorage.setItem(storageKeyRef.current, 'true')
+          }
+        } else {
+          setAnnouncement(null)
+          setShowModal(false)
+        }
+      } catch (error) {
+        console.error('Error fetching announcement:', error)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [user]
+  )
 
   useEffect(() => {
     // Reset state when user logs out
@@ -25,6 +54,7 @@ export function AnnouncementModal() {
         sessionStorage.removeItem(`announcement_shown_${lastUserIdRef.current}`)
         lastUserIdRef.current = null
       }
+      storageKeyRef.current = null
       setAnnouncement(null)
       setShowModal(false)
       setLoading(false)
@@ -32,6 +62,7 @@ export function AnnouncementModal() {
     }
 
     lastUserIdRef.current = String(user.id)
+    storageKeyRef.current = `announcement_shown_${user.id}`
 
     // Don't show announcement modal for admin users
     if (user.role === 'admin') {
@@ -39,8 +70,8 @@ export function AnnouncementModal() {
       return
     }
 
-    const storageKey = `announcement_shown_${user.id}`
-    const hasSeenAnnouncement = sessionStorage.getItem(storageKey) === 'true'
+    const storageKey = storageKeyRef.current
+    const hasSeenAnnouncement = storageKey ? sessionStorage.getItem(storageKey) === 'true' : false
 
     if (hasSeenAnnouncement) {
       setLoading(false)
@@ -48,26 +79,22 @@ export function AnnouncementModal() {
       return
     }
 
-    const fetchLatestAnnouncement = async () => {
-      try {
-        setLoading(true)
-        const response = await api.get('/announcements/latest')
-        if (response.data) {
-          setAnnouncement(response.data)
-          setShowModal(true)
-          sessionStorage.setItem(storageKey, 'true')
-        } else {
-          setShowModal(false)
-        }
-      } catch (error) {
-        console.error('Error fetching announcement:', error)
-      } finally {
-        setLoading(false)
+    fetchLatestAnnouncement({ markAsSeen: true })
+  }, [user, fetchLatestAnnouncement])
+
+  useEffect(() => {
+    const handleManualOpen = () => {
+      if (!user || user.role === 'admin') {
+        return
       }
+      fetchLatestAnnouncement({ markAsSeen: false })
     }
 
-    fetchLatestAnnouncement()
-  }, [user])
+    window.addEventListener('open-announcement-modal', handleManualOpen)
+    return () => {
+      window.removeEventListener('open-announcement-modal', handleManualOpen)
+    }
+  }, [user, fetchLatestAnnouncement])
 
   const handleClose = () => {
     setShowModal(false)
@@ -82,8 +109,8 @@ export function AnnouncementModal() {
     : `http://localhost:3001${announcement.image_url}`
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden animate-slideDown">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-2xl w-auto max-w-[90vw] max-h-[90vh] flex flex-col overflow-hidden animate-slideDown">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -103,15 +130,17 @@ export function AnnouncementModal() {
         </div>
 
         {/* Content */}
-        <div className="p-6">
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">{announcement.title}</h3>
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[70vh]">
+          <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+            {announcement.title}
+          </h3>
           
           {announcement.announcement_type === 'image' && announcement.image_url ? (
-            <div className="mb-4">
+            <div className="mb-4 flex justify-center">
               <img
                 src={imageUrl}
                 alt={announcement.title}
-                className="w-full h-auto rounded-lg shadow-md"
+                className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-md"
                 onError={(e) => {
                   // Fallback if image fails to load
                   e.currentTarget.style.display = 'none'
