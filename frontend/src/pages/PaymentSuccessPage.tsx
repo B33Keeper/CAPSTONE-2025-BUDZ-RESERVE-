@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, ArrowLeft, Home, X, Calendar, Clock, MapPin, CreditCard } from 'lucide-react'
+import { CheckCircle, ArrowLeft, Home } from 'lucide-react'
 import { api } from '../lib/api'
+import { ReservationsModal } from '../components/modals/ReservationsModal'
 
 export function PaymentSuccessPage() {
   const navigate = useNavigate()
@@ -11,6 +12,20 @@ export function PaymentSuccessPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [showReservationModal, setShowReservationModal] = useState(false)
   const hasProcessed = useRef(false)
+
+  const steps = [
+    { id: 1, name: 'Select a date', hint: 'Pick your play day' },
+    { id: 2, name: 'Select time & court no.', hint: 'Choose slot and court' },
+    { id: 3, name: 'Select payment method.', hint: 'Confirm your payment' },
+    { id: 4, name: 'Completed', hint: 'Booking finalized' }
+  ]
+  const currentStep = steps.length + 1
+
+  const getStepState = (stepId: number): 'completed' | 'current' | 'upcoming' => {
+    if (stepId < currentStep) return 'completed'
+    if (stepId === currentStep) return 'current'
+    return 'upcoming'
+  }
 
   useEffect(() => {
     // Get payment details from URL parameters
@@ -175,7 +190,86 @@ export function PaymentSuccessPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex flex-col items-center justify-center gap-6 p-4">
+      <div className="w-full max-w-5xl">
+        <div className="bg-gradient-to-r from-slate-100 via-white to-slate-100 border border-slate-200 rounded-2xl px-4 py-5 shadow-sm">
+          <ol className="mx-auto flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+            {steps.map((step, index) => {
+              const state = getStepState(step.id)
+              const isLast = index === steps.length - 1
+              const isCompleted = state === 'completed'
+              const isCurrent = state === 'current'
+
+              const stateStyles: Record<typeof state, {
+                circle: string
+                title: string
+                hint: string
+                icon?: JSX.Element
+              }> = {
+                completed: {
+                  circle: 'bg-emerald-500 text-white shadow-md shadow-emerald-200',
+                  title: 'text-emerald-600',
+                  hint: 'text-emerald-500',
+                  icon: (
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  )
+                },
+                current: {
+                  circle: 'bg-blue-600 text-white shadow-lg shadow-blue-200',
+                  title: 'text-blue-700',
+                  hint: 'text-blue-500'
+                },
+                upcoming: {
+                  circle: 'bg-white text-slate-400 border border-slate-200',
+                  title: 'text-slate-500',
+                  hint: 'text-slate-400'
+                }
+              }
+
+              const styles = stateStyles[state]
+
+              return (
+                <li key={step.id} className="flex flex-1 flex-col items-start gap-3 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-300 sm:h-10 sm:w-10 ${styles.circle}`}
+                      aria-current={isCurrent ? 'step' : undefined}
+                    >
+                      {styles.icon ?? step.id}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-semibold tracking-tight sm:text-base whitespace-nowrap ${styles.title}`}>{step.name}</p>
+                      <p className={`text-xs font-medium sm:text-sm whitespace-nowrap ${styles.hint}`}>{step.hint}</p>
+                    </div>
+                  </div>
+
+                  {!isLast && (
+                    <div className="ml-12 hidden flex-1 sm:flex">
+                      <div
+                        className={`h-1 w-full rounded-full transition-all duration-300 ${
+                          isCompleted ? 'bg-emerald-300' : isCurrent ? 'bg-blue-400' : 'bg-slate-200'
+                        }`}
+                      />
+                    </div>
+                  )}
+
+                  {!isLast && (
+                    <div
+                      className={`ml-4 h-8 w-px self-stretch sm:hidden ${
+                        isCompleted ? 'bg-emerald-200' : isCurrent ? 'bg-blue-200' : 'bg-slate-200'
+                      }`}
+                    />
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+        </div>
+      </div>
+
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full text-center">
         {/* Success Icon */}
         <div className="flex justify-center mb-6">
@@ -295,11 +389,7 @@ export function PaymentSuccessPage() {
           
           <button
             onClick={() => {
-              if (bookingSummary) {
-                setShowReservationModal(true)
-              } else {
-                navigate('/bookings')
-              }
+              setShowReservationModal(true)
             }}
             className="w-full border border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
           >
@@ -360,166 +450,12 @@ export function PaymentSuccessPage() {
           </p>
         </div>
       </div>
+      </div>
 
-      {/* Reservation Details Modal */}
-      {showReservationModal && bookingSummary && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowReservationModal(false)
-            }
-          }}
-        >
-          <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Reservation Details</h2>
-                <p className="text-sm text-gray-500">
-                  Review the confirmed booking information
-                </p>
-              </div>
-              <button
-                onClick={() => setShowReservationModal(false)}
-                className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                aria-label="Close reservation details"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[70vh] overflow-y-auto px-6 py-6 space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
-                  <div className="rounded-full bg-blue-100 p-2">
-                    <Calendar className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Reservation Date
-                    </p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {bookingSummary.date || '—'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
-                  <div className="rounded-full bg-emerald-100 p-2">
-                    <CreditCard className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Reference Number
-                    </p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {bookingSummary.referenceNumber || paymentDetails?.reference || '—'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {bookingSummary.courtBookings?.length > 0 && (
-                <div>
-                  <div className="mb-3 flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-base font-semibold text-gray-900">
-                      Court Reservations
-                    </h3>
-                  </div>
-                  <div className="space-y-3">
-                    {bookingSummary.courtBookings.map((court: any, index: number) => (
-                      <div
-                        key={`${court.court || court.courtName}-${index}`}
-                        className="rounded-lg border border-gray-200 px-4 py-3"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-gray-900">
-                            {court.court || court.courtName || `Court ${index + 1}`}
-                          </span>
-                          <span className="text-sm font-medium text-gray-600">
-                            ₱{Number(court.subtotal || 0).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                          <Clock className="h-4 w-4" />
-                          <span>{court.schedule || court.timeSlot || '—'}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {bookingSummary.equipmentBookings?.length > 0 && (
-                <div>
-                  <div className="mb-3 flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-purple-600" />
-                    <h3 className="text-base font-semibold text-gray-900">
-                      Equipment Rentals
-                    </h3>
-                  </div>
-                  <div className="space-y-3">
-                    {bookingSummary.equipmentBookings.map((equipment: any, index: number) => (
-                      <div
-                        key={`${equipment.equipment || equipment.courtName}-${index}`}
-                        className="rounded-lg border border-gray-200 px-4 py-3"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-gray-900">
-                            {equipment.equipment || equipment.courtName || `Equipment ${index + 1}`}
-                          </span>
-                          <span className="text-sm font-medium text-gray-600">
-                            ₱{Number(equipment.subtotal || 0).toLocaleString()}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-xs text-gray-500">
-                          Duration: {equipment.time || equipment.timeSlot || '—'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-                    Total Amount Paid
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-blue-700">
-                    ₱{Number(bookingSummary.amount || 0).toLocaleString()}
-                  </p>
-                </div>
-
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
-                    Payment Method
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-emerald-700">
-                    {bookingSummary.paymentMethod || 'Processing...'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
-              <button
-                onClick={() => setShowReservationModal(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => navigate('/bookings')}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-              >
-                Go to Booking History
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <ReservationsModal
+        isOpen={showReservationModal}
+        onClose={() => setShowReservationModal(false)}
+      />
+    </>
   )
 }

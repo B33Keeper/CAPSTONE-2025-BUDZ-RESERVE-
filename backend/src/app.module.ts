@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 // import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 
@@ -17,6 +18,8 @@ import { TimeSlotsModule } from './modules/time-slots/time-slots.module';
 import { GalleryModule } from './modules/gallery/gallery.module';
 import { SuggestionsModule } from './modules/suggestions/suggestions.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
+import { QueuePlayersModule } from './modules/queue-players/queue-players.module';
+import { QueueingCourtsModule } from './modules/queueing-courts/queueing-courts.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -26,6 +29,9 @@ import { HealthController } from './health.controller';
       isGlobal: true,
       envFilePath: '.env',
     }),
+
+    // Task Scheduling
+    ScheduleModule.forRoot(),
 
     // Email configuration
     MailerModule.forRootAsync({
@@ -77,6 +83,8 @@ import { HealthController } from './health.controller';
     GalleryModule,
     SuggestionsModule,
     AnnouncementsModule,
+    QueuePlayersModule,
+    QueueingCourtsModule,
   ],
   controllers: [HealthController],
   providers: [],

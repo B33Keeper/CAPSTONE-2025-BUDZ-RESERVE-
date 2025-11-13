@@ -1,4 +1,6 @@
-import { Controller, Post, Body, Headers, Logger, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Headers, Logger, HttpCode, HttpStatus, Req } from '@nestjs/common';
+import { Request } from 'express';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { PayMongoService } from './paymongo.service';
@@ -103,7 +105,8 @@ export class WebhookController {
   @HttpCode(HttpStatus.OK)
   async handlePaymongoWebhook(
     @Body() body: PaymongoWebhookEvent,
-    @Headers('paymongo-signature') signature: string,
+    @Headers('paymongo-signature') signature: string | string[],
+    @Req() req: Request & { rawBody?: Buffer },
   ) {
     try {
       this.logger.log('Paymongo webhook received');
@@ -111,7 +114,7 @@ export class WebhookController {
 
       // Verify webhook signature (implement proper verification)
       // For now, we'll process all webhooks in test mode
-      if (!this.verifyWebhookSignature(body, signature)) {
+      if (!this.verifyWebhookSignature(req.rawBody, signature)) {
         this.logger.warn('Invalid webhook signature');
         return { success: false, message: 'Invalid signature' };
       }
@@ -433,10 +436,74 @@ export class WebhookController {
     }
   }
 
-  private verifyWebhookSignature(body: any, signature: string): boolean {
-    // TEMP: accept all while diagnosing delivery; uses configured secret for future verification upgrades
-    const _secret = process.env.PAYMONGO_WEBHOOK_SECRET || 'whsk_7Myz2HAE5CZ3Td5V2gvVwrim';
-    return true;
+  private verifyWebhookSignature(rawBody: Buffer | undefined, signature: string | string[] | undefined): boolean {
+    const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
+    if (!secret) {
+      this.logger.warn('PAYMONGO_WEBHOOK_SECRET is not configured');
+      return false;
+    }
+
+    if (!signature) {
+      this.logger.warn('Missing paymongo-signature header');
+      return false;
+    }
+
+    try {
+      if (!rawBody || rawBody.length === 0) {
+        this.logger.warn('Missing raw request body for signature verification');
+        return false;
+      }
+
+      const signatureHeader = Array.isArray(signature) ? signature[0] : signature;
+      if (!signatureHeader || typeof signatureHeader !== 'string') {
+        this.logger.warn(`Invalid signature header format: ${JSON.stringify(signature)}`);
+        return false;
+      }
+
+      const signatureParts = signatureHeader
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .reduce<Record<string, string>>((acc, part) => {
+          const [key, value] = part.split('=');
+          if (key && value) {
+            acc[key] = value;
+          }
+          return acc;
+        }, {});
+
+      const timestamp = signatureParts['t'];
+      const expectedSignature =
+        signatureParts['v1'] ||
+        signatureParts['te'] ||
+        signatureParts['li'];
+
+      if (!timestamp || !expectedSignature) {
+        this.logger.warn(`Invalid signature header format: ${signatureHeader}`);
+        return false;
+      }
+
+      const payload = `${timestamp}.${rawBody.toString('utf8')}`;
+      const hmac = createHmac('sha256', secret);
+      hmac.update(payload, 'utf8');
+      const computedSignature = hmac.digest('hex');
+
+      const computedBuffer = Buffer.from(computedSignature, 'hex');
+      const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+
+      if (
+        computedBuffer.length !== expectedBuffer.length ||
+        !timingSafeEqual(computedBuffer, expectedBuffer)
+      ) {
+        this.logger.warn('Webhook signature validation failed');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      this.logger.error('Error verifying webhook signature', error);
+      return false;
+    }
   }
 
   private async handleTestPayment(paymentData: any, testData: any) {

@@ -120,6 +120,7 @@ export const useAuthStore = create<AuthState>()(
         const userId = get().user?.id
         if (userId) {
           localStorage.removeItem(`termsAccepted_${userId}`)
+          sessionStorage.removeItem(`announcement_shown_${userId}`)
         }
         set({
           user: null,
@@ -152,6 +153,10 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           localStorage.removeItem('access_token')
           localStorage.removeItem('refresh_token')
+          const userId = get().user?.id
+          if (userId) {
+            sessionStorage.removeItem(`announcement_shown_${userId}`)
+          }
           set({
             user: null,
             isAuthenticated: false,
