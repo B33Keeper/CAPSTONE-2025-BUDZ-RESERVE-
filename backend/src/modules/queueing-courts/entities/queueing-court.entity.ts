@@ -8,6 +8,7 @@ import {
 
 export enum QueueingCourtStatus {
   AVAILABLE = 'available',
+  OCCUPIED = 'occupied',
   MAINTENANCE = 'maintenance',
   UNAVAILABLE = 'unavailable',
 }

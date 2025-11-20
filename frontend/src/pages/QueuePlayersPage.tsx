@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { QueueingShell } from '@/components/QueueingShell'
-import { apiServices, QueuePlayer } from '@/lib/apiServices'
+import { apiServices, QueueMatchGameType, QueuePlayer } from '@/lib/apiServices'
 import toast from 'react-hot-toast'
 
 interface DropdownOption {
@@ -110,6 +110,8 @@ function DropdownField({ label, options, value, onChange, className }: DropdownF
 }
 
 const skillLevels = ['Beginner', 'Intermediate', 'Advanced'] as const
+const PLAYERS_PER_PAGE = 10
+const HISTORY_PLAYERS_PER_PAGE = 10
 
 type PlayerSex = 'male' | 'female'
 type PlayerSkill = (typeof skillLevels)[number]
@@ -161,6 +163,23 @@ export function QueuePlayersPage() {
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false)
   const sortMenuRef = useRef<HTMLDivElement>(null)
   const historySortMenuRef = useRef<HTMLDivElement>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [isGeneratingMatches, setIsGeneratingMatches] = useState(false)
+  const [historyPage, setHistoryPage] = useState(1)
+
+  const toggleSexSelection = useCallback(
+    (sex: PlayerSex) => {
+      setSelectedSex((current) => (current === sex ? null : sex))
+    },
+    [setSelectedSex]
+  )
+
+  const toggleSkillSelection = useCallback(
+    (skill: PlayerSkill) => {
+      setSelectedSkill((current) => (current === skill ? null : skill))
+    },
+    [setSelectedSkill]
+  )
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -183,6 +202,14 @@ export function QueuePlayersPage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, sortBy])
+
+  useEffect(() => {
+    setHistoryPage(1)
+  }, [selectedHistoryDate, historySortBy])
 
   const loadPlayers = useCallback(async () => {
     setPlayersLoading(true)
@@ -238,6 +265,26 @@ export function QueuePlayersPage() {
     })
   }, [players, searchQuery, sortBy])
 
+  const totalPages = Math.max(1, Math.ceil(filteredPlayers.length / PLAYERS_PER_PAGE))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const paginatedPlayers = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * PLAYERS_PER_PAGE
+    return filteredPlayers.slice(startIndex, startIndex + PLAYERS_PER_PAGE)
+  }, [filteredPlayers, safeCurrentPage])
+  const showingRangeStart =
+    filteredPlayers.length === 0 ? 0 : (safeCurrentPage - 1) * PLAYERS_PER_PAGE + 1
+  const showingRangeEnd =
+    filteredPlayers.length === 0
+      ? 0
+      : Math.min(filteredPlayers.length, showingRangeStart + PLAYERS_PER_PAGE - 1)
+  const shouldShowPagination = filteredPlayers.length > PLAYERS_PER_PAGE
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
   const historyByDate = useMemo(() => {
     return players.reduce((acc, player) => {
       if (!player.lastPlayed) {
@@ -275,6 +322,36 @@ export function QueuePlayersPage() {
     return sorted.sort((a, b) => a.name.localeCompare(b.name))
   }, [historyByDate, historySortBy, selectedHistoryDate])
 
+  const historyTotalPages = selectedHistoryDate
+    ? Math.max(1, Math.ceil(historyPlayersForSelectedDate.length / HISTORY_PLAYERS_PER_PAGE))
+    : 1
+  const safeHistoryPage = Math.min(historyPage, historyTotalPages)
+  const paginatedHistoryPlayers = useMemo(() => {
+    if (!selectedHistoryDate) return []
+    const startIndex = (safeHistoryPage - 1) * HISTORY_PLAYERS_PER_PAGE
+    return historyPlayersForSelectedDate.slice(startIndex, startIndex + HISTORY_PLAYERS_PER_PAGE)
+  }, [historyPlayersForSelectedDate, safeHistoryPage, selectedHistoryDate])
+
+  const statusStyles = useMemo(() => {
+    return {
+      'In Queue': {
+        label: 'Queued',
+        badgeClass: 'border border-purple-400/50 bg-purple-500/10 text-purple-200'
+      },
+      Waiting: {
+        label: 'Waiting',
+        badgeClass: 'border border-amber-400/60 bg-amber-500/10 text-amber-200'
+      },
+      'In Match': {
+        label: 'Playing',
+        badgeClass: 'border border-emerald-400/60 bg-emerald-500/15 text-emerald-200'
+      }
+    } satisfies Record<
+      QueuePlayer['status'],
+      { label: string; badgeClass: string }
+    >
+  }, [])
+
   useEffect(() => {
     if (historyDates.length === 0) {
       if (selectedHistoryDate !== null) {
@@ -287,6 +364,12 @@ export function QueuePlayersPage() {
       setSelectedHistoryDate(historyDates[0])
     }
   }, [historyDates, selectedHistoryDate])
+
+  useEffect(() => {
+    if (historyPage > historyTotalPages) {
+      setHistoryPage(historyTotalPages)
+    }
+  }, [historyPage, historyTotalPages])
 
   const handleAddPlayer = async () => {
     const trimmedName = playerName.trim()
@@ -435,6 +518,32 @@ export function QueuePlayersPage() {
     }
   }, [editForm.name, editForm.sex, editForm.skill, isUpdatingPlayer, playerToEdit])
 
+  const handleGenerateMatches = useCallback(async () => {
+    if (isGeneratingMatches) return
+    setIsGeneratingMatches(true)
+    setPlayersError(null)
+
+    try {
+      const response = await apiServices.generateQueueMatches({ gameType: gameType as QueueMatchGameType })
+      const generatedCount = response?.matchesGenerated ?? 0
+      const activeCount = response?.activeMatches?.length ?? 0
+      const pendingCount = response?.pendingMatches?.length ?? 0
+
+      toast.success(
+        generatedCount > 0
+          ? `Generated ${generatedCount} match${generatedCount === 1 ? '' : 'es'} (${activeCount} active, ${pendingCount} pending).`
+          : 'No matches generated. Not enough eligible players.'
+      )
+      await loadPlayers()
+    } catch (error) {
+      console.error('Failed to generate matches', error)
+      setPlayersError('Unable to generate matches. Please try again.')
+      toast.error('Unable to generate matches. Please try again.')
+    } finally {
+      setIsGeneratingMatches(false)
+    }
+  }, [gameType, isGeneratingMatches, loadPlayers])
+
   return (
     <QueueingShell activeTab="players">
       <section className="rounded-3xl border border-white/10 bg-white/[0.08] p-5 shadow-2xl shadow-black/30 backdrop-blur-lg sm:p-6">
@@ -457,23 +566,23 @@ export function QueuePlayersPage() {
                 <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
                   <button
                     type="button"
-                onClick={() => setSelectedSex('male')}
-                className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-                  selectedSex === 'male'
-                    ? 'bg-indigo-500/90 text-white shadow-lg shadow-indigo-500/40'
-                    : 'bg-white/10 text-white/80 hover:bg-white/15'
-                }`}
+                    onClick={() => toggleSexSelection('male')}
+                    className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
+                      selectedSex === 'male'
+                        ? 'bg-indigo-500/90 text-white shadow-lg shadow-indigo-500/40'
+                        : 'bg-white/10 text-white/80 hover:bg-white/15'
+                    }`}
                   >
                     Male
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSelectedSex('female')}
+                    onClick={() => toggleSexSelection('female')}
                     className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
-                  selectedSex === 'female'
-                    ? 'bg-indigo-500/90 text-white shadow-lg shadow-indigo-500/40'
-                    : 'bg-white/10 text-white/80 hover:bg-white/15'
-                }`}
+                      selectedSex === 'female'
+                        ? 'bg-indigo-500/90 text-white shadow-lg shadow-indigo-500/40'
+                        : 'bg-white/10 text-white/80 hover:bg-white/15'
+                    }`}
                   >
                     Female
                   </button>
@@ -487,7 +596,7 @@ export function QueuePlayersPage() {
                     <button
                       key={level}
                       type="button"
-                      onClick={() => setSelectedSkill(level)}
+                      onClick={() => toggleSkillSelection(level)}
                       className={`rounded-full px-5 py-2 text-sm font-semibold transition ${
                         selectedSkill === level
                           ? 'bg-emerald-500/90 text-white shadow-lg shadow-emerald-500/40'
@@ -552,9 +661,15 @@ export function QueuePlayersPage() {
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/60">Action</span>
                 <button
                   type="button"
-                  className="w-full rounded-full bg-[#1f49ff] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_20px_35px_rgba(31,73,255,0.35)] transition hover:-translate-y-0.5 hover:bg-[#2b57ff] md:w-auto"
+                  onClick={() => void handleGenerateMatches()}
+                  disabled={isGeneratingMatches || playersLoading}
+                  className={`w-full rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-[0_20px_35px_rgba(31,73,255,0.35)] transition md:w-auto ${
+                    isGeneratingMatches || playersLoading
+                      ? 'bg-[#1f49ff]/60 cursor-not-allowed opacity-70'
+                      : 'bg-[#1f49ff] hover:-translate-y-0.5 hover:bg-[#2b57ff]'
+                  }`}
                 >
-                  Generate Matches
+                  {isGeneratingMatches ? 'Generating…' : 'Generate Matches'}
                 </button>
               </div>
 
@@ -660,7 +775,7 @@ export function QueuePlayersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredPlayers.map((player) => (
+                  paginatedPlayers.map((player) => (
                     <tr key={player.id} className="transition-colors hover:bg-white/10">
                       <td className="px-6 py-4 font-semibold text-white">
                         <div className="flex items-center gap-3">
@@ -692,8 +807,12 @@ export function QueuePlayersPage() {
                       </td>
                       <td className="px-6 py-4 text-center">{player.gamesPlayed}</td>
                       <td className="px-6 py-4">
-                        <span className="rounded-full border border-purple-400/50 bg-purple-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-purple-200">
-                          {player.status}
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                            statusStyles[player.status]?.badgeClass ?? 'border border-white/20 bg-white/10 text-white'
+                          }`}
+                        >
+                          {statusStyles[player.status]?.label ?? player.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -725,6 +844,42 @@ export function QueuePlayersPage() {
               </tbody>
             </table>
           </div>
+          {shouldShowPagination && filteredPlayers.length > 0 && (
+            <div className="flex flex-col gap-3 border-t border-white/10 px-2 pt-4 text-sm text-white/70 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+              <span>
+                Showing {showingRangeStart}-{showingRangeEnd} of {filteredPlayers.length} players
+              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                    safeCurrentPage === 1
+                      ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/40'
+                      : 'border-white/20 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
+                  }`}
+                >
+                  Previous
+                </button>
+                <span className="text-xs font-semibold uppercase tracking-wide text-white/60">
+                  Page {safeCurrentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                    safeCurrentPage === totalPages
+                      ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/40'
+                      : 'border-white/20 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -866,8 +1021,8 @@ export function QueuePlayersPage() {
       )}
 
       {showHistoryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl rounded-3xl border border-white/10 bg-[#11050b] p-6 text-white shadow-[0_40px_80px_rgba(0,0,0,0.45)]">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:items-center">
+          <div className="relative w-full max-w-5xl rounded-3xl border border-white/10 bg-[#11050b] p-4 sm:p-6 text-white shadow-[0_40px_80px_rgba(0,0,0,0.45)] max-h-[90vh] overflow-y-auto">
             <button
               type="button"
               onClick={() => setShowHistoryModal(false)}
@@ -876,7 +1031,7 @@ export function QueuePlayersPage() {
             >
               ✕
             </button>
-            <div className="space-y-4 pr-10 sm:pr-12 pt-2">
+            <div className="space-y-4 pr-2 sm:pr-6 pt-2">
               <div className="flex flex-col gap-2">
                 <h3 className="text-2xl font-semibold text-white">Players History</h3>
                 <p className="text-sm text-white/70">
@@ -888,9 +1043,10 @@ export function QueuePlayersPage() {
                   No player history recorded yet.
                 </div>
               ) : (
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,220px)_1fr] min-h-[24rem]">
+                <div className="grid gap-6 min-h-[24rem] grid-cols-1 lg:grid-cols-[minmax(0,220px)_1fr]">
                   <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.07]">
-                    <table className="min-w-full divide-y divide-white/10 text-sm text-white/80">
+                    <div className="max-h-[50vh] overflow-y-auto">
+                      <table className="min-w-full divide-y divide-white/10 text-sm text-white/80">
                       <thead className="bg-white/10 uppercase tracking-wide text-white/60">
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold sm:px-6">Date</th>
@@ -917,10 +1073,11 @@ export function QueuePlayersPage() {
                           )
                         })}
                       </tbody>
-                    </table>
+                      </table>
+                    </div>
                   </div>
                   <div className="flex min-h-[18rem] h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.07]">
-                    <div className="border-b border-white/10 px-6 py-4">
+                    <div className="border-b border-white/10 px-4 sm:px-6 py-4">
                       <h4 className="text-base font-semibold text-white">
                         {selectedHistoryDate
                           ? new Date(selectedHistoryDate).toLocaleDateString('en-US', {
@@ -932,16 +1089,17 @@ export function QueuePlayersPage() {
                       </h4>
                       {selectedHistoryDate && (
                         <p className="text-xs text-white/60">
-                          {historyByDate[selectedHistoryDate]?.length ?? 0} player
-                          {((historyByDate[selectedHistoryDate]?.length ?? 0) === 1 ? '' : 's')}
+                          {historyPlayersForSelectedDate.length} player
+                          {historyPlayersForSelectedDate.length === 1 ? '' : 's'}
                         </p>
                       )}
                     </div>
-                    <div className="flex-1 overflow-auto">
-                      <table className="min-w-full w-full divide-y divide-white/10 text-sm text-white/80">
+                    <div className="flex-1 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full w-full divide-y divide-white/10 text-sm text-white/80">
                         <thead className="bg-white/10 uppercase tracking-wide text-white/60">
                           <tr>
-                            <th className="px-4 py-3 text-left font-semibold sm:px-6">
+                            <th className="px-3 sm:px-4 lg:px-6 py-3 text-left font-semibold">
                               <div className="relative inline-flex items-center gap-2" ref={historySortMenuRef}>
                                 <button
                                   type="button"
@@ -953,7 +1111,7 @@ export function QueuePlayersPage() {
                                     <path d="M6.75 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zM4 7.25A1.25 1.25 0 015.25 6h9.5A1.25 1.25 0 0116 7.25v.5A1.25 1.25 0 0114.75 9h-9.5A1.25 1.25 0 014 7.75v-.5zm2.75 3.25a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zM4 14.25A1.25 1.25 0 015.25 13h9.5A1.25 1.25 0 0116 14.25v.5A1.25 1.25 0 0114.75 16h-9.5A1.25 1.25 0 014 14.75v-.5z" />
                                   </svg>
                                 </button>
-                                <span>Name</span>
+                                <span className="text-xs sm:text-sm">Name</span>
                                 {isHistorySortMenuOpen && (
                                   <div className="absolute left-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-2xl border border-white/15 bg-[#11050b] shadow-[0_20px_40px_rgba(0,0,0,0.45)]">
                                     <ul className="py-1">
@@ -997,17 +1155,17 @@ export function QueuePlayersPage() {
                                 )}
                               </div>
                             </th>
-                            <th className="px-4 py-3 text-left font-semibold sm:px-6">Skill Level</th>
-                            <th className="px-4 py-3 text-center font-semibold sm:px-6">Games Played</th>
-                            <th className="px-4 py-3 text-left font-semibold sm:px-6">Action</th>
+                            <th className="px-3 sm:px-4 lg:px-6 py-3 text-left font-semibold">Skill Level</th>
+                            <th className="px-3 sm:px-4 lg:px-6 py-3 text-center font-semibold">Games Played</th>
+                            <th className="px-3 sm:px-4 lg:px-6 py-3 text-left font-semibold">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/10">
-                          {selectedHistoryDate && historyPlayersForSelectedDate.length > 0 ? (
-                            historyPlayersForSelectedDate.map((player) => {
+                          {selectedHistoryDate && paginatedHistoryPlayers.length > 0 ? (
+                            paginatedHistoryPlayers.map((player) => {
                               return (
                                 <tr key={`history-${player.id}`} className="transition hover:bg-white/10">
-                                  <td className="px-4 py-3 font-semibold text-white sm:px-6">
+                                  <td className="px-3 sm:px-4 lg:px-6 py-3 font-semibold text-white">
                                     <div className="flex items-center gap-3">
                                       <span
                                         className={`inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-xs shadow-inner ${
@@ -1031,13 +1189,17 @@ export function QueuePlayersPage() {
                                       <span>{player.name}</span>
                                     </div>
                                   </td>
-                                  <td className="px-4 py-3 sm:px-6">{player.skill}</td>
-                                  <td className="px-4 py-3 text-center sm:px-6">{player.gamesPlayed}</td>
-                                  <td className="px-4 py-3 sm:px-6">
+                                  <td className="px-3 sm:px-4 lg:px-6 py-3 font-medium capitalize">
+                                    {player.skill.toLowerCase()}
+                                  </td>
+                                  <td className="px-3 sm:px-4 lg:px-6 py-3 text-center font-semibold text-indigo-200">
+                                    {player.gamesPlayed}
+                                  </td>
+                                  <td className="px-3 sm:px-4 lg:px-6 py-3">
                                     <button
                                       type="button"
                                       onClick={() => handleImportHistoryPlayer(player)}
-                                      className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:-translate-y-0.5 hover:bg-white/15 hover:text-white"
+                                      className="inline-flex items-center justify-center rounded-full border border-indigo-400/40 bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-indigo-100 transition hover:bg-indigo-500/20"
                                     >
                                       Get
                                     </button>
@@ -1048,15 +1210,46 @@ export function QueuePlayersPage() {
                           ) : (
                             <tr>
                               <td colSpan={4} className="px-4 py-6 text-center text-sm text-white/60 sm:px-6">
-                                {selectedHistoryDate
-                                  ? 'No players recorded for this date.'
-                                  : 'Select a date to view its players.'}
+                                {selectedHistoryDate ? 'No players recorded for this date.' : 'Select a date to view its players.'}
                               </td>
                             </tr>
                           )}
                         </tbody>
                       </table>
+                      </div>
                     </div>
+                    {selectedHistoryDate && historyPlayersForSelectedDate.length > HISTORY_PLAYERS_PER_PAGE && (
+                      <div className="border-t border-white/10 px-4 sm:px-6 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm">
+                        <span className="text-white/70">
+                          Showing {(safeHistoryPage - 1) * HISTORY_PLAYERS_PER_PAGE + 1}-
+                          {Math.min(historyPlayersForSelectedDate.length, safeHistoryPage * HISTORY_PLAYERS_PER_PAGE)} of{' '}
+                          {historyPlayersForSelectedDate.length} players
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setHistoryPage((prev) => Math.max(1, prev - 1))}
+                            disabled={safeHistoryPage === 1}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/80 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Previous history page"
+                          >
+                            ‹
+                          </button>
+                          <span className="text-white/80 text-sm">
+                            Page {safeHistoryPage} of {historyTotalPages}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setHistoryPage((prev) => Math.min(historyTotalPages, prev + 1))}
+                            disabled={safeHistoryPage === historyTotalPages}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white/80 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label="Next history page"
+                          >
+                            ›
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

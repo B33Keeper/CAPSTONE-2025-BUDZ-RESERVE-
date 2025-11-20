@@ -48,11 +48,13 @@ export function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isReservationsModalOpen, setIsReservationsModalOpen] = useState(false)
+  const [isQueueingAnimating, setIsQueueingAnimating] = useState(false)
   const { user, isAuthenticated, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const activeSection = useActiveSection()
   const profileRef = useRef<HTMLDivElement>(null)
+  const queueingAnimationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleLogout = () => {
     logout()
@@ -114,7 +116,19 @@ export function Header() {
   }
 
 
+  const triggerQueueingAnimation = () => {
+    if (queueingAnimationTimeoutRef.current) {
+      clearTimeout(queueingAnimationTimeoutRef.current)
+    }
+    setIsQueueingAnimating(true)
+    queueingAnimationTimeoutRef.current = setTimeout(() => {
+      setIsQueueingAnimating(false)
+      queueingAnimationTimeoutRef.current = null
+    }, 600)
+  }
+
   const handleManageQueueingClick = () => {
+    triggerQueueingAnimation()
     if (!isAuthenticated) {
       toast.error('Login to proceed')
       navigate('/login?returnUrl=/queueing')
@@ -127,6 +141,30 @@ export function Header() {
     window.dispatchEvent(new CustomEvent('open-announcement-modal'))
   }
 
+  const getManageQueueingClasses = (variant: 'desktop' | 'mobile' = 'desktop') => {
+    const layoutClasses = variant === 'mobile' ? 'block w-full text-left' : ''
+    const baseClasses = 'relative overflow-hidden transition-all duration-500 px-4 py-2 rounded-lg font-medium group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500'
+    const inactiveClasses = 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50'
+    const activeClasses = 'text-white bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 shadow-lg scale-[1.02]'
+
+    return `${layoutClasses} ${baseClasses} ${isQueueingAnimating ? activeClasses : inactiveClasses}`
+  }
+
+  const renderManageQueueingLabel = (variant: 'desktop' | 'mobile' = 'desktop') => (
+    <>
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-r from-blue-400/30 via-blue-600/40 to-indigo-500/30 transition-transform duration-500 ease-out ${isQueueingAnimating ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 group-hover:translate-x-0 group-hover:opacity-60'}`}
+      ></span>
+      <span className={`relative flex items-center gap-2 ${variant === 'mobile' ? 'justify-start' : 'justify-center'}`}>
+        Manage Queueing
+        {isQueueingAnimating && (
+          <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+        )}
+      </span>
+    </>
+  )
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -138,6 +176,9 @@ export function Header() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
+      if (queueingAnimationTimeoutRef.current) {
+        clearTimeout(queueingAnimationTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -187,9 +228,9 @@ export function Header() {
               </button>
               <button
                 onClick={handleManageQueueingClick}
-                className="relative transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 group after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full"
+                className={getManageQueueingClasses()}
               >
-                Manage Queueing
+                {renderManageQueueingLabel()}
               </button>
             </nav>
             
@@ -400,9 +441,9 @@ export function Header() {
                   handleManageQueueingClick()
                   setIsMenuOpen(false)
                 }}
-                className="block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
+                className={getManageQueueingClasses('mobile')}
               >
-                Manage Queueing
+                {renderManageQueueingLabel('mobile')}
               </button>
               {isAuthenticated ? (
                 <>

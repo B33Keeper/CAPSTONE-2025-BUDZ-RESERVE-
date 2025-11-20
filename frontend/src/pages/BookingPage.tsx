@@ -56,6 +56,7 @@ export function BookingPage() {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicateMessage, setDuplicateMessage] = useState('')
   const [isTermsAccepted, setIsTermsAccepted] = useState(false)
+  const [autoProceedAfterTerms, setAutoProceedAfterTerms] = useState(false)
   
   const DATE_WINDOW_DAYS = 28
   const today = new Date()
@@ -613,11 +614,26 @@ export function BookingPage() {
       setIsTermsAccepted(termsAccepted)
       if (!termsAccepted) {
         // Show terms modal if not accepted yet
+        setAutoProceedAfterTerms(true)
         setShowTermsModal(true)
       }
     } else {
       setIsTermsAccepted(false)
     }
+  }
+
+  const proceedToTimeAndCourtSelection = async () => {
+    if (!tempSelectedDate) {
+      setDateError('Please select a date before proceeding.')
+      return
+    }
+
+    setDateError('')
+    setSelectedDate(tempSelectedDate)
+    setCurrentStep(2)
+
+    // Load availability data for the selected date
+    await loadAvailabilityData(tempSelectedDate)
   }
 
   const handleProceedFromDateSelection = async () => {
@@ -628,15 +644,12 @@ export function BookingPage() {
 
     if (!isTermsAccepted) {
       setDateError('Please accept the Terms and Conditions to proceed.')
+      setAutoProceedAfterTerms(true)
       setShowTermsModal(true)
       return
     }
 
-    setSelectedDate(tempSelectedDate)
-    setCurrentStep(2)
-    
-    // Load availability data for the selected date
-    await loadAvailabilityData(tempSelectedDate)
+    await proceedToTimeAndCourtSelection()
   }
 
   const handleBackToStep = (step: number) => {
@@ -662,7 +675,7 @@ export function BookingPage() {
 
   // Handle Terms and Conditions
 
-  const handleAcceptTerms = () => {
+  const handleAcceptTerms = async () => {
     setShowTermsModal(false)
     // Store acceptance in localStorage with user ID to remember for current login session
     if (user?.id) {
@@ -670,6 +683,11 @@ export function BookingPage() {
     }
     setIsTermsAccepted(true)
     setDateError('')
+
+    if (autoProceedAfterTerms) {
+      setAutoProceedAfterTerms(false)
+      await proceedToTimeAndCourtSelection()
+    }
   }
 
   // Helper function to parse schedule string to start and end times (24-hour format)
@@ -821,6 +839,7 @@ export function BookingPage() {
 
   const handleCloseTerms = () => {
     setShowTermsModal(false)
+    setAutoProceedAfterTerms(false)
   }
 
   // Initialize cell statuses on component mount

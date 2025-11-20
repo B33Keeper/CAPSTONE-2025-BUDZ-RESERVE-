@@ -1,7 +1,14 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { QueueingShell } from '@/components/QueueingShell'
-import { apiServices, type QueueingCourtStatus } from '@/lib/apiServices'
+import { CreateMatchModal } from '@/components/modals/CreateMatchModal'
+import {
+  apiServices,
+  type QueueMatch,
+  type QueueMatchGameType,
+  type QueueMatchPlayer,
+  type QueueingCourtStatus
+} from '@/lib/apiServices'
 
 type CourtCard = {
   id: number
@@ -9,53 +16,10 @@ type CourtCard = {
   status: QueueingCourtStatus
 }
 
-const matches = [
-  {
-    id: 1,
-    type: 'Doubles Match',
-    requestedAt: '01:46 PM',
-    teams: [
-      { name: 'Ivan', color: 'text-blue-400' },
-      { name: 'Filber', color: 'text-blue-400' },
-    ],
-    opponents: [
-      { name: 'Patrick', color: 'text-emerald-400' },
-      { name: 'Benito', color: 'text-emerald-400' },
-    ],
-  },
-  {
-    id: 2,
-    type: 'Singles Match',
-    requestedAt: '02:05 PM',
-    teams: [{ name: 'Anna', color: 'text-blue-400' }],
-    opponents: [{ name: 'Marco', color: 'text-emerald-400' }],
-  },
-  {
-    id: 3,
-    type: 'Doubles Match',
-    requestedAt: '02:22 PM',
-    teams: [
-      { name: 'Chris', color: 'text-blue-400' },
-      { name: 'Dani', color: 'text-blue-400' },
-    ],
-    opponents: [
-      { name: 'Lia', color: 'text-emerald-400' },
-      { name: 'Jude', color: 'text-emerald-400' },
-    ],
-  },
-]
-
-const playerProfiles: Record<string, { sex: 'male' | 'female'; skill: string }> = {
-  Ivan: { sex: 'male', skill: 'Beginner' },
-  Filber: { sex: 'male', skill: 'Beginner' },
-  Patrick: { sex: 'male', skill: 'Beginner' },
-  Benito: { sex: 'male', skill: 'Beginner' },
-  Anna: { sex: 'female', skill: 'Intermediate' },
-  Marco: { sex: 'male', skill: 'Advanced' },
-  Chris: { sex: 'male', skill: 'Intermediate' },
-  Dani: { sex: 'male', skill: 'Intermediate' },
-  Lia: { sex: 'female', skill: 'Intermediate' },
-  Jude: { sex: 'male', skill: 'Advanced' },
+const gameTypeLabels: Record<QueueMatchGameType, string> = {
+  'mens-doubles': "Men's Doubles",
+  'womens-doubles': "Women's Doubles",
+  'mixed-doubles': 'Mixed Doubles'
 }
 
 function SexBadge({ sex }: { sex: 'male' | 'female' }) {
@@ -80,25 +44,37 @@ function SexBadge({ sex }: { sex: 'male' | 'female' }) {
   )
 }
 
-function TeamPlayerCard({
-  player,
-  profile
-}: {
-  player: { name: string; color: string }
-  profile: { sex: 'male' | 'female'; skill: string }
-}) {
+function TeamPlayerCard({ player }: { player: QueueMatchPlayer }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <div className="flex items-center justify-center gap-2">
-        <SexBadge sex={profile.sex} />
-        <span className={`text-base font-semibold ${player.color}`}>{player.name}</span>
+        <SexBadge sex={player.sex} />
+        <span className="text-base font-semibold text-white">{player.name}</span>
       </div>
       <span className="rounded-full bg-white/12 px-3 py-0.5 text-xs font-medium uppercase tracking-wide text-white/60">
-        {profile.skill}
+        {player.skill}
       </span>
     </div>
   )
 }
+
+const formatMatchTime = (value: string | null) => {
+  if (!value) return '—'
+  return new Date(value).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const formatElapsedTime = (startTime: string | null, now: number) => {
+  if (!startTime) return '00:00'
+  const diffSeconds = Math.max(0, Math.floor((now - new Date(startTime).getTime()) / 1000))
+  const minutes = String(Math.floor(diffSeconds / 60)).padStart(2, '0')
+  const seconds = String(diffSeconds % 60).padStart(2, '0')
+  return `${minutes}:${seconds}`
+}
+
+const formatTeamLabel = (team: QueueMatchPlayer[]) => team.map((player) => player.name).join(' & ')
 
 export function QueueingPage() {
   const [courts, setCourts] = useState<CourtCard[]>([])
@@ -117,9 +93,40 @@ export function QueueingPage() {
     error: ''
   })
   const [courtToDelete, setCourtToDelete] = useState<{ id: number; name: string } | null>(null)
+  const [activeMatches, setActiveMatches] = useState<QueueMatch[]>([])
+  const [pendingMatches, setPendingMatches] = useState<QueueMatch[]>([])
+  const [loadingMatches, setLoadingMatches] = useState(true)
+  const [matchesError, setMatchesError] = useState<string | null>(null)
+  const [completingMatchIds, setCompletingMatchIds] = useState<Set<number>>(new Set())
+  const [cancellingMatchIds, setCancellingMatchIds] = useState<Set<number>>(new Set())
+  const [nowTimestamp, setNowTimestamp] = useState(() => Date.now())
+  const [matchToComplete, setMatchToComplete] = useState<QueueMatch | null>(null)
+  const [isDeclaringWinner, setIsDeclaringWinner] = useState(false)
+  const [isClearingPendingMatches, setIsClearingPendingMatches] = useState(false)
+  const [createMatchModal, setCreateMatchModal] = useState<{
+    open: boolean
+    courtId: number | null
+    courtName: string | null
+  }>({
+    open: false,
+    courtId: null,
+    courtName: null
+  })
   const nextCourtNumber = useMemo(() => {
     if (courts.length === 0) return 1
-    return Math.max(...courts.map((court) => court.id)) + 1
+    
+    // Extract numbers from court names that match "Court X" pattern
+    const courtNumbers = courts
+      .map((court) => {
+        const match = court.name.match(/^Court\s+(\d+)$/i)
+        return match ? parseInt(match[1], 10) : null
+      })
+      .filter((num): num is number => num !== null)
+    
+    if (courtNumbers.length === 0) return 1
+    
+    // Return the next number after the highest court number
+    return Math.max(...courtNumbers) + 1
   }, [courts])
 
   const loadCourts = useCallback(async () => {
@@ -145,9 +152,38 @@ export function QueueingPage() {
     }
   }, [])
 
+  const loadMatches = useCallback(async () => {
+    try {
+      setLoadingMatches(true)
+      setMatchesError(null)
+      const [active, pending] = await Promise.all([
+        apiServices.getQueueMatches({ status: 'active' }),
+        apiServices.getQueueMatches({ status: 'pending' })
+      ])
+      setActiveMatches(active)
+      setPendingMatches(pending)
+    } catch (error) {
+      console.error('[QueueingPage] Failed to load matches:', error)
+      setMatchesError('Unable to load matches. Please try again.')
+    } finally {
+      setLoadingMatches(false)
+    }
+  }, [])
+
   useEffect(() => {
     void loadCourts()
   }, [loadCourts])
+
+  useEffect(() => {
+    void loadMatches()
+  }, [loadMatches])
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNowTimestamp(Date.now())
+    }, 1000)
+    return () => window.clearInterval(interval)
+  }, [])
 
   const handleOpenAddCourtModal = useCallback(() => {
     setAddCourtModal({
@@ -256,6 +292,100 @@ export function QueueingPage() {
     }
   }, [courts, isClearingCourts])
 
+  const handleDeclareMatchWinner = useCallback(
+    async (winner: 'teamA' | 'teamB' | 'draw') => {
+      if (!matchToComplete || isDeclaringWinner) return
+      const matchId = matchToComplete.id
+      setIsDeclaringWinner(true)
+      setCompletingMatchIds((prev) => {
+        const next = new Set(prev)
+        next.add(matchId)
+        return next
+      })
+
+      try {
+        await apiServices.completeQueueMatch(matchId, { winner })
+        toast.success('Match result recorded.')
+        await Promise.all([loadMatches(), loadCourts()])
+        setMatchToComplete(null)
+      } catch (error) {
+        console.error('[QueueingPage] Failed to complete match:', error)
+        toast.error('Unable to complete match. Please try again.')
+      } finally {
+        setIsDeclaringWinner(false)
+        setCompletingMatchIds((prev) => {
+          const next = new Set(prev)
+          next.delete(matchId)
+          return next
+        })
+      }
+    },
+    [isDeclaringWinner, loadCourts, loadMatches, matchToComplete]
+  )
+
+  const handleCancelMatch = useCallback(
+    async (matchId: number) => {
+      if (cancellingMatchIds.has(matchId)) return
+      setCancellingMatchIds((prev) => {
+        const next = new Set(prev)
+        next.add(matchId)
+        return next
+      })
+
+      try {
+        await apiServices.cancelQueueMatch(matchId)
+        toast.success('Match cancelled.')
+        await Promise.all([loadMatches(), loadCourts()])
+      } catch (error) {
+        console.error('[QueueingPage] Failed to cancel match:', error)
+        toast.error('Unable to cancel match. Please try again.')
+      } finally {
+        setCancellingMatchIds((prev) => {
+          const next = new Set(prev)
+          next.delete(matchId)
+          return next
+        })
+      }
+    },
+    [cancellingMatchIds, loadCourts, loadMatches]
+  )
+  const handleRequestCompleteMatch = useCallback((match: QueueMatch) => {
+    setMatchToComplete(match)
+  }, [])
+
+  const handleCloseWinnerModal = useCallback(() => {
+    if (isDeclaringWinner) return
+    setMatchToComplete(null)
+  }, [isDeclaringWinner])
+
+  const handleClearPendingMatches = useCallback(async () => {
+    if (pendingMatches.length === 0 || isClearingPendingMatches) {
+      return
+    }
+
+    try {
+      setIsClearingPendingMatches(true)
+      await apiServices.clearPendingQueueMatches()
+      toast.success('Pending matches cleared.')
+      await loadMatches()
+    } catch (error) {
+      console.error('[QueueingPage] Failed to clear pending matches:', error)
+      toast.error('Unable to clear pending matches. Please try again.')
+    } finally {
+      setIsClearingPendingMatches(false)
+    }
+  }, [isClearingPendingMatches, loadMatches, pendingMatches.length])
+
+  const activeMatchesByCourt = useMemo(() => {
+    const map = new Map<number, QueueMatch>()
+    activeMatches.forEach((match) => {
+      if (match.courtId != null) {
+        map.set(match.courtId, match)
+      }
+    })
+    return map
+  }, [activeMatches])
+
   const renderStatusBadge = (status: CourtCard['status']) => {
     if (status === 'maintenance') {
       return (
@@ -269,6 +399,14 @@ export function QueueingPage() {
       return (
         <span className="rounded-full border border-rose-500/60 bg-rose-500/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-300">
           Unavailable
+        </span>
+      )
+    }
+
+    if (status === 'occupied') {
+      return (
+        <span className="rounded-full border border-orange-400/70 bg-orange-500/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-orange-200">
+          Occupied
         </span>
       )
     }
@@ -306,89 +444,166 @@ export function QueueingPage() {
                   className="h-56 animate-pulse rounded-[20px] border border-white/12 bg-white/5"
                 />
               ))
-            : courts.map((court) => (
-                <div key={court.id} className="relative rounded-[20px] border border-white/18 bg-[#14070e] shadow-[0_14px_34px_rgba(0,0,0,0.45)]">
-                  <div className="pointer-events-none">
-                    <div className="absolute inset-0 rounded-[20px] border border-white/12" />
-                    <div className="absolute inset-x-5 top-[36%] h-px bg-white/16" />
-                    <div className="absolute inset-x-5 bottom-6 h-px bg-white/16" />
-                    <div className="absolute top-[36%] bottom-6 left-[33%] w-px bg-white/16" />
-                    <div className="absolute top-[36%] bottom-6 right-[33%] w-px bg-white/16" />
-                    <div className="absolute top-[52%] bottom-6 left-1/2 w-px -translate-x-1/2 bg-white/16" />
-                  </div>
-                  <div className="relative flex items-start justify-between px-6 pt-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                      <span className="text-base">{court.name}</span>
-                      <div className="flex items-center gap-2 text-white/80">
-                        <button
-                          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
-                          type="button"
-                          aria-label="Edit court"
-                          disabled
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="h-4 w-4 opacity-40"
+            : courts.map((court) => {
+                const courtMatch = activeMatchesByCourt.get(court.id)
+                const isCompleting =
+                  courtMatch && (completingMatchIds.has(courtMatch.id) || (matchToComplete?.id === courtMatch.id && isDeclaringWinner))
+                const isCancelling = courtMatch ? cancellingMatchIds.has(courtMatch.id) : false
+
+                return (
+                  <div key={court.id} className="relative rounded-[20px] border border-white/18 bg-[#14070e] shadow-[0_14px_34px_rgba(0,0,0,0.45)]">
+                    <div className="pointer-events-none">
+                      <div className="absolute inset-0 rounded-[20px] border border-white/12" />
+                      <div className="absolute inset-x-5 top-[36%] h-px bg-white/16" />
+                      <div className="absolute inset-x-5 bottom-6 h-px bg-white/16" />
+                      <div className="absolute top-[36%] bottom-6 left-[33%] w-px bg-white/16" />
+                      <div className="absolute top-[36%] bottom-6 right-[33%] w-px bg-white/16" />
+                      <div className="absolute top-[52%] bottom-6 left-1/2 w-px -translate-x-1/2 bg-white/16" />
+                    </div>
+                    <div className="relative flex items-start justify-between px-6 pt-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                        <span className="text-base">{court.name}</span>
+                        <div className="flex items-center gap-2 text-white/80">
+                          <button
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+                            type="button"
+                            aria-label="Edit court"
+                            disabled
                           >
-                            <path d="M16.862 3.487l3.651 3.651a1.5 1.5 0 010 2.122l-9.9 9.9-4.604 1.265 1.265-4.604 9.9-9.9a1.5 1.5 0 012.122 0z" />
-                            <path d="M13.95 6.4l3.651 3.651" />
-                            <path d="M5 21h14" />
-                          </svg>
-                        </button>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="h-4 w-4 opacity-40"
+                            >
+                              <path d="M16.862 3.487l3.651 3.651a1.5 1.5 0 010 2.122l-9.9 9.9-4.604 1.265 1.265-4.604 9.9-9.9a1.5 1.5 0 012.122 0z" />
+                              <path d="M13.95 6.4l3.651 3.651" />
+                              <path d="M5 21h14" />
+                            </svg>
+                          </button>
+                          <button
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+                            type="button"
+                            onClick={() => handlePromptDeleteCourt(court)}
+                            disabled={isDeletingCourt && courtToDelete?.id === court.id}
+                            aria-label="Delete court"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="h-4 w-4"
+                            >
+                              <path d="M4 7h16" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                              <path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12" />
+                              <path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      {renderStatusBadge(court.status)}
+                    </div>
+                    {courtMatch ? (
+                      <div className="relative flex flex-col gap-5 px-6 pb-8 pt-6 text-white">
+                        <div className="flex flex-col gap-1 text-sm text-white/70">
+                          <span className="text-sm font-semibold text-white">
+                            Game Type: {gameTypeLabels[courtMatch.gameType]}
+                          </span>
+                          <span>Start Time: {formatMatchTime(courtMatch.startedAt)}</span>
+                          <span>Elapsed Time: {formatElapsedTime(courtMatch.startedAt, nowTimestamp)}</span>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-center">
+                          <div className="grid gap-4 text-white sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
+                            <div className="flex flex-col items-center gap-3">
+                              {courtMatch.teamA.map((player) => (
+                                <TeamPlayerCard key={`court-${court.id}-teamA-${player.id}`} player={player} />
+                              ))}
+                            </div>
+                            <span className="mx-auto inline-flex items-center justify-center rounded-full bg-white/15 px-4 py-1 text-sm font-semibold text-white">
+                              vs
+                            </span>
+                            <div className="flex flex-col items-center gap-3">
+                              {courtMatch.teamB.map((player) => (
+                                <TeamPlayerCard key={`court-${court.id}-teamB-${player.id}`} player={player} />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-3 text-sm font-semibold sm:flex-row sm:items-center sm:justify-between">
+                          <button
+                            type="button"
+                            onClick={() => handleRequestCompleteMatch(courtMatch)}
+                            disabled={isCompleting}
+                            className={`rounded-full px-5 py-2 text-sm text-white transition ${
+                              isCompleting
+                                ? 'cursor-not-allowed bg-emerald-500/40'
+                                : 'bg-emerald-500 shadow-lg shadow-emerald-900/30 hover:bg-emerald-500/90'
+                            }`}
+                          >
+                            {isCompleting ? 'Completing…' : 'Complete Match'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleCancelMatch(courtMatch.id)}
+                            disabled={isCancelling}
+                            className={`rounded-full px-5 py-2 text-sm text-white transition ${
+                              isCancelling
+                                ? 'cursor-not-allowed bg-white/10 text-white/50'
+                                : 'bg-white/10 text-white/80 hover:bg-white/20'
+                            }`}
+                          >
+                            {isCancelling ? 'Cancelling…' : 'Cancel Match'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative flex flex-col items-center justify-center px-6 pb-12 pt-12 text-center">
+                        <p className="mb-6 text-sm text-white/75">
+                          {court.status === 'occupied'
+                            ? 'Court marked as occupied but waiting for a match assignment.'
+                            : 'Generate matches from the Players tab to occupy this court.'}
+                        </p>
                         <button
-                          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
                           type="button"
-                          onClick={() => handlePromptDeleteCourt(court)}
-                          disabled={isDeletingCourt && courtToDelete?.id === court.id}
-                          aria-label="Delete court"
+                          className="inline-flex items-center gap-2 rounded-md bg-[#1F49FF] px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(31,73,255,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-[#2b57ff]"
+                          onClick={() => {
+                            if (court.status === 'available') {
+                              setCreateMatchModal({
+                                open: true,
+                                courtId: court.id,
+                                courtName: court.name
+                              })
+                            } else {
+                              toast.error('Court is not available')
+                            }
+                          }}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
                             className="h-4 w-4"
+                            aria-hidden="true"
                           >
-                            <path d="M4 7h16" />
-                            <path d="M10 11v6" />
-                            <path d="M14 11v6" />
-                            <path d="M5 7l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12" />
-                            <path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2" />
+                            <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                           </svg>
+                          Add Match
                         </button>
                       </div>
-                    </div>
-                    {renderStatusBadge(court.status)}
+                    )}
                   </div>
-                  <div className="relative flex flex-col items-center justify-center px-6 pb-12 pt-12 text-center">
-                    <p className="mb-6 text-sm text-white/75">Add players to start the game</p>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-md bg-[#1F49FF] px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(31,73,255,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-[#2b57ff]"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        className="h-4 w-4"
-                        aria-hidden="true"
-                      >
-                        <path d="M10 10a4 4 0 100-8 4 4 0 000 8zM2 17a6 6 0 1112 0H2zm13.25-7.75a.75.75 0 00-1.5 0V11h-1.75a.75.75 0 000 1.5h1.75v1.75a.75.75 0 001.5 0V12.5H17a.75.75 0 000-1.5h-1.75V9.25z" />
-                      </svg>
-                      Add Players
-                    </button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
         </div>
         {!loadingCourts && courts.length === 0 && !courtsError && (
           <p className="mt-6 text-center text-sm text-white/60">No courts added yet.</p>
@@ -409,9 +624,9 @@ export function QueueingPage() {
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.05] shadow-2xl shadow-black/30 backdrop-blur-lg">
         <div className="border-b border-white/5 px-4 pb-4 pt-6 sm:px-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <h2 className="text-xl font-semibold text-white/90">
-              Pending Matches <span className="text-white/50">({matches.length})</span>
+              Pending Matches <span className="text-white/50">({pendingMatches.length})</span>
             </h2>
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
               <div className="relative w-full md:w-64">
@@ -429,12 +644,32 @@ export function QueueingPage() {
                 <option value="waiting">Waiting</option>
                 <option value="playing">Playing</option>
               </select>
+              <button
+                type="button"
+                onClick={handleClearPendingMatches}
+                disabled={pendingMatches.length === 0 || isClearingPendingMatches}
+                className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isClearingPendingMatches ? 'Clearing…' : 'Clear pending'}
+              </button>
             </div>
           </div>
+          {matchesError && !loadingMatches && (
+            <p className="mt-3 text-sm font-medium text-rose-300">{matchesError}</p>
+          )}
         </div>
 
         <div className="grid gap-4 px-4 pb-6 sm:px-6 md:grid-cols-2 xl:grid-cols-3">
-          {matches.map((match) => (
+          {loadingMatches ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={`pending-skeleton-${index}`} className="h-64 animate-pulse rounded-3xl border border-white/10 bg-white/5" />
+            ))
+          ) : pendingMatches.length === 0 ? (
+            <div className="col-span-full rounded-3xl border border-white/10 bg-white/[0.04] px-6 py-10 text-center text-sm text-white/70">
+              {matchesError ?? 'No pending matches. Generate new ones to keep players engaged.'}
+            </div>
+          ) : (
+            pendingMatches.map((match) => (
               <div
                 key={match.id}
                 className="rounded-3xl border border-white/12 bg-white/[0.08] p-6 text-white shadow-lg shadow-black/25 backdrop-blur-md transition-transform hover:-translate-y-1 hover:shadow-[0_24px_45px_rgba(0,0,0,0.35)]"
@@ -442,41 +677,103 @@ export function QueueingPage() {
                 <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-between sm:text-left">
                   <div>
                     <span className="block text-sm uppercase tracking-wide text-white/60">#{match.id}</span>
-                    <span className="text-lg font-semibold">{match.type}</span>
+                    <span className="text-lg font-semibold">{gameTypeLabels[match.gameType]}</span>
                   </div>
-                  <span className="text-sm text-white/60">Requested {match.requestedAt}</span>
+                  <span className="text-sm text-white/60">
+                    Requested {formatMatchTime(match.createdAt)}
+                  </span>
                 </div>
                 <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-5 text-center text-white/90">
                   <div className="grid gap-4 text-white/90 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
                     <div className="flex w-full flex-col items-center gap-4">
-                      {match.teams.map((player) => {
-                        const profile = playerProfiles[player.name] ?? { sex: 'male', skill: 'Recreational' }
-                        return (
-                          <div key={player.name} className="flex w-full flex-col items-center gap-2">
-                            <TeamPlayerCard player={player} profile={profile} />
-                          </div>
-                        )
-                      })}
+                      {match.teamA.map((player) => (
+                        <TeamPlayerCard key={`pending-${match.id}-teamA-${player.id}`} player={player} />
+                      ))}
                     </div>
                     <span className="mx-auto inline-flex items-center justify-center rounded-full bg-white/20 px-5 py-1.5 text-sm font-semibold text-white">
                       vs
                     </span>
                     <div className="flex w-full flex-col items-center gap-4">
-                      {match.opponents.map((player) => {
-                        const profile = playerProfiles[player.name] ?? { sex: 'male', skill: 'Recreational' }
-                        return (
-                          <div key={player.name} className="flex w-full flex-col items-center gap-2">
-                            <TeamPlayerCard player={player} profile={profile} />
-                          </div>
-                        )
-                      })}
+                      {match.teamB.map((player) => (
+                        <TeamPlayerCard key={`pending-${match.id}-teamB-${player.id}`} player={player} />
+                      ))}
                     </div>
                   </div>
                 </div>
               </div>
-          ))}
+            ))
+          )}
         </div>
       </section>
+
+      {matchToComplete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#12060f] p-6 text-white shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Declare Match Winner</h3>
+                <p className="text-sm text-white/70">Select the winning team</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseWinnerModal}
+                disabled={isDeclaringWinner}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/70 transition hover:bg-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={() => void handleDeclareMatchWinner('teamA')}
+                disabled={isDeclaringWinner}
+                className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                  isDeclaringWinner
+                    ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/60'
+                    : 'border-white/15 bg-white/5 text-white hover:border-emerald-300 hover:bg-emerald-500/15'
+                }`}
+              >
+                <span>🏆 {formatTeamLabel(matchToComplete.teamA)}</span>
+                <span className="text-white/60">vs</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeclareMatchWinner('teamB')}
+                disabled={isDeclaringWinner}
+                className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                  isDeclaringWinner
+                    ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/60'
+                    : 'border-white/15 bg-white/5 text-white hover:border-emerald-300 hover:bg-emerald-500/15'
+                }`}
+              >
+                <span>🏆 {formatTeamLabel(matchToComplete.teamB)}</span>
+                <span className="text-white/60">vs</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeclareMatchWinner('draw')}
+                disabled={isDeclaringWinner}
+                className={`flex w-full items-center justify-center rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
+                  isDeclaringWinner
+                    ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/60'
+                    : 'border-white/15 bg-white/5 text-white hover:border-white/30 hover:bg-white/10'
+                }`}
+              >
+                🤝 Match Tied (Draw)
+              </button>
+              <button
+                type="button"
+                onClick={handleCloseWinnerModal}
+                disabled={isDeclaringWinner}
+                className="w-full rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {addCourtModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
@@ -591,6 +888,16 @@ export function QueueingPage() {
         </div>
       )}
 
+      <CreateMatchModal
+        isOpen={createMatchModal.open}
+        onClose={() => setCreateMatchModal({ open: false, courtId: null, courtName: null })}
+        courtId={createMatchModal.courtId}
+        courtName={createMatchModal.courtName}
+        onMatchCreated={() => {
+          void loadMatches()
+          void loadCourts()
+        }}
+      />
     </QueueingShell>
   )
 }

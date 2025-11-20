@@ -38,18 +38,44 @@ export interface QueuePlayer {
   sex: 'male' | 'female'
   skill: 'Beginner' | 'Intermediate' | 'Advanced'
   gamesPlayed: number
-  status: 'In Queue' | 'Waiting'
+  status: 'In Queue' | 'Waiting' | 'In Match'
   createdAt: string
   updatedAt: string
   lastPlayed: string | null
 }
 
-export type QueueingCourtStatus = 'available' | 'maintenance' | 'unavailable'
+export type QueueingCourtStatus = 'available' | 'occupied' | 'maintenance' | 'unavailable'
 
 export interface QueueingCourt {
   id: number
   name: string
   status: QueueingCourtStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export type QueueMatchStatus = 'pending' | 'active' | 'completed' | 'cancelled'
+
+export type QueueMatchGameType = 'mens-doubles' | 'womens-doubles' | 'mixed-doubles'
+
+export interface QueueMatchPlayer {
+  id: number
+  name: string
+  sex: 'male' | 'female'
+  skill: 'Beginner' | 'Intermediate' | 'Advanced'
+}
+
+export interface QueueMatch {
+  id: number
+  gameType: QueueMatchGameType
+  status: QueueMatchStatus
+  teamA: QueueMatchPlayer[]
+  teamB: QueueMatchPlayer[]
+  courtId: number | null
+  courtName: string | null
+  startedAt: string | null
+  completedAt: string | null
+  winner: 'teamA' | 'teamB' | 'draw' | null
   createdAt: string
   updatedAt: string
 }
@@ -190,5 +216,40 @@ export const apiServices = {
 
   async deleteQueuePlayer(id: number) {
     await api.delete(`/queue-players/${id}`)
+  },
+
+  async generateQueueMatches(payload: { gameType: QueueMatchGameType }) {
+    const response = await api.post('/queue-matches/generate', payload)
+    return response.data
+  },
+
+  async createQueueMatch(payload: {
+    gameType: QueueMatchGameType
+    courtId?: number | null
+    teamA: Array<{ id: number; name: string; sex: 'male' | 'female'; skill: 'Beginner' | 'Intermediate' | 'Advanced' }>
+    teamB: Array<{ id: number; name: string; sex: 'male' | 'female'; skill: 'Beginner' | 'Intermediate' | 'Advanced' }>
+  }): Promise<QueueMatch> {
+    const response = await api.post('/queue-matches', payload)
+    return response.data
+  },
+
+  async getQueueMatches(params?: { status?: QueueMatchStatus }): Promise<QueueMatch[]> {
+    const response = await api.get('/queue-matches', { params })
+    return response.data
+  },
+
+  async completeQueueMatch(id: number, payload: { winner: 'teamA' | 'teamB' | 'draw' }): Promise<QueueMatch> {
+    const response = await api.patch(`/queue-matches/${id}/complete`, payload)
+    return response.data
+  },
+
+  async cancelQueueMatch(id: number): Promise<QueueMatch> {
+    const response = await api.patch(`/queue-matches/${id}/cancel`)
+    return response.data
+  },
+
+  async clearPendingQueueMatches(): Promise<{ cleared: number }> {
+    const response = await api.delete('/queue-matches/pending')
+    return response.data
   }
 }
