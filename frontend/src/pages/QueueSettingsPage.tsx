@@ -1,5 +1,7 @@
-import { useState, ChangeEvent, useMemo, useCallback } from 'react'
+import { useState, ChangeEvent, useMemo, useCallback, useEffect } from 'react'
 import { QueueingShell } from '@/components/QueueingShell'
+import { apiServices, type QueuePlayer } from '@/lib/apiServices'
+import toast from 'react-hot-toast'
 
 type FeeFormState = {
   doublesFee: string
@@ -14,25 +16,21 @@ const initialFeeState: FeeFormState = {
 }
 
 type FeeRow = {
+  playerId: number
   label: string
-  sex: 'male' | 'female'
+  sex: QueuePlayer['sex']
   games: number
   shuttleFee: number
   courtFee: number
   status: 'paid' | 'unpaid'
 }
 
-const initialFeeRows: FeeRow[] = [
-  { label: 'Ivan', sex: 'male', games: 2, shuttleFee: 30, courtFee: 0, status: 'paid' },
-  { label: 'Filber', sex: 'male', games: 2, shuttleFee: 30, courtFee: 0, status: 'unpaid' },
-  { label: 'Patrick', sex: 'male', games: 2, shuttleFee: 30, courtFee: 0, status: 'unpaid' },
-  { label: 'Benito', sex: 'male', games: 2, shuttleFee: 30, courtFee: 0, status: 'unpaid' },
-]
-
 export function QueueSettingsPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [feeForm, setFeeForm] = useState<FeeFormState>(initialFeeState)
-  const [rows, setRows] = useState<FeeRow[]>(initialFeeRows)
+  const [players, setPlayers] = useState<QueuePlayer[]>([])
+  const [playersLoading, setPlayersLoading] = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState<Record<number, 'paid' | 'unpaid'>>({})
   const [searchQuery, setSearchQuery] = useState('')
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -51,6 +49,30 @@ export function QueueSettingsPage() {
   )
 
   const displayValue = useCallback((value: string) => formatCurrency(Number(value || 0)), [formatCurrency])
+
+  const numericDoublesFee = useMemo(() => Number(feeForm.doublesFee || 0), [feeForm.doublesFee])
+  const numericCourtFee = useMemo(() => Number(feeForm.courtFee || 0), [feeForm.courtFee])
+
+  const todayISODate = useMemo(() => new Date().toISOString().slice(0, 10), [])
+
+  const activePlayers = useMemo(() => {
+    return players.filter((player) => {
+      if (!player.lastPlayed) return true
+      return player.lastPlayed.slice(0, 10) === todayISODate
+    })
+  }, [players, todayISODate])
+
+  const rows = useMemo<FeeRow[]>(() => {
+    return activePlayers.map((player) => ({
+      playerId: player.id,
+      label: player.name,
+      sex: player.sex,
+      games: player.gamesPlayed,
+      shuttleFee: player.gamesPlayed * numericDoublesFee,
+      courtFee: numericCourtFee,
+      status: paymentStatus[player.id] ?? 'unpaid'
+    }))
+  }, [activePlayers, numericCourtFee, numericDoublesFee, paymentStatus])
 
   const totals = useMemo(() => {
     return rows.reduce(
@@ -73,13 +95,36 @@ export function QueueSettingsPage() {
     return rows.filter((row) => row.label.toLowerCase().includes(query))
   }, [rows, searchQuery])
 
-  const handleTogglePaymentStatus = useCallback((player: string) => {
-    setRows((prev) =>
-      prev.map((row) =>
-        row.label === player ? { ...row, status: row.status === 'paid' ? 'unpaid' : 'paid' } : row
-      )
-    )
+  const handleTogglePaymentStatus = useCallback((playerId: number) => {
+    setPaymentStatus((prev) => ({
+      ...prev,
+      [playerId]: prev[playerId] === 'paid' ? 'unpaid' : 'paid'
+    }))
   }, [])
+
+  const loadPlayers = useCallback(async () => {
+    setPlayersLoading(true)
+    try {
+      const response = await apiServices.getQueuePlayers()
+      setPlayers(response)
+      setPaymentStatus((prev) => {
+        const next: Record<number, 'paid' | 'unpaid'> = {}
+        response.forEach((player) => {
+          next[player.id] = prev[player.id] ?? 'unpaid'
+        })
+        return next
+      })
+    } catch (error) {
+      console.error('Failed to load queue players for fee management', error)
+      toast.error('Failed to load current players')
+    } finally {
+      setPlayersLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadPlayers()
+  }, [loadPlayers])
 
   return (
     <QueueingShell activeTab="settings">
@@ -190,9 +235,21 @@ export function QueueSettingsPage() {
           <div className="space-y-4 rounded-2xl border border-white/15 bg-white/15 px-5 py-4 text-sm text-white">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-base font-semibold">Fee Management</h3>
-              <button className="rounded-md bg-blue-500 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600">
-                Export
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-white/70">
+                  Active players: {rows.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void loadPlayers()}
+                  className="rounded-md border border-white/20 px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
+                >
+                  Refresh
+                </button>
+                <button className="rounded-md bg-blue-500 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600">
+                  Export
+                </button>
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl bg-emerald-100/90 px-4 py-3 text-emerald-700">
@@ -200,7 +257,7 @@ export function QueueSettingsPage() {
                 <p className="mt-1 text-xl font-semibold">{formatCurrency(totals.collected)}</p>
               </div>
               <div className="rounded-xl bg-amber-100/90 px-4 py-3 text-amber-700">
-                <p className="text-xs uppercase tracking-wide">Outstanding</p>
+                <p className="text-xs uppercase tracking-wide">Unpaids</p>
                 <p className="mt-1 text-xl font-semibold">{formatCurrency(totals.outstanding)}</p>
               </div>
             </div>
@@ -228,10 +285,17 @@ export function QueueSettingsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/15 text-white/85">
-                  {filteredRows.length === 0 && (
+                  {playersLoading && (
                     <tr>
                       <td colSpan={7} className="px-4 py-6 text-center text-sm text-white/60">
-                        No players match the current search.
+                        Loading players...
+                      </td>
+                    </tr>
+                  )}
+                  {!playersLoading && filteredRows.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-6 text-center text-sm text-white/60">
+                        {rows.length === 0 ? 'No active players found.' : 'No players match the current search.'}
                       </td>
                     </tr>
                   )}
@@ -278,7 +342,7 @@ export function QueueSettingsPage() {
                           {row.status === 'paid' ? (
                             <button
                               type="button"
-                              onClick={() => handleTogglePaymentStatus(row.label)}
+                              onClick={() => handleTogglePaymentStatus(row.playerId)}
                               className="rounded-md border border-white/30 px-3 py-1 text-[11px] font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
                             >
                               Mark Unpaid
@@ -286,7 +350,7 @@ export function QueueSettingsPage() {
                           ) : (
                             <button
                               type="button"
-                              onClick={() => handleTogglePaymentStatus(row.label)}
+                              onClick={() => handleTogglePaymentStatus(row.playerId)}
                               className="rounded-md bg-emerald-500 px-4 py-1 text-[11px] font-semibold text-white shadow transition hover:bg-emerald-600"
                             >
                               Set Paid

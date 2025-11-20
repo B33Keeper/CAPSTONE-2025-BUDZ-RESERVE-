@@ -20,6 +20,7 @@ import { SuggestionsModule } from './modules/suggestions/suggestions.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
 import { QueuePlayersModule } from './modules/queue-players/queue-players.module';
 import { QueueingCourtsModule } from './modules/queueing-courts/queueing-courts.module';
+import { QueueMatchesModule } from './modules/queue-matches/queue-matches.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -85,6 +86,7 @@ import { HealthController } from './health.controller';
     AnnouncementsModule,
     QueuePlayersModule,
     QueueingCourtsModule,
+    QueueMatchesModule,
   ],
   controllers: [HealthController],
   providers: [],

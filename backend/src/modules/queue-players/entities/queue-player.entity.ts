@@ -24,7 +24,7 @@ export class QueuePlayer {
   gamesPlayed: number;
 
   @Column({ type: 'varchar', length: 20, default: 'In Queue' })
-  status: 'In Queue' | 'Waiting';
+  status: 'In Queue' | 'Waiting' | 'In Match';
 
   @Column({ name: 'last_played', type: 'date', nullable: true })
   lastPlayed: Date | null;

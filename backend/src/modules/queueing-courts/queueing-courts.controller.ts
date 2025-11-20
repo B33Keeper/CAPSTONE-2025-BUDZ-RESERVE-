@@ -31,16 +31,16 @@ export class QueueingCourtsController {
     return this.queueingCourtsService.findAll();
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete a queueing court by id' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.queueingCourtsService.remove(id);
-  }
-
   @Delete()
   @ApiOperation({ summary: 'Delete all queueing courts' })
   removeAll() {
     return this.queueingCourtsService.removeAll();
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a queueing court by id' })
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.queueingCourtsService.remove(id);
   }
 }
 
