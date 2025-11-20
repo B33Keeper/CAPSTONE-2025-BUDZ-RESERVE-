@@ -16,6 +16,7 @@ const payment_controller_1 = require("./payment.controller");
 const webhook_controller_1 = require("./webhook.controller");
 const paymongo_service_1 = require("./paymongo.service");
 const email_receipt_service_1 = require("./email-receipt.service");
+const equipment_rental_scheduler_service_1 = require("./equipment-rental-scheduler.service");
 const payment_entity_1 = require("./entities/payment.entity");
 const equipment_rental_entity_1 = require("./entities/equipment-rental.entity");
 const equipment_rental_item_entity_1 = require("./entities/equipment-rental-item.entity");
@@ -35,7 +36,7 @@ exports.PaymentsModule = PaymentsModule = __decorate([
             mailer_1.MailerModule,
         ],
         controllers: [payments_controller_1.PaymentsController, payment_controller_1.PaymentController, webhook_controller_1.WebhookController],
-        providers: [payments_service_1.PaymentsService, paymongo_service_1.PayMongoService, email_receipt_service_1.EmailReceiptService],
+        providers: [payments_service_1.PaymentsService, paymongo_service_1.PayMongoService, email_receipt_service_1.EmailReceiptService, equipment_rental_scheduler_service_1.EquipmentRentalSchedulerService],
         exports: [payments_service_1.PaymentsService, paymongo_service_1.PayMongoService, email_receipt_service_1.EmailReceiptService],
     })
 ], PaymentsModule);

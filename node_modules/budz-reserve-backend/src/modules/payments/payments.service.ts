@@ -106,6 +106,7 @@ export class PaymentsService {
 
     // Build sales report data
     const reportData = [];
+    const reservationsByReference = new Map<string, Reservation[]>();
     let totalReservations = 0;
     let totalIncome = 0;
     let totalCancellations = 0;
@@ -171,6 +172,22 @@ export class PaymentsService {
         console.error(`[SalesReport Service] Error fetching equipment rentals for reservation ${reservation.Reservation_ID}:`, error);
       }
 
+      const referenceNumber = reservation.Reference_Number;
+
+      let relatedReservations: Reservation[] = [];
+      if (referenceNumber) {
+        if (!reservationsByReference.has(referenceNumber)) {
+          const matchingReservations = await this.reservationsRepository.find({
+            where: { Reference_Number: referenceNumber },
+            relations: ['court'],
+          });
+          reservationsByReference.set(referenceNumber, matchingReservations);
+        }
+        relatedReservations = reservationsByReference.get(referenceNumber) ?? [];
+      } else {
+        relatedReservations = [reservation];
+      }
+
       reportData.push({
         reservationId: reservation.Reservation_ID,
         customerName: reservation.user?.name || 'Unknown',
@@ -181,6 +198,16 @@ export class PaymentsService {
         price: amount,
         status: isCancelled ? 'cancelled' : 'completed',
         equipmentRentals: equipmentRentals,
+        referenceNumber,
+        relatedReservations: relatedReservations.map((res) => ({
+          id: res.Reservation_ID,
+          courtName: res.court?.Court_Name || 'Unknown',
+          startTime: res.Start_Time,
+          endTime: res.End_Time,
+          status: res.Status,
+          price: Number(res.Total_Amount) || 0,
+          date: res.Reservation_Date,
+        })),
       });
     }
 

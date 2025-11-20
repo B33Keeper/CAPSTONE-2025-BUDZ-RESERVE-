@@ -10,6 +10,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const throttler_1 = require("@nestjs/throttler");
+const schedule_1 = require("@nestjs/schedule");
 const mailer_1 = require("@nestjs-modules/mailer");
 const handlebars_adapter_1 = require("@nestjs-modules/mailer/dist/adapters/handlebars.adapter");
 const database_module_1 = require("./database/database.module");
@@ -24,6 +25,8 @@ const time_slots_module_1 = require("./modules/time-slots/time-slots.module");
 const gallery_module_1 = require("./modules/gallery/gallery.module");
 const suggestions_module_1 = require("./modules/suggestions/suggestions.module");
 const announcements_module_1 = require("./modules/announcements/announcements.module");
+const queue_players_module_1 = require("./modules/queue-players/queue-players.module");
+const queueing_courts_module_1 = require("./modules/queueing-courts/queueing-courts.module");
 const health_controller_1 = require("./health.controller");
 let AppModule = class AppModule {
 };
@@ -35,6 +38,7 @@ exports.AppModule = AppModule = __decorate([
                 isGlobal: true,
                 envFilePath: '.env',
             }),
+            schedule_1.ScheduleModule.forRoot(),
             mailer_1.MailerModule.forRootAsync({
                 imports: [config_1.ConfigModule],
                 useFactory: async (configService) => ({
@@ -78,6 +82,8 @@ exports.AppModule = AppModule = __decorate([
             gallery_module_1.GalleryModule,
             suggestions_module_1.SuggestionsModule,
             announcements_module_1.AnnouncementsModule,
+            queue_players_module_1.QueuePlayersModule,
+            queueing_courts_module_1.QueueingCourtsModule,
         ],
         controllers: [health_controller_1.HealthController],
         providers: [],

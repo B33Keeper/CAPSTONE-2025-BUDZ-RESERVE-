@@ -36,8 +36,8 @@ export default function AdminCreateReservations() {
   const [selectedDate, setSelectedDate] = useState('')
   const [tempSelectedDate, setTempSelectedDate] = useState('')
   const [activeTab, setActiveTab] = useState('Sheet 1')
-  const [racketQuantity, setRacketQuantity] = useState(0)
-  const [racketTime, setRacketTime] = useState(1)
+  const [racketQuantities, setRacketQuantities] = useState<Record<string, number>>({})
+  const [racketTimes, setRacketTimes] = useState<Record<string, number>>({})
   const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set())
   const [currentStep, setCurrentStep] = useState(0) // Step 0: User selection
   const [dateError, setDateError] = useState('')
@@ -396,6 +396,21 @@ export default function AdminCreateReservations() {
     loadData()
   }, [])
 
+  // Refresh equipment data when navigating to "Rent an racket" tab to get updated stock values
+  useEffect(() => {
+    if (activeTab === 'Rent an racket') {
+      const refreshEquipment = async () => {
+        try {
+          const equipmentData = await apiServices.getEquipment()
+          setEquipment(equipmentData)
+        } catch (err) {
+          console.error('Error refreshing equipment data:', err)
+        }
+      }
+      refreshEquipment()
+    }
+  }, [activeTab])
+
   // Load availability data when date is selected
   const loadAvailabilityData = async (date: string) => {
     if (!date) return
@@ -540,12 +555,24 @@ export default function AdminCreateReservations() {
   }
 
   const handleRacketQuantityChange = (racketName: string, newQuantity: number) => {
-    setRacketQuantity(newQuantity)
+    // Ensure quantity doesn't exceed available stock
+    const racketItem = equipment.find(eq => eq.equipment_name === racketName)
+    if (!racketItem) return
     
-    const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
-    const price = Number(equipmentItem?.price) || 100
+    // Backend stocks already has deducted active paid rentals
+    // To calculate max available, we add back current cart quantity (since it's not yet deducted)
+    const currentBookingQuantity = equipmentBookings.find(booking => booking.equipment === racketName)?.quantity || 0
+    const maxAvailable = racketItem.stocks + currentBookingQuantity // stocks + current cart = total available
     
-    if (newQuantity === 0) {
+    const finalQuantity = Math.max(0, Math.min(newQuantity, maxAvailable))
+    
+    setRacketQuantities(prev => ({ ...prev, [racketName]: finalQuantity }))
+    
+    const price = Number(racketItem.price) || 100
+    
+    const racketTime = racketTimes[racketName] || 1
+    
+    if (finalQuantity === 0) {
       setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
       setFlippedCards(prev => {
         const newSet = new Set(prev)
@@ -556,8 +583,8 @@ export default function AdminCreateReservations() {
       const newBooking: EquipmentBooking = {
         equipment: racketName,
         time: `${racketTime} hr`,
-        subtotal: price * racketTime * newQuantity,
-        quantity: newQuantity
+        subtotal: price * racketTime * finalQuantity,
+        quantity: finalQuantity
       }
       setEquipmentBookings(prev => {
         const filtered = prev.filter(booking => booking.equipment !== racketName)
@@ -567,10 +594,12 @@ export default function AdminCreateReservations() {
   }
 
   const handleRacketTimeChange = (racketName: string, newTime: number) => {
-    setRacketTime(newTime)
+    setRacketTimes(prev => ({ ...prev, [racketName]: newTime }))
     
     const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
     const price = Number(equipmentItem?.price) || 100
+    
+    const racketQuantity = racketQuantities[racketName] || 0
     
     if (racketQuantity > 0) {
       const newBooking: EquipmentBooking = {
@@ -778,8 +807,48 @@ export default function AdminCreateReservations() {
     return date
   })
 
+  const resolveApiBaseUrl = () => {
+    const explicitBase = typeof api.defaults.baseURL === 'string' ? api.defaults.baseURL : ''
+    if (explicitBase) {
+      return explicitBase.replace(/\/api\/?$/, '')
+    }
+    const envBase = (import.meta.env.VITE_API_URL as string | undefined) || ''
+    if (envBase) {
+      return envBase.replace(/\/api\/?$/, '')
+    }
+    return window.location.origin
+  }
+
+  const getEquipmentImageSrc = (imagePath?: string | null) => {
+    const cacheBuster = Date.now()
+    const fallback = `/assets/img/equipments/racket.png?v=${cacheBuster}`
+    if (!imagePath || imagePath.trim() === '') {
+      return fallback
+    }
+    if (imagePath.startsWith('http')) {
+      return `${imagePath}?v=${cacheBuster}`
+    }
+    const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`
+    return `${resolveApiBaseUrl()}${normalizedPath}?v=${cacheBuster}`
+  }
+
   const isRacketBooked = (racket: string) => {
     return equipmentBookings.some(booking => booking.equipment === racket)
+  }
+
+  // Get available stock from backend (stocks field reflects deducted stock from active paid rentals)
+  // Also deduct quantities currently in cart (not yet paid)
+  const getAvailableStock = (racketName: string) => {
+    const racketItem = equipment.find(eq => eq.equipment_name === racketName)
+    if (!racketItem) return 0
+    
+    // Backend stocks already has deducted active paid rentals
+    // Get current booked quantity in cart for this racket (not yet paid)
+    const cartQuantity = equipmentBookings
+      .find(booking => booking.equipment === racketName)?.quantity || 0
+    
+    // Available = backend stocks (after paid rentals) - cart quantities
+    return Math.max(0, racketItem.stocks - cartQuantity)
   }
 
   const handleProcessCashPayment = async () => {
@@ -838,6 +907,23 @@ export default function AdminCreateReservations() {
 
       if (response.data) {
         toast.success('Reservation created successfully with cash payment!')
+        
+        // Clear equipment bookings from cart
+        setEquipmentBookings([])
+        setRacketQuantities({})
+        setRacketTimes({})
+        
+        // Wait for a moment to ensure backend processing completes, then refresh equipment data
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        try {
+          const equipmentData = await apiServices.getEquipment()
+          setEquipment(equipmentData)
+          console.log('Equipment data refreshed after payment:', equipmentData)
+        } catch (err) {
+          console.error('Error refreshing equipment data:', err)
+        }
+        
         setRecentPaymentMethod('cash')
         setQrPaymentData(null)
         setQrPaymentConfirmed(true)
@@ -1513,7 +1599,7 @@ export default function AdminCreateReservations() {
                         {equipment.map((item, index) => (
                           <div
                             key={item.id}
-                            className="relative h-80 sm:h-72 md:h-80 lg:h-84 cursor-pointer group animate-fade-in"
+                            className="relative h-[22rem] sm:h-[22rem] md:h-[23rem] lg:h-[24rem] cursor-pointer group animate-fade-in"
                             style={{ animationDelay: `${index * 100}ms` }}
                             onClick={() => handleRacketClick(item.equipment_name)}
                           >
@@ -1524,15 +1610,15 @@ export default function AdminCreateReservations() {
                                 <div className={`relative bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 rounded-2xl p-3 sm:p-4 md:p-6 h-full flex flex-col justify-between items-center hover:shadow-2xl hover:scale-105 hover:-translate-y-2 transition-all duration-500 group-hover:border-blue-400 group-hover:from-blue-50 group-hover:to-blue-100 ${
                               isRacketBooked(item.equipment_name) ? 'border-green-500 ring-4 ring-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-green-200' : 'border-gray-200 hover:border-blue-400'
                             }`}>
-                                  {item.stocks > 5 && (
+                                  {getAvailableStock(item.equipment_name) > 5 && (
                                     <div className="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
                                       Popular
                                     </div>
                                   )}
                                   
-                                  {item.stocks > 0 && (
+                                  {getAvailableStock(item.equipment_name) > 0 && (
                                     <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-bounce">
-                                      {item.stocks}
+                                      {getAvailableStock(item.equipment_name)}
                                     </div>
                                   )}
                                   
@@ -1541,7 +1627,7 @@ export default function AdminCreateReservations() {
                                       <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500"></div>
                                       <div className="relative w-full h-20 sm:h-24 md:h-32 bg-white rounded-lg shadow-sm overflow-hidden">
                                         <img
-                                          src={`${item.image_path || "/assets/img/equipments/racket.png"}?v=${Date.now()}`}
+                                          src={getEquipmentImageSrc(item.image_path)}
                                           alt={item.equipment_name}
                                           className="w-full h-full object-contain object-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-2"
                                           style={{
@@ -1560,11 +1646,33 @@ export default function AdminCreateReservations() {
                                     
                                     <div className="flex items-center justify-center space-x-2">
                                       <div className={`w-3 h-3 rounded-full animate-pulse ${
-                                        item.stocks > 0 ? 'bg-green-500 shadow-green-200 shadow-lg' : 'bg-red-500 shadow-red-200 shadow-lg'
+                                        getAvailableStock(item.equipment_name) > 0 ? 'bg-green-500 shadow-green-200 shadow-lg' : 'bg-red-500 shadow-red-200 shadow-lg'
                                       }`}></div>
                                       <p className="text-xs sm:text-sm text-gray-600 font-medium">
-                                        {item.stocks > 0 ? `${item.stocks} available` : 'Out of stock'}
+                                        {getAvailableStock(item.equipment_name) > 0 ? `${getAvailableStock(item.equipment_name)} available` : 'Out of stock'}
                                       </p>
+                                    </div>
+
+                                    {/* Equipment Specs */}
+                                    <div className="grid grid-cols-3 gap-2 text-[11px] sm:text-xs text-gray-600 w-full">
+                                      <div className="bg-white rounded-lg border border-gray-200 px-2 py-1 shadow-sm text-center h-16 flex flex-col">
+                                        <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Unit</p>
+                                        <div className="flex-1 flex items-center justify-center leading-tight">
+                                          <p className="font-semibold text-gray-800 break-words">{item.unit?.toString().trim() || '—'}</p>
+                                        </div>
+                                      </div>
+                                      <div className="bg-white rounded-lg border border-gray-200 px-2 py-1 shadow-sm text-center h-16 flex flex-col">
+                                        <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Weight</p>
+                                        <div className="flex-1 flex items-center justify-center leading-tight">
+                                          <p className="font-semibold text-gray-800 break-words">{item.weight?.toString().trim() || '—'}</p>
+                                        </div>
+                                      </div>
+                                      <div className="bg-white rounded-lg border border-gray-200 px-2 py-1 shadow-sm text-center h-16 flex flex-col">
+                                        <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Tension</p>
+                                        <div className="flex-1 flex items-center justify-center leading-tight">
+                                          <p className="font-semibold text-gray-800 break-words">{item.tension?.toString().trim() || '—'}</p>
+                                        </div>
+                                      </div>
                                     </div>
                                     
                                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl px-4 py-2 border border-blue-200 shadow-sm group-hover:shadow-md transition-all duration-300">
@@ -1600,7 +1708,7 @@ export default function AdminCreateReservations() {
                                       <div className="flex items-center justify-center">
                                         <input
                                           type="number"
-                                          value={racketTime}
+                                          value={racketTimes[item.equipment_name] || 1}
                                           onChange={(e) => handleRacketTimeChange(item.equipment_name, Number(e.target.value))}
                                           onClick={(e) => e.stopPropagation()}
                                           className="w-20 px-3 py-2 border border-gray-300 rounded text-sm text-center"
@@ -1614,18 +1722,27 @@ export default function AdminCreateReservations() {
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation()
-                                            const newQuantity = Math.max(0, racketQuantity - 1)
+                                            const currentQuantity = racketQuantities[item.equipment_name] || 0
+                                            const newQuantity = Math.max(0, currentQuantity - 1)
                                             handleRacketQuantityChange(item.equipment_name, newQuantity)
                                           }}
                                           className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
                                         >
                                           -
                                         </button>
-                                        <span className="w-12 text-center text-lg font-medium">{racketQuantity}</span>
+                                        <span className="w-12 text-center text-lg font-medium">{racketQuantities[item.equipment_name] || 0}</span>
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation()
-                                            const newQuantity = Math.min(item.stocks, racketQuantity + 1)
+                                            const currentQuantity = racketQuantities[item.equipment_name] || 0
+                                            const racketItem = equipment.find(eq => eq.equipment_name === item.equipment_name)
+                                            if (!racketItem) return
+                                            
+                                            // Backend stocks already has deducted active paid rentals
+                                            // Add back current cart quantity to get total available
+                                            const currentBookingQuantity = equipmentBookings.find(booking => booking.equipment === item.equipment_name)?.quantity || 0
+                                            const maxAvailable = racketItem.stocks + currentBookingQuantity
+                                            const newQuantity = Math.min(maxAvailable, currentQuantity + 1)
                                             handleRacketQuantityChange(item.equipment_name, newQuantity)
                                           }}
                                           className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
@@ -1676,7 +1793,8 @@ export default function AdminCreateReservations() {
                           <thead>
                             <tr className="bg-gray-100">
                               <th className="border border-gray-300 px-4 py-2 text-left">Equipment</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left">Time:</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Time</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Quantity</th>
                               <th className="border border-gray-300 px-4 py-2 text-left">Sub total</th>
                             </tr>
                           </thead>
@@ -1685,7 +1803,8 @@ export default function AdminCreateReservations() {
                               <tr key={index}>
                                 <td className="border border-gray-300 px-4 py-2">{booking.equipment}</td>
                                 <td className="border border-gray-300 px-4 py-2">{booking.time}</td>
-                                <td className="border border-gray-300 px-4 py-2">{booking.subtotal}</td>
+                                <td className="border border-gray-300 px-4 py-2">{booking.quantity ?? 1}</td>
+                                <td className="border border-gray-300 px-4 py-2">{formatCurrency(booking.subtotal)}</td>
                               </tr>
                             ))}
                           </tbody>

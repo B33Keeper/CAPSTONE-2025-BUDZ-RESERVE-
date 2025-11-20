@@ -354,6 +354,15 @@ export class WebhookController {
         subtotal,
       });
       await this.rentalItemRepository.save(item);
+      
+      // Deduct stock from equipment when rental is created
+      if (equipmentRow && equipmentRow.stocks >= quantity) {
+        await this.equipmentRepository.update(equipmentRow.id, {
+          stocks: equipmentRow.stocks - quantity
+        });
+        this.logger.log(`Deducted ${quantity} stock from ${equipmentRow.equipment_name}. Remaining: ${equipmentRow.stocks - quantity}`);
+      }
+      
       total += subtotal;
     }
 

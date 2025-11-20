@@ -45,4 +45,22 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], CreateEquipmentDto.prototype, "image_path", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(12),
+    __metadata("design:type", Object)
+], CreateEquipmentDto.prototype, "unit", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(5),
+    __metadata("design:type", Object)
+], CreateEquipmentDto.prototype, "weight", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(5),
+    __metadata("design:type", Object)
+], CreateEquipmentDto.prototype, "tension", void 0);
 //# sourceMappingURL=create-equipment.dto.js.map

@@ -1,0 +1,79 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Test coverage
+coverage
+.nyc_output
+.coverage
+*.lcov
+
+# Logs
+*.log
+logs
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*.swn
+*~
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Test files
+*.test.js
+*.spec.js
+*.test.ts
+*.spec.ts
+__tests__
+test/
+tests/
+e2e/
+
+# TypeScript
+*.tsbuildinfo
+
+# Uploads (handled separately via volumes)
+uploads/*
+!uploads/.gitkeep
+
+# Docker files
+Dockerfile*
+.dockerignore
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+.circleci
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+

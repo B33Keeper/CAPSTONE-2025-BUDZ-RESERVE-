@@ -39,6 +39,18 @@ __decorate([
     __metadata("design:type", String)
 ], Equipment.prototype, "image_path", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true }),
+    __metadata("design:type", Object)
+], Equipment.prototype, "unit", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true }),
+    __metadata("design:type", Object)
+], Equipment.prototype, "weight", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true }),
+    __metadata("design:type", Object)
+], Equipment.prototype, "tension", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], Equipment.prototype, "created_at", void 0);

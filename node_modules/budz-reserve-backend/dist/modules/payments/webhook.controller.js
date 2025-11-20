@@ -15,6 +15,7 @@ var WebhookController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhookController = void 0;
 const common_1 = require("@nestjs/common");
+const crypto_1 = require("crypto");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const paymongo_service_1 = require("./paymongo.service");
@@ -82,10 +83,10 @@ let WebhookController = WebhookController_1 = class WebhookController {
             return { success: false, message: 'Test webhook failed', error: error.message };
         }
     }
-    async handlePaymongoWebhook(body, signature) {
+    async handlePaymongoWebhook(body, signature, req) {
         try {
             this.logger.log('Paymongo webhook received');
-            if (!this.verifyWebhookSignature(body, signature)) {
+            if (!this.verifyWebhookSignature(req.rawBody, signature)) {
                 this.logger.warn('Invalid webhook signature');
                 return { success: false, message: 'Invalid signature' };
             }
@@ -287,6 +288,12 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 subtotal,
             });
             await this.rentalItemRepository.save(item);
+            if (equipmentRow && equipmentRow.stocks >= quantity) {
+                await this.equipmentRepository.update(equipmentRow.id, {
+                    stocks: equipmentRow.stocks - quantity
+                });
+                this.logger.log(`Deducted ${quantity} stock from ${equipmentRow.equipment_name}. Remaining: ${equipmentRow.stocks - quantity}`);
+            }
             total += subtotal;
         }
         await this.rentalRepository.update(savedRental.id, { total_amount: Number(total.toFixed(2)) });
@@ -353,9 +360,62 @@ let WebhookController = WebhookController_1 = class WebhookController {
             this.logger.error('Error handling payment_intent.failed event:', error);
         }
     }
-    verifyWebhookSignature(body, signature) {
-        const _secret = process.env.PAYMONGO_WEBHOOK_SECRET || 'whsk_7Myz2HAE5CZ3Td5V2gvVwrim';
-        return true;
+    verifyWebhookSignature(rawBody, signature) {
+        const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
+        if (!secret) {
+            this.logger.warn('PAYMONGO_WEBHOOK_SECRET is not configured');
+            return false;
+        }
+        if (!signature) {
+            this.logger.warn('Missing paymongo-signature header');
+            return false;
+        }
+        try {
+            if (!rawBody || rawBody.length === 0) {
+                this.logger.warn('Missing raw request body for signature verification');
+                return false;
+            }
+            const signatureHeader = Array.isArray(signature) ? signature[0] : signature;
+            if (!signatureHeader || typeof signatureHeader !== 'string') {
+                this.logger.warn(`Invalid signature header format: ${JSON.stringify(signature)}`);
+                return false;
+            }
+            const signatureParts = signatureHeader
+                .split(',')
+                .map((part) => part.trim())
+                .filter(Boolean)
+                .reduce((acc, part) => {
+                const [key, value] = part.split('=');
+                if (key && value) {
+                    acc[key] = value;
+                }
+                return acc;
+            }, {});
+            const timestamp = signatureParts['t'];
+            const expectedSignature = signatureParts['v1'] ||
+                signatureParts['te'] ||
+                signatureParts['li'];
+            if (!timestamp || !expectedSignature) {
+                this.logger.warn(`Invalid signature header format: ${signatureHeader}`);
+                return false;
+            }
+            const payload = `${timestamp}.${rawBody.toString('utf8')}`;
+            const hmac = (0, crypto_1.createHmac)('sha256', secret);
+            hmac.update(payload, 'utf8');
+            const computedSignature = hmac.digest('hex');
+            const computedBuffer = Buffer.from(computedSignature, 'hex');
+            const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+            if (computedBuffer.length !== expectedBuffer.length ||
+                !(0, crypto_1.timingSafeEqual)(computedBuffer, expectedBuffer)) {
+                this.logger.warn('Webhook signature validation failed');
+                return false;
+            }
+            return true;
+        }
+        catch (error) {
+            this.logger.error('Error verifying webhook signature', error);
+            return false;
+        }
     }
     async handleTestPayment(paymentData, testData) {
         try {
@@ -471,8 +531,9 @@ __decorate([
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Headers)('paymongo-signature')),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, Object, Object]),
     __metadata("design:returntype", Promise)
 ], WebhookController.prototype, "handlePaymongoWebhook", null);
 exports.WebhookController = WebhookController = WebhookController_1 = __decorate([

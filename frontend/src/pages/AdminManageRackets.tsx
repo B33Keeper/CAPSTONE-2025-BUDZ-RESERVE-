@@ -427,6 +427,19 @@ const AdminManageRackets = () => {
     setSelectedImage(null)
   }
 
+  const renderValueWithLineBreaks = (value?: string | null) => {
+    if (!value) {
+      return '—'
+    }
+    const parts = value.trim().split(/\s+/)
+    return parts.map((part, index) => (
+      <span key={`${part}-${index}`}>
+        {part}
+        {index < parts.length - 1 && <br />}
+      </span>
+    ))
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 scroll-smooth">
       {/* Custom Scrollbar Styles */}
@@ -646,10 +659,10 @@ const AdminManageRackets = () => {
                     {/* Specifications */}
                     <div className="px-6 py-4 bg-white border-t border-gray-100">
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <div className="bg-blue-50/70 rounded-xl px-4 py-3 text-center border border-blue-100">
+                         <div className="bg-blue-50/70 rounded-xl px-4 py-3 text-center border border-blue-100">
                           <p className="text-xs text-blue-600 uppercase tracking-wide font-semibold">Unit</p>
-                          <p className="text-sm font-medium text-slate-800 mt-1 truncate">
-                            {racket.unit?.toString().trim() || '—'}
+                           <p className="text-sm font-medium text-slate-800 mt-1 leading-tight">
+                             {renderValueWithLineBreaks(racket.unit?.toString())}
                           </p>
                         </div>
                         <div className="bg-blue-50/70 rounded-xl px-4 py-3 text-center border border-blue-100">
@@ -808,9 +821,10 @@ const AdminManageRackets = () => {
                     <input
                       type="text"
                       value={editingRacket.unit ?? ''}
-                      onChange={(e) => setEditingRacket({...editingRacket, unit: e.target.value})}
+                      onChange={(e) => setEditingRacket({...editingRacket, unit: e.target.value.slice(0, 12)})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter unit"
+                      maxLength={12}
                     />
                   </div>
 
@@ -820,9 +834,10 @@ const AdminManageRackets = () => {
                     <input
                       type="text"
                       value={editingRacket.weight ?? ''}
-                      onChange={(e) => setEditingRacket({...editingRacket, weight: e.target.value})}
+                      onChange={(e) => setEditingRacket({...editingRacket, weight: e.target.value.slice(0, 5)})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter weight"
+                      maxLength={5}
                     />
                   </div>
 
@@ -832,9 +847,10 @@ const AdminManageRackets = () => {
                     <input
                       type="text"
                       value={editingRacket.tension ?? ''}
-                      onChange={(e) => setEditingRacket({...editingRacket, tension: e.target.value})}
+                      onChange={(e) => setEditingRacket({...editingRacket, tension: e.target.value.slice(0, 5)})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter tension"
+                      maxLength={5}
                     />
                   </div>
 

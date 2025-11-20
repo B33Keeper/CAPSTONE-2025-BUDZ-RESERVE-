@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Fragment, useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, ChevronLeft, ChevronRight, Filter, Menu, Receipt } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight, Filter, Menu, Receipt } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -181,8 +181,17 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
   const [showDateFilter, setShowDateFilter] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
   const [rentalsMap, setRentalsMap] = useState<RentalsMap>({})
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
 
   const itemsPerPage = useMemo(() => (isMobile ? 5 : 7), [isMobile])
+  const detailColSpan = isMobile ? 5 : 7
+
+  const toggleRowExpansion = (key: string) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
 
   // Determine if reservation has already ended
   const isReservationEnded = (reservation: Reservation) => {
@@ -292,6 +301,7 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
     const newTotalPages = Math.max(1, Math.ceil(groupedReservations.length / safeItemsPerPage))
     setTotalPages(prev => (prev === newTotalPages ? prev : newTotalPages))
     setCurrentPage(prev => Math.max(1, Math.min(prev, newTotalPages)))
+    setExpandedRows({})
   }, [itemsPerPage, groupedReservations.length])
 
   // Handle receipt download/view
@@ -668,38 +678,58 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                       ? group.courts
                       : group.reservations.map(res => res.court?.Court_Name || 'Unknown Court')
                     const receiptReservation = group.reservations.find(res => res.Paymongo_Reference_Number)
+                    const isExpanded = !!expandedRows[group.key]
 
                     return (
-                      <ResponsiveTableRow key={group.key} className="hover:bg-blue-50/50 transition-colors duration-200 border-b border-gray-100">
-                            <ResponsiveTableCell className="font-medium text-gray-700">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <span className="text-xs font-bold text-blue-600">{startIndex + index + 1}</span>
-                                </div>
+                      <Fragment key={group.key}>
+                        <ResponsiveTableRow
+                          className={`transition-colors duration-200 border-b border-gray-100 ${
+                            isExpanded ? 'bg-blue-50/50' : 'hover:bg-blue-50/50'
+                          }`}
+                        >
+                          <ResponsiveTableCell className="font-medium text-gray-700">
+                            <div className="flex items-center space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => toggleRowExpansion(group.key)}
+                                aria-label={isExpanded ? 'Hide reserved courts' : 'Show reserved courts'}
+                                className={`p-1.5 rounded-full border text-gray-500 hover:text-blue-600 hover:border-blue-300 transition-colors ${
+                                  isExpanded ? 'bg-blue-100 border-blue-300 text-blue-600' : 'border-gray-200'
+                                }`}
+                              >
+                                <ChevronDown
+                                  className={`w-4 h-4 transition-transform duration-200 ${
+                                    isExpanded ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </button>
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-xs font-bold text-blue-600">{startIndex + index + 1}</span>
                               </div>
-                            </ResponsiveTableCell>
-                            <ResponsiveTableCell className="font-medium text-gray-800">{formatDate(group.reservationDate)}</ResponsiveTableCell>
-                            <ResponsiveTableCell className="text-gray-700">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span>{`${formatTime(group.startTime)} - ${formatTime(group.endTime)}`}</span>
-                              </div>
-                            </ResponsiveTableCell>
-                            <ResponsiveTableCell hideOnMobile className="text-gray-700">
-                              <div className="flex flex-col gap-1">
-                                {courts.map((court, courtIndex) => (
-                                  <div key={`${group.key}-court-${courtIndex}`} className="flex items-center space-x-2">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                    <span>{court}</span>
-                                  </div>
-                                ))}
-                              </div>
+                            </div>
                           </ResponsiveTableCell>
-                            <ResponsiveTableCell hideOnMobile className="text-gray-700">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                                <span>{getPaymentMethod(payments)}</span>
-                              </div>
+                          <ResponsiveTableCell className="font-medium text-gray-800">{formatDate(group.reservationDate)}</ResponsiveTableCell>
+                          <ResponsiveTableCell className="text-gray-700">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span>{`${formatTime(group.startTime)} - ${formatTime(group.endTime)}`}</span>
+                            </div>
+                          </ResponsiveTableCell>
+                          <ResponsiveTableCell hideOnMobile className="text-gray-700">
+                            <div className="flex flex-col gap-1">
+                              {courts.map((court, courtIndex) => (
+                                <div key={`${group.key}-court-${courtIndex}`} className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                  <span>{court}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </ResponsiveTableCell>
+                          <ResponsiveTableCell hideOnMobile className="text-gray-700">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                              <span>{getPaymentMethod(payments)}</span>
+                            </div>
                           </ResponsiveTableCell>
                           <ResponsiveTableCell className="text-gray-700">
                             {formatRentalItems(rentalItems)}
@@ -720,6 +750,50 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                             </div>
                           </ResponsiveTableCell>
                         </ResponsiveTableRow>
+                        {isExpanded && (
+                          <ResponsiveTableRow className="bg-blue-50/70 border-b border-blue-100">
+                            <ResponsiveTableCell colSpan={detailColSpan} className="bg-blue-50/70">
+                              <div className="px-2 sm:px-4 py-4 space-y-3">
+                                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                  <span>Reserved courts & schedules</span>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  {group.reservations
+                                    .sort((a, b) => a.Start_Time.localeCompare(b.Start_Time))
+                                    .map((reservation) => (
+                                      <div
+                                        key={`${group.key}-detail-${reservation.Reservation_ID}`}
+                                        className="p-3 bg-white rounded-xl border border-blue-100 shadow-sm flex flex-col gap-2"
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            {reservation.court?.Court_Name || 'Court'}
+                                          </span>
+                                          <span
+                                            className={`text-xs font-semibold ${
+                                              reservation.Status === 'Cancelled' ? 'text-red-500' : 'text-green-600'
+                                            }`}
+                                          >
+                                            {reservation.Status || 'Confirmed'}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm text-gray-600">
+                                          <span>
+                                            {formatTime(reservation.Start_Time)} - {formatTime(reservation.End_Time)}
+                                          </span>
+                                          <span className="font-semibold text-gray-900">
+                                            ₱{formatPrice(reservation.Total_Amount)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                </div>
+                              </div>
+                            </ResponsiveTableCell>
+                          </ResponsiveTableRow>
+                        )}
+                      </Fragment>
                     )
                   })}
                     </ResponsiveTableBody>

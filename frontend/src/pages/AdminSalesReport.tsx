@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { Fragment, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
@@ -6,6 +6,8 @@ import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { ChevronDown } from 'lucide-react'
+const REPORT_LOGO_PATH = '/assets/icons/BBC ICON.png'
 
 interface EquipmentRental {
   equipmentName: string
@@ -13,7 +15,17 @@ interface EquipmentRental {
   hours: number
 }
 
-interface SalesReportItem {
+interface ReservationDetail {
+  id: number
+  courtName: string
+  startTime: string
+  endTime: string
+  status?: string
+  price?: number
+  date?: string | Date
+}
+
+  interface SalesReportItem {
   reservationId: number
   customerName: string
   courtName: string
@@ -23,6 +35,8 @@ interface SalesReportItem {
   price: number
   status: 'completed' | 'cancelled'
   equipmentRentals?: EquipmentRental[]
+  referenceNumber?: string
+  relatedReservations?: ReservationDetail[]
 }
 
 const AdminSalesReport = () => {
@@ -36,6 +50,7 @@ const AdminSalesReport = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -54,6 +69,44 @@ const AdminSalesReport = () => {
     }).format(price)
   }
 
+  const formatPriceCompact = (price: number) => {
+    const formatted = new Intl.NumberFormat('en-PH', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price)
+    return `₱${formatted}`
+  }
+
+  const formatTimeDisplay = (time: string) => {
+    if (!time) return ''
+    const parsed = new Date(`2000-01-01T${time}`)
+    if (Number.isNaN(parsed.getTime())) return time
+    return parsed.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+  }
+
+  const formatTimeRange = (start?: string, end?: string) => {
+    if (!start && !end) return ''
+    if (!start) return formatTimeDisplay(end!)
+    if (!end) return formatTimeDisplay(start)
+    return `${formatTimeDisplay(start)} - ${formatTimeDisplay(end)}`
+  }
+
+  const formatDateForReport = (dateStr: string) => {
+    const parsed = new Date(dateStr)
+    if (Number.isNaN(parsed.getTime())) {
+      return dateStr
+    }
+    return parsed.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+    })
+  }
+
   const periods = [
     { value: 'daily', label: 'Daily' },
     { value: 'weekly', label: 'Weekly' },
@@ -62,7 +115,26 @@ const AdminSalesReport = () => {
     { value: 'yearly', label: 'Yearly' },
   ]
 
-  const handleDownload = () => {
+  const fetchImageAsDataUrl = async (path: string): Promise<string | null> => {
+    try {
+      const response = await fetch(path)
+      if (!response.ok) {
+        return null
+      }
+      const blob = await response.blob()
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+    } catch (error) {
+      console.warn('Failed to load logo for PDF:', error)
+      return null
+    }
+  }
+
+  const handleDownload = async () => {
     try {
       // Use the same filtered data that's displayed in the table
       const dataToExport = filteredData
@@ -73,96 +145,135 @@ const AdminSalesReport = () => {
       }
 
       // Create new PDF document
-      const doc = new jsPDF()
-      
-      // Generate filename with period and date
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'pt',
+        format: 'a4',
+      })
+      const pageWidth = doc.internal.pageSize.getWidth()
       const date = new Date().toISOString().split('T')[0]
       const periodLabel = periods.find(p => p.value === selectedPeriod)?.label || 'Daily'
+      const margins = { left: 40, right: 40 }
+
+      const logoDataUrl = await fetchImageAsDataUrl(REPORT_LOGO_PATH)
+      if (logoDataUrl) {
+        doc.addImage(logoDataUrl, 'PNG', margins.left, 24, 60, 60)
+      }
       
-      // Add title
-      doc.setFontSize(18)
-      doc.text('Sales Report', 14, 20)
+      // Titles
+      doc.setFontSize(22)
+      doc.text('Budz Badminton Court Sales Report', pageWidth / 2, 50, { align: 'center' })
+      doc.setFontSize(14)
+      doc.text('Sales Report', pageWidth / 2, 70, { align: 'center' })
       
-      // Add period and date info
+      // Metadata
       doc.setFontSize(11)
-      let yPos = 30
-      doc.text(`Period: ${periodLabel}`, 14, yPos)
-      yPos += 6
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, yPos)
+      let yPos = 90
+      doc.text(`Period: ${periodLabel}`, margins.left, yPos)
+      yPos += 18
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, margins.left, yPos)
       
       if (dateFrom || dateTo) {
-        yPos += 6
+        yPos += 18
         const dateRange = dateFrom && dateTo 
           ? `${new Date(dateFrom).toLocaleDateString()} - ${new Date(dateTo).toLocaleDateString()}`
           : dateFrom 
           ? `From: ${new Date(dateFrom).toLocaleDateString()}`
           : `To: ${new Date(dateTo).toLocaleDateString()}`
-        doc.text(`Date Range: ${dateRange}`, 14, yPos)
+        doc.text(`Date Range: ${dateRange}`, margins.left, yPos)
       }
       
       if (searchQuery) {
-        yPos += 6
-        doc.text(`Filtered by: "${searchQuery}"`, 14, yPos)
+        yPos += 18
+        doc.text(`Filtered by: "${searchQuery}"`, margins.left, yPos)
       }
 
       // Prepare table data
       const tableData = dataToExport.map(item => {
         // Format equipment rentals
         const equipmentInfo = item.equipmentRentals && item.equipmentRentals.length > 0
-          ? item.equipmentRentals.map(rental => 
-              `${rental.equipmentName} (Qty: ${rental.quantity}, ${rental.hours}h)`
-            ).join('; ')
+          ? item.equipmentRentals
+              .map(rental => `${rental.equipmentName} (Qty: ${rental.quantity ?? 1}, ${rental.hours}h)`)
+              .join('\n')
           : 'None'
+
+        const courtDisplay = item.relatedReservations && item.relatedReservations.length > 0
+          ? item.relatedReservations
+              .map(detail => `${detail.courtName} (${formatTimeRange(detail.startTime, detail.endTime)})`)
+              .join('\n')
+          : item.courtName
+
+        const timeDisplay = item.relatedReservations && item.relatedReservations.length > 0
+          ? item.relatedReservations
+              .map(detail => formatTimeRange(detail.startTime, detail.endTime))
+              .join('\n')
+          : item.time
 
         return [
           item.reservationId.toString(),
           item.customerName,
-          item.courtName,
-          item.time,
-          item.date,
+          courtDisplay,
+          timeDisplay,
+          formatDateForReport(item.date),
           item.paymentMethod,
           equipmentInfo,
-          formatPrice(item.price),
+          formatPriceCompact(item.price),
           item.status.toUpperCase()
         ]
       })
 
       // Add table using autoTable
       autoTable(doc, {
-        head: [['Reservation ID', 'Customer Name', 'Court Name', 'Time', 'Date', 'Payment Method', 'Racket Rent / Duration', 'Price', 'Status']],
+        head: [[
+          'Reservation ID',
+          'Customer Name',
+          'Court / Schedule',
+          'Time Slots',
+          'Date',
+          'Payment\nMethod',
+          'Racket Rent / Duration',
+          'Price',
+          'Status',
+        ]],
         body: tableData,
-        startY: yPos + 8,
+        startY: yPos + 28,
         styles: { 
-          fontSize: 7,
-          cellPadding: 1.5,
+          fontSize: 8,
+          cellPadding: 2,
           overflow: 'linebreak',
-          cellWidth: 'wrap'
+          lineColor: [220, 220, 220],
+          lineWidth: 0.1,
+          valign: 'middle',
+          cellWidth: 'wrap',
         },
         headStyles: { 
-          fillColor: [66, 139, 202], 
+          fillColor: [71, 85, 105], 
           textColor: 255, 
           fontStyle: 'bold',
-          fontSize: 7,
-          halign: 'center'
+          fontSize: 8,
+          halign: 'center',
+          cellPadding: 3,
         },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
+        alternateRowStyles: { fillColor: [245, 248, 255] },
+        theme: 'grid',
         columnStyles: {
-          0: { cellWidth: 16, halign: 'center' }, // Reservation ID
-          1: { cellWidth: 25, halign: 'left' }, // Customer Name
-          2: { cellWidth: 16, halign: 'center' }, // Court Name
-          3: { cellWidth: 20, halign: 'center' }, // Time
-          4: { cellWidth: 20, halign: 'center' }, // Date
-          5: { cellWidth: 18, halign: 'center' }, // Payment Method
-          6: { cellWidth: 32, halign: 'left', overflow: 'linebreak' }, // Racket Rent / Duration - wrap text
-          7: { cellWidth: 18, halign: 'right' }, // Price
-          8: { cellWidth: 16, halign: 'center' } // Status
+          0: { cellWidth: 45, halign: 'center' }, // Reservation ID
+          1: { cellWidth: 95, halign: 'left' }, // Customer Name
+          2: { cellWidth: 130, halign: 'left' }, // Court / Schedule
+          3: { cellWidth: 95, halign: 'left' }, // Time Slots
+          4: { cellWidth: 65, halign: 'center' }, // Date
+          5: { cellWidth: 70, halign: 'center' }, // Payment Method
+          6: { cellWidth: 145, halign: 'left', overflow: 'linebreak' }, // Racket Rent / Duration
+          7: { cellWidth: 50, halign: 'left', cellPadding: 2 }, // Price
+          8: { cellWidth: 60, halign: 'center' }, // Status
         },
         margin: { 
-          left: 10,
-          right: 10,
-          top: searchQuery ? 48 : 42
+          left: margins.left,
+          right: margins.right,
+          top: searchQuery ? 90 : 84,
+          bottom: 50,
         },
-        tableWidth: 'wrap'
+        tableWidth: pageWidth - margins.left - margins.right
       })
 
       // Calculate summary from filtered data
@@ -179,14 +290,14 @@ const AdminSalesReport = () => {
       )
 
       // Add summary section
-      const finalY = (doc as any).lastAutoTable?.finalY || doc.internal.pageSize.height - 40
+      const finalY = (doc as any).lastAutoTable?.finalY || doc.internal.pageSize.height - 80
       doc.setFontSize(12)
-      doc.text('Summary', 14, finalY + 15)
+      doc.text('Summary', margins.left, finalY + 30)
       
       doc.setFontSize(10)
-      doc.text(`Total Reservations: ${filteredSummary.totalReservations}`, 14, finalY + 25)
-      doc.text(`Total Income: ${formatPrice(filteredSummary.totalIncome)}`, 14, finalY + 32)
-      doc.text(`Total Cancellations: ${filteredSummary.totalCancellations}`, 14, finalY + 39)
+      doc.text(`Total Reservations: ${filteredSummary.totalReservations}`, margins.left, finalY + 46)
+      doc.text(`Total Income: ${formatPrice(filteredSummary.totalIncome)}`, margins.left, finalY + 60)
+      doc.text(`Total Cancellations: ${filteredSummary.totalCancellations}`, margins.left, finalY + 74)
 
       // Save the PDF
       const filename = `Sales_Report_${periodLabel}_${date}.pdf`
@@ -199,6 +310,13 @@ const AdminSalesReport = () => {
 
   const handlePeriodChange = (period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly') => {
     setSelectedPeriod(period)
+  }
+
+  const toggleRowExpansion = (key: string) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
   }
 
   const handleLogout = () => {
@@ -250,6 +368,10 @@ const AdminSalesReport = () => {
   useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery, dateFrom, dateTo])
+
+  useEffect(() => {
+    setExpandedRows({})
+  }, [selectedPeriod, searchQuery, dateFrom, dateTo])
 
   // Helper function to parse date string to Date object
   const parseDate = (dateString: string): Date | null => {
@@ -322,6 +444,8 @@ const AdminSalesReport = () => {
     
     // Search in court name
     if (item.courtName.toLowerCase().includes(query)) return true
+
+    if (item.referenceNumber && item.referenceNumber.toLowerCase().includes(query)) return true
     
     // Search in payment method
     if (item.paymentMethod.toLowerCase().includes(query)) return true
@@ -348,6 +472,15 @@ const AdminSalesReport = () => {
         rental.hours.toString().includes(query)
       )
       if (hasMatchingEquipment) return true
+    }
+
+    if (item.relatedReservations && item.relatedReservations.length > 0) {
+      const matchRelated = item.relatedReservations.some((detail) => {
+        const courtMatch = detail.courtName?.toLowerCase().includes(query)
+        const timeMatch = formatTimeRange(detail.startTime, detail.endTime).toLowerCase().includes(query)
+        return courtMatch || timeMatch
+      })
+      if (matchRelated) return true
     }
     
     return false
@@ -615,43 +748,192 @@ const AdminSalesReport = () => {
                           </td>
                         </tr>
                       ) : (
-                        currentData.map((item, index) => (
-                          <tr 
-                            key={item.reservationId} 
-                            className={`border-b border-gray-100 transition-all duration-200 hover:bg-blue-50 ${
-                              index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                            } animate-slideIn`}
-                            style={{ animationDelay: `${index * 50}ms` }}
-                          >
-                            <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.customerName}</td>
-                            <td className="px-6 py-4 text-sm text-gray-700">{item.courtName}</td>
-                            <td className="px-6 py-4 text-sm text-gray-700">{item.time}</td>
-                            <td className="px-6 py-4 text-sm text-gray-700">{item.date}</td>
-                            <td className="px-6 py-4 text-sm font-medium text-green-600">{item.paymentMethod}</td>
-                            <td className="px-6 py-4 text-sm text-gray-700">
-                              {item.equipmentRentals && item.equipmentRentals.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
-                                  {item.equipmentRentals.slice(0, 2).map((rental, idx) => (
-                                    <div key={idx} className="flex items-center gap-2">
-                                      <span>{rental.equipmentName}</span>
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium animate-pulse-slow">
-                                        {rental.hours}h
+                        currentData.map((item, index) => {
+                          const rowKey = item.referenceNumber || item.reservationId.toString()
+                          const isExpanded = !!expandedRows[rowKey]
+                          const relatedDetails = item.relatedReservations ?? []
+                          const primaryDetail = relatedDetails[0]
+                          const additionalCourts = Math.max(0, relatedDetails.length - 1)
+                          const primaryCourt = primaryDetail?.courtName || item.courtName
+                          const primaryTime = primaryDetail
+                            ? formatTimeRange(primaryDetail.startTime, primaryDetail.endTime)
+                            : item.time
+
+                          return (
+                            <Fragment key={rowKey}>
+                              <tr 
+                                className={`border-b border-gray-100 transition-all duration-200 ${
+                                  isExpanded ? 'bg-blue-50/70' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50 hover:bg-blue-50'
+                                } animate-slideIn`}
+                                style={{ animationDelay: `${index * 50}ms` }}
+                              >
+                                <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                  <div className="flex items-start gap-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleRowExpansion(rowKey)}
+                                      aria-label={isExpanded ? 'Hide reserved courts' : 'Show reserved courts'}
+                                      className={`mt-0.5 p-1.5 rounded-full border text-gray-500 hover:text-blue-600 hover:border-blue-300 transition-colors ${
+                                        isExpanded ? 'bg-blue-100 border-blue-300 text-blue-600' : 'border-gray-200'
+                                      }`}
+                                    >
+                                      <ChevronDown
+                                        className={`w-4 h-4 transition-transform duration-200 ${
+                                          isExpanded ? 'rotate-180' : ''
+                                        }`}
+                                      />
+                                    </button>
+                                    <div>
+                                      <p className="font-semibold text-gray-900">{item.customerName}</p>
+                                      {item.referenceNumber && (
+                                        <p className="text-xs text-gray-500">Ref: {item.referenceNumber}</p>
+                                      )}
+                                      <p className="text-xs text-gray-400">Reservation #{item.reservationId}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  <div className="flex flex-col">
+                                    <span>{primaryCourt}</span>
+                                    {additionalCourts > 0 && (
+                                      <span className="text-xs text-blue-600 font-medium">
+                                        +{additionalCourts} more court{additionalCourts > 1 ? 's' : ''}
                                       </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  <div className="flex flex-col">
+                                    <span>{primaryTime}</span>
+                                    {additionalCourts > 0 && (
+                                      <span className="text-xs text-blue-600 font-medium">
+                                        +{additionalCourts} more slot{additionalCourts > 1 ? 's' : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">{item.date}</td>
+                                <td className="px-6 py-4 text-sm font-medium text-green-600">
+                                  <div className="flex flex-col">
+                                    <span>{item.paymentMethod}</span>
+                                    <span
+                                      className={`text-xs font-semibold ${
+                                        item.status === 'cancelled' ? 'text-red-500' : 'text-emerald-600'
+                                      }`}
+                                    >
+                                      {item.status.toUpperCase()}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.equipmentRentals && item.equipmentRentals.length > 0 ? (
+                                <div className="flex flex-wrap gap-3">
+                                  {item.equipmentRentals.slice(0, 2).map((rental, idx) => (
+                                    <div key={idx} className="flex flex-col text-sm text-gray-700">
+                                      <span className="font-medium text-gray-900">{rental.equipmentName}</span>
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 font-semibold">
+                                          {rental.hours}h
+                                        </span>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 font-semibold">
+                                          Qty: {rental.quantity ?? 1}
+                                        </span>
+                                      </div>
                                     </div>
                                   ))}
                                   {item.equipmentRentals.length > 2 && (
-                                    <span className="text-xs text-gray-500">+{item.equipmentRentals.length - 2} more</span>
+                                    <span className="text-xs text-gray-400">
+                                      +{item.equipmentRentals.length - 2} more
+                                    </span>
                                   )}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400">None</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">None</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                                  {formatPrice(item.price)}
+                                </td>
+                              </tr>
+                              {isExpanded && (
+                                <tr className="bg-blue-50/60 border-b border-blue-100">
+                                  <td colSpan={7} className="px-6 py-4">
+                                    <div className="flex flex-col gap-3">
+                                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                        <span>Courts & schedules</span>
+                                      </div>
+                                      {relatedDetails.length > 0 ? (
+                                        <div className="grid gap-3 lg:grid-cols-2">
+                                          {relatedDetails
+                                            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                            .map((detail) => (
+                                              <div
+                                                key={`${rowKey}-detail-${detail.id}`}
+                                                className="p-3 bg-white rounded-xl border border-blue-100 shadow-sm flex flex-col gap-2"
+                                              >
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-sm font-semibold text-gray-900">
+                                                    {detail.courtName}
+                                                  </span>
+                                                  <span
+                                                    className={`text-xs font-semibold ${
+                                                      detail.status === 'Cancelled' ? 'text-red-500' : 'text-emerald-600'
+                                                    }`}
+                                                  >
+                                                    {(detail.status || item.status).toUpperCase()}
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm text-gray-600">
+                                                  <span>{formatTimeRange(detail.startTime, detail.endTime)}</span>
+                                                  <span className="font-semibold text-gray-900">
+                                                    {formatPrice(detail.price ?? item.price)}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-gray-600">
+                                          Only a single court reservation was recorded for this entry.
+                                        </p>
+                                      )}
+                                      {item.equipmentRentals && item.equipmentRentals.length > 0 && (
+                                        <div className="mt-4">
+                                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-blue-700 mb-2">
+                                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                            <span>Racket rentals</span>
+                                          </div>
+                                          <div className="grid gap-3 lg:grid-cols-2">
+                                            {item.equipmentRentals.map((rental, rentalIdx) => (
+                                              <div
+                                                key={`${rowKey}-rental-${rentalIdx}`}
+                                                className="p-3 bg-white rounded-xl border border-indigo-100 shadow-sm flex flex-col gap-2"
+                                              >
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-sm font-semibold text-gray-900">
+                                                    {rental.equipmentName}
+                                                  </span>
+                                                  <span className="text-xs font-semibold text-emerald-600">
+                                                    Qty: {rental.quantity ?? 1}
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-sm text-gray-600">
+                                                  <span>Duration</span>
+                                                  <span className="font-semibold text-gray-900">{rental.hours}h</span>
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
                               )}
-                            </td>
-                            <td className="px-6 py-4 text-sm font-semibold text-green-600">
-                              {formatPrice(item.price)}
-                            </td>
-                          </tr>
-                        ))
+                            </Fragment>
+                          )
+                        })
                       )}
                     </tbody>
                   </table>

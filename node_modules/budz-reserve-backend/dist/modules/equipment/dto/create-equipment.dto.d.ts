@@ -4,4 +4,7 @@ export declare class CreateEquipmentDto {
     price: number;
     status?: string;
     image_path?: string;
+    unit?: string | null;
+    weight?: string | null;
+    tension?: string | null;
 }

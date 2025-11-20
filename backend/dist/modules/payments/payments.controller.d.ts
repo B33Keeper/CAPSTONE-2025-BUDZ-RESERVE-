@@ -16,6 +16,16 @@ export declare class PaymentsController {
             price: number;
             status: string;
             equipmentRentals: any[];
+            referenceNumber: string;
+            relatedReservations: {
+                id: number;
+                courtName: string;
+                startTime: string;
+                endTime: string;
+                status: import("../reservations/entities/reservation.entity").ReservationStatus;
+                price: number;
+                date: Date;
+            }[];
         }[];
         summary: {
             totalReservations: number;

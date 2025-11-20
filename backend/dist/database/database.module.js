@@ -21,6 +21,8 @@ const time_slot_entity_1 = require("../modules/time-slots/entities/time-slot.ent
 const gallery_entity_1 = require("../modules/gallery/entities/gallery.entity");
 const suggestion_entity_1 = require("../modules/suggestions/entities/suggestion.entity");
 const announcement_entity_1 = require("../modules/announcements/entities/announcement.entity");
+const queue_player_entity_1 = require("../modules/queue-players/entities/queue-player.entity");
+const queueing_court_entity_1 = require("../modules/queueing-courts/entities/queueing-court.entity");
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -36,11 +38,21 @@ exports.DatabaseModule = DatabaseModule = __decorate([
                     username: configService.get('DB_USERNAME', 'root'),
                     password: configService.get('DB_PASSWORD', ''),
                     database: configService.get('DB_DATABASE', 'budz_reserve'),
-                    entities: [user_entity_1.User, court_entity_1.Court, equipment_entity_1.Equipment, reservation_entity_1.Reservation, payment_entity_1.Payment, equipment_rental_entity_1.EquipmentRental, equipment_rental_item_entity_1.EquipmentRentalItem, time_slot_entity_1.TimeSlot, gallery_entity_1.Gallery, suggestion_entity_1.Suggestion, announcement_entity_1.Announcement],
+                    entities: [user_entity_1.User, court_entity_1.Court, equipment_entity_1.Equipment, reservation_entity_1.Reservation, payment_entity_1.Payment, equipment_rental_entity_1.EquipmentRental, equipment_rental_item_entity_1.EquipmentRentalItem, time_slot_entity_1.TimeSlot, gallery_entity_1.Gallery, suggestion_entity_1.Suggestion, announcement_entity_1.Announcement, queue_player_entity_1.QueuePlayer, queueing_court_entity_1.QueueingCourt],
                     synchronize: configService.get('NODE_ENV') === 'development',
                     logging: configService.get('NODE_ENV') === 'development',
                     migrations: ['dist/database/migrations/*.js'],
                     migrationsRun: true,
+                    extra: {
+                        connectionLimit: 10,
+                        connectTimeout: 30000,
+                        acquireTimeout: 30000,
+                        timeout: 30000,
+                    },
+                    retryAttempts: 5,
+                    retryDelay: 3000,
+                    autoLoadEntities: true,
+                    keepConnectionAlive: true,
                 }),
                 inject: [config_1.ConfigService],
             }),

@@ -7,6 +7,7 @@ import { PaymentController } from './payment.controller';
 import { WebhookController } from './webhook.controller';
 import { PayMongoService } from './paymongo.service';
 import { EmailReceiptService } from './email-receipt.service';
+import { EquipmentRentalSchedulerService } from './equipment-rental-scheduler.service';
 import { Payment } from './entities/payment.entity';
 import { EquipmentRental } from './entities/equipment-rental.entity';
 import { EquipmentRentalItem } from './entities/equipment-rental-item.entity';
@@ -23,7 +24,7 @@ import { CourtsModule } from '../courts/courts.module';
     MailerModule,
   ],
   controllers: [PaymentsController, PaymentController, WebhookController],
-  providers: [PaymentsService, PayMongoService, EmailReceiptService],
+  providers: [PaymentsService, PayMongoService, EmailReceiptService, EquipmentRentalSchedulerService],
   exports: [PaymentsService, PayMongoService, EmailReceiptService],
 })
 export class PaymentsModule {}

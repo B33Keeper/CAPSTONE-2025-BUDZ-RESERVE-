@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateUserDto = void 0;
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
 const mapped_types_1 = require("@nestjs/mapped-types");
 const create_user_dto_1 = require("./create-user.dto");
 class UpdateUserDto extends (0, mapped_types_1.PartialType)(create_user_dto_1.CreateUserDto) {
@@ -30,6 +31,13 @@ __decorate([
     __metadata("design:type", Number)
 ], UpdateUserDto.prototype, "age", void 0);
 __decorate([
+    (0, class_transformer_1.Transform)(({ value }) => {
+        if (typeof value !== 'string') {
+            return undefined;
+        }
+        const normalized = value.replace(/[\s-]/g, '').trim();
+        return normalized.length === 0 ? undefined : normalized;
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.Length)(10, 20),

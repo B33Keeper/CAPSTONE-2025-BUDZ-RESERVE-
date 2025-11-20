@@ -5,6 +5,9 @@ export declare class Equipment {
     price: number;
     status: string;
     image_path: string;
+    unit: string | null;
+    weight: string | null;
+    tension: string | null;
     created_at: Date;
     updated_at: Date;
 }

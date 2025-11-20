@@ -21,8 +21,22 @@ let EquipmentService = class EquipmentService {
     constructor(equipmentRepository) {
         this.equipmentRepository = equipmentRepository;
     }
+    normalizePayload(payload) {
+        const normalizeString = (value) => {
+            if (value === undefined)
+                return undefined;
+            const trimmed = value?.toString().trim() ?? '';
+            return trimmed.length > 0 ? trimmed : null;
+        };
+        return {
+            ...payload,
+            unit: normalizeString(payload.unit),
+            weight: normalizeString(payload.weight),
+            tension: normalizeString(payload.tension),
+        };
+    }
     async create(createEquipmentDto) {
-        const equipment = this.equipmentRepository.create(createEquipmentDto);
+        const equipment = this.equipmentRepository.create(this.normalizePayload(createEquipmentDto));
         return this.equipmentRepository.save(equipment);
     }
     async findAll() {
@@ -41,7 +55,7 @@ let EquipmentService = class EquipmentService {
     }
     async update(id, updateEquipmentDto) {
         const equipment = await this.findOne(id);
-        await this.equipmentRepository.update(id, updateEquipmentDto);
+        await this.equipmentRepository.update(id, this.normalizePayload(updateEquipmentDto));
         return this.findOne(id);
     }
     async remove(id) {

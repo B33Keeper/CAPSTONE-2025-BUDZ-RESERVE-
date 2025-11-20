@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, Like } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -17,6 +17,8 @@ import { PaymongoQrPhCode } from '../payments/types/paymongo.types';
 
 @Injectable()
 export class ReservationsService {
+  private readonly logger = new Logger(ReservationsService.name);
+
   constructor(
     @InjectRepository(Reservation)
     private reservationsRepository: Repository<Reservation>,
@@ -717,6 +719,7 @@ export class ReservationsService {
 
     let equipmentHandled = false;
     let effectiveReferenceNumber = referenceNumber || '';
+    let sharedReferenceNumber = referenceNumber || '';
 
     for (const courtBooking of sortedCourtBookings) {
       const courts = await this.courtsService.findAll();
@@ -728,6 +731,10 @@ export class ReservationsService {
 
       const [startTime, endTime] = this.parseScheduleToTimes(courtBooking.schedule);
 
+      if (!sharedReferenceNumber) {
+        sharedReferenceNumber = `REF${Date.now()}${Math.floor(Math.random() * 1000)}`;
+      }
+
       const reservation = this.reservationsRepository.create({
         User_ID: userId,
         Court_ID: court.Court_Id,
@@ -735,7 +742,7 @@ export class ReservationsService {
         Start_Time: startTime,
         End_Time: endTime,
         Total_Amount: courtBooking.subtotal,
-        Reference_Number: referenceNumber || `REF${Date.now()}`,
+        Reference_Number: sharedReferenceNumber,
         Notes: `${reservationNotePrefix} - ${customerDetailsNote}`,
         Status: ReservationStatus.CONFIRMED,
         Is_Admin_Created: true,
@@ -770,7 +777,7 @@ export class ReservationsService {
       reservations,
       totalAmount,
       referenceNumber:
-        effectiveReferenceNumber || referenceNumber || reservations[0].Reference_Number,
+        effectiveReferenceNumber || sharedReferenceNumber || reservations[0].Reference_Number,
     };
   }
 
@@ -907,20 +914,22 @@ export class ReservationsService {
         );
       }
 
-      const reservedQuantity = await this.getReservedQuantityForRange(
-        equipmentRow.id,
-        reservationDate,
-        bookingStartTime,
-        bookingHours,
-        excludeReservationId,
-      );
+      // Reload equipment to get latest stock value (after any concurrent deductions)
+      const currentEquipment = await this.equipmentRepository.findOne({
+        where: { id: equipmentRow.id },
+      });
 
-      const remaining = equipmentRow.stocks - reservedQuantity;
+      if (!currentEquipment) {
+        throw new BadRequestException(`Equipment "${equipmentRow.equipment_name}" not found.`);
+      }
 
-      if (remaining < quantity) {
+      // Since stock is deducted when rentals are created, currentEquipment.stocks 
+      // already reflects available stock after all active rentals.
+      // Check if there's enough stock available
+      if (currentEquipment.stocks < quantity) {
         throw new BadRequestException(
           `Not enough stock for ${equipmentRow.equipment_name} on ${reservationDate} at ${bookingStartTime}. ` +
-            `Remaining: ${Math.max(remaining, 0)}`,
+            `Available: ${currentEquipment.stocks}, Requested: ${quantity}`,
         );
       }
     }
@@ -955,52 +964,165 @@ export class ReservationsService {
       const hours = this.parseHours(b.time);
       const quantity = b.quantity && b.quantity > 0 ? b.quantity : 1;
 
-      let equipmentRow = await this.equipmentRepository.findOne({ where: { equipment_name: Like(`%${b.equipment}%`) } });
+      // Try exact match first (most reliable)
+      let equipmentRow = await this.equipmentRepository.findOne({ 
+        where: { equipment_name: b.equipment } 
+      });
+      
+      // If exact match fails, try case-insensitive exact match
       if (!equipmentRow) {
-        const fallbackRow = await this.equipmentRepository.findOne({ where: { equipment_name: b.equipment } });
-        if (fallbackRow) {
-          equipmentRow = fallbackRow;
+        equipmentRow = await this.equipmentRepository.findOne({ 
+          where: { equipment_name: Like(b.equipment) } 
+        });
+      }
+      
+      // If still not found, try partial match but log a warning
+      if (!equipmentRow) {
+        const partialMatch = await this.equipmentRepository.findOne({ 
+          where: { equipment_name: Like(`%${b.equipment}%`) } 
+        });
+        if (partialMatch) {
+          this.logger.warn(
+            `Equipment name "${b.equipment}" matched partially to "${partialMatch.equipment_name}" (ID: ${partialMatch.id}). ` +
+            `Using partial match, but this may not be the intended equipment.`
+          );
+          equipmentRow = partialMatch;
         }
       }
-
-      if (equipmentRow) {
-        const reservationDate = this.formatDateOnly(reservation.Reservation_Date);
-        const bookingStartTime = this.ensureTimeFormat(b.startTime ?? normalizedDefaultStart);
-        if (!bookingStartTime) {
-          throw new BadRequestException(
-            `Missing start time for equipment rental of ${equipmentRow.equipment_name}. Please select a court schedule first.`,
-          );
-        }
-
-        const reservedQuantity = await this.getReservedQuantityForRange(
-          equipmentRow.id,
-          reservationDate,
-          bookingStartTime,
-          hours,
-          reservation.Reservation_ID,
+      
+      // If equipment still not found, throw error instead of silently using equipment_id = 0
+      if (!equipmentRow) {
+        this.logger.error(
+          `Equipment not found for name "${b.equipment}". Cannot create rental item.`
         );
-        const remaining = equipmentRow.stocks - reservedQuantity;
-
-        if (remaining < quantity) {
-          throw new BadRequestException(
-            `Not enough stock for ${equipmentRow.equipment_name} on ${reservationDate} at ${bookingStartTime}. ` +
-              `Remaining: ${Math.max(remaining, 0)}`,
-          );
-        }
+        throw new BadRequestException(
+          `Equipment "${b.equipment}" not found. Please check the equipment name.`
+        );
       }
+
+      // Reload equipment to get latest stock value before checking availability
+      const currentEquipment = await this.equipmentRepository.findOne({
+        where: { id: equipmentRow.id },
+      });
+
+      if (!currentEquipment) {
+        throw new BadRequestException(`Equipment "${equipmentRow.equipment_name}" (ID: ${equipmentRow.id}) not found.`);
+      }
+
+      const reservationDate = this.formatDateOnly(reservation.Reservation_Date);
+      const bookingStartTime = this.ensureTimeFormat(b.startTime ?? normalizedDefaultStart);
+      if (!bookingStartTime) {
+        throw new BadRequestException(
+          `Missing start time for equipment rental of ${currentEquipment.equipment_name}. Please select a court schedule first.`,
+        );
+      }
+
+      // Since stock is deducted when rentals are created, currentEquipment.stocks 
+      // already reflects available stock after all active rentals.
+      // Check if there's enough stock available
+      if (currentEquipment.stocks < quantity) {
+        throw new BadRequestException(
+          `Not enough stock for ${currentEquipment.equipment_name} on ${reservationDate} at ${bookingStartTime}. ` +
+            `Available: ${currentEquipment.stocks}, Requested: ${quantity}`,
+        );
+      }
+
+      // Update equipmentRow to use current equipment for stock deduction later
+      equipmentRow = currentEquipment;
 
       const hourlyPrice = equipmentRow ? Number(equipmentRow.price) : Number(((b.subtotal || 0) / Math.max(1, hours * quantity)).toFixed(2)) || 0;
       const subtotal = b.subtotal != null && b.subtotal > 0 ? Number(b.subtotal) : Number((hourlyPrice * hours * quantity).toFixed(2));
 
+      // Ensure equipmentRow exists before creating rental item
+      if (!equipmentRow || !equipmentRow.id) {
+        this.logger.error(
+          `Invalid equipment row when creating rental item for "${b.equipment}". ` +
+          `equipmentRow: ${JSON.stringify(equipmentRow)}`
+        );
+        throw new BadRequestException(
+          `Cannot create rental item: Equipment "${b.equipment}" not found or invalid.`
+        );
+      }
+
       const item = this.equipmentRentalItemRepository.create({
         rental_id: savedRental.id,
-        equipment_id: equipmentRow ? equipmentRow.id : 0,
+        equipment_id: equipmentRow.id,
         quantity,
         hours,
         hourly_price: hourlyPrice,
         subtotal,
       });
       await this.equipmentRentalItemRepository.save(item);
+      
+      // Deduct stock from equipment when rental is created
+      // equipmentRow is guaranteed to exist and have an id at this point
+      if (equipmentRow && equipmentRow.id) {
+        try {
+          // Reload equipment to get latest stock value before deducting
+          const currentEquipment = await this.equipmentRepository.findOne({
+            where: { id: equipmentRow.id },
+          });
+          
+          if (!currentEquipment) {
+            this.logger.error(
+              `Equipment not found for ID ${equipmentRow.id} when trying to deduct stock`
+            );
+            throw new BadRequestException(
+              `Equipment "${equipmentRow.equipment_name}" not found for stock deduction`
+            );
+          }
+          
+          if (currentEquipment.stocks >= quantity) {
+            const previousStock = currentEquipment.stocks;
+            const newStock = previousStock - quantity;
+            
+            const updateResult = await this.equipmentRepository.update(currentEquipment.id, {
+              stocks: newStock
+            });
+            
+            // Verify the update was successful
+            if (updateResult.affected && updateResult.affected > 0) {
+              // Reload to verify the update was committed
+              const updatedEquipment = await this.equipmentRepository.findOne({
+                where: { id: currentEquipment.id },
+              });
+              
+              if (updatedEquipment && updatedEquipment.stocks === newStock) {
+                this.logger.log(
+                  `Successfully deducted ${quantity} stock from ${currentEquipment.equipment_name}. ` +
+                  `Previous: ${previousStock}, New: ${newStock}, Verified: ${updatedEquipment.stocks}`
+                );
+              } else {
+                this.logger.error(
+                  `Stock deduction may have failed for ${currentEquipment.equipment_name}. ` +
+                  `Expected: ${newStock}, Actual: ${updatedEquipment?.stocks || 'unknown'}`
+                );
+              }
+            } else {
+              this.logger.error(
+                `Failed to update stock for ${currentEquipment.equipment_name}. Update affected 0 rows.`
+              );
+            }
+          } else {
+            this.logger.warn(
+              `Cannot deduct ${quantity} stock from ${equipmentRow.equipment_name}. ` +
+              `Current stock: ${currentEquipment.stocks}, Requested: ${quantity}`
+            );
+            throw new BadRequestException(
+              `Insufficient stock for ${equipmentRow.equipment_name}. ` +
+              `Available: ${currentEquipment.stocks}, Requested: ${quantity}`
+            );
+          }
+        } catch (error) {
+          this.logger.error(
+            `Error deducting stock for equipment ${equipmentRow.equipment_name}:`,
+            error
+          );
+          // Re-throw to prevent the rental from being created if stock deduction fails
+          throw error;
+        }
+      }
+      
       total += subtotal;
     }
 

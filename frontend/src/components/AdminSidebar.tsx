@@ -15,17 +15,9 @@ export interface AdminSidebarProps {
 }
 
 export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpandedChange }: AdminSidebarProps) {
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false)
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const navigate = useNavigate()
-
-  // Auto-expand sidebar on mount for better UX
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsSidebarExpanded(true)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [])
 
   // Notify parent when expansion changes
   useEffect(() => {
@@ -141,11 +133,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpande
 
       {/* Desktop Sidebar */}
       <div 
-        className={`hidden md:block transition-all duration-300 ease-in-out sticky top-14 sm:top-16 z-30 self-start h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] overflow-y-auto border-r border-gray-200 bg-white shadow-sm scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent ${
-          isSidebarExpanded ? 'w-64' : 'w-16'
-        }`}
-        onMouseEnter={() => setIsSidebarExpanded(true)}
-        onMouseLeave={() => setIsSidebarExpanded(false)}
+        className={`hidden md:block transition-all duration-300 ease-in-out sticky top-14 sm:top-16 z-30 self-start h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] overflow-y-auto border-r border-gray-200 bg-white shadow-sm scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent w-64`}
       >
         {/* Custom Scrollbar Styles */}
         <style dangerouslySetInnerHTML={{ __html: `

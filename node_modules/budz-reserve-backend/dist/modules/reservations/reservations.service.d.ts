@@ -21,6 +21,7 @@ export declare class ReservationsService {
     private courtsService;
     private equipmentService;
     private payMongoService;
+    private readonly logger;
     constructor(reservationsRepository: Repository<Reservation>, paymentRepository: Repository<Payment>, equipmentRentalRepository: Repository<EquipmentRental>, equipmentRentalItemRepository: Repository<EquipmentRentalItem>, equipmentRepository: Repository<Equipment>, userRepository: Repository<User>, courtsService: CourtsService, equipmentService: EquipmentService, payMongoService: PayMongoService);
     create(createReservationDto: CreateReservationDto, userId: number): Promise<Reservation>;
     getEquipmentAvailabilityByDate(dateInput: string, startTime?: string, hoursParam?: number): Promise<{

@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import { Repository } from 'typeorm';
 import { PayMongoService } from './paymongo.service';
 import { EmailReceiptService } from './email-receipt.service';
@@ -45,7 +46,9 @@ export declare class WebhookController {
         message: string;
         error: any;
     }>;
-    handlePaymongoWebhook(body: PaymongoWebhookEvent, signature: string): Promise<{
+    handlePaymongoWebhook(body: PaymongoWebhookEvent, signature: string | string[], req: Request & {
+        rawBody?: Buffer;
+    }): Promise<{
         success: boolean;
         message: string;
     }>;

@@ -9,6 +9,18 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { getErrorMessage } from '@/lib/errorUtils'
 import { CONTACT_NUMBER_REGEX, PASSWORD_REGEX, USERNAME_REGEX } from '@/lib/validation'
 
+const contactNumberSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') return value
+    const normalized = value.replace(/[\s-]/g, '').trim()
+    return normalized.length === 0 ? undefined : normalized
+  },
+  z.union([
+    z.string().regex(CONTACT_NUMBER_REGEX, 'Contact number must contain 10 to 15 digits and may start with +'),
+    z.undefined(),
+  ])
+)
+
 const signupSchema = z
   .object({
     name: z
@@ -53,18 +65,7 @@ const signupSchema = z
       .max(128, 'Password must be at most 128 characters')
       .regex(PASSWORD_REGEX, 'Password must contain uppercase, lowercase, number, and special character'),
     confirmPassword: z.string({ required_error: 'Please confirm your password' }),
-    contact_number: z
-      .preprocess(
-        (value) => {
-          if (typeof value !== 'string') return value
-          const normalized = value.replace(/[\s-]/g, '').trim()
-          return normalized.length === 0 ? undefined : normalized
-        },
-        z
-          .string()
-          .regex(CONTACT_NUMBER_REGEX, 'Contact number must contain 10 to 15 digits and may start with +')
-      )
-      .optional(),
+    contact_number: contactNumberSchema,
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -187,26 +188,26 @@ export function SignupPage() {
             </div>
           </div>
 
-          {/* Sex Field - Full Width */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3 text-center">Sex</label>
-            <div className="flex space-x-6 justify-center">
-              {['Male', 'Female'].map((sex) => (
-                <label key={sex} className="flex items-center">
-                  <input
-                    {...register('sex')}
-                    type="radio"
-                    value={sex}
-                    className="mr-2 text-blue-500 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">{sex}</span>
-                </label>
-              ))}
-            </div>
-            {errors.sex && (
-              <p className="mt-1 text-sm text-red-600 text-center">{errors.sex.message}</p>
-            )}
+        {/* Sex Field - Inline */}
+        <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-center sm:space-y-0 sm:space-x-4">
+          <label className="text-sm font-medium text-gray-700 sm:w-auto sm:pr-2 sm:text-right">Sex:</label>
+          <div className="flex space-x-4">
+            {['Male', 'Female'].map((sex) => (
+              <label key={sex} className="flex items-center">
+                <input
+                  {...register('sex')}
+                  type="radio"
+                  value={sex}
+                  className="mr-2 text-blue-500 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{sex}</span>
+              </label>
+            ))}
           </div>
+        </div>
+        {errors.sex && (
+          <p className="mt-1 text-sm text-red-600">{errors.sex.message}</p>
+        )}
 
           {/* Second Row - Username and Email */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

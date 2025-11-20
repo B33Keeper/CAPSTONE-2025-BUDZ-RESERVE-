@@ -29,16 +29,16 @@ export class CreateEquipmentDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(12)
   unit?: string | null;
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(5)
   weight?: string | null;
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(5)
   tension?: string | null;
 }

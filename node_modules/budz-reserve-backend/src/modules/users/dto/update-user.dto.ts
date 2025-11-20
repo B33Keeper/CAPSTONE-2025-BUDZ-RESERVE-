@@ -1,4 +1,5 @@
 import { IsOptional, IsString, IsInt, Min, Max, Length, IsEmail } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateUserDto } from './create-user.dto';
 
@@ -14,6 +15,13 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @Max(120)
   age?: number;
 
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const normalized = value.replace(/[\s-]/g, '').trim();
+    return normalized.length === 0 ? undefined : normalized;
+  })
   @IsOptional()
   @IsString()
   @Length(10, 20)

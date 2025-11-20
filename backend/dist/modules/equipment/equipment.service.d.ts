@@ -5,6 +5,7 @@ import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 export declare class EquipmentService {
     private equipmentRepository;
     constructor(equipmentRepository: Repository<Equipment>);
+    private normalizePayload;
     create(createEquipmentDto: CreateEquipmentDto): Promise<Equipment>;
     findAll(): Promise<Equipment[]>;
     findOne(id: number): Promise<Equipment>;

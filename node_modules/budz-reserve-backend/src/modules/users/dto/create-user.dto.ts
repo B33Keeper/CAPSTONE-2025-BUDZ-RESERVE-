@@ -1,4 +1,5 @@
 import { IsEmail, IsString, IsOptional, IsEnum, IsInt, Min, Max, Length, Matches } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { Gender } from '../entities/user.entity';
 
 export class CreateUserDto {
@@ -31,6 +32,13 @@ export class CreateUserDto {
   })
   password: string;
 
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const normalized = value.replace(/[\s-]/g, '').trim();
+    return normalized.length === 0 ? undefined : normalized;
+  })
   @IsOptional()
   @IsString()
   @Length(10, 20)
