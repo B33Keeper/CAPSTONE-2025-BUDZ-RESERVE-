@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { api } from '@/lib/api'
+import { resolveImageUrl } from '@/lib/imageUtils'
 
 interface User {
   id: number
@@ -50,8 +51,8 @@ export const useAuthStore = create<AuthState>()(
           const { access_token, user } = response.data
 
           // Convert profile picture path to full URL if it exists
-          if (user.profile_picture && !user.profile_picture.startsWith('http')) {
-            user.profile_picture = `http://localhost:3001${user.profile_picture}`
+          if (user.profile_picture) {
+            user.profile_picture = resolveImageUrl(user.profile_picture)
           }
 
           localStorage.setItem('access_token', access_token)
@@ -76,8 +77,8 @@ export const useAuthStore = create<AuthState>()(
 
       authenticate: ({ user, access_token }) => {
         const normalizedUser = { ...user }
-        if (normalizedUser.profile_picture && !normalizedUser.profile_picture.startsWith('http')) {
-          normalizedUser.profile_picture = `http://localhost:3001${normalizedUser.profile_picture}`
+        if (normalizedUser.profile_picture) {
+          normalizedUser.profile_picture = resolveImageUrl(normalizedUser.profile_picture)
         }
 
         localStorage.setItem('access_token', access_token)
@@ -95,8 +96,8 @@ export const useAuthStore = create<AuthState>()(
           const { access_token, user } = response.data
 
           // Convert profile picture path to full URL if it exists
-          if (user.profile_picture && !user.profile_picture.startsWith('http')) {
-            user.profile_picture = `http://localhost:3001${user.profile_picture}`
+          if (user.profile_picture) {
+            user.profile_picture = resolveImageUrl(user.profile_picture)
           }
 
           localStorage.setItem('access_token', access_token)
@@ -140,8 +141,8 @@ export const useAuthStore = create<AuthState>()(
           const user = response.data
 
           // Convert profile picture path to full URL if it exists
-          if (user.profile_picture && !user.profile_picture.startsWith('http')) {
-            user.profile_picture = `http://localhost:3001${user.profile_picture}`
+          if (user.profile_picture) {
+            user.profile_picture = resolveImageUrl(user.profile_picture)
           }
 
           set({

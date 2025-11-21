@@ -44,6 +44,21 @@ export interface QueuePlayer {
   lastPlayed: string | null
 }
 
+export interface QueuePlayerHistory {
+  id: number
+  userId: number
+  originalId: number
+  name: string
+  sex: 'male' | 'female'
+  skill: 'Beginner' | 'Intermediate' | 'Advanced'
+  gamesPlayed: number
+  status: 'In Queue' | 'Waiting' | 'In Match'
+  lastPlayed: string | Date | null
+  createdAt: string
+  updatedAt: string
+  archivedAt: string | Date
+}
+
 export type QueueingCourtStatus = 'available' | 'occupied' | 'maintenance' | 'unavailable'
 
 export interface QueueingCourt {
@@ -78,6 +93,23 @@ export interface QueueMatch {
   winner: 'teamA' | 'teamB' | 'draw' | null
   createdAt: string
   updatedAt: string
+}
+
+export interface QueueMatchHistory {
+  id: number
+  userId: number
+  originalId: number
+  gameType: QueueMatchGameType
+  teamA: QueueMatchPlayer[]
+  teamB: QueueMatchPlayer[]
+  courtId: number | null
+  courtName: string | null
+  startedAt: string | Date | null
+  completedAt: string | Date | null
+  winner: 'teamA' | 'teamB' | 'draw' | null
+  createdAt: string
+  updatedAt: string
+  archivedAt: string | Date
 }
 
 export interface Reservation {
@@ -190,6 +222,16 @@ export const apiServices = {
     return response.data
   },
 
+  async getQueuePlayersHistory() {
+    const response = await api.get('/queue-players/history')
+    return response.data
+  },
+
+  async migratePlayers() {
+    const response = await api.post('/queue-players/migrate')
+    return response.data
+  },
+
   async createQueuePlayer(data: {
     name: string
     sex: 'male' | 'female'
@@ -218,6 +260,16 @@ export const apiServices = {
     await api.delete(`/queue-players/${id}`)
   },
 
+  async savePlayersToHistory() {
+    const response = await api.post('/queue-players/save-to-history')
+    return response.data
+  },
+
+  async clearPlayersHistory() {
+    const response = await api.delete('/queue-players/history')
+    return response.data
+  },
+
   async generateQueueMatches(payload: { gameType: QueueMatchGameType }) {
     const response = await api.post('/queue-matches/generate', payload)
     return response.data
@@ -235,6 +287,11 @@ export const apiServices = {
 
   async getQueueMatches(params?: { status?: QueueMatchStatus }): Promise<QueueMatch[]> {
     const response = await api.get('/queue-matches', { params })
+    return response.data
+  },
+
+  async getQueueMatchesHistory(): Promise<QueueMatchHistory[]> {
+    const response = await api.get('/queue-matches/history')
     return response.data
   },
 

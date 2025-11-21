@@ -41,6 +41,9 @@ export class QueueMatch {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ name: 'user_id', type: 'int' })
+  userId: number;
+
   @Column({ type: 'enum', enum: QueueMatchGameType })
   gameType: QueueMatchGameType;
 

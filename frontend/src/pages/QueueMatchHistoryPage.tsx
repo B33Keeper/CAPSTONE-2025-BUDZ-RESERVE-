@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { QueueingShell } from '@/components/QueueingShell'
-import { apiServices, type QueueMatch } from '@/lib/apiServices'
+import { apiServices, type QueueMatchHistory } from '@/lib/apiServices'
 
-function PlayerBadge({ player }: { player: QueueMatch['teamA'][number] }) {
+function PlayerBadge({ player }: { player: QueueMatchHistory['teamA'][number] }) {
   const isMale = player.sex === 'male'
   const sexClasses = isMale ? 'bg-sky-500/15 text-sky-200' : 'bg-pink-500/15 text-pink-200'
   return (
@@ -50,7 +50,7 @@ function DrawBadge() {
 }
 
 export function QueueMatchHistoryPage() {
-  const [matches, setMatches] = useState<QueueMatch[]>([])
+  const [matches, setMatches] = useState<QueueMatchHistory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedHistoryDate, setSelectedHistoryDate] = useState<string | null>(null)
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false)
@@ -65,8 +65,8 @@ export function QueueMatchHistoryPage() {
       try {
         setLoading(true)
         setError(null)
-        const completedMatches = await apiServices.getQueueMatches({ status: 'completed' })
-        setMatches(completedMatches)
+        const historyMatches = await apiServices.getQueueMatchesHistory()
+        setMatches(historyMatches)
       } catch (err) {
         console.error('[QueueMatchHistoryPage] Failed to load matches:', err)
         setError('Unable to load match history. Please try again later.')
@@ -78,39 +78,31 @@ export function QueueMatchHistoryPage() {
     void fetchMatches()
   }, [])
 
-  // Group matches by completion date
+  // Group matches by archived date (using local timezone)
   const matchesByDate = useMemo(() => {
     return matches.reduce((acc, match) => {
-      const completedDate = match.completedAt ? match.completedAt.slice(0, 10) : null
-      if (!completedDate) {
+      if (!match.archivedAt) {
         return acc
       }
-      if (!acc[completedDate]) {
-        acc[completedDate] = []
+      // Convert to local date to match what's displayed
+      const archivedDateObj = new Date(match.archivedAt)
+      const year = archivedDateObj.getFullYear()
+      const month = String(archivedDateObj.getMonth() + 1).padStart(2, '0')
+      const day = String(archivedDateObj.getDate()).padStart(2, '0')
+      const archivedDate = `${year}-${month}-${day}`
+      
+      if (!acc[archivedDate]) {
+        acc[archivedDate] = []
       }
-      acc[completedDate].push(match)
+      acc[archivedDate].push(match)
       return acc
-    }, {} as Record<string, QueueMatch[]>)
+    }, {} as Record<string, QueueMatchHistory[]>)
   }, [matches])
 
   // Extract unique dates that have matches, sorted descending
   const historyDates = useMemo(() => {
     return Object.keys(matchesByDate).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
   }, [matchesByDate])
-
-  // Auto-select first date when dates are available
-  useEffect(() => {
-    if (historyDates.length === 0) {
-      if (selectedHistoryDate !== null) {
-        setSelectedHistoryDate(null)
-      }
-      return
-    }
-
-    if (!selectedHistoryDate || !historyDates.includes(selectedHistoryDate)) {
-      setSelectedHistoryDate(historyDates[0])
-    }
-  }, [historyDates, selectedHistoryDate])
 
   // Close dropdown when clicking outside
   useEffect(() => {

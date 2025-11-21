@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { QueueingShell } from '@/components/QueueingShell'
-import { apiServices, QueueMatchGameType, QueuePlayer } from '@/lib/apiServices'
+import { apiServices, QueueMatchGameType, QueuePlayer, QueueMatch, QueuePlayerHistory } from '@/lib/apiServices'
 import toast from 'react-hot-toast'
 
 interface DropdownOption {
@@ -150,6 +150,10 @@ export function QueuePlayersPage() {
   const [players, setPlayers] = useState<QueuePlayer[]>([])
   const [playersLoading, setPlayersLoading] = useState(true)
   const [playersError, setPlayersError] = useState<string | null>(null)
+  const [historyPlayers, setHistoryPlayers] = useState<QueuePlayerHistory[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [activeMatches, setActiveMatches] = useState<QueueMatch[]>([])
+  const [pendingMatches, setPendingMatches] = useState<QueueMatch[]>([])
   const [isAddingPlayer, setIsAddingPlayer] = useState(false)
   const [deletingPlayerIds, setDeletingPlayerIds] = useState<Set<number>>(new Set())
   const [playerToDelete, setPlayerToDelete] = useState<{ id: number; name: string } | null>(null)
@@ -166,6 +170,12 @@ export function QueuePlayersPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isGeneratingMatches, setIsGeneratingMatches] = useState(false)
   const [historyPage, setHistoryPage] = useState(1)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [isClearingPlayers, setIsClearingPlayers] = useState(false)
+  const [isSavingPlayers, setIsSavingPlayers] = useState(false)
+  const [isClearingHistory, setIsClearingHistory] = useState(false)
+  const [showClearHistoryConfirm, setShowClearHistoryConfirm] = useState(false)
+  const [isMigratingPlayers, setIsMigratingPlayers] = useState(false)
 
   const toggleSexSelection = useCallback(
     (sex: PlayerSex) => {
@@ -225,18 +235,109 @@ export function QueuePlayersPage() {
     }
   }, [])
 
+  const loadMatches = useCallback(async () => {
+    try {
+      const [active, pending] = await Promise.all([
+        apiServices.getQueueMatches({ status: 'active' }),
+        apiServices.getQueueMatches({ status: 'pending' })
+      ])
+      setActiveMatches(active)
+      setPendingMatches(pending)
+    } catch (error) {
+      console.error('Failed to load matches', error)
+      // Don't show error toast, just log it - matches are for status only
+    }
+  }, [])
+
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    try {
+      const history = await apiServices.getQueuePlayersHistory()
+      setHistoryPlayers(history)
+    } catch (error) {
+      console.error('Failed to load history', error)
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     void loadPlayers()
-  }, [loadPlayers])
+    void loadMatches()
+    void loadHistory()
+  }, [loadPlayers, loadMatches, loadHistory])
 
-  const todayISODate = new Date().toISOString().slice(0, 10)
+  // Reload history when modal opens
+  useEffect(() => {
+    if (showHistoryModal) {
+      void loadHistory()
+    }
+  }, [showHistoryModal, loadHistory])
 
-  const todaysPlayers = useMemo(() => {
-    return players.filter((player) => {
-      if (!player.lastPlayed) return true
-      return player.lastPlayed.slice(0, 10) === todayISODate
+  // Set up polling to refresh matches every 5 seconds for real-time status updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      void loadMatches()
+    }, 5000) // Poll every 5 seconds
+
+    return () => clearInterval(interval)
+  }, [loadMatches])
+
+  // Get today's date in ISO format (YYYY-MM-DD) using local timezone
+  const getTodayISODate = () => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const todayISODate = getTodayISODate()
+
+  // Calculate real-time player status based on matches
+  // Players remain in the list unless deleted - they just get updated status
+  const playersWithRealTimeStatus = useMemo(() => {
+    // Get all player IDs in active matches (playing)
+    const playersInActiveMatches = new Set<number>()
+    activeMatches.forEach((match) => {
+      match.teamA.forEach((p) => playersInActiveMatches.add(p.id))
+      match.teamB.forEach((p) => playersInActiveMatches.add(p.id))
     })
-  }, [players, todayISODate])
+
+    // Get all player IDs in pending matches (pending)
+    const playersInPendingMatches = new Set<number>()
+    pendingMatches.forEach((match) => {
+      match.teamA.forEach((p) => playersInPendingMatches.add(p.id))
+      match.teamB.forEach((p) => playersInPendingMatches.add(p.id))
+    })
+
+    // Update player status based on match data
+    // All players remain in the list - only their status changes
+    return players.map((player) => {
+      let status: 'In Queue' | 'Waiting' | 'In Match' = 'Waiting' // Default to Waiting
+
+      if (playersInActiveMatches.has(player.id)) {
+        status = 'In Match' // Playing
+      } else if (playersInPendingMatches.has(player.id)) {
+        status = 'Waiting' // Pending
+      } else {
+        status = 'Waiting' // Not in any match - show as Waiting
+      }
+
+      return {
+        ...player,
+        status
+      }
+    })
+  }, [players, activeMatches, pendingMatches])
+
+  // Show ALL players in the queue - they remain visible regardless of lastPlayed date
+  // Players are only removed when manually deleted, not when matches complete
+  const todaysPlayers = useMemo(() => {
+    // Return all players - no date filtering
+    // Players stay in the queue after completing matches, they just get their gamesPlayed incremented
+    return playersWithRealTimeStatus
+  }, [playersWithRealTimeStatus])
 
   const filteredPlayers = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
@@ -263,7 +364,7 @@ export function QueuePlayersPage() {
       }
       return a.name.localeCompare(b.name)
     })
-  }, [players, searchQuery, sortBy])
+  }, [todaysPlayers, searchQuery, sortBy])
 
   const totalPages = Math.max(1, Math.ceil(filteredPlayers.length / PLAYERS_PER_PAGE))
   const safeCurrentPage = Math.min(currentPage, totalPages)
@@ -285,25 +386,36 @@ export function QueuePlayersPage() {
     }
   }, [currentPage, totalPages])
 
+  // History uses data from the history table, grouped by archivedAt date
   const historyByDate = useMemo(() => {
-    return players.reduce((acc, player) => {
-      if (!player.lastPlayed) {
-        return acc
+    return historyPlayers.reduce((acc, historyPlayer) => {
+      // Extract date part (YYYY-MM-DD) from archivedAt using local timezone
+      let archiveDate: string
+      if (typeof historyPlayer.archivedAt === 'string') {
+        archiveDate = historyPlayer.archivedAt.slice(0, 10)
+      } else {
+        // Use local timezone, not UTC, to match backend behavior
+        const date = new Date(historyPlayer.archivedAt)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        archiveDate = `${year}-${month}-${day}`
       }
-      const dateKey = player.lastPlayed.slice(0, 10)
-      if (dateKey >= todayISODate) {
-        return acc
+      
+      if (!acc[archiveDate]) {
+        acc[archiveDate] = []
       }
-      if (!acc[dateKey]) {
-        acc[dateKey] = []
-      }
-      acc[dateKey].push(player)
+      acc[archiveDate].push(historyPlayer)
+      
       return acc
-    }, {} as Record<string, QueuePlayer[]>)
-  }, [players, todayISODate])
+    }, {} as Record<string, QueuePlayerHistory[]>)
+  }, [historyPlayers])
 
+  // Limit history to only the 5 most recent dates
+  const HISTORY_DATE_LIMIT = 5
   const historyDates = useMemo(() => {
-    return Object.keys(historyByDate).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+    const sortedDates = Object.keys(historyByDate).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+    return sortedDates.slice(0, HISTORY_DATE_LIMIT)
   }, [historyByDate])
 
   const historyPlayersForSelectedDate = useMemo(() => {
@@ -391,7 +503,7 @@ export function QueuePlayersPage() {
         sex: selectedSex,
         skill: selectedSkill,
         status: 'In Queue',
-        lastPlayed: new Date().toISOString().slice(0, 10)
+        lastPlayed: todayISODate // Use the same date format as the filter for consistency
       }
       const createdPlayer = await apiServices.createQueuePlayer(payload)
       setPlayers((prev) => [...prev, createdPlayer])
@@ -416,7 +528,8 @@ export function QueuePlayersPage() {
 
     try {
       await apiServices.deleteQueuePlayer(playerId)
-      setPlayers((prev) => prev.filter((player) => player.id !== playerId))
+      // Reload players from server to ensure UI is in sync with database
+      await loadPlayers()
       if (playerName) {
         toast.success(`${playerName} removed from queue.`)
       } else {
@@ -433,7 +546,7 @@ export function QueuePlayersPage() {
         return next
       })
     }
-  }, [])
+  }, [loadPlayers])
 
   const confirmDeletePlayer = useCallback(async () => {
     if (!playerToDelete || deletingPlayerIds.has(playerToDelete.id)) {
@@ -456,13 +569,13 @@ export function QueuePlayersPage() {
   }, [])
 
   const handleImportHistoryPlayer = useCallback(
-    async (player: QueuePlayer) => {
+    async (player: QueuePlayerHistory) => {
       const alreadyInQueue = todaysPlayers.some(
         (existing) => existing.name.toLowerCase() === player.name.toLowerCase()
       )
 
       if (alreadyInQueue) {
-        toast('Player is already in today’s queue.')
+        toast('Player is already in today\'s queue.')
         return
       }
 
@@ -534,7 +647,7 @@ export function QueuePlayersPage() {
           ? `Generated ${generatedCount} match${generatedCount === 1 ? '' : 'es'} (${activeCount} active, ${pendingCount} pending).`
           : 'No matches generated. Not enough eligible players.'
       )
-      await loadPlayers()
+      await Promise.all([loadPlayers(), loadMatches()]) // Refresh players and matches to update statuses
     } catch (error) {
       console.error('Failed to generate matches', error)
       setPlayersError('Unable to generate matches. Please try again.')
@@ -542,7 +655,112 @@ export function QueuePlayersPage() {
     } finally {
       setIsGeneratingMatches(false)
     }
-  }, [gameType, isGeneratingMatches, loadPlayers])
+  }, [gameType, isGeneratingMatches, loadPlayers, loadMatches])
+
+  const handleClearAllPlayers = useCallback(async () => {
+    if (isClearingPlayers || todaysPlayers.length === 0) return
+    
+    setIsClearingPlayers(true)
+    setPlayersError(null)
+    setShowClearConfirm(false)
+
+    try {
+      // Delete all today's players
+      await Promise.all(todaysPlayers.map((player) => apiServices.deleteQueuePlayer(player.id)))
+      
+      const clearedCount = todaysPlayers.length
+      toast.success(`Cleared ${clearedCount} player${clearedCount === 1 ? '' : 's'} from the queue.`)
+      await loadPlayers()
+    } catch (error) {
+      console.error('Failed to clear players', error)
+      setPlayersError('Unable to clear players. Please try again.')
+      toast.error('Unable to clear players. Please try again.')
+    } finally {
+      setIsClearingPlayers(false)
+    }
+  }, [isClearingPlayers, todaysPlayers, loadPlayers])
+
+  const handleSavePlayersToHistory = useCallback(async () => {
+    if (isSavingPlayers || todaysPlayers.length === 0) {
+      if (todaysPlayers.length === 0) {
+        toast.error('No players to save. Add players to the queue first.')
+      }
+      return
+    }
+    
+    setIsSavingPlayers(true)
+    setPlayersError(null)
+
+    try {
+      const result = await apiServices.savePlayersToHistory()
+      const savedCount = result.savedCount || 0
+      
+      if (savedCount === 0) {
+        toast.error('No players were saved to history.')
+      } else {
+        toast.success(`Successfully saved ${savedCount} player${savedCount === 1 ? '' : 's'} to history.`)
+        // Reload history to show the newly saved players
+        await loadHistory()
+      }
+    } catch (error) {
+      console.error('Failed to save players to history', error)
+      setPlayersError('Unable to save players to history. Please try again.')
+      toast.error('Unable to save players to history. Please try again.')
+    } finally {
+      setIsSavingPlayers(false)
+    }
+  }, [isSavingPlayers, todaysPlayers.length, loadHistory])
+
+  const handleClearHistory = useCallback(async () => {
+    if (isClearingHistory) return
+    
+    setIsClearingHistory(true)
+    setPlayersError(null)
+    setShowClearHistoryConfirm(false)
+
+    try {
+      const result = await apiServices.clearPlayersHistory()
+      const deletedCount = result.deletedCount || 0
+      toast.success(`Successfully cleared ${deletedCount} history record${deletedCount === 1 ? '' : 's'}.`)
+      // Reload history to refresh the view
+      await loadHistory()
+      // Reload players in case any were deleted from active queue
+      await loadPlayers()
+      // Reset selected date if it was set
+      setSelectedHistoryDate(null)
+    } catch (error) {
+      console.error('Failed to clear history', error)
+      setPlayersError('Unable to clear history. Please try again.')
+      toast.error('Unable to clear history. Please try again.')
+    } finally {
+      setIsClearingHistory(false)
+    }
+  }, [isClearingHistory, loadHistory, loadPlayers])
+
+  const handleMigratePlayers = useCallback(async () => {
+    if (isMigratingPlayers) return
+    
+    setIsMigratingPlayers(true)
+    setPlayersError(null)
+
+    try {
+      const result = await apiServices.migratePlayers()
+      const migratedCount = result.migratedCount || 0
+      if (migratedCount > 0) {
+        toast.success(`Successfully migrated ${migratedCount} player${migratedCount === 1 ? '' : 's'} to your account.`)
+        // Reload players to show the migrated players
+        await loadPlayers()
+      } else {
+        toast('No players found to migrate.')
+      }
+    } catch (error) {
+      console.error('Failed to migrate players', error)
+      setPlayersError('Unable to migrate players. Please try again.')
+      toast.error('Unable to migrate players. Please try again.')
+    } finally {
+      setIsMigratingPlayers(false)
+    }
+  }, [isMigratingPlayers, loadPlayers])
 
   return (
     <QueueingShell activeTab="players">
@@ -673,15 +891,32 @@ export function QueuePlayersPage() {
                 </button>
               </div>
 
-              <div className="flex w-full flex-col items-start md:ml-auto md:w-auto">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/60">History</span>
-                <button
-                  type="button"
-                  onClick={() => setShowHistoryModal(true)}
-                  className="w-full rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-white/15 md:w-auto"
-                >
-                  Players History
-                </button>
+              <div className="flex w-full flex-col items-start gap-3 md:ml-auto md:w-auto md:flex-row">
+                <div className="flex w-full flex-col items-start md:w-auto">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/60">Actions</span>
+                  <button
+                    type="button"
+                    onClick={handleSavePlayersToHistory}
+                    disabled={isSavingPlayers || todaysPlayers.length === 0}
+                    className={`w-full rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 md:w-auto ${
+                      isSavingPlayers || todaysPlayers.length === 0
+                        ? 'bg-white/5 cursor-not-allowed opacity-50'
+                        : 'bg-green-600/80 hover:bg-green-600'
+                    }`}
+                  >
+                    {isSavingPlayers ? 'Saving...' : 'Save Players'}
+                  </button>
+                </div>
+                <div className="flex w-full flex-col items-start md:w-auto">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/60">History</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowHistoryModal(true)}
+                    className="w-full rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-white/15 md:w-auto"
+                  >
+                    Players History
+                  </button>
+                </div>
               </div>
             </div>
             {playersError && (
@@ -844,42 +1079,60 @@ export function QueuePlayersPage() {
               </tbody>
             </table>
           </div>
-          {shouldShowPagination && filteredPlayers.length > 0 && (
-            <div className="flex flex-col gap-3 border-t border-white/10 px-2 pt-4 text-sm text-white/70 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-              <span>
-                Showing {showingRangeStart}-{showingRangeEnd} of {filteredPlayers.length} players
-              </span>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={safeCurrentPage === 1}
-                  className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
-                    safeCurrentPage === 1
-                      ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/40'
-                      : 'border-white/20 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
-                  }`}
-                >
-                  Previous
-                </button>
-                <span className="text-xs font-semibold uppercase tracking-wide text-white/60">
-                  Page {safeCurrentPage} of {totalPages}
+          <div className="flex flex-col gap-3 border-t border-white/10 px-2 pt-4 sm:px-4">
+            {shouldShowPagination && filteredPlayers.length > 0 && (
+              <div className="flex flex-col gap-3 text-sm text-white/70 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  Showing {showingRangeStart}-{showingRangeEnd} of {filteredPlayers.length} players
                 </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={safeCurrentPage === 1}
+                    className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                      safeCurrentPage === 1
+                        ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/40'
+                        : 'border-white/20 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
+                    }`}
+                  >
+                    Previous
+                  </button>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-white/60">
+                    Page {safeCurrentPage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={safeCurrentPage === totalPages}
+                    className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                      safeCurrentPage === totalPages
+                        ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/40'
+                        : 'border-white/20 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+            {todaysPlayers.length > 0 && (
+              <div className="flex justify-center pt-2">
                 <button
                   type="button"
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={safeCurrentPage === totalPages}
-                  className={`rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
-                    safeCurrentPage === totalPages
-                      ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/40'
-                      : 'border-white/20 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
+                  onClick={() => setShowClearConfirm(true)}
+                  disabled={isClearingPlayers || playersLoading}
+                  className={`rounded-full border px-6 py-2.5 text-sm font-semibold uppercase tracking-wide transition ${
+                    isClearingPlayers || playersLoading
+                      ? 'cursor-not-allowed border-red-500/30 bg-red-500/10 text-red-400/50'
+                      : 'border-red-400/50 bg-red-500/10 text-red-200 hover:border-red-400/70 hover:bg-red-500/20 hover:text-red-100'
                   }`}
                 >
-                  Next
+                  {isClearingPlayers ? 'Clearing...' : 'Clear Players'}
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </section>
 
@@ -906,6 +1159,64 @@ export function QueuePlayersPage() {
                 className="rounded-full bg-rose-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-900/30 transition hover:bg-rose-500/90 disabled:cursor-not-allowed disabled:bg-rose-500/60"
               >
                 {deletingSelectedPlayer ? 'Removing…' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#11050b] p-6 text-center shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+            <h3 className="text-lg font-semibold text-white">Clear all players?</h3>
+            <p className="mt-2 text-sm text-white/70">
+              This will remove all <span className="font-semibold text-white">{todaysPlayers.length}</span> player{todaysPlayers.length === 1 ? '' : 's'} from today's queue. This action cannot be undone.
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                disabled={isClearingPlayers}
+                className="rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleClearAllPlayers()}
+                disabled={isClearingPlayers}
+                className="rounded-full bg-rose-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-900/30 transition hover:bg-rose-500/90 disabled:cursor-not-allowed disabled:bg-rose-500/60"
+              >
+                {isClearingPlayers ? 'Clearing…' : 'Clear All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearHistoryConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#11050b] p-6 text-center shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+            <h3 className="text-lg font-semibold text-white">Clear all history?</h3>
+            <p className="mt-2 text-sm text-white/70">
+              This will permanently delete all players history records. This action cannot be undone.
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowClearHistoryConfirm(false)}
+                disabled={isClearingHistory}
+                className="rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleClearHistory()}
+                disabled={isClearingHistory}
+                className="rounded-full bg-rose-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-900/30 transition hover:bg-rose-500/90 disabled:cursor-not-allowed disabled:bg-rose-500/60"
+              >
+                {isClearingHistory ? 'Clearing…' : 'Clear History'}
               </button>
             </div>
           </div>
@@ -1033,10 +1344,24 @@ export function QueuePlayersPage() {
             </button>
             <div className="space-y-4 pr-2 sm:pr-6 pt-2">
               <div className="flex flex-col gap-2">
-                <h3 className="text-2xl font-semibold text-white">Players History</h3>
-                <p className="text-sm text-white/70">
-                  Select a date to review who entered the queue on that day.
-                </p>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-semibold text-white">Players History</h3>
+                    <p className="text-sm text-white/70">
+                      Select a date to review who entered the queue on that day. History is limited to the 5 most recent dates.
+                    </p>
+                  </div>
+                  {historyDates.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowClearHistoryConfirm(true)}
+                      disabled={isClearingHistory}
+                      className="rounded-full border border-red-500/50 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isClearingHistory ? 'Clearing...' : 'Clear History'}
+                    </button>
+                  )}
+                </div>
               </div>
               {historyDates.length === 0 ? (
                 <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-6 py-8 text-center text-sm text-white/70">

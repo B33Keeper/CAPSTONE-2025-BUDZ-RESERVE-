@@ -11,6 +11,9 @@ export class QueuePlayer {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ name: 'user_id', type: 'int' })
+  userId: number;
+
   @Column({ type: 'varchar', length: 120 })
   name: string;
 

@@ -6,7 +6,9 @@ import { BookingDetailsModal } from '@/components/modals/BookingDetailsModal'
 import { PaymentSummaryStep } from '@/components/PaymentSummaryStep'
 import { PaymentService } from '@/lib/paymentService'
 import { useAuthStore } from '@/store/authStore'
+import { resolveImageUrl } from '@/lib/imageUtils'
 import api from '@/lib/api'
+import toast from 'react-hot-toast'
 
 interface CourtBooking {
   court: string
@@ -84,17 +86,6 @@ export function BookingPage() {
   
   const { user } = useAuthStore()
 
-  const resolveApiBaseUrl = () => {
-    const explicitBase = typeof api.defaults.baseURL === 'string' ? api.defaults.baseURL : ''
-    if (explicitBase) {
-      return explicitBase.replace(/\/api\/?$/, '')
-    }
-    const envBase = (import.meta.env.VITE_API_URL as string | undefined) || ''
-    if (envBase) {
-      return envBase.replace(/\/api\/?$/, '')
-    }
-    return window.location.origin
-  }
 
 
   // Calculate total amount
@@ -1353,19 +1344,7 @@ export function BookingPage() {
                                 <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500"></div>
                                 <div className="relative w-full h-20 sm:h-24 md:h-32 bg-white rounded-lg shadow-sm overflow-hidden">
                             <img
-                              src={(() => {
-                                const baseUrl = resolveApiBaseUrl()
-                                if (item.image_path) {
-                                  if (item.image_path.startsWith('http')) {
-                                    return item.image_path
-                                  }
-                                  const normalizedPath = item.image_path.startsWith('/')
-                                    ? item.image_path
-                                    : `/${item.image_path}`
-                                  return `${baseUrl}${normalizedPath}`
-                                }
-                                return '/assets/img/equipments/racket.png'
-                              })()}
+                              src={item.image_path ? resolveImageUrl(item.image_path) : '/assets/img/equipments/racket-removebg-preview.png'}
                               alt={item.equipment_name}
                                     className="w-full h-full object-contain object-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-2"
                                     style={{
@@ -1563,6 +1542,10 @@ export function BookingPage() {
                   onClick={() => {
                     if (courtBookings.length === 0 && equipmentBookings.length > 0) {
                       setShowEquipmentGuard(true)
+                      return
+                    }
+                    if (courtBookings.length === 0) {
+                      toast.error('Select time and court number to proceed')
                       return
                     }
                     setShowBookingDetailsModal(true)

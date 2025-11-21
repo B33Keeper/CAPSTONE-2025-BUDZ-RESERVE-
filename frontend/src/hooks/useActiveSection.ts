@@ -6,8 +6,9 @@ export function useActiveSection(offset: number = 100) {
   const location = useLocation();
 
   useEffect(() => {
-    // If on the booking page, no section should be active
-    if (location.pathname === '/booking') {
+    // If on pages that aren't the home page, no section should be active
+    const excludedPaths = ['/booking', '/login', '/signup', '/signup/', '/queueing', '/payment-success', '/payment-failed'];
+    if (excludedPaths.some(path => location.pathname === path || location.pathname.startsWith(path))) {
       setActiveSection(null);
       return;
     }

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, type JSX } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { apiServices, Court, Equipment, TimeSlot } from '@/lib/apiServices'
+import { resolveImageUrl } from '@/lib/imageUtils'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
@@ -1541,7 +1542,7 @@ export default function AdminCreateReservations() {
                                       <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500"></div>
                                       <div className="relative w-full h-20 sm:h-24 md:h-32 bg-white rounded-lg shadow-sm overflow-hidden">
                                         <img
-                                          src={`${item.image_path || "/assets/img/equipments/racket.png"}?v=${Date.now()}`}
+                                          src={`${item.image_path ? resolveImageUrl(item.image_path) : "/assets/img/equipments/racket-removebg-preview.png"}?v=${Date.now()}`}
                                           alt={item.equipment_name}
                                           className="w-full h-full object-contain object-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-2"
                                           style={{

@@ -8,6 +8,7 @@ import cors from 'cors';
 import express from 'express';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import * as fs from 'fs';
 
 import { AppModule } from './app.module';
 
@@ -20,6 +21,24 @@ async function bootstrap() {
       logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     });
     const configService = app.get(ConfigService);
+
+    // Initialize upload directories on startup
+    const uploadDir = configService.get('UPLOAD_DEST', 'uploads');
+    const uploadPath = uploadDir.startsWith('/') 
+      ? uploadDir 
+      : join(process.cwd(), uploadDir);
+    
+    const requiredDirs = ['avatars', 'equipments', 'gallery', 'announcements'];
+    
+    console.log('📁 Initializing upload directories...');
+    requiredDirs.forEach((subfolder) => {
+      const dirPath = join(uploadPath, subfolder);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+        console.log(`✅ Created directory: ${dirPath}`);
+      }
+    });
+    console.log('✅ Upload directories initialized');
 
     // Serve static files
     app.useStaticAssets(join(__dirname, '..', 'uploads'), {

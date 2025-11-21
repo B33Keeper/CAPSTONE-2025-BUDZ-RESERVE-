@@ -9,30 +9,35 @@ import {
   Patch,
   Post,
   Query,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import { QueueMatchesService } from './queue-matches.service';
 import { GenerateQueueMatchesDto } from './dto/generate-queue-matches.dto';
 import { QueueMatchStatus } from './entities/queue-match.entity';
 import { CompleteQueueMatchDto } from './dto/complete-queue-match.dto';
 import { CreateQueueMatchDto } from './dto/create-queue-match.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('queue-matches')
 @Controller('queue-matches')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class QueueMatchesController {
   constructor(private readonly queueMatchesService: QueueMatchesService) {}
 
   @Post('generate')
   @ApiOperation({ summary: 'Generate fair matches from the player queue' })
-  generate(@Body() dto: GenerateQueueMatchesDto) {
-    return this.queueMatchesService.generateMatches(dto);
+  generate(@Body() dto: GenerateQueueMatchesDto, @Request() req: any) {
+    return this.queueMatchesService.generateMatches(dto, req.user.id);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a match manually' })
-  create(@Body() dto: CreateQueueMatchDto) {
-    return this.queueMatchesService.createMatch(dto);
+  create(@Body() dto: CreateQueueMatchDto, @Request() req: any) {
+    return this.queueMatchesService.createMatch(dto, req.user.id);
   }
 
   @Get()
@@ -40,8 +45,15 @@ export class QueueMatchesController {
   findAll(
     @Query('status', new ParseEnumPipe(QueueMatchStatus, { optional: true }))
     status?: QueueMatchStatus,
+    @Request() req?: any,
   ) {
-    return this.queueMatchesService.findAll(status);
+    return this.queueMatchesService.findAll(status, req?.user?.id);
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get match history' })
+  findHistory(@Request() req: any) {
+    return this.queueMatchesService.findHistory(req.user.id);
   }
 
   @Patch(':id/complete')
@@ -49,20 +61,21 @@ export class QueueMatchesController {
   complete(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: CompleteQueueMatchDto,
+    @Request() req: any,
   ) {
-    return this.queueMatchesService.completeMatch(id, body);
+    return this.queueMatchesService.completeMatch(id, body, req.user.id);
   }
 
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Cancel a pending or active match' })
-  cancel(@Param('id', ParseIntPipe) id: number) {
-    return this.queueMatchesService.cancelMatch(id);
+  cancel(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.queueMatchesService.cancelMatch(id, req.user.id);
   }
 
   @Delete('pending')
   @ApiOperation({ summary: 'Clear all pending matches' })
-  clearPending() {
-    return this.queueMatchesService.clearPendingMatches();
+  clearPending(@Request() req: any) {
+    return this.queueMatchesService.clearPendingMatches(req.user.id);
   }
 }
 
