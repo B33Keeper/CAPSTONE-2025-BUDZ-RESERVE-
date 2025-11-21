@@ -42,6 +42,7 @@ const LogOutIcon = () => (
 
 import { ProfileModal } from './modals/ProfileModal'
 import { ReservationsModal } from './modals/ReservationsModal'
+import { QueueingLoadingScreen } from './QueueingLoadingScreen'
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -49,6 +50,7 @@ export function Header() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isReservationsModalOpen, setIsReservationsModalOpen] = useState(false)
   const [isQueueingAnimating, setIsQueueingAnimating] = useState(false)
+  const [showQueueingLoading, setShowQueueingLoading] = useState(false)
   const { user, isAuthenticated, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -92,13 +94,19 @@ export function Header() {
     setIsMenuOpen(false)
   }
 
+  // Helper function to check if we're on a page that shouldn't highlight navigation
+  const isExcludedPage = () => {
+    const excludedPaths = ['/booking', '/login', '/signup', '/queueing', '/payment-success', '/payment-failed']
+    return excludedPaths.some(path => location.pathname === path || location.pathname.startsWith(path))
+  }
+
   const getNavButtonClasses = (sectionId: string) => {
     const baseClasses = "relative transition-all duration-300 px-4 py-2 rounded-lg font-medium group"
     const activeClasses = "text-blue-600 bg-blue-50 shadow-sm"
     const inactiveClasses = "text-gray-700 hover:text-blue-600 hover:bg-blue-50/50"
 
-    // If we're on the booking page, don't highlight any section navigation
-    if (location.pathname === '/booking') {
+    // If we're on pages that aren't the home page, don't highlight any section navigation
+    if (isExcludedPage()) {
       return `${baseClasses} ${inactiveClasses} after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full`
     }
 
@@ -134,7 +142,15 @@ export function Header() {
       navigate('/login?returnUrl=/queueing')
       return
     }
-    navigate('/queueing')
+    
+    // Show loading screen
+    setShowQueueingLoading(true)
+    
+    // Wait for animation, then navigate
+    // The loading screen will hide automatically when navigation completes (via useEffect)
+    setTimeout(() => {
+      navigate('/queueing')
+    }, 1500) // 1.5 seconds loading animation
   }
 
   const triggerAnnouncementModal = () => {
@@ -148,6 +164,19 @@ export function Header() {
     const activeClasses = 'text-white bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 shadow-lg scale-[1.02]'
 
     return `${layoutClasses} ${baseClasses} ${isQueueingAnimating ? activeClasses : inactiveClasses}`
+  }
+
+  const getLoginClasses = (variant: 'desktop' | 'mobile' = 'desktop') => {
+    const baseClasses = variant === 'mobile' 
+      ? 'block px-4 py-3 rounded-lg transition-all duration-300 font-medium'
+      : 'relative transition-all duration-300 px-4 py-2 rounded-lg font-medium group'
+    const activeClasses = 'text-blue-600 bg-blue-50 shadow-sm'
+    const inactiveClasses = variant === 'mobile'
+      ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50'
+      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 group after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full'
+
+    const isActive = location.pathname === '/login'
+    return `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`
   }
 
   const renderManageQueueingLabel = (variant: 'desktop' | 'mobile' = 'desktop') => (
@@ -182,8 +211,24 @@ export function Header() {
     }
   }, [])
 
+  // Hide loading screen when navigation to queueing page completes
+  useEffect(() => {
+    if (location.pathname.startsWith('/queueing') && showQueueingLoading) {
+      // Small delay to ensure page has rendered
+      const timer = setTimeout(() => {
+        setShowQueueingLoading(false)
+        // Dispatch event to notify that loading screen is complete
+        window.dispatchEvent(new CustomEvent('queueing-loading-complete'))
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [location.pathname, showQueueingLoading])
+
   return (
     <>
+    {/* Queueing Loading Screen */}
+    {showQueueingLoading && <QueueingLoadingScreen />}
+    
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-white/40 shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-colors duration-300 overflow-visible">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
         <div className="flex justify-between items-center h-18">
@@ -371,7 +416,7 @@ export function Header() {
                 <>
                   <Link
                     to="/login"
-                    className="relative transition-all duration-300 px-4 py-2 rounded-lg font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 group after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 hover:after:w-full"
+                    className={getLoginClasses('desktop')}
                   >
                     Login
                   </Link>
@@ -405,25 +450,25 @@ export function Header() {
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white/95 backdrop-blur-md border-t border-gray-200/50">
               <button
                 onClick={() => scrollToSection('home')}
-                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${location.pathname === '/booking' ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'home' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
+                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${isExcludedPage() ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'home' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
               >
                 Home
               </button>
               <button
                 onClick={() => scrollToSection('about')}
-                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${location.pathname === '/booking' ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'about' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
+                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${isExcludedPage() ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'about' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
               >
                 About Us
               </button>
               <button
                 onClick={() => scrollToSection('gallery')}
-                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${location.pathname === '/booking' ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'gallery' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
+                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${isExcludedPage() ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'gallery' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
               >
                 Gallery
               </button>
               <button
                 onClick={() => scrollToSection('contact')}
-                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${location.pathname === '/booking' ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'contact' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
+                className={`block w-full text-left px-4 py-3 rounded-lg transition-all duration-300 font-medium ${isExcludedPage() ? 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50' : (activeSection === 'contact' ? 'text-blue-600 bg-blue-50 shadow-sm' : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/50')}`}
               >
                 Contact Us
               </button>
@@ -522,7 +567,7 @@ export function Header() {
                 <>
                   <Link
                     to="/login"
-                    className="block px-4 py-3 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50/50 transition-all duration-300 font-medium"
+                    className={getLoginClasses('mobile')}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Login

@@ -13,6 +13,8 @@ build
 .vercel
 .next
 out
+.vite
+vite.config.ts.timestamp-*
 
 # Environment variables
 .env
@@ -41,6 +43,20 @@ logs
 *.swo
 *.swn
 *~
+.project
+.classpath
+.settings
+.vs
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 
 # Documentation
 README.md
@@ -77,10 +93,12 @@ tmp/
 temp/
 *.tmp
 
-# Vite cache
-.vite
-vite.config.ts.timestamp-*
+# Development scripts
+simple-server.js
+simple-static-server.js
+frontend-server*.js
+server.js
 
-# Public assets (handled via COPY)
-public/*
-
+# Public assets (handled via COPY in Dockerfile)
+# Keep public folder structure but exclude large files if needed
+# public/assets/*

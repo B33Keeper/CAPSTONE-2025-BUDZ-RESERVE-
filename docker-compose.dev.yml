@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # MySQL Database
   mysql:
@@ -16,20 +18,23 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./database_export.sql:/docker-entrypoint-initdb.d/01-database-export.sql
-      - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql
+      - ./database_export.sql:/docker-entrypoint-initdb.d/01-database-export.sql:ro
+      - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql:ro
     networks:
       - budz-reserve-network
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --max_connections=200
+      - --innodb-buffer-pool-size=256M
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+    security_opt:
+      - no-new-privileges:true
 
   # phpMyAdmin Database UI
   phpmyadmin:
@@ -58,6 +63,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
 
   # Backend API
   backend:
@@ -96,7 +103,7 @@ services:
     networks:
       - budz-reserve-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -126,23 +133,33 @@ services:
       - backend
     networks:
       - budz-reserve-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Nginx Reverse Proxy
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     container_name: budz-reserve-nginx
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "80:80"
     volumes:
-      - ./docker/nginx/nginx.dev.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     networks:
       - budz-reserve-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/ || exit 1"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -150,7 +167,11 @@ services:
 
 volumes:
   mysql_data:
+    driver: local
 
 networks:
   budz-reserve-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

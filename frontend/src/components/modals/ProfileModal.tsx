@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
+import { resolveImageUrl } from '@/lib/imageUtils'
 import toast from 'react-hot-toast'
 import { User, Mail, Phone, Calendar, Save, Upload, Lock, X } from 'lucide-react'
 
@@ -88,9 +89,9 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       const currentProfilePicture = user?.profile_picture
       const updatedProfilePicture = updatedUser.profile_picture
       
-      // If response has profile_picture but it's not a full URL, convert it
-      if (updatedProfilePicture && !updatedProfilePicture.startsWith('http')) {
-        updatedUser.profile_picture = `http://localhost:3001${updatedProfilePicture}`
+      // If response has profile_picture, resolve it to full URL
+      if (updatedProfilePicture) {
+        updatedUser.profile_picture = resolveImageUrl(updatedProfilePicture)
       } else if (!updatedProfilePicture && currentProfilePicture) {
         // If response doesn't include profile_picture, preserve the existing one
         updatedUser.profile_picture = currentProfilePicture
@@ -198,7 +199,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       console.log('Upload response:', response.data)
       
       const data = response.data
-      const fullImageUrl = `http://localhost:3001${data.profilePicture}`
+      const fullImageUrl = resolveImageUrl(data.profilePicture)
       updateUser({ profile_picture: fullImageUrl })
       toast.success('Profile picture updated successfully!')
     } catch (error: any) {

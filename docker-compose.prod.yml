@@ -4,6 +4,7 @@ services:
   # MySQL Database
   mysql:
     image: mysql:8.4
+    platform: linux/amd64
     container_name: budz-reserve-mysql
     restart: unless-stopped
     environment:
@@ -15,8 +16,8 @@ services:
       MYSQL_COLLATION: utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./database_export.sql:/docker-entrypoint-initdb.d/01-database-export.sql
-      - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql
+      - ./database_export.sql:/docker-entrypoint-initdb.d/01-database-export.sql:ro
+      - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql:ro
     ports:
       - "3306:3306"
     command:
@@ -34,6 +35,8 @@ services:
       start_period: 30s
     networks:
       - budz-reserve-network
+    security_opt:
+      - no-new-privileges:true
 
   # Backend API
   backend:
@@ -42,6 +45,14 @@ services:
       dockerfile: ./backend/Dockerfile.prod
     container_name: budz-reserve-backend
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
     environment:
       NODE_ENV: production
       DB_HOST: mysql
@@ -78,6 +89,12 @@ services:
         condition: service_healthy
     networks:
       - budz-reserve-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Frontend React App
   frontend:
@@ -86,6 +103,8 @@ services:
       dockerfile: ./frontend/Dockerfile.prod
     container_name: budz-reserve-frontend
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
       VITE_APP_NAME: ${VITE_APP_NAME:-Budz Reserve}
@@ -93,29 +112,40 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - budz-reserve-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # Nginx Reverse Proxy
   nginx:
     image: nginx:1.27-alpine
     container_name: budz-reserve-nginx
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./docker/nginx/nginx.prod.conf:/etc/nginx/nginx.conf
-      - ./uploads:/var/www/uploads
-      - ./ssl:/etc/nginx/ssl
+      - ./docker/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./uploads:/var/www/uploads:ro
+      - ./ssl:/etc/nginx/ssl:ro
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     networks:
       - budz-reserve-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health || exit 1"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -123,7 +153,11 @@ services:
 
 volumes:
   mysql_data:
+    driver: local
 
 networks:
   budz-reserve-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

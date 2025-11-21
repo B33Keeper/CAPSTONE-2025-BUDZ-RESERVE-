@@ -376,6 +376,20 @@ export function QueueingPage() {
     }
   }, [isClearingPendingMatches, loadMatches, pendingMatches.length])
 
+  // Calculate relative match numbers starting from 1 for each batch of pending matches
+  const pendingMatchMinId = useMemo(() => {
+    if (pendingMatches.length === 0) return 0
+    return Math.min(...pendingMatches.map((match) => match.id))
+  }, [pendingMatches])
+
+  const getMatchNumber = useCallback(
+    (matchId: number) => {
+      if (pendingMatchMinId === 0) return matchId
+      return matchId - pendingMatchMinId + 1
+    },
+    [pendingMatchMinId]
+  )
+
   const activeMatchesByCourt = useMemo(() => {
     const map = new Map<number, QueueMatch>()
     activeMatches.forEach((match) => {
@@ -676,7 +690,7 @@ export function QueueingPage() {
               >
                 <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-between sm:text-left">
                   <div>
-                    <span className="block text-sm uppercase tracking-wide text-white/60">#{match.id}</span>
+                    <span className="block text-sm uppercase tracking-wide text-white/60">#{getMatchNumber(match.id)}</span>
                     <span className="text-lg font-semibold">{gameTypeLabels[match.gameType]}</span>
                   </div>
                   <span className="text-sm text-white/60">

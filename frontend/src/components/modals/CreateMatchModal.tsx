@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { apiServices, type QueuePlayer, type QueueMatchGameType, type QueueMatchPlayer } from '@/lib/apiServices'
 
@@ -34,6 +34,34 @@ function SexBadge({ sex }: { sex: 'male' | 'female' }) {
           <path d="M10 2a4.5 4.5 0 10.878 8.9l-.378.378H8.75a.75.75 0 000 1.5h1.25v1.25a.75.75 0 001.5 0V12.78l.378-.378A4.5 4.5 0 0010 2zm0 1.5a3 3 0 110 6 3 3 0 010-6z" />
         </svg>
       )}
+    </span>
+  )
+}
+
+function StatusBadge({ status }: { status: QueuePlayer['status'] }) {
+  const statusConfig = {
+    'In Queue': {
+      label: 'Available',
+      className: 'border-purple-400/50 bg-purple-500/10 text-purple-200'
+    },
+    'Waiting': {
+      label: 'Pending',
+      className: 'border-amber-400/60 bg-amber-500/10 text-amber-200'
+    },
+    'In Match': {
+      label: 'Playing',
+      className: 'border-emerald-400/60 bg-emerald-500/15 text-emerald-200'
+    }
+  }
+
+  const config = statusConfig[status] || statusConfig['In Queue']
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${config.className}`}
+      title={status}
+    >
+      {config.label}
     </span>
   )
 }
@@ -78,13 +106,9 @@ export function CreateMatchModal({ isOpen, onClose, courtId, courtName, onMatchC
     setLoadingPlayers(true)
     try {
       const response = await apiServices.getQueuePlayers()
-      // Filter to only show today's players (same as Players table)
-      const todayISODate = new Date().toISOString().slice(0, 10)
-      const todaysPlayers = response.filter((player) => {
-        if (!player.lastPlayed) return true
-        return player.lastPlayed.slice(0, 10) === todayISODate
-      })
-      setPlayers(todaysPlayers)
+      // Show ALL players - no date filtering
+      // Players remain in the queue after completing matches
+      setPlayers(response)
     } catch (error) {
       console.error('Failed to load players', error)
       toast.error('Failed to load players')
@@ -92,6 +116,9 @@ export function CreateMatchModal({ isOpen, onClose, courtId, courtName, onMatchC
       setLoadingPlayers(false)
     }
   }
+
+  // Skill level order for sorting
+  const skillOrder = { Advanced: 1, Intermediate: 2, Beginner: 3 }
 
   const filteredPlayers = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
@@ -109,17 +136,40 @@ export function CreateMatchModal({ isOpen, onClose, courtId, courtName, onMatchC
       filtered = filtered.filter((p) => p.name.toLowerCase().includes(normalizedQuery))
     }
 
-    return filtered.sort((a, b) => a.name.localeCompare(b.name))
+    // Sort by skill level first (Advanced > Intermediate > Beginner), then by name
+    return filtered.sort((a, b) => {
+      const skillDiff = (skillOrder[a.skill] || 999) - (skillOrder[b.skill] || 999)
+      if (skillDiff !== 0) return skillDiff
+      return a.name.localeCompare(b.name)
+    })
   }, [players, searchQuery, gameType])
 
-  // Separate players by gender
+  // Separate players by gender, already sorted by skill then name
   const malePlayers = useMemo(() => {
-    return filteredPlayers.filter((p) => p.sex === 'male').sort((a, b) => a.name.localeCompare(b.name))
+    return filteredPlayers.filter((p) => p.sex === 'male')
   }, [filteredPlayers])
 
   const femalePlayers = useMemo(() => {
-    return filteredPlayers.filter((p) => p.sex === 'female').sort((a, b) => a.name.localeCompare(b.name))
+    return filteredPlayers.filter((p) => p.sex === 'female')
   }, [filteredPlayers])
+
+  // Group players by skill level for display
+  const groupPlayersBySkill = useCallback((playerList: typeof filteredPlayers) => {
+    const grouped: Record<string, typeof filteredPlayers> = {
+      Advanced: [],
+      Intermediate: [],
+      Beginner: []
+    }
+
+    playerList.forEach((player) => {
+      if (grouped[player.skill]) {
+        grouped[player.skill].push(player)
+      }
+    })
+
+    // Filter out empty groups
+    return Object.entries(grouped).filter(([_, players]) => players.length > 0)
+  }, [])
 
   const handlePlayerClick = (playerId: number, team: 'A' | 'B') => {
     if (team === 'A') {
@@ -368,13 +418,19 @@ export function CreateMatchModal({ isOpen, onClose, courtId, courtName, onMatchC
             ) : filteredPlayers.length === 0 ? (
               <p className="text-center text-sm text-white/60">No players found</p>
             ) : gameType === 'mixed-doubles' ? (
-              // Mixed Doubles: Side-by-side layout with male and female players separated
+              // Mixed Doubles: Side-by-side layout with male and female players separated, grouped by skill
               <div className="grid grid-cols-2 gap-6">
                 {malePlayers.length > 0 && (
                   <div>
                     <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-white/60">Male Players</h4>
-                    <div className="space-y-2">
-                      {malePlayers.map((player) => {
+                    <div className="space-y-4">
+                      {groupPlayersBySkill(malePlayers).map(([skillLevel, skillPlayers]) => (
+                        <div key={`male-${skillLevel}`} className="space-y-2">
+                          <h5 className="text-[10px] font-semibold uppercase tracking-wide text-white/50">
+                            {skillLevel} ({skillPlayers.length})
+                          </h5>
+                          <div className="space-y-2">
+                            {skillPlayers.map((player) => {
                         const isSelectedA = selectedTeamA.includes(player.id)
                         const isSelectedB = selectedTeamB.includes(player.id)
                         const isSelected = isSelectedA || isSelectedB
@@ -408,7 +464,10 @@ export function CreateMatchModal({ isOpen, onClose, courtId, courtName, onMatchC
                             <SexBadge sex={player.sex} />
                             <div className="flex-1">
                               <div className="font-medium">{player.name}</div>
-                              <div className="text-xs text-white/60">{player.skill}</div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs text-white/60">{player.skill}</div>
+                                <StatusBadge status={player.status} />
+                              </div>
                             </div>
                             {isSelected && (
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -420,16 +479,25 @@ export function CreateMatchModal({ isOpen, onClose, courtId, courtName, onMatchC
                               </svg>
                             )}
                           </button>
-                        )
-                      })}
+                            )
+                          })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
                 {femalePlayers.length > 0 && (
                   <div>
                     <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-white/60">Female Players</h4>
-                    <div className="space-y-2">
-                      {femalePlayers.map((player) => {
+                    <div className="space-y-4">
+                      {groupPlayersBySkill(femalePlayers).map(([skillLevel, skillPlayers]) => (
+                        <div key={`female-${skillLevel}`} className="space-y-2">
+                          <h5 className="text-[10px] font-semibold uppercase tracking-wide text-white/50">
+                            {skillLevel} ({skillPlayers.length})
+                          </h5>
+                          <div className="space-y-2">
+                            {skillPlayers.map((player) => {
                         const isSelectedA = selectedTeamA.includes(player.id)
                         const isSelectedB = selectedTeamB.includes(player.id)
                         const isSelected = isSelectedA || isSelectedB
@@ -463,7 +531,77 @@ export function CreateMatchModal({ isOpen, onClose, courtId, courtName, onMatchC
                             <SexBadge sex={player.sex} />
                             <div className="flex-1">
                               <div className="font-medium">{player.name}</div>
-                              <div className="text-xs text-white/60">{player.skill}</div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs text-white/60">{player.skill}</div>
+                                <StatusBadge status={player.status} />
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                            )
+                          })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Men's or Women's Doubles: Grid layout grouped by skill
+              <div className="space-y-4">
+                {groupPlayersBySkill(filteredPlayers).map(([skillLevel, skillPlayers]) => (
+                  <div key={skillLevel} className="space-y-2">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-white/60">
+                      {skillLevel} Players ({skillPlayers.length})
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                      {skillPlayers.map((player) => {
+                        const isSelectedA = selectedTeamA.includes(player.id)
+                        const isSelectedB = selectedTeamB.includes(player.id)
+                        const isSelected = isSelectedA || isSelectedB
+
+                        return (
+                          <button
+                            key={player.id}
+                            type="button"
+                            onClick={() => {
+                              if (isSelectedA) {
+                                handlePlayerClick(player.id, 'A')
+                              } else if (isSelectedB) {
+                                handlePlayerClick(player.id, 'B')
+                              } else {
+                                // Auto-select to team with fewer players
+                                if (selectedTeamA.length < selectedTeamB.length) {
+                                  handlePlayerClick(player.id, 'A')
+                                } else {
+                                  handlePlayerClick(player.id, 'B')
+                                }
+                              }
+                            }}
+                            className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition ${
+                              isSelectedA
+                                ? 'border-blue-500 bg-blue-500/20 text-white'
+                                : isSelectedB
+                                  ? 'border-pink-500 bg-pink-500/20 text-white'
+                                  : 'border-white/10 bg-white/5 text-white/80 hover:border-white/30 hover:bg-white/10'
+                            }`}
+                          >
+                            <SexBadge sex={player.sex} />
+                            <div className="flex-1">
+                              <div className="font-medium">{player.name}</div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs text-white/60">{player.skill}</div>
+                                <StatusBadge status={player.status} />
+                              </div>
                             </div>
                             {isSelected && (
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -479,59 +617,7 @@ export function CreateMatchModal({ isOpen, onClose, courtId, courtName, onMatchC
                       })}
                     </div>
                   </div>
-                )}
-              </div>
-            ) : (
-              // Men's or Women's Doubles: Grid layout
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                {filteredPlayers.map((player) => {
-                  const isSelectedA = selectedTeamA.includes(player.id)
-                  const isSelectedB = selectedTeamB.includes(player.id)
-                  const isSelected = isSelectedA || isSelectedB
-
-                  return (
-                    <button
-                      key={player.id}
-                      type="button"
-                      onClick={() => {
-                        if (isSelectedA) {
-                          handlePlayerClick(player.id, 'A')
-                        } else if (isSelectedB) {
-                          handlePlayerClick(player.id, 'B')
-                        } else {
-                          // Auto-select to team with fewer players
-                          if (selectedTeamA.length < selectedTeamB.length) {
-                            handlePlayerClick(player.id, 'A')
-                          } else {
-                            handlePlayerClick(player.id, 'B')
-                          }
-                        }
-                      }}
-                      className={`flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition ${
-                        isSelectedA
-                          ? 'border-blue-500 bg-blue-500/20 text-white'
-                          : isSelectedB
-                            ? 'border-pink-500 bg-pink-500/20 text-white'
-                            : 'border-white/10 bg-white/5 text-white/80 hover:border-white/30 hover:bg-white/10'
-                      }`}
-                    >
-                      <SexBadge sex={player.sex} />
-                      <div className="flex-1">
-                        <div className="font-medium">{player.name}</div>
-                        <div className="text-xs text-white/60">{player.skill}</div>
-                      </div>
-                      {isSelected && (
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                          <path
-                            fillRule="evenodd"
-                            d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      )}
-                    </button>
-                  )
-                })}
+                ))}
               </div>
             )}
           </div>

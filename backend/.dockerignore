@@ -39,6 +39,20 @@ logs
 *.swo
 *.swn
 *~
+.project
+.classpath
+.settings
+.vs
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 
 # Documentation
 README.md
@@ -77,3 +91,6 @@ tmp/
 temp/
 *.tmp
 
+# Development scripts
+simple-backend.js
+simple-server.js

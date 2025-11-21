@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { apiServices, Equipment } from '@/lib/apiServices'
+import { resolveImageUrl } from '@/lib/imageUtils'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
@@ -60,17 +61,6 @@ const AdminManageRackets = () => {
     })
   }
 
-  const resolveApiBaseUrl = () => {
-    const explicitBase = typeof api.defaults.baseURL === 'string' ? api.defaults.baseURL : ''
-    if (explicitBase) {
-      return explicitBase.replace(/\/api\/?$/, '')
-    }
-    const envBase = (import.meta.env.VITE_API_URL as string | undefined) || ''
-    if (envBase) {
-      return envBase.replace(/\/api\/?$/, '')
-    }
-    return window.location.origin
-  }
 
   interface SanitizedRacket {
     equipment_name: string
@@ -265,12 +255,7 @@ const AdminManageRackets = () => {
   const handleEditRacket = (racketId: number) => {
     const racket = rackets.find(r => r.id === racketId)
     if (racket) {
-      const baseUrl = resolveApiBaseUrl()
-      const imageUrl = racket.image_path?.startsWith('http')
-        ? racket.image_path
-        : racket.image_path
-        ? `${baseUrl}${racket.image_path.startsWith('/') ? racket.image_path : `/${racket.image_path}`}`
-        : ''
+      const imageUrl = resolveImageUrl(racket.image_path || '')
       const preparedRacket = {
         ...racket,
         unit: racket.unit ?? '',
@@ -569,13 +554,9 @@ const AdminManageRackets = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8 animate-fadeInUp">
               {rackets.map((racket) => {
-                const apiBaseUrl = resolveApiBaseUrl()
-                const normalizedPath = racket.image_path
-                  ? racket.image_path.startsWith('http')
-                    ? racket.image_path
-                    : `${apiBaseUrl}${racket.image_path.startsWith('/') ? racket.image_path : `/${racket.image_path}`}`
-                  : `${window.location.origin}/assets/img/equipments/racket.png`
-                const imageUrl = normalizedPath
+                const imageUrl = racket.image_path 
+                  ? resolveImageUrl(racket.image_path)
+                  : '/assets/img/equipments/racket-removebg-preview.png'
                 const priceFormatted = `₱${Number(racket.price || 0).toFixed(2)}`
                 
                 return (

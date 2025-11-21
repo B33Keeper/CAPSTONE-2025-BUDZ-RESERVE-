@@ -1,4 +1,5 @@
 import api from './api';
+import { resolveImageUrl } from './imageUtils';
 
 export interface GalleryItem {
   id: number;
@@ -13,21 +14,7 @@ export interface GalleryItem {
 
 // Helper function to get the full image URL
 export function getImageUrl(imagePath: string): string {
-  // If it's already a full URL, return as-is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
-  }
-  
-  // If it's an uploaded file, construct the full URL using the backend URL
-  if (imagePath.startsWith('/uploads/')) {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-    // Remove /api from the base URL to get the backend base URL
-    const backendBaseUrl = API_BASE_URL.replace('/api', '');
-    return `${backendBaseUrl}${imagePath}`;
-  }
-  
-  // For static assets, return as-is
-  return imagePath;
+  return resolveImageUrl(imagePath);
 }
 
 export interface CreateGalleryItem {

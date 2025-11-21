@@ -4,7 +4,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ git
 
 # Copy package files
 COPY package*.json ./
@@ -16,6 +16,7 @@ RUN npm ci && npm cache clean --force
 COPY . .
 
 # Build the application
+ENV NODE_ENV=production
 RUN npm run build
 
 # Production stage
@@ -24,7 +25,7 @@ FROM node:22-alpine AS production
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache dumb-init tini
+RUN apk add --no-cache dumb-init tini curl
 
 # Install production dependencies for server
 RUN npm install --no-save express helmet compression && npm cache clean --force
@@ -45,8 +46,8 @@ USER nextjs
 EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
 
 # Use tini as entrypoint for proper signal handling
 ENTRYPOINT ["/sbin/tini", "--"]

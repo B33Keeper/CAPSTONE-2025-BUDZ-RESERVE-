@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: mysql:3306
--- Generation Time: Nov 13, 2025 at 08:55 PM
+-- Generation Time: Nov 21, 2025 at 10:42 PM
 -- Server version: 8.4.7
 -- PHP Version: 8.3.26
 
@@ -39,6 +39,15 @@ CREATE TABLE `announcements` (
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `announcements`
+--
+
+INSERT INTO `announcements` (`id`, `title`, `content`, `image_url`, `announcement_type`, `is_active`, `created_by`, `created_at`, `updated_at`) VALUES
+(11, 'Queueing Schedule', NULL, '/uploads/announcements/1763665735979-747450007.jpg', 'image', 1, 8, '2025-11-20 19:08:56.006388', '2025-11-20 19:12:35.000000'),
+(12, 'Queueing schedule', NULL, '/uploads/announcements/1763665802776-592725168.jpg', 'image', 1, 8, '2025-11-20 19:10:02.803080', '2025-11-20 19:28:01.000000'),
+(13, 'Queueing Schedule', NULL, '/uploads/announcements/1763665822974-992925982.jpg', 'image', 1, 8, '2025-11-20 19:10:23.005518', '2025-11-20 19:28:14.000000');
+
 -- --------------------------------------------------------
 
 --
@@ -60,8 +69,8 @@ CREATE TABLE `courts` (
 
 INSERT INTO `courts` (`Court_Id`, `Court_Name`, `Status`, `Price`, `Created_at`, `Updated_at`) VALUES
 (1, 'Court 1', 'Available', 250.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
-(2, 'Court 2', 'Available', 250.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
-(3, 'Court 3', 'Maintenance', 250.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
+(2, 'Court 2', 'Available', 250.00, '2025-10-14 20:57:26.558877', '2025-11-20 18:46:09.000000'),
+(3, 'Court 3', 'Maintenance', 250.00, '2025-10-14 20:57:26.558877', '2025-11-20 08:34:56.000000'),
 (4, 'Court 4', 'Available', 220.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
 (5, 'Court 5', 'Available', 250.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
 (6, 'Court 6', 'Available', 250.00, '2025-10-14 20:57:26.558877', '2025-10-14 20:57:26.558877'),
@@ -98,12 +107,12 @@ CREATE TABLE `equipments` (
 --
 
 INSERT INTO `equipments` (`id`, `equipment_name`, `stocks`, `price`, `status`, `created_at`, `updated_at`, `image_path`, `unit`, `weight`, `tension`) VALUES
-(1, 'Yonex GR 303', 1, 150.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:46:46.000000', '/uploads/equipments/1763066806085-104844781.png', 'Head Heavy', '5U', '30lbs'),
-(2, 'Li-Ning Blaze 100', 15, 80.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:47:24.000000', '/uploads/equipments/1763066844358-713667384.png', NULL, NULL, NULL),
-(3, 'YONEX Arcsaber 7 Play', 25, 100.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:47:29.000000', '/uploads/equipments/1763066849690-775455644.png', NULL, NULL, NULL),
-(4, 'Victor Thruster', 30, 15.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:47:35.000000', '/uploads/equipments/1763066855060-739408470.png', NULL, NULL, NULL),
-(5, 'Apacs Power', 50, 20.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-13 20:47:52.000000', '/uploads/equipments/1763066872053-315981378.png', NULL, NULL, NULL),
-(6, 'AlpSport', 10, 100.00, 'Available', '2025-11-07 04:47:49.382927', '2025-11-13 20:47:42.000000', '/uploads/equipments/1763066862024-19154608.png', NULL, NULL, NULL);
+(1, 'Yonex GR 303', 1, 150.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:06:20.000000', '/uploads/equipments/1763665580696-174217441.png', 'Head Heavy', '5U', '30lbs'),
+(2, 'Li-Ning Blaze 100', 15, 80.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:06:33.000000', '/uploads/equipments/1763665593089-172220678.png', NULL, NULL, NULL),
+(3, 'YONEX Arcsaber 7 Play', 25, 100.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:06:59.000000', '/uploads/equipments/1763665619009-798561788.png', NULL, NULL, NULL),
+(4, 'Victor Thruster', 30, 15.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:07:04.000000', '/uploads/equipments/1763665624609-30605186.png', NULL, NULL, NULL),
+(5, 'Apacs Power', 50, 20.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:07:11.000000', '/uploads/equipments/1763665631982-619789640.png', NULL, NULL, NULL),
+(6, 'AlpSport', 10, 100.00, 'Available', '2025-11-07 04:47:49.382927', '2025-11-20 19:07:18.000000', '/uploads/equipments/1763665638634-241461592.png', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -139,7 +148,8 @@ INSERT INTO `equipment_rentals` (`id`, `reservation_id`, `user_id`, `total_amoun
 (11, 170, 1, 150.00, NULL, '2025-11-09 10:32:35.929218', '2025-11-09 10:32:35.000000'),
 (12, 172, 1, 150.00, NULL, '2025-11-10 12:56:23.445954', '2025-11-10 12:56:23.000000'),
 (13, 173, 1, 300.00, NULL, '2025-11-10 14:09:37.333748', '2025-11-10 14:09:37.000000'),
-(14, 177, 1, 80.00, NULL, '2025-11-10 20:27:49.580969', '2025-11-10 20:27:49.000000');
+(14, 177, 1, 80.00, NULL, '2025-11-10 20:27:49.580969', '2025-11-10 20:27:49.000000'),
+(15, 189, 11, 20.00, NULL, '2025-11-17 09:15:09.229248', '2025-11-17 09:15:09.000000');
 
 -- --------------------------------------------------------
 
@@ -177,7 +187,8 @@ INSERT INTO `equipment_rental_items` (`id`, `rental_id`, `equipment_id`, `quanti
 (12, 11, 1, 1, 1, 150.00, 150.00, '2025-11-09 10:32:35.975569'),
 (13, 12, 1, 1, 1, 150.00, 150.00, '2025-11-10 12:56:23.494898'),
 (14, 13, 1, 1, 2, 150.00, 300.00, '2025-11-10 14:09:37.389912'),
-(15, 14, 2, 1, 1, 80.00, 80.00, '2025-11-10 20:27:49.625485');
+(15, 14, 2, 1, 1, 80.00, 80.00, '2025-11-10 20:27:49.625485'),
+(16, 15, 5, 1, 1, 20.00, 20.00, '2025-11-17 09:15:09.253039');
 
 -- --------------------------------------------------------
 
@@ -295,7 +306,10 @@ INSERT INTO `payments` (`id`, `reservation_id`, `amount`, `payment_method`, `sta
 (119, 183, 250.00, 'QR Ph', 'Pending', 'code_GskUjaSRhb4qAqgLUfBf1Cph', '1762856990342G4BDC', 'Pay via QR Ph code generated (code_GskUjaSRhb4qAqgLUfBf1Cph). Notes: Reservation 1762856990342G4BDC - filbert. Walk-in customer: filbert | Contact: 09498680515 | Email: zhiky090924@gmail.com', '2025-11-11 10:29:52.770267', '2025-11-11 10:29:52.770267'),
 (120, 184, 250.00, 'QR Ph', 'Pending', 'code_z2QhpvnJX6CbTH2w8WdoFfbA', '1762857078784NQSLY', 'Pay via QR Ph code generated (code_z2QhpvnJX6CbTH2w8WdoFfbA). Notes: Reservation 1762857078784NQSLY - POGI NAMAN NETO. Walk-in customer: POGI NAMAN NETO | Contact: 09498680515 | Email: baktolbomb@gmail.com', '2025-11-11 10:31:21.157893', '2025-11-11 10:31:21.157893'),
 (121, 185, 500.00, 'QR Ph', 'Pending', 'code_CqNxQjrg9kftKnJfK82yHksn', '17628602956507KXW8', 'Pay via QR Ph code generated (code_CqNxQjrg9kftKnJfK82yHksn). Notes: Reservation 17628602956507KXW8 - NATHAN. Walk-in customer: NATHAN | Contact: +639498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:25:18.559415', '2025-11-11 11:25:18.559415'),
-(122, 187, 250.00, 'QR Ph', 'Pending', 'code_xwntBEC3HLFXf628sHxCvkKt', '1762861756706JQP83', 'Pay via QR Ph code generated (code_xwntBEC3HLFXf628sHxCvkKt). Notes: Reservation 1762861756706JQP83 - kukurikabu. Walk-in customer: kukurikabu | Contact: 09498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:49:23.183615', '2025-11-11 11:49:23.183615');
+(122, 187, 250.00, 'QR Ph', 'Pending', 'code_xwntBEC3HLFXf628sHxCvkKt', '1762861756706JQP83', 'Pay via QR Ph code generated (code_xwntBEC3HLFXf628sHxCvkKt). Notes: Reservation 1762861756706JQP83 - kukurikabu. Walk-in customer: kukurikabu | Contact: 09498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:49:23.183615', '2025-11-11 11:49:23.183615'),
+(123, 188, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1763370662799', 'Test payment - paymaya', '2025-11-17 09:11:02.802705', '2025-11-17 09:11:02.802705'),
+(124, 189, 270.00, 'Cash', 'Completed', 'CASH176337090928155', '1763370907250DO7DH', 'Payment received in cash - Walk-in customer: Ivan Louis Cielo | Contact: 09366274094 | Email: cieloivanlouis@gmail.com', '2025-11-17 09:15:09.284738', '2025-11-17 09:15:09.284738'),
+(125, 190, 250.00, 'QR Ph', 'Pending', 'code_oYECzaU5cvFTK9FAneas8a7i', '1763640187618HRO60', 'Pay via QR Ph code generated (code_oYECzaU5cvFTK9FAneas8a7i). Notes: Reservation 1763640187618HRO60 - Ivan Louis Cielo. Walk-in customer: Ivan Louis Cielo | Contact: 09366274094 | Email: cieloivanlouis@gmail.com', '2025-11-20 12:03:41.470987', '2025-11-20 12:03:41.470987');
 
 -- --------------------------------------------------------
 
@@ -306,7 +320,7 @@ INSERT INTO `payments` (`id`, `reservation_id`, `amount`, `payment_method`, `sta
 CREATE TABLE `queueing_courts` (
   `id` int NOT NULL,
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `status` enum('available','maintenance','unavailable') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'available',
+  `status` enum('available','occupied','maintenance','unavailable') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'available',
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -316,9 +330,123 @@ CREATE TABLE `queueing_courts` (
 --
 
 INSERT INTO `queueing_courts` (`id`, `name`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'Court 1', 'available', '2025-11-13 20:36:16.574890', '2025-11-13 20:36:16.574890'),
-(2, 'Court 2', 'available', '2025-11-13 20:36:18.190571', '2025-11-13 20:36:18.190571'),
-(3, 'Court 3', 'available', '2025-11-13 20:36:19.858695', '2025-11-13 20:36:19.858695');
+(20, 'Court 1', 'available', '2025-11-21 20:51:27.205213', '2025-11-21 22:35:45.000000'),
+(21, 'Court 2', 'available', '2025-11-21 20:51:29.196099', '2025-11-21 22:35:51.000000'),
+(22, 'Court 3', 'available', '2025-11-21 20:51:31.917685', '2025-11-21 20:51:31.917685');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `queue_matches`
+--
+
+CREATE TABLE `queue_matches` (
+  `id` int NOT NULL,
+  `gameType` enum('mens-doubles','womens-doubles','mixed-doubles') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('pending','active','completed','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `teamA` json NOT NULL,
+  `teamB` json NOT NULL,
+  `court_id` int DEFAULT NULL,
+  `court_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `started_at` datetime DEFAULT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  `winner` enum('teamA','teamB','draw') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `user_id` int NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `queue_matches`
+--
+
+INSERT INTO `queue_matches` (`id`, `gameType`, `status`, `teamA`, `teamB`, `court_id`, `court_name`, `started_at`, `completed_at`, `created_at`, `updated_at`, `winner`, `user_id`) VALUES
+(1, 'mens-doubles', 'completed', '[{\"id\": 13, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 14, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', '[{\"id\": 15, \"sex\": \"male\", \"name\": \"Mcklain\", \"skill\": \"Advanced\"}, {\"id\": 16, \"sex\": \"male\", \"name\": \"Tips\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-15 08:05:53', '2025-11-15 08:07:00', '2025-11-15 08:05:53.149399', '2025-11-20 09:43:04.000000', NULL, 0),
+(2, 'mens-doubles', 'completed', '[{\"id\": 9, \"sex\": \"male\", \"name\": \"Sky\", \"skill\": \"Intermediate\"}, {\"id\": 10, \"sex\": \"male\", \"name\": \"Lebron\", \"skill\": \"Intermediate\"}]', '[{\"id\": 11, \"sex\": \"male\", \"name\": \"Jess\", \"skill\": \"Intermediate\"}, {\"id\": 12, \"sex\": \"male\", \"name\": \"Limit\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-15 08:05:53', '2025-11-15 08:07:02', '2025-11-15 08:05:53.169820', '2025-11-17 10:13:07.000000', NULL, 0),
+(3, 'mens-doubles', 'completed', '[{\"id\": 7, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}, {\"id\": 8, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}]', '[{\"id\": 17, \"sex\": \"male\", \"name\": \"Mama\", \"skill\": \"Beginner\"}, {\"id\": 18, \"sex\": \"male\", \"name\": \"papa\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-15 08:05:53', '2025-11-15 08:07:04', '2025-11-15 08:05:53.176068', '2025-11-17 10:13:09.000000', NULL, 0),
+(4, 'mixed-doubles', 'completed', '[{\"id\": 16, \"sex\": \"male\", \"name\": \"Tips\", \"skill\": \"Advanced\"}, {\"id\": 19, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', '[{\"id\": 15, \"sex\": \"male\", \"name\": \"Mcklain\", \"skill\": \"Advanced\"}, {\"id\": 20, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-15 08:08:12', '2025-11-15 08:16:12', '2025-11-15 08:08:11.642950', '2025-11-20 09:43:04.000000', 'teamA', 0),
+(5, 'mens-doubles', 'completed', '[{\"id\": 14, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 13, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', '[{\"id\": 15, \"sex\": \"male\", \"name\": \"Mcklain\", \"skill\": \"Advanced\"}, {\"id\": 16, \"sex\": \"male\", \"name\": \"Tips\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-15 08:16:27', '2025-11-15 08:17:31', '2025-11-15 08:16:27.157665', '2025-11-20 09:43:04.000000', 'teamA', 0),
+(6, 'mens-doubles', 'completed', '[{\"id\": 11, \"sex\": \"male\", \"name\": \"Jess\", \"skill\": \"Intermediate\"}, {\"id\": 12, \"sex\": \"male\", \"name\": \"Limit\", \"skill\": \"Intermediate\"}]', '[{\"id\": 10, \"sex\": \"male\", \"name\": \"Lebron\", \"skill\": \"Intermediate\"}, {\"id\": 9, \"sex\": \"male\", \"name\": \"Sky\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-15 08:16:27', '2025-11-15 08:17:35', '2025-11-15 08:16:27.168378', '2025-11-17 10:13:07.000000', 'teamB', 0),
+(7, 'mens-doubles', 'completed', '[{\"id\": 8, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}, {\"id\": 7, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}]', '[{\"id\": 17, \"sex\": \"male\", \"name\": \"Mama\", \"skill\": \"Beginner\"}, {\"id\": 18, \"sex\": \"male\", \"name\": \"papa\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-15 08:16:27', '2025-11-15 08:17:37', '2025-11-15 08:16:27.174054', '2025-11-17 10:13:09.000000', 'teamB', 0),
+(26, 'mens-doubles', 'cancelled', '[{\"id\": 13, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 14, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', '[{\"id\": 15, \"sex\": \"male\", \"name\": \"Mcklain\", \"skill\": \"Advanced\"}, {\"id\": 16, \"sex\": \"male\", \"name\": \"Tips\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-15 08:27:54', '2025-11-17 09:02:38', '2025-11-15 08:27:53.877248', '2025-11-20 09:43:04.000000', NULL, 0),
+(27, 'mens-doubles', 'cancelled', '[{\"id\": 11, \"sex\": \"male\", \"name\": \"Jess\", \"skill\": \"Intermediate\"}, {\"id\": 12, \"sex\": \"male\", \"name\": \"Limit\", \"skill\": \"Intermediate\"}]', '[{\"id\": 10, \"sex\": \"male\", \"name\": \"Lebron\", \"skill\": \"Intermediate\"}, {\"id\": 9, \"sex\": \"male\", \"name\": \"Sky\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-15 08:27:54', '2025-11-17 09:02:39', '2025-11-15 08:27:53.895043', '2025-11-17 10:13:07.000000', NULL, 0),
+(28, 'mens-doubles', 'cancelled', '[{\"id\": 18, \"sex\": \"male\", \"name\": \"papa\", \"skill\": \"Beginner\"}, {\"id\": 17, \"sex\": \"male\", \"name\": \"Mama\", \"skill\": \"Beginner\"}]', '[{\"id\": 8, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}, {\"id\": 7, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-15 08:27:54', '2025-11-17 09:02:40', '2025-11-15 08:27:53.910443', '2025-11-17 10:13:09.000000', NULL, 0),
+(34, 'mixed-doubles', 'cancelled', '[{\"id\": 21, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 23, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 22, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 24, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-17 10:07:04', '2025-11-17 10:36:52', '2025-11-17 10:07:03.999972', '2025-11-20 09:43:04.000000', NULL, 0),
+(39, 'mixed-doubles', 'completed', '[{\"id\": 22, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 23, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 21, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 24, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-17 10:47:36', '2025-11-20 08:33:42', '2025-11-17 10:47:35.726715', '2025-11-20 09:43:04.000000', 'teamB', 0),
+(40, 'mixed-doubles', 'cancelled', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 10:02:57', '2025-11-20 10:13:22', '2025-11-20 10:02:56.519972', '2025-11-21 20:44:56.000000', NULL, 0),
+(41, 'mixed-doubles', 'completed', '[{\"id\": 30, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 29, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 10:18:05', '2025-11-20 10:36:11', '2025-11-20 10:18:05.110198', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(42, 'mixed-doubles', 'completed', '[{\"id\": 29, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 30, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 10:36:11', '2025-11-20 10:36:37', '2025-11-20 10:35:43.433686', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(43, 'mixed-doubles', 'cancelled', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 10:36:37', '2025-11-20 10:37:42', '2025-11-20 10:35:43.447168', '2025-11-21 20:44:56.000000', NULL, 0),
+(45, 'mixed-doubles', 'completed', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 11:10:15', '2025-11-20 11:15:41', '2025-11-20 11:10:15.333217', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(46, 'mixed-doubles', 'completed', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 11:41:39', '2025-11-20 11:42:09', '2025-11-20 11:41:39.293875', '2025-11-21 20:44:56.000000', 'teamB', 0),
+(47, 'mens-doubles', 'cancelled', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 30, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}]', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 29, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-20 11:42:09', '2025-11-20 11:42:22', '2025-11-20 11:41:52.147907', '2025-11-21 20:44:56.000000', NULL, 0),
+(48, 'mens-doubles', 'cancelled', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 30, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}]', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 29, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-20 11:47:37', '2025-11-20 11:48:05', '2025-11-20 11:47:36.521051', '2025-11-21 20:44:56.000000', NULL, 0),
+(50, 'mens-doubles', 'cancelled', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 30, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}]', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 29, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-20 11:48:15', '2025-11-20 11:53:32', '2025-11-20 11:48:15.230783', '2025-11-21 20:44:56.000000', NULL, 0),
+(51, 'mixed-doubles', 'cancelled', '[{\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}, {\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', '[{\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-20 11:53:32', '2025-11-20 11:53:35', '2025-11-20 11:48:26.606418', '2025-11-21 20:44:56.000000', NULL, 0),
+(52, 'mixed-doubles', 'completed', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 11:54:42', '2025-11-20 12:04:17', '2025-11-20 11:54:42.430611', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(53, 'mixed-doubles', 'cancelled', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 12:04:17', '2025-11-20 12:06:33', '2025-11-20 11:55:17.255181', '2025-11-21 20:44:56.000000', NULL, 0),
+(54, 'mens-doubles', 'cancelled', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 30, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}]', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 29, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-20 19:30:41', '2025-11-20 19:31:03', '2025-11-20 19:30:40.959940', '2025-11-21 20:44:56.000000', NULL, 0),
+(55, 'mixed-doubles', 'cancelled', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 19:31:03', '2025-11-20 19:31:06', '2025-11-20 19:30:59.891540', '2025-11-21 20:44:56.000000', NULL, 0),
+(56, 'mens-doubles', 'completed', '[{\"id\": 27, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 30, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}]', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 29, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-20 19:38:36', '2025-11-20 19:42:29', '2025-11-20 19:38:36.264590', '2025-11-21 20:44:56.000000', 'teamB', 0),
+(57, 'mixed-doubles', 'cancelled', '[{\"id\": 53, \"sex\": \"male\", \"name\": \"dsada\", \"skill\": \"Advanced\"}, {\"id\": 28, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 25, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 19:57:10', '2025-11-20 20:07:55', '2025-11-20 19:57:09.942249', '2025-11-21 20:44:56.000000', NULL, 0),
+(60, 'mens-doubles', 'completed', '[{\"id\": 46, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 49, \"sex\": \"male\", \"name\": \"Limit\", \"skill\": \"Intermediate\"}]', '[{\"id\": 45, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 50, \"sex\": \"male\", \"name\": \"Lebron\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 20:07:43', '2025-11-20 20:26:33', '2025-11-20 20:07:43.315993', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(61, 'mens-doubles', 'completed', '[{\"id\": 48, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}, {\"id\": 56, \"sex\": \"male\", \"name\": \"dadasds\", \"skill\": \"Intermediate\"}]', '[{\"id\": 47, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}, {\"id\": 51, \"sex\": \"male\", \"name\": \"Jess\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 20:08:30', '2025-11-20 20:26:31', '2025-11-20 20:08:29.557611', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(62, 'mixed-doubles', 'completed', '[{\"id\": 57, \"sex\": \"male\", \"name\": \"hehehe\", \"skill\": \"Advanced\"}, {\"id\": 55, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', '[{\"id\": 58, \"sex\": \"male\", \"name\": \"jerulo\", \"skill\": \"Advanced\"}, {\"id\": 54, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 20:09:27', '2025-11-20 20:26:35', '2025-11-20 20:09:27.068899', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(116, 'mens-doubles', 'completed', '[{\"id\": 74, \"sex\": \"male\", \"name\": \"hehehe\", \"skill\": \"Advanced\"}, {\"id\": 66, \"sex\": \"male\", \"name\": \"Lebron\", \"skill\": \"Intermediate\"}]', '[{\"id\": 62, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 72, \"sex\": \"male\", \"name\": \"dadasds\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 20:45:17', '2025-11-20 20:58:56', '2025-11-20 20:45:17.229479', '2025-11-21 20:44:56.000000', 'teamB', 0),
+(117, 'mens-doubles', 'completed', '[{\"id\": 69, \"sex\": \"male\", \"name\": \"jerulo\", \"skill\": \"Advanced\"}, {\"id\": 65, \"sex\": \"male\", \"name\": \"Limit\", \"skill\": \"Intermediate\"}]', '[{\"id\": 67, \"sex\": \"male\", \"name\": \"Keke\", \"skill\": \"Advanced\"}, {\"id\": 68, \"sex\": \"male\", \"name\": \"Jess\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 20:45:27', '2025-11-20 20:45:33', '2025-11-20 20:45:27.329377', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(118, 'mens-doubles', 'completed', '[{\"id\": 63, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 64, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}]', '[{\"id\": 73, \"sex\": \"male\", \"name\": \"dsada\", \"skill\": \"Advanced\"}, {\"id\": 75, \"sex\": \"male\", \"name\": \"dsadas\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-20 20:46:48', '2025-11-20 20:53:27', '2025-11-20 20:46:47.761430', '2025-11-21 20:44:56.000000', 'teamB', 0),
+(119, 'mens-doubles', 'completed', '[{\"id\": 63, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 74, \"sex\": \"male\", \"name\": \"hehehe\", \"skill\": \"Advanced\"}]', '[{\"id\": 26, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 62, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-20 21:08:00', '2025-11-20 21:08:58', '2025-11-20 21:07:59.826582', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(120, 'mens-doubles', 'completed', '[{\"id\": 57, \"sex\": \"male\", \"name\": \"hehehe\", \"skill\": \"Advanced\"}, {\"id\": 69, \"sex\": \"male\", \"name\": \"jerulo\", \"skill\": \"Advanced\"}]', '[{\"id\": 53, \"sex\": \"male\", \"name\": \"dsada\", \"skill\": \"Advanced\"}, {\"id\": 67, \"sex\": \"male\", \"name\": \"Keke\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-20 21:08:00', '2025-11-20 21:09:18', '2025-11-20 21:07:59.857193', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(121, 'mens-doubles', 'completed', '[{\"id\": 46, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 73, \"sex\": \"male\", \"name\": \"dsada\", \"skill\": \"Advanced\"}]', '[{\"id\": 52, \"sex\": \"male\", \"name\": \"Keke\", \"skill\": \"Advanced\"}, {\"id\": 58, \"sex\": \"male\", \"name\": \"jerulo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-20 21:08:00', '2025-11-20 21:09:19', '2025-11-20 21:07:59.874439', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(122, 'mens-doubles', 'completed', '[{\"id\": 65, \"sex\": \"male\", \"name\": \"Limit\", \"skill\": \"Intermediate\"}, {\"id\": 72, \"sex\": \"male\", \"name\": \"dadasds\", \"skill\": \"Intermediate\"}]', '[{\"id\": 51, \"sex\": \"male\", \"name\": \"Jess\", \"skill\": \"Intermediate\"}, {\"id\": 49, \"sex\": \"male\", \"name\": \"Limit\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 21:08:00', '2025-11-20 21:09:21', '2025-11-20 21:07:59.886821', '2025-11-21 15:08:20.000000', 'teamB', 0),
+(123, 'mens-doubles', 'completed', '[{\"id\": 50, \"sex\": \"male\", \"name\": \"Lebron\", \"skill\": \"Intermediate\"}, {\"id\": 66, \"sex\": \"male\", \"name\": \"Lebron\", \"skill\": \"Intermediate\"}]', '[{\"id\": 56, \"sex\": \"male\", \"name\": \"dadasds\", \"skill\": \"Intermediate\"}, {\"id\": 68, \"sex\": \"male\", \"name\": \"Jess\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-20 21:08:58', '2025-11-20 21:09:14', '2025-11-20 21:07:59.893801', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(124, 'mens-doubles', 'completed', '[{\"id\": 48, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}, {\"id\": 64, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}]', '[{\"id\": 30, \"sex\": \"male\", \"name\": \"Jason\", \"skill\": \"Beginner\"}, {\"id\": 29, \"sex\": \"male\", \"name\": \"jacob\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-20 21:09:15', '2025-11-20 21:09:16', '2025-11-20 21:07:59.916135', '2025-11-21 20:44:56.000000', 'teamA', 0),
+(125, 'mens-doubles', 'completed', '[{\"id\": 82, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 83, \"sex\": \"male\", \"name\": \"Levy\", \"skill\": \"Intermediate\"}]', '[{\"id\": 81, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 84, \"sex\": \"male\", \"name\": \"Leafy\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-21 20:08:54', '2025-11-21 20:19:20', '2025-11-21 20:08:53.663517', '2025-11-21 20:44:56.000000', 'teamA', 11),
+(126, 'mens-doubles', 'cancelled', '[{\"id\": 82, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 84, \"sex\": \"male\", \"name\": \"Leafy\", \"skill\": \"Intermediate\"}]', '[{\"id\": 81, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 83, \"sex\": \"male\", \"name\": \"Levy\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-21 20:09:10', '2025-11-21 20:09:18', '2025-11-21 20:09:09.644802', '2025-11-21 20:44:56.000000', NULL, 11),
+(127, 'mens-doubles', 'cancelled', '[{\"id\": 81, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 83, \"sex\": \"male\", \"name\": \"Levy\", \"skill\": \"Intermediate\"}]', '[{\"id\": 82, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 84, \"sex\": \"male\", \"name\": \"Leafy\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-21 20:15:40', '2025-11-21 20:15:51', '2025-11-21 20:15:40.359621', '2025-11-21 20:44:56.000000', NULL, 11),
+(128, 'mens-doubles', 'cancelled', '[{\"id\": 81, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 83, \"sex\": \"male\", \"name\": \"Levy\", \"skill\": \"Intermediate\"}]', '[{\"id\": 82, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 84, \"sex\": \"male\", \"name\": \"Leafy\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-21 20:19:20', '2025-11-21 20:24:16', '2025-11-21 20:19:11.032362', '2025-11-21 20:44:56.000000', NULL, 11),
+(129, 'mens-doubles', 'completed', '[{\"id\": 86, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 88, \"sex\": \"male\", \"name\": \"Levy\", \"skill\": \"Intermediate\"}]', '[{\"id\": 85, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 87, \"sex\": \"male\", \"name\": \"Leafy\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-21 20:35:14', '2025-11-21 20:35:17', '2025-11-21 20:35:13.889945', '2025-11-21 20:44:56.000000', 'teamA', 11),
+(130, 'mens-doubles', 'completed', '[{\"id\": 90, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 91, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 92, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 89, \"sex\": \"male\", \"name\": \"Leafy\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-21 20:36:07', '2025-11-21 20:36:11', '2025-11-21 20:36:07.184524', '2025-11-21 20:44:56.000000', 'teamB', 11),
+(131, 'mixed-doubles', 'completed', '[{\"id\": 99, \"sex\": \"female\", \"name\": \"fdddfd\", \"skill\": \"Advanced\"}, {\"id\": 98, \"sex\": \"male\", \"name\": \"dasdadda\", \"skill\": \"Advanced\"}]', '[{\"id\": 97, \"sex\": \"male\", \"name\": \"dadas\", \"skill\": \"Advanced\"}, {\"id\": 100, \"sex\": \"female\", \"name\": \"fdfdfd\", \"skill\": \"Advanced\"}]', 20, 'Court 1', '2025-11-21 20:56:08', '2025-11-21 21:01:08', '2025-11-21 20:56:08.469547', '2025-11-21 21:01:08.000000', 'teamA', 11),
+(132, 'mens-doubles', 'completed', '[{\"id\": 106, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 104, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 105, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 103, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', 20, 'Court 1', '2025-11-21 22:23:24', '2025-11-21 22:23:26', '2025-11-21 22:23:23.992594', '2025-11-21 22:23:26.000000', 'teamA', 11),
+(133, 'mens-doubles', 'completed', '[{\"id\": 109, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 108, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 110, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 107, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', 20, 'Court 1', '2025-11-21 22:30:24', '2025-11-21 22:30:27', '2025-11-21 22:30:23.979297', '2025-11-21 22:30:26.000000', 'teamA', 11),
+(134, 'mens-doubles', 'completed', '[{\"id\": 113, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 112, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 114, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 111, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', 20, 'Court 1', '2025-11-21 22:35:19', '2025-11-21 22:35:22', '2025-11-21 22:35:18.570166', '2025-11-21 22:35:21.000000', 'teamA', 11),
+(135, 'mens-doubles', 'completed', '[{\"id\": 113, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 112, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 114, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 111, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', 20, 'Court 1', '2025-11-21 22:35:29', '2025-11-21 22:35:45', '2025-11-21 22:35:29.382072', '2025-11-21 22:35:45.000000', 'teamA', 11),
+(136, 'mens-doubles', 'completed', '[{\"id\": 114, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 112, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 113, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 111, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', 21, 'Court 2', '2025-11-21 22:35:45', '2025-11-21 22:35:52', '2025-11-21 22:35:41.823141', '2025-11-21 22:35:51.000000', 'teamB', 11);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `queue_matches_history`
+--
+
+CREATE TABLE `queue_matches_history` (
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `original_id` int NOT NULL,
+  `court_id` int DEFAULT NULL,
+  `court_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `started_at` datetime DEFAULT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  `winner` enum('teamA','teamB','draw') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  `archived_at` datetime NOT NULL,
+  `gameType` enum('mens-doubles','womens-doubles','mixed-doubles') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `teamA` json NOT NULL,
+  `teamB` json NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `queue_matches_history`
+--
+
+INSERT INTO `queue_matches_history` (`id`, `user_id`, `original_id`, `court_id`, `court_name`, `started_at`, `completed_at`, `winner`, `created_at`, `updated_at`, `archived_at`, `gameType`, `teamA`, `teamB`) VALUES
+(1, 11, 132, 20, 'Court 1', '2025-11-21 22:23:24', '2025-11-21 22:23:26', 'teamA', '2025-11-21 22:23:23.992000', '2025-11-21 22:23:26.000000', '2025-11-21 22:23:26', 'mens-doubles', '[{\"id\": 106, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 104, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 105, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 103, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
+(2, 11, 133, 20, 'Court 1', '2025-11-21 22:30:24', '2025-11-21 22:30:27', 'teamA', '2025-11-21 22:30:23.979000', '2025-11-21 22:30:26.000000', '2025-11-21 22:30:27', 'mens-doubles', '[{\"id\": 109, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 108, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 110, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 107, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
+(3, 11, 134, 20, 'Court 1', '2025-11-21 22:35:19', '2025-11-21 22:35:22', 'teamA', '2025-11-21 22:35:18.570000', '2025-11-21 22:35:21.000000', '2025-11-21 22:35:22', 'mens-doubles', '[{\"id\": 113, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 112, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 114, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 111, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
+(4, 11, 135, 20, 'Court 1', '2025-11-21 22:35:29', '2025-11-21 22:35:45', 'teamA', '2025-11-21 22:35:29.382000', '2025-11-21 22:35:45.000000', '2025-11-21 22:35:45', 'mens-doubles', '[{\"id\": 113, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 112, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 114, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 111, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
+(5, 11, 136, 21, 'Court 2', '2025-11-21 22:35:45', '2025-11-21 22:35:52', 'teamB', '2025-11-21 22:35:41.823000', '2025-11-21 22:35:51.000000', '2025-11-21 22:35:52', 'mens-doubles', '[{\"id\": 114, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 112, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 113, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 111, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]');
 
 -- --------------------------------------------------------
 
@@ -335,18 +463,40 @@ CREATE TABLE `queue_players` (
   `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'In Queue',
   `last_played` date DEFAULT NULL,
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  `user_id` int NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `queue_players_history`
+--
+
+CREATE TABLE `queue_players_history` (
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `original_id` int NOT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sex` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `skill` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `games_played` int NOT NULL DEFAULT '0',
+  `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `last_played` date DEFAULT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  `archived_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `queue_players`
+-- Dumping data for table `queue_players_history`
 --
 
-INSERT INTO `queue_players` (`id`, `name`, `sex`, `skill`, `games_played`, `status`, `last_played`, `created_at`, `updated_at`) VALUES
-(1, 'Ivan', 'male', 'Advanced', 0, 'In Queue', '2025-11-13', '2025-11-13 19:52:42.428358', '2025-11-13 19:52:42.428358'),
-(2, 'Cielo', 'male', 'Advanced', 0, 'In Queue', '2025-11-13', '2025-11-13 19:52:46.266655', '2025-11-13 19:52:46.266655'),
-(3, 'Levy', 'male', 'Advanced', 0, 'In Queue', '2025-11-13', '2025-11-13 19:53:10.299910', '2025-11-13 19:53:10.299910'),
-(4, 'Jersey', 'female', 'Intermediate', 0, 'In Queue', '2025-11-13', '2025-11-13 20:36:29.770452', '2025-11-13 20:36:29.770452');
+INSERT INTO `queue_players_history` (`id`, `user_id`, `original_id`, `name`, `sex`, `skill`, `games_played`, `status`, `last_played`, `created_at`, `updated_at`, `archived_at`) VALUES
+(145, 11, 110, 'Cielo', 'male', 'Advanced', 0, 'In Queue', '2025-11-22', '2025-11-21 22:28:55.658000', '2025-11-21 22:28:55.658000', '2025-11-21 22:30:00'),
+(146, 11, 109, 'Degamo', 'male', 'Advanced', 0, 'In Queue', '2025-11-22', '2025-11-21 22:28:52.341000', '2025-11-21 22:28:52.341000', '2025-11-21 22:30:00'),
+(147, 11, 107, 'Ivan', 'male', 'Advanced', 0, 'In Queue', '2025-11-22', '2025-11-21 22:28:45.027000', '2025-11-21 22:28:45.027000', '2025-11-21 22:30:00'),
+(148, 11, 108, 'Louis', 'male', 'Advanced', 0, 'In Queue', '2025-11-22', '2025-11-21 22:28:48.648000', '2025-11-21 22:28:48.648000', '2025-11-21 22:30:00');
 
 -- --------------------------------------------------------
 
@@ -437,7 +587,10 @@ INSERT INTO `reservations` (`Reservation_ID`, `User_ID`, `Court_ID`, `Reservatio
 (184, 10, 1, '2025-11-11', '19:00:00', '20:00:00', 'Confirmed', 250.00, '1762857078784NQSLY', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: POGI NAMAN NETO | Contact: 09498680515 | Email: baktolbomb@gmail.com', '2025-11-11 10:31:20.243016', '2025-11-11 10:31:20.243016', 0),
 (185, 1, 1, '2025-12-01', '08:00:00', '09:00:00', 'Confirmed', 250.00, '17628602956507KXW8', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: NATHAN | Contact: +639498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:25:18.515427', '2025-11-11 11:25:18.515427', 1),
 (186, 1, 2, '2025-12-01', '08:00:00', '09:00:00', 'Confirmed', 250.00, '17628602956507KXW8', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: NATHAN | Contact: +639498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:25:18.541802', '2025-11-11 11:25:18.541802', 1),
-(187, 1, 2, '2025-11-12', '08:00:00', '09:00:00', 'Confirmed', 250.00, '1762861756706JQP83', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: kukurikabu | Contact: 09498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:49:23.155775', '2025-11-11 11:49:23.155775', 1);
+(187, 1, 2, '2025-11-12', '08:00:00', '09:00:00', 'Confirmed', 250.00, '1762861756706JQP83', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: kukurikabu | Contact: 09498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:49:23.155775', '2025-11-11 11:49:23.155775', 1),
+(188, 1, 1, '2025-11-17', '06:00:00', '07:00:00', 'Confirmed', 250.00, '1763370629871AO564', 'test_payment_id', 'Test reservation via webhook', '2025-11-17 09:11:02.764751', '2025-11-17 09:11:02.764751', 0),
+(189, 11, 2, '2025-11-18', '08:00:00', '09:00:00', 'Confirmed', 250.00, '1763370907250DO7DH', NULL, 'Payment via Cash - Walk-in customer: Ivan Louis Cielo | Contact: 09366274094 | Email: cieloivanlouis@gmail.com', '2025-11-17 09:15:09.206971', '2025-11-17 09:15:09.206971', 1),
+(190, 11, 1, '2025-11-21', '08:00:00', '09:00:00', 'Confirmed', 250.00, '1763640187618HRO60', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: Ivan Louis Cielo | Contact: 09366274094 | Email: cieloivanlouis@gmail.com', '2025-11-20 12:03:41.453152', '2025-11-20 12:03:41.453152', 1);
 
 -- --------------------------------------------------------
 
@@ -517,7 +670,9 @@ INSERT INTO `users` (`id`, `name`, `age`, `sex`, `username`, `email`, `password`
 (8, 'admin', 21, 'Male', 'admin', 'rockwell.barrientos1996@gmail.com', '$2a$12$yznI4LmuRWJfoTS6B2UA0e2w8CQYy/PlZhrh5fjiJRuka6jjbXLMm', '09498680515', NULL, 1, 0, NULL, NULL, NULL, '2025-10-31 01:22:24.615642', '2025-11-13 20:49:57.876332', 'admin'),
 (9, 'kukurikabu', NULL, NULL, 'guest_1762801511064_hyb2j', 'guest_1762801511064_hyb2j@walkin.local', '$2a$12$ws2m1tw2yrA/lS/xiU.58uMq./hZ5iw31QkOSbBcM0uoy2ybxVdki', NULL, NULL, 1, 0, NULL, NULL, NULL, '2025-11-10 19:05:11.779141', '2025-11-10 19:05:11.779141', 'user'),
 (10, 'POGI', NULL, NULL, 'guest_1762856699787_2dafn', 'baktolbomb@gmail.com', '$2a$12$TfvFWWt6ocE9N0ADY8E6Iu5dE1xcAT9bTvpeNge8b5LjiS7phsEdO', '09498680515', NULL, 1, 0, NULL, NULL, NULL, '2025-11-11 10:25:00.272395', '2025-11-11 10:25:00.272395', 'user'),
-(11, 'Ivan Louis Cielo', 22, 'Male', 'ivan', 'cieloivanlouis@gmail.com', '$2a$12$y3c6Xjzo4WG6w.95WmIo7uWdlKW.QQZqyaWM81dYw82fa9judyNba', '09366274094', '/uploads/avatars/1763065882845-613575116.jpg', 1, 0, NULL, NULL, NULL, '2025-11-13 19:50:17.012848', '2025-11-13 20:49:34.531289', 'user');
+(11, 'Ivan Louis Cielo', 22, 'Male', 'ivan', 'cieloivanlouis@gmail.com', '$2a$12$y3c6Xjzo4WG6w.95WmIo7uWdlKW.QQZqyaWM81dYw82fa9judyNba', '09366274094', '/uploads/avatars/1763665522840-755203769.jpg', 1, 0, NULL, NULL, NULL, '2025-11-13 19:50:17.012848', '2025-11-20 19:05:23.000000', 'user'),
+(14, 'jerjerjer', 22, 'Male', 'jerjer', 'koko@gmail.com', '$2a$12$/3ov1rB.TXUVaeMIiPHRzOkxiWDsTIx.ILHoKp3HTmIRq74OyIHfq', NULL, NULL, 1, 0, NULL, NULL, NULL, '2025-11-21 19:30:16.619265', '2025-11-21 19:30:16.619265', 'user'),
+(15, 'popopo', 22, 'Male', 'popo', 'dadw@gmail.com', '$2a$12$Zg/XA8hGRY4kXc529EHIJ.ZBIufiyrs5gY5Tc2ESj0vo52D8znWpy', NULL, NULL, 1, 0, NULL, NULL, NULL, '2025-11-21 19:43:28.020506', '2025-11-21 19:43:28.020506', 'user');
 
 --
 -- Indexes for dumped tables
@@ -582,9 +737,28 @@ ALTER TABLE `queueing_courts`
   ADD UNIQUE KEY `IDX_8998f10fcaf5371581be2dcc42` (`name`);
 
 --
+-- Indexes for table `queue_matches`
+--
+ALTER TABLE `queue_matches`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `FK_d5a0337f1dac2b96c88cb22799e` (`court_id`);
+
+--
+-- Indexes for table `queue_matches_history`
+--
+ALTER TABLE `queue_matches_history`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `queue_players`
 --
 ALTER TABLE `queue_players`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `queue_players_history`
+--
+ALTER TABLE `queue_players_history`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -624,7 +798,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `announcements`
 --
 ALTER TABLE `announcements`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `courts`
@@ -642,13 +816,13 @@ ALTER TABLE `equipments`
 -- AUTO_INCREMENT for table `equipment_rentals`
 --
 ALTER TABLE `equipment_rentals`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `equipment_rental_items`
 --
 ALTER TABLE `equipment_rental_items`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `gallery`
@@ -666,25 +840,43 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=123;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=126;
 
 --
 -- AUTO_INCREMENT for table `queueing_courts`
 --
 ALTER TABLE `queueing_courts`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+
+--
+-- AUTO_INCREMENT for table `queue_matches`
+--
+ALTER TABLE `queue_matches`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=137;
+
+--
+-- AUTO_INCREMENT for table `queue_matches_history`
+--
+ALTER TABLE `queue_matches_history`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `queue_players`
 --
 ALTER TABLE `queue_players`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=115;
+
+--
+-- AUTO_INCREMENT for table `queue_players_history`
+--
+ALTER TABLE `queue_players_history`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=149;
 
 --
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `Reservation_ID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=188;
+  MODIFY `Reservation_ID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=191;
 
 --
 -- AUTO_INCREMENT for table `suggestions`
@@ -702,7 +894,7 @@ ALTER TABLE `time_slots`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- Constraints for dumped tables
@@ -725,6 +917,12 @@ ALTER TABLE `equipment_rental_items`
 --
 ALTER TABLE `payments`
   ADD CONSTRAINT `FK_9ed5ff4942e09edfd44ee0ccf01` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`Reservation_ID`);
+
+--
+-- Constraints for table `queue_matches`
+--
+ALTER TABLE `queue_matches`
+  ADD CONSTRAINT `FK_d5a0337f1dac2b96c88cb22799e` FOREIGN KEY (`court_id`) REFERENCES `queueing_courts` (`id`);
 
 --
 -- Constraints for table `reservations`
