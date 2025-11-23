@@ -350,14 +350,6 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
   useEffect(() => {
     if (isOpen) {
       fetchReservations()
-      
-      // Auto-refresh every 30 seconds to move ended reservations to history
-      const refreshInterval = setInterval(() => {
-        console.log('[ReservationsModal] Auto-refreshing to check for ended reservations...')
-        fetchReservations()
-      }, 30000) // Refresh every 30 seconds
-      
-      return () => clearInterval(refreshInterval)
     }
   }, [isOpen, fetchReservations])
 
