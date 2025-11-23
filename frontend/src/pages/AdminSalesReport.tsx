@@ -30,6 +30,11 @@ const AdminSalesReport = () => {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Sales Report')
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>('daily')
   const [salesData, setSalesData] = useState<SalesReportItem[]>([])
+  const [summary, setSummary] = useState<{ totalReservations: number; totalIncome: number; totalCancellations: number }>({
+    totalReservations: 0,
+    totalIncome: 0,
+    totalCancellations: 0
+  })
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
@@ -229,6 +234,7 @@ const AdminSalesReport = () => {
       console.log(`[SalesReport] Response:`, response.data)
       if (response.data) {
         setSalesData(response.data.data || [])
+        setSummary(response.data.summary || { totalReservations: 0, totalIncome: 0, totalCancellations: 0 })
         setCurrentPage(1) // Reset to first page when changing period
       }
     } catch (error: any) {
@@ -624,8 +630,26 @@ const AdminSalesReport = () => {
                             style={{ animationDelay: `${index * 50}ms` }}
                           >
                             <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.customerName}</td>
-                            <td className="px-6 py-4 text-sm text-gray-700">{item.courtName}</td>
-                            <td className="px-6 py-4 text-sm text-gray-700">{item.time}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              <div className="flex flex-col gap-1">
+                                {item.courtName.split(', ').map((court, idx) => (
+                                  <div key={idx} className="flex items-center space-x-2">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                    <span>{court.trim()}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              <div className="flex flex-col gap-1">
+                                {item.time.split(', ').map((time, idx) => (
+                                  <div key={idx} className="flex items-center space-x-2">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span>{time.trim()}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
                             <td className="px-6 py-4 text-sm text-gray-700">{item.date}</td>
                             <td className="px-6 py-4 text-sm font-medium text-green-600">{item.paymentMethod}</td>
                             <td className="px-6 py-4 text-sm text-gray-700">
@@ -675,7 +699,11 @@ const AdminSalesReport = () => {
                             <span className="text-xs text-gray-400 ml-2">(Filtered)</span>
                           )}
                         </div>
-                        <div className="text-2xl font-bold text-gray-900">{filteredData.length}</div>
+                        <div className="text-2xl font-bold text-gray-900">
+                          {(dateFrom || dateTo || searchQuery) 
+                            ? filteredData.length 
+                            : summary.totalReservations}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -696,7 +724,11 @@ const AdminSalesReport = () => {
                           )}
                         </div>
                         <div className="text-2xl font-bold text-green-600">
-                          {formatPrice(filteredData.reduce((sum, item) => sum + item.price, 0))}
+                          {formatPrice(
+                            (dateFrom || dateTo || searchQuery)
+                              ? filteredData.reduce((sum, item) => sum + item.price, 0)
+                              : summary.totalIncome
+                          )}
                         </div>
                       </div>
                     </div>
