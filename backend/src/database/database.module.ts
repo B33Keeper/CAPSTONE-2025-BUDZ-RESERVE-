@@ -15,16 +15,18 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         database: configService.get('DB_DATABASE', 'budz_reserve'),
         // Use autoLoadEntities instead of explicit entities array for better performance
         // entities array is loaded automatically when autoLoadEntities is true
-        synchronize: configService.get('NODE_ENV') === 'development',
+        // Disable synchronize when database is pre-initialized from SQL dump to avoid foreign key constraint errors
+        synchronize: false, // Database schema is already created via docker-entrypoint-initdb.d scripts
         logging: configService.get('NODE_ENV') === 'development',
         migrations: ['dist/database/migrations/*.js'],
-        migrationsRun: true,
+        migrationsRun: false, // Database is pre-initialized, migrations should be run manually if needed
         // Connection pool settings
+        // Note: Only valid MySQL2 pool options are allowed here
         extra: {
           connectionLimit: 10,
-          connectTimeout: 30000, // 30 seconds
-          acquireTimeout: 30000, // 30 seconds
-          timeout: 30000, // 30 seconds
+          connectTimeout: 30000, // 30 seconds - valid MySQL2 option
+          // acquireTimeout and timeout are not valid MySQL2 connection pool options
+          // They cause warnings and may prevent proper connection
         },
         // Retry connection settings
         retryAttempts: 5,

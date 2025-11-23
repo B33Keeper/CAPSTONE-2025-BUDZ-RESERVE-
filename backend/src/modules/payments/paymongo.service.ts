@@ -489,7 +489,7 @@ export class PayMongoService {
   }
 
   // Create proper Paymongo checkout session that allows user to choose payment method
-  async createPaymongoCheckout(amount: number, currency: string = 'PHP', description?: string, returnUrl?: string, billingInfo?: any, bookingData?: any) {
+  async createPaymongoCheckout(amount: number, currency: string = 'PHP', description?: string, returnUrl?: string, cancelUrl?: string, billingInfo?: any, bookingData?: any) {
     try {
       // Build line items: court + equipment breakdown for clearer checkout UI
       const lineItems: any[] = [];
@@ -548,10 +548,10 @@ export class PayMongoService {
               send_email_receipt: true,
               show_description: true,
               show_line_items: true,
-              cancel_url: returnUrl || `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/booking`,
-              success_url: bookingData ? 
+              cancel_url: cancelUrl || `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/payment/failed`,
+              success_url: returnUrl || (bookingData ? 
                 `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/payment/success?checkout_session_id={CHECKOUT_SESSION_ID}&amount=${amount}&bookingData=${encodeURIComponent(JSON.stringify(bookingData))}` :
-                (returnUrl || `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/payment/success`),
+                `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/payment/success`),
               reference_number: `REF${Date.now()}`,
               description: description || 'Badminton Court Booking',
               metadata: bookingData ? {

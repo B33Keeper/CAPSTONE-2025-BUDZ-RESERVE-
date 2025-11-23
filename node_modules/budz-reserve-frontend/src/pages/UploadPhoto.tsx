@@ -273,8 +273,8 @@ const UploadPhoto = () => {
       <div className="flex">
         <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
 
-        {/* Main Content */}
-        <main className="flex-1 p-3 sm:p-4 lg:p-8 overflow-x-hidden animate-fadeIn">
+        {/* Main Content - with left margin to account for fixed sidebar */}
+        <main className="flex-1 md:ml-64 p-3 sm:p-4 lg:p-8 overflow-x-hidden animate-fadeIn">
 
           {/* Page Header */}
           <div className="mb-8">

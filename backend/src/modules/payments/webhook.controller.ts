@@ -12,6 +12,7 @@ import { EquipmentRental } from './entities/equipment-rental.entity';
 import { EquipmentRentalItem } from './entities/equipment-rental-item.entity';
 import { Equipment } from '../equipment/entities/equipment.entity';
 import { CourtsService } from '../courts/courts.service';
+import { ReservationsService } from '../reservations/reservations.service';
 
 interface PaymongoWebhookEvent {
   data: {
@@ -39,6 +40,7 @@ export class WebhookController {
     private readonly emailReceiptService: EmailReceiptService,
     private readonly paymentsService: PaymentsService,
     private readonly courtsService: CourtsService,
+    private readonly reservationsService: ReservationsService,
     @InjectRepository(Reservation)
     private readonly reservationRepository: Repository<Reservation>,
     @InjectRepository(Payment)
@@ -275,14 +277,53 @@ export class WebhookController {
       this.logger.log(`💳 Processing Payment: ${paymentData.id}`);
       this.logger.log('───────────────────────────────────────────────────────────');
       
-      // Prefer payment details from webhook payload; fallback to API fetch
-      const payment = paymentData?.attributes
-        ? { id: paymentData.id, attributes: paymentData.attributes }
-        : await this.payMongoService.getPayment(paymentData.id);
+      // Always fetch the full payment details from PayMongo API to ensure we have complete information
+      // Webhook payload might not include all payment method details
+      let payment: any;
+      try {
+        payment = await this.payMongoService.getPayment(paymentData.id);
+        this.logger.log(`✅ Fetched full payment details from PayMongo API`);
+      } catch (fetchError) {
+        // Fallback to webhook payload if API fetch fails
+        this.logger.warn(`⚠️ Failed to fetch payment from API, using webhook payload: ${fetchError.message}`);
+        payment = paymentData?.attributes
+          ? { id: paymentData.id, attributes: paymentData.attributes }
+          : { id: paymentData.id, attributes: {} };
+      }
       
       this.logger.log(`💰 Amount: ₱${(payment.attributes.amount / 100).toFixed(2)}`);
-      this.logger.log(`💳 Payment Method: ${payment.attributes.source?.type || 'Unknown'}`);
       this.logger.log(`📊 Status: ${payment.attributes.status}`);
+      
+      // Extract payment method type - try multiple sources
+      let paymentMethodType: string | undefined;
+      
+      // First, try source.type (direct payment method type)
+      if (payment.attributes.source?.type) {
+        paymentMethodType = payment.attributes.source.type;
+        this.logger.log(`💳 Payment Method (from source.type): ${paymentMethodType}`);
+      }
+      
+      // If not found and we have a source.id (payment method ID), fetch the payment method details
+      if (!paymentMethodType && payment.attributes.source?.id) {
+        try {
+          this.logger.log(`🔍 Fetching payment method details from source.id: ${payment.attributes.source.id}`);
+          const paymentMethod = await this.payMongoService.getPaymentMethod(payment.attributes.source.id);
+          paymentMethodType = paymentMethod.attributes.type;
+          this.logger.log(`💳 Payment Method (from fetched payment method): ${paymentMethodType}`);
+        } catch (error) {
+          this.logger.warn(`⚠️ Failed to fetch payment method details: ${error.message}`);
+        }
+      }
+      
+      // If still not found, log warning and use default
+      if (!paymentMethodType) {
+        this.logger.warn(`⚠️ Payment method type not found in payment object, using default GCASH`);
+        this.logger.log(`   Payment object structure:`, JSON.stringify({
+          source: payment.attributes.source,
+          id: payment.id
+        }, null, 2));
+        paymentMethodType = 'gcash'; // Default fallback
+      }
       
       // Create reservation FIRST if booking data is in metadata or provided by caller (checkout session)
       let reservationId = 0;
@@ -318,7 +359,7 @@ export class WebhookController {
       // Create payment record(s) in local database - one for each reservation in the transaction
       // This ensures all reservations in the same transaction have payment information
       const totalAmount = payment.attributes.amount / 100; // Convert from centavos
-      const paymentMethod = this.mapPaymentMethod(payment.attributes.source?.type);
+      const paymentMethod = this.mapPaymentMethod(paymentMethodType || payment.attributes.source?.type || 'gcash');
       const transactionId = payment.id;
       const referenceNumber = createdReservations.length > 0 
         ? createdReservations[0].Reference_Number 
@@ -374,8 +415,10 @@ export class WebhookController {
         if (effectiveBookingData?.equipmentBookings?.length && createdReservations.length > 0) {
           // Link equipment rentals to the first reservation in the transaction
           const firstReservationId = createdReservations[0].Reservation_ID;
+          // Use the userId from the first reservation if bookingData.userId is null (admin-created)
+          const effectiveUserId = createdReservations[0]?.User_ID || effectiveBookingData.userId;
           await this.createEquipmentRentalsFromBooking(
-            effectiveBookingData.userId,
+            effectiveUserId,
             firstReservationId,
             effectiveBookingData.equipmentBookings
           );
@@ -471,6 +514,24 @@ export class WebhookController {
   private async createReservationFromPayment(payment: any, bookingData: any): Promise<Reservation[]> {
     const createdReservations: Reservation[] = [];
     try {
+      // If userId is null/undefined and we have customer info, create/get guest user for admin-created reservations
+      let effectiveUserId = bookingData.userId;
+      if ((!effectiveUserId || effectiveUserId === null) && (bookingData.customerName || bookingData.customerEmail || bookingData.customerContact)) {
+        this.logger.log(`   👤 Admin-created reservation detected. Creating/getting guest user...`);
+        try {
+          const guestUser = await this.reservationsService.getOrCreateGuestUser(
+            bookingData.customerName || 'Walk-in Customer',
+            bookingData.customerEmail,
+            bookingData.customerContact
+          );
+          effectiveUserId = guestUser.id;
+          this.logger.log(`   ✅ Guest user created/found: User ID ${effectiveUserId}`);
+        } catch (userError) {
+          this.logger.error(`   ❌ Failed to create/get guest user: ${userError.message}`);
+          throw new Error(`Failed to create guest user for admin-created reservation: ${userError.message}`);
+        }
+      }
+      
       // Create reservations from booking data in payment metadata
       for (const courtBooking of bookingData.courtBookings || []) {
         // Map court name to Court_ID
@@ -490,12 +551,12 @@ export class WebhookController {
         this.logger.log(`   📅 Creating reservation for date: ${reservationDate.toISOString().split('T')[0]}`);
         this.logger.log(`   ⏰ Time: ${startTime} - ${endTime}`);
         this.logger.log(`   🏸 Court: ${court.Court_Name} (ID: ${court.Court_Id})`);
-        this.logger.log(`   👤 User ID: ${bookingData.userId}`);
+        this.logger.log(`   👤 User ID: ${effectiveUserId}`);
         
         // Check for duplicate reservation to prevent webhook from creating duplicates
         const existingReservation = await this.reservationRepository.findOne({
           where: {
-            User_ID: bookingData.userId,
+            User_ID: effectiveUserId,
             Court_ID: court.Court_Id,
             Reservation_Date: reservationDate,
             Start_Time: startTime,
@@ -528,7 +589,7 @@ export class WebhookController {
         }
         
         const reservation = this.reservationRepository.create({
-          User_ID: bookingData.userId,
+          User_ID: effectiveUserId,
           Court_ID: court.Court_Id,
           Reservation_Date: reservationDate,
           Start_Time: startTime,
@@ -538,7 +599,7 @@ export class WebhookController {
           Paymongo_Reference_Number: payment.id,
           Notes: `Payment via Paymongo - ${payment.id}`,
           Status: ReservationStatus.CONFIRMED,
-          Is_Admin_Created: false, // Important: Set to false so it appears in "My Reservations"
+          Is_Admin_Created: bookingData.isAdminCreated === true, // Check if this is an admin-created reservation
         });
 
         const savedReservation = await this.reservationRepository.save(reservation);

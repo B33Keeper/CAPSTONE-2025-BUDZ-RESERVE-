@@ -482,7 +482,7 @@ export class ReservationsService {
     }
   }
 
-  private async getOrCreateGuestUser(
+  async getOrCreateGuestUser(
     customerName: string,
     customerEmail?: string,
     customerContact?: string,

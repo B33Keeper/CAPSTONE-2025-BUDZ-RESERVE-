@@ -420,6 +420,7 @@ export class PaymentController {
     amount: number; 
     description?: string; 
     returnUrl?: string;
+    cancelUrl?: string;
     billingInfo?: {
       name: string;
       email: string;
@@ -428,7 +429,7 @@ export class PaymentController {
     bookingData?: string;
   }) {
     try {
-      const { amount, description, returnUrl, billingInfo, bookingData } = body;
+      const { amount, description, returnUrl, cancelUrl, billingInfo, bookingData } = body;
       
       if (!amount || amount <= 0) {
         throw new Error('Invalid amount');
@@ -449,6 +450,7 @@ export class PaymentController {
         'PHP',
         description,
         returnUrl,
+        cancelUrl,
         billingInfo,
         parsedBookingData
       );

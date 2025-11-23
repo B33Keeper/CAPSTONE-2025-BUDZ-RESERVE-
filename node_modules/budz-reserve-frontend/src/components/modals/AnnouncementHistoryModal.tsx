@@ -27,6 +27,11 @@ export function AnnouncementHistoryModal({ isOpen, onClose }: AnnouncementHistor
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [togglingId, setTogglingId] = useState<number | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'delete' | 'toggle'
+    announcement: Announcement
+    nextStatus?: boolean
+  } | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -47,11 +52,11 @@ export function AnnouncementHistoryModal({ isOpen, onClose }: AnnouncementHistor
     }
   }
 
-  const handleToggleActive = async (id: number, currentStatus: boolean) => {
+  const handleToggleActive = async (id: number, nextStatus: boolean) => {
     try {
       setTogglingId(id)
-      await api.patch(`/announcements/${id}`, { is_active: !currentStatus })
-      toast.success(`Announcement ${!currentStatus ? 'activated' : 'deactivated'} successfully`)
+      await api.patch(`/announcements/${id}`, { is_active: nextStatus })
+      toast.success(`Announcement ${nextStatus ? 'activated' : 'deactivated'} successfully`)
       await fetchAnnouncements()
     } catch (error: any) {
       console.error('Error toggling announcement status:', error)
@@ -62,10 +67,6 @@ export function AnnouncementHistoryModal({ isOpen, onClose }: AnnouncementHistor
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this announcement? This action cannot be undone.')) {
-      return
-    }
-
     try {
       setDeletingId(id)
       await api.delete(`/announcements/${id}`)
@@ -77,6 +78,30 @@ export function AnnouncementHistoryModal({ isOpen, onClose }: AnnouncementHistor
     } finally {
       setDeletingId(null)
     }
+  }
+
+  const openConfirm = (config: {
+    type: 'delete' | 'toggle'
+    announcement: Announcement
+    nextStatus?: boolean
+  }) => {
+    setConfirmAction(config)
+  }
+
+  const closeConfirm = () => {
+    setConfirmAction(null)
+  }
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return
+    if (confirmAction.type === 'delete') {
+      await handleDelete(confirmAction.announcement.id)
+    } else {
+      const desiredStatus =
+        confirmAction.nextStatus ?? !confirmAction.announcement.is_active
+      await handleToggleActive(confirmAction.announcement.id, desiredStatus)
+    }
+    setConfirmAction(null)
   }
 
   if (!isOpen) return null
@@ -159,7 +184,13 @@ export function AnnouncementHistoryModal({ isOpen, onClose }: AnnouncementHistor
                         <div className="flex items-center space-x-1">
                           {/* Toggle Active/Inactive Button */}
                           <button
-                            onClick={() => handleToggleActive(announcement.id, announcement.is_active)}
+                            onClick={() =>
+                              openConfirm({
+                                type: 'toggle',
+                                announcement,
+                                nextStatus: !announcement.is_active
+                              })
+                            }
                             disabled={togglingId === announcement.id}
                             className={`p-2 rounded-lg transition-colors ${
                               announcement.is_active
@@ -183,7 +214,12 @@ export function AnnouncementHistoryModal({ isOpen, onClose }: AnnouncementHistor
                           
                           {/* Delete Button */}
                           <button
-                            onClick={() => handleDelete(announcement.id)}
+                            onClick={() =>
+                              openConfirm({
+                                type: 'delete',
+                                announcement
+                              })
+                            }
                             disabled={deletingId === announcement.id}
                             className="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Delete announcement"
@@ -235,6 +271,47 @@ export function AnnouncementHistoryModal({ isOpen, onClose }: AnnouncementHistor
           </button>
         </div>
       </div>
+
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="mb-4">
+              <h3 className="text-xl font-bold text-gray-900">
+                {confirmAction.type === 'delete'
+                  ? 'Delete announcement?'
+                  : confirmAction.nextStatus
+                    ? 'Activate announcement?'
+                    : 'Deactivate announcement?'}
+              </h3>
+              <p className="mt-2 text-gray-600">
+                {confirmAction.type === 'delete'
+                  ? 'This action cannot be undone. Are you sure you want to delete this announcement?'
+                  : `Are you sure you want to ${confirmAction.nextStatus ? 'activate' : 'deactivate'} "${confirmAction.announcement.title}"?`}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
+              <button
+                onClick={closeConfirm}
+                className="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-semibold text-white transition ${
+                  confirmAction.type === 'delete'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : confirmAction.nextStatus
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-yellow-500 hover:bg-yellow-600'
+                }`}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

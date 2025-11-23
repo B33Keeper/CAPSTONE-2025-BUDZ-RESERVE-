@@ -240,8 +240,24 @@ export class PaymentService {
   }
 
   // Legacy method for backward compatibility
-  static async createCheckout(amount: number, description?: string, billingInfo?: { name: string; email: string; contactNumber: string }, bookingData?: any): Promise<PaymentCheckoutResponse> {
+  static async createCheckout(
+    amount: number, 
+    description?: string, 
+    billingInfo?: { name: string; email: string; contactNumber: string }, 
+    bookingData?: any,
+    returnUrl?: string,
+    cancelUrl?: string
+  ): Promise<PaymentCheckoutResponse> {
     try {
+      // Use custom return URLs if provided, otherwise use defaults
+      const successUrl = returnUrl || `${window.location.origin}/payment/success`
+      const failureUrl = cancelUrl || `${window.location.origin}/payment/failed`
+      
+      // Add booking data to return URL as query parameter if provided
+      const returnUrlWithData = bookingData 
+        ? `${successUrl}?bookingData=${encodeURIComponent(JSON.stringify(bookingData))}`
+        : successUrl
+      
       const response = await fetch(`${API_BASE_URL}/payment/create-paymongo-checkout`, {
         method: 'POST',
         headers: {
@@ -250,7 +266,8 @@ export class PaymentService {
         body: JSON.stringify({
           amount,
           description,
-          returnUrl: `${window.location.origin}/payment/success`,
+          returnUrl: returnUrlWithData,
+          cancelUrl: failureUrl,
           billingInfo: billingInfo || {
             name: 'Customer',
             email: 'customer@example.com',

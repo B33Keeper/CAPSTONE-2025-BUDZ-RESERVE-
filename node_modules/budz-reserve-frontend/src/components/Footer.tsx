@@ -56,7 +56,7 @@ export function Footer() {
               <li><span className="text-gray-300 text-sm">Court Reservations</span></li>
               <li><span className="text-gray-300 text-sm">Equipment Rental</span></li>
               <li><span className="text-gray-300 text-sm">Tournament Booking</span></li>
-              <li><span className="text-gray-300 text-sm">Group Events</span></li>
+              <li><span className="text-gray-300 text-sm">Queueing management</span></li>
               <li><span className="text-gray-300 text-sm">Training Sessions</span></li>
             </ul>
           </div>

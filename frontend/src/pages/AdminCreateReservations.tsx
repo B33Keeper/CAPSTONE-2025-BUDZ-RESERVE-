@@ -7,6 +7,8 @@ import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
 import toast from 'react-hot-toast'
+import { BookingDetailsModal } from '@/components/modals/BookingDetailsModal'
+import { PaymentService } from '@/lib/paymentService'
 
 interface CourtBooking {
   court: string
@@ -79,6 +81,7 @@ export default function AdminCreateReservations() {
   const [availabilityData, setAvailabilityData] = useState<Map<number, any[]>>(new Map())
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [showEquipmentGuard, setShowEquipmentGuard] = useState(false)
+  const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false)
   const [referenceNumber, setReferenceNumber] = useState('')
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
@@ -192,7 +195,7 @@ export default function AdminCreateReservations() {
     return 'upcoming'
   }
 
-  const handleGenerateQrPayment = async () => {
+  const handleProcessPayMongoPayment = async () => {
     if (!customerName || customerName.trim() === '') {
       toast.error('Please enter customer name first')
       return
@@ -213,48 +216,72 @@ export default function AdminCreateReservations() {
       return
     }
 
-    if (totalAmount === 0) {
-      toast.error('Total amount must be greater than zero to generate a QR code')
-      return
-    }
-
     try {
-      setIsGeneratingQr(true)
+      setIsGeneratingQr(true) // Reusing this state for loading indicator
 
-      let effectiveReferenceNumber = referenceNumber
-      if (!effectiveReferenceNumber) {
-        effectiveReferenceNumber =
-          Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
-        setReferenceNumber(effectiveReferenceNumber)
+      // Generate reference number if not already set
+      if (!referenceNumber) {
+        const refNumber = Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
+        setReferenceNumber(refNumber)
       }
 
-      const effectiveNotes =
-        qrNotes.trim() ||
-        `Reservation ${effectiveReferenceNumber} - ${customerName.trim() || 'Walk-in Customer'}`
+      // Calculate total amount
+      const courtTotal = courtBookings.reduce((sum, booking) => sum + booking.subtotal, 0)
+      const equipmentTotal = equipmentBookings.reduce((sum, booking) => sum + booking.subtotal, 0)
+      const calculatedTotalAmount = courtTotal + equipmentTotal
 
-      const response = await api.post('/reservations/admin/qrph/preview', {
+      // Prepare booking data for metadata
+      const bookingData = {
+        userId: null, // Admin created, will be resolved to guest user by backend
+        selectedDate,
+        courtBookings: courtBookings.map(booking => ({
+          court: booking.court,
+          schedule: booking.schedule,
+          subtotal: booking.subtotal
+        })),
+        equipmentBookings: equipmentBookings.map(booking => ({
+          equipment: booking.equipment,
+          time: booking.time,
+          subtotal: booking.subtotal,
+          quantity: booking.quantity || 1
+        })),
+        referenceNumber: referenceNumber || Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase(),
         customerName: customerName.trim(),
         customerEmail: customerEmail.trim(),
         customerContact: customerContact.trim(),
-        qrDetails: {
-          notes: effectiveNotes,
-          kind: 'instore',
-          ...(paymongoMobileNumber ? { mobileNumber: paymongoMobileNumber } : {})
-        }
-      })
-
-      if (response.data?.qrData) {
-        toast.success('QR Ph code generated. Await customer payment.')
-        setRecentPaymentMethod('qrph')
-        setQrPaymentData(response.data.qrData)
-        setQrPaymentConfirmed(false)
-        setCurrentStep(4)
-      } else {
-        toast.error('Failed to generate QR code preview. Please try again.')
+        isAdminCreated: true // Flag to mark this as admin-created reservation
       }
-    } catch (error: any) {
-      console.error('Error generating QR Ph code:', error)
-      toast.error(error.response?.data?.message || 'Failed to generate QR code. Please try again.')
+
+      // Create checkout session with PayMongo using admin-specific return URLs
+      const adminSuccessUrl = `${window.location.origin}/admin/payment/success`
+      const adminFailedUrl = `${window.location.origin}/admin/payment/failed`
+      
+      const checkoutResponse = await PaymentService.createCheckout(
+        calculatedTotalAmount,
+        `Badminton Court Booking - ${selectedDate}`,
+        {
+          name: customerName.trim(),
+          email: customerEmail.trim(),
+          contactNumber: customerContact.trim()
+        },
+        bookingData,
+        adminSuccessUrl,
+        adminFailedUrl
+      )
+
+      if (checkoutResponse.success && checkoutResponse.data) {
+        // Redirect to Paymongo's hosted checkout page
+        if (checkoutResponse.data.checkoutUrl) {
+          window.location.href = checkoutResponse.data.checkoutUrl
+        } else {
+          toast.error('Payment setup failed: No checkout URL provided')
+        }
+      } else {
+        toast.error(`Payment setup failed: ${checkoutResponse.message || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Payment error:', error)
+      toast.error('Payment processing failed. Please try again.')
     } finally {
       setIsGeneratingQr(false)
     }
@@ -974,7 +1001,8 @@ export default function AdminCreateReservations() {
       <div className="flex">
         <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
         
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
+        {/* Main Content - with left margin to account for fixed sidebar */}
+        <main className="flex-1 md:ml-64 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
           <div className="bg-white rounded-lg shadow-lg p-6 mx-auto" style={{ maxWidth: 'calc(72rem + 400px)' }}>
             <div className="bg-gradient-to-r from-slate-100 via-white to-slate-100 px-4 py-5 sm:px-6 rounded-t-lg -mx-6 -mt-6 mb-6 overflow-hidden">
               <ol className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-6">
@@ -1724,9 +1752,11 @@ export default function AdminCreateReservations() {
                         setShowEquipmentGuard(true)
                         return
                       }
-                      const refNumber = Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
-                      setReferenceNumber(refNumber)
-                      setCurrentStep(3)
+                      if (courtBookings.length === 0) {
+                        toast.error('Select time and court number to proceed')
+                        return
+                      }
+                      setShowBookingDetailsModal(true)
                     }}
                     className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium"
                   >
@@ -1737,108 +1767,200 @@ export default function AdminCreateReservations() {
             )}
 
             {currentStep === 3 && (
-              <div className="space-y-6">
-                <div className="bg-gray-600 text-white px-6 py-4 rounded-t-lg -mx-6 -mt-6 mb-6 shadow">
-                  <h2 className="text-base sm:text-lg font-semibold">Payment Method</h2>
-                  <p className="text-blue-100 text-xs sm:text-sm mt-1">Confirm booking and process cash payment</p>
-                </div>
-
-                <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Booking Summary</h3>
-                  <p className="text-sm text-gray-600">Date: <span className="font-medium">{selectedDate}</span></p>
-                  {(customerName || customerEmail || customerContact) && (
-                    <div className="mt-1 space-y-1 text-sm text-gray-600">
-                      {customerName && (
-                        <p>
-                          For: <span className="font-medium">{customerName.trim()}</span>
-                        </p>
-                      )}
-                      {customerEmail && (
-                        <p>
-                          Email: <span className="font-medium">{customerEmail.trim()}</span>
-                        </p>
-                      )}
-                      {customerContact && (
-                        <p>
-                          Phone: <span className="font-medium">{customerContact.trim()}</span>
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <div className="mt-4">
-                    <h4 className="font-medium text-gray-700">Court Bookings:</h4>
-                    {courtBookings.length > 0 ? (
-                      <ul className="list-disc list-inside text-sm text-gray-600">
-                        {courtBookings.map((booking, index) => (
-                          <li key={index}>{booking.court} - {booking.schedule} (₱{booking.subtotal.toFixed(2)})</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-gray-500">No court bookings.</p>
-                    )}
-                  </div>
-                  <div className="mt-2">
-                    <h4 className="font-medium text-gray-700">Equipment Rentals:</h4>
-                    {equipmentBookings.length > 0 ? (
-                      <ul className="list-disc list-inside text-sm text-gray-600">
-                        {equipmentBookings.map((booking, index) => (
-                          <li key={index}>{booking.equipment} x {booking.quantity} for {booking.time} (₱{booking.subtotal.toFixed(2)})</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-gray-500">No equipment rentals.</p>
-                    )}
-                  </div>
-                  <div className="text-right mt-4">
-                    <p className="text-xl font-bold text-gray-900">Total Amount: ₱{totalAmount.toFixed(2)}</p>
-                  </div>
-                </div>
-
-                <div className="mt-6 p-4 sm:p-5 border border-blue-200 bg-blue-50/60 rounded-xl shadow-sm space-y-4">
+              <div className="max-w-4xl mx-auto">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-8">
                   <div>
-                    <h3 className="text-base font-semibold text-blue-900">PayMongo QR Ph Payment</h3>
-                    <p className="text-sm text-blue-700">
-                      Generate a QR Ph code for the customer to scan. The reservation will be saved with a pending payment status until PayMongo confirms the transaction.
+                    <h1 className="text-3xl font-bold text-gray-900">Complete Your Reservation</h1>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Selected Date:</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {(() => {
+                        const selectedDateDetails = getDateDisplayDetails(selectedDate)
+                        return selectedDateDetails?.formattedDate ?? selectedDate
+                      })()}
                     </p>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                </div>
+
+                {/* Customer Information Section */}
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Customer Information</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-blue-900 mb-2">
-                        QR Notes
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Name:
                       </label>
                       <input
                         type="text"
-                        value={qrNotes}
-                        onChange={(e) => setQrNotes(e.target.value)}
-                        placeholder="Reservation reference and customer name"
-                        className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
+                        value={customerName}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
                       />
-                      <p className="mt-2 text-xs text-blue-700">
-                        Leave blank to auto-fill with the reservation reference and customer name.
-                      </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-blue-900 mb-2">
-                        Mobile Number Used For QR
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Contact Number:
                       </label>
                       <input
-                        type="text"
-                        value={paymongoMobileNumber}
+                        type="tel"
+                        value={customerContact}
                         readOnly
-                        className="w-full px-4 py-3 border border-blue-200 rounded-lg bg-blue-100/70 text-blue-900 font-medium cursor-not-allowed"
-                        placeholder="+63XXXXXXXXXX"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
                       />
-                      <p className="mt-2 text-xs text-blue-700">
-                        Update the customer phone number above if this needs to change. PayMongo requires the mobile number in international format.
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address:
+                      </label>
+                      <input
+                        type="email"
+                        value={customerEmail}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reference Number */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-blue-800">
+                        Reference Number: <span className="font-mono">{referenceNumber || 'Generating...'}</span>
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-center items-stretch gap-3 mt-8">
+                {/* Booking Summary */}
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Booking Summary</h2>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            No.
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Item
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Schedule
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Subtotal
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {[...courtBookings.map(b => ({ courtName: b.court, timeSlot: b.schedule, subtotal: b.subtotal })), ...equipmentBookings.map(b => ({ courtName: b.equipment, timeSlot: b.time, subtotal: b.subtotal }))].map((booking, index) => (
+                          <tr key={`${booking.courtName}-${booking.timeSlot}-${index}`}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                              {index + 1}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {booking.courtName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {booking.timeSlot}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              ₱{booking.subtotal.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Payment Details */}
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Details</h2>
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-medium text-gray-900">Total:</span>
+                    <span className="text-2xl font-bold text-gray-900">₱{totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Payment Methods */}
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Methods</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-blue-500 cursor-pointer">
+                      <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-2">
+                        <span className="text-white font-bold text-sm">GC</span>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">GCash</span>
+                    </div>
+                    <div className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-blue-500 cursor-pointer">
+                      <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-2">
+                        <span className="text-white font-bold text-sm">M</span>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Maya</span>
+                    </div>
+                    <div className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-blue-500 cursor-pointer">
+                      <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mb-2">
+                        <span className="text-white font-bold text-sm">G</span>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">GrabPay</span>
+                    </div>
+                    <div className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:border-blue-500 cursor-pointer">
+                      <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mb-2">
+                        <span className="text-white font-bold text-sm">OB</span>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Online Banking</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 text-center mb-4">
+                    Send Your payment to <strong>Budz Badminton Court</strong>
+                  </p>
+                  
+                  {/* Cash Payment Option */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={handleProcessCashPayment}
+                      disabled={isProcessingPayment || totalAmount === 0}
+                      className="w-full flex items-center justify-center p-4 border-2 border-green-600 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mr-3">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <span className="text-base font-semibold text-gray-900 block">Cash Payment</span>
+                        <span className="text-sm text-gray-600">Process cash payment immediately</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Payment Confirmation & No Refund Policy */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                    Payment Confirmation & No Refund Policy:
+                  </h3>
+                  <p className="text-sm text-yellow-700">
+                    By proceeding with payment, you confirm that the transaction is final and non-refundable. 
+                    Cancellations are not accepted. If you agree, please continue with the payment.
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end space-x-4">
                   <button
                     onClick={() => handleBackToStep(2)}
-                    className="flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1846,31 +1968,22 @@ export default function AdminCreateReservations() {
                     Back
                   </button>
                   <button
-                    onClick={handleProcessCashPayment}
-                    className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                    disabled={isProcessingPayment || totalAmount === 0}
-                  >
-                    {isProcessingPayment ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <span>Payment Received (Cash)</span>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleGenerateQrPayment}
-                    className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 justify-center"
-                    disabled={isGeneratingQr || totalAmount === 0}
+                    onClick={handleProcessPayMongoPayment}
+                    disabled={isGeneratingQr || totalAmount === 0 || !customerName || !customerEmail || !customerContact}
+                    className="flex items-center px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
                     {isGeneratingQr ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        <span>Generating QR...</span>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        <span>Processing...</span>
                       </>
                     ) : (
-                      <span>Generate QR Payment</span>
+                      <>
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        <span>Pay Now</span>
+                      </>
                     )}
                   </button>
                 </div>
@@ -2100,6 +2213,43 @@ export default function AdminCreateReservations() {
           </div>
         </div>
       )}
+
+      {/* Booking Details Modal */}
+      <BookingDetailsModal
+        isOpen={showBookingDetailsModal}
+        onClose={() => setShowBookingDetailsModal(false)}
+        onProceedToPayment={() => {
+          if (courtBookings.length === 0 && equipmentBookings.length > 0) {
+            setShowEquipmentGuard(true)
+            return
+          }
+          // Generate reference number when proceeding to payment step
+          const refNumber = Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
+          setReferenceNumber(refNumber)
+          setCurrentStep(3)
+        }}
+        courtBookings={courtBookings}
+        equipmentBookings={equipmentBookings}
+        totalAmount={totalAmount}
+        selectedDate={selectedDate}
+      />
+
+      {/* Guard Modal: require court before equipment */}
+      {showEquipmentGuard && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-blue-600 text-white px-6 py-4 font-semibold">Action needed</div>
+            <div className="p-6 space-y-3">
+              <p className="text-gray-800 font-medium">Please book a court before renting equipment.</p>
+              <p className="text-gray-600 text-sm">Select a date and time slot for a court first, then you can add racket rentals.</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <button onClick={() => setShowEquipmentGuard(false)} className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Got it</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AdminFooter />
     </div>
   )

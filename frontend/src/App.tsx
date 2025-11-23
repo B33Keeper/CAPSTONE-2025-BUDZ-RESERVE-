@@ -11,6 +11,8 @@ import { VerifyOtpPage } from '@/pages/VerifyOtpPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { PaymentSuccessPage } from '@/pages/PaymentSuccessPage'
 import { PaymentFailedPage } from '@/pages/PaymentFailedPage'
+import { AdminPaymentSuccessPage } from '@/pages/AdminPaymentSuccessPage'
+import { AdminPaymentFailedPage } from '@/pages/AdminPaymentFailedPage'
 import { QueueingPage } from '@/pages/QueueingPage'
 import { QueuePlayersPage } from '@/pages/QueuePlayersPage'
 import { QueueSettingsPage } from '@/pages/QueueSettingsPage'
@@ -72,6 +74,22 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/payment/success" 
+          element={
+            <ProtectedRoute>
+              <AdminPaymentSuccessPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/payment/failed" 
+          element={
+            <ProtectedRoute>
+              <AdminPaymentFailedPage />
             </ProtectedRoute>
           } 
         />

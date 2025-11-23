@@ -397,8 +397,8 @@ const AdminManageCourts = () => {
       <div className="flex">
         <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
 
-        {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
+        {/* Main Content - with left margin to account for fixed sidebar */}
+        <main className="flex-1 md:ml-64 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
           {/* Header Section */}
           <div className="mb-8">
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8 animate-slideDown">

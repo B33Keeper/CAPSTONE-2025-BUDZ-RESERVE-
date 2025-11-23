@@ -149,22 +149,30 @@ export function PaymentSummaryStep({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {allBookings.map((booking, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {index + 1}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {booking.courtName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {booking.timeSlot}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ₱{booking.subtotal.toFixed(2)}
-                  </td>
-                </tr>
-              ))}
+              {allBookings.map((booking, index) => {
+                // Ensure each court-time combination is displayed as a separate row
+                console.log(`[PaymentSummaryStep] Displaying booking ${index + 1}:`, {
+                  courtName: booking.courtName,
+                  timeSlot: booking.timeSlot,
+                  subtotal: booking.subtotal
+                })
+                return (
+                  <tr key={`${booking.courtName}-${booking.timeSlot}-${index}`}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                      {index + 1}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {booking.courtName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {booking.timeSlot}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      ₱{booking.subtotal.toFixed(2)}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

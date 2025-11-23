@@ -466,8 +466,8 @@ const AdminSalesReport = () => {
       <div className="flex">
         <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
 
-        {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gray-50 min-h-screen animate-fadeIn">
+        {/* Main Content - with left margin to account for fixed sidebar */}
+        <main className="flex-1 md:ml-64 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gray-50 min-h-screen animate-fadeIn">
           {/* Sales Report Header Card */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6 animate-slideDown">
             <h1 className="text-5xl font-bold text-gray-900 mb-2">Sales Report</h1>

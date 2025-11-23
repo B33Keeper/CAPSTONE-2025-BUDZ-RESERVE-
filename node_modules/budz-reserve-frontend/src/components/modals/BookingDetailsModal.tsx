@@ -117,7 +117,9 @@ export function BookingDetailsModal({
             <div className="mb-6">
               <div className="flex items-center space-x-3 mb-4">
                 <MapPin className="w-5 h-5 text-green-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Court Reservations</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Court Reservations ({courtBookings.length} {courtBookings.length === 1 ? 'booking' : 'bookings'})
+                </h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden">
@@ -129,13 +131,21 @@ export function BookingDetailsModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {courtBookings.map((booking, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="border border-gray-300 px-4 py-3">{booking.court}</td>
-                        <td className="border border-gray-300 px-4 py-3">{booking.schedule}</td>
-                        <td className="border border-gray-300 px-4 py-3 font-medium">₱{booking.subtotal.toLocaleString()}</td>
-                      </tr>
-                    ))}
+                    {courtBookings.map((booking, index) => {
+                      // Ensure each court-time combination is displayed as a separate row
+                      console.log(`[BookingDetailsModal] Displaying booking ${index + 1}:`, {
+                        court: booking.court,
+                        schedule: booking.schedule,
+                        subtotal: booking.subtotal
+                      })
+                      return (
+                        <tr key={`${booking.court}-${booking.schedule}-${index}`} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-3 font-medium">{booking.court}</td>
+                          <td className="border border-gray-300 px-4 py-3">{booking.schedule}</td>
+                          <td className="border border-gray-300 px-4 py-3 font-medium">₱{booking.subtotal.toLocaleString()}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

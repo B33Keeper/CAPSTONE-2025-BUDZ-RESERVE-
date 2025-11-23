@@ -19,12 +19,9 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpande
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const navigate = useNavigate()
 
-  // Auto-expand sidebar on mount for better UX
+  // Keep sidebar expanded by default (no hover to expand)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsSidebarExpanded(true)
-    }, 500)
-    return () => clearTimeout(timer)
+    setIsSidebarExpanded(true)
   }, [])
 
   // Notify parent when expansion changes
@@ -139,13 +136,16 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpande
         />
       )}
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - Fixed, always visible while scrolling */}
       <div 
-        className={`hidden md:block transition-all duration-300 ease-in-out sticky top-14 sm:top-16 z-30 self-start h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] overflow-y-auto border-r border-gray-200 bg-white shadow-sm scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent ${
-          isSidebarExpanded ? 'w-64' : 'w-16'
-        }`}
-        onMouseEnter={() => setIsSidebarExpanded(true)}
-        onMouseLeave={() => setIsSidebarExpanded(false)}
+        className="hidden md:block transition-all duration-300 ease-in-out fixed z-30 overflow-y-auto border-r border-gray-200 bg-white shadow-sm scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent w-64"
+        style={{
+          top: '4rem',
+          bottom: '6rem',
+          left: 0,
+          maxHeight: 'calc(100vh - 4rem - 6rem)',
+          height: 'calc(100vh - 4rem - 6rem)'
+        }}
       >
         {/* Custom Scrollbar Styles */}
         <style dangerouslySetInnerHTML={{ __html: `
@@ -160,65 +160,48 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpande
             border-radius: 3px;
             transition: background-color 0.2s;
           }
-          .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background-color: #94a3b8;
+          .scrollbar-thin::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
           }
         ` }} />
         {/* Logo/Branding Section */}
-        <div className={`flex items-center justify-center ${isSidebarExpanded ? 'px-4' : 'px-2'} py-4 border-b border-gray-100 transition-all duration-300`}>
-          <div className={`flex items-center ${isSidebarExpanded ? 'space-x-3' : 'justify-center'}`}>
+        <div className="flex items-center justify-center px-4 py-4 border-b border-gray-100 transition-all duration-300">
+          <div className="flex items-center space-x-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg flex-shrink-0">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <div className={`transition-all duration-300 overflow-hidden text-center ${isSidebarExpanded ? 'opacity-100 max-w-full ml-0' : 'opacity-0 max-w-0 ml-0'}`}>
+            <div className="transition-all duration-300 overflow-hidden text-center opacity-100 max-w-full ml-0">
               <h2 className="text-sm font-bold text-gray-900 whitespace-nowrap">Admin Panel</h2>
               <p className="text-xs text-gray-500 whitespace-nowrap">Budz Reserve</p>
             </div>
           </div>
         </div>
 
-        <nav className={`${isSidebarExpanded ? 'px-2' : 'px-0'} py-4 space-y-1`}>
+        <nav className="px-2 py-4 space-y-1">
           {sidebarItems.map((item, index) => (
             <div key={item.id} className={`${!item.indented && index > 0 && !sidebarItems[index - 1].indented ? 'mt-2 pt-2 border-t border-gray-100' : ''}`}>
               <button
                 onClick={() => handleNavigation(item.id)}
-                className={`w-full flex items-center ${
-                  isSidebarExpanded ? 'space-x-3' : 'justify-center'
-                } ${isSidebarExpanded ? (item.indented ? 'pl-8' : 'pl-4') : 'pl-0 pr-0'} py-3 rounded-xl ${
-                  isSidebarExpanded ? 'mx-2' : 'mx-0'
-                } text-left transition-all duration-300 ease-in-out group relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                className={`w-full flex items-center space-x-3 ${item.indented ? 'pl-8' : 'pl-4'} py-3 rounded-xl mx-2 text-left transition-all duration-300 ease-in-out relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                   activeItem === item.id
-                    ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 font-semibold shadow-md transform scale-[1.02]'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm hover:transform hover:scale-[1.01] active:scale-[0.98]'
+                    ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 font-semibold shadow-md'
+                    : 'text-gray-600 bg-gray-50'
                 }`}
-                title={!isSidebarExpanded ? item.label : undefined}
                 aria-label={item.label}
               >
                 {/* Active indicator bar */}
-                {activeItem === item.id && isSidebarExpanded && (
+                {activeItem === item.id && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-r-full shadow-lg"></div>
                 )}
                 
-                <div className={`w-6 h-6 flex items-center justify-center flex-shrink-0 transition-transform duration-300 ${
-                  activeItem === item.id ? 'transform scale-110' : 'group-hover:scale-110'
-                }`}>
+                <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
                   {renderIcon(item.icon)}
                 </div>
-                <span className={`font-medium transition-all duration-300 relative ${
-                  isSidebarExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 w-0 overflow-hidden -translate-x-2'
-                }`}>
+                <span className="font-medium opacity-100 translate-x-0">
                   {item.label}
                 </span>
-                
-                {/* Tooltip for collapsed state */}
-                {!isSidebarExpanded && (
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg">
-                    {item.label}
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
-                  </div>
-                )}
               </button>
             </div>
           ))}
@@ -244,7 +227,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpande
           </div>
           <button
             onClick={() => setIsMobileSidebarOpen(false)}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            className="p-2 rounded-lg text-gray-500 bg-gray-100 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -258,8 +241,8 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpande
                 onClick={() => handleNavigation(item.id)}
                 className={`w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left transition-all duration-300 relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                   activeItem === item.id
-                    ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 font-semibold shadow-md transform scale-[1.02]'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm hover:transform hover:scale-[1.01] active:scale-[0.98]'
+                    ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 font-semibold shadow-md'
+                    : 'text-gray-600 bg-gray-50'
                 }`}
                 aria-label={item.label}
               >
@@ -267,9 +250,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpande
                 {activeItem === item.id && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-10 bg-blue-600 rounded-r-full shadow-lg"></div>
                 )}
-                <div className={`w-6 h-6 flex items-center justify-center flex-shrink-0 transition-transform duration-300 ${
-                  activeItem === item.id ? 'transform scale-110' : 'group-hover:scale-110'
-                }`}>
+                <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
                   {renderIcon(item.icon)}
                 </div>
                 <span className="font-medium">{item.label}</span>
@@ -283,7 +264,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange, onExpande
       <div className="md:hidden">
         <button
           onClick={() => setIsMobileSidebarOpen(true)}
-          className="fixed top-4 left-4 z-40 p-3 rounded-xl bg-white shadow-lg border border-gray-200 text-gray-700 hover:bg-gray-50 hover:shadow-xl active:scale-95 transition-all duration-200"
+          className="fixed top-4 left-4 z-40 p-3 rounded-xl bg-white shadow-lg border border-gray-200 text-gray-700 bg-gray-50 transition-all duration-200"
         >
           <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
