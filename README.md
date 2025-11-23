@@ -46,29 +46,34 @@ A comprehensive full-stack badminton court reservation system built with React, 
 
 ### 🎯 Core Features
 - **Court Booking System**: Real-time availability checking and reservation management
-- **Payment Integration**: PayMongo payment gateway with webhook support
+- **Payment Integration**: PayMongo payment gateway with webhook support and multiple payment methods (GCash, GrabPay, Maya, Visa)
 - **Equipment Rental**: Racket rental system with stock management and automated return reminders
-- **Queue Management**: Player queueing system for court matches
+- **Queue Management**: Player queueing system for court matches with automated scheduling
 - **Admin Dashboard**: Comprehensive analytics and management tools
 - **Sales Reporting**: Detailed sales reports with filtering and PDF export
 - **User Management**: Role-based access control (Admin, User)
-- **Email Notifications**: Automated email receipts and rental reminders
+- **Email Notifications**: Automated email receipts, rental reminders, and reservation notifications
+- **Reservation Notifications**: Automated email reminders before reservations and notifications when reservations end
+- **Modern UI/UX**: Enhanced login and signup pages with improved user experience
 
 ### 📊 Admin Features
 - **Dashboard**: Daily metrics, monthly trends, and quick access links
 - **Court Management**: Dynamic court creation and management
 - **Equipment Management**: Stock tracking and availability management
 - **Sales Reports**: Period-based reporting (Daily, Weekly, Monthly, Quarterly, Yearly)
-- **Reservation Management**: Create and manage reservations
-- **Announcement System**: Create and manage announcements
+- **Reservation Management**: Create and manage reservations with automated notifications
+- **Announcement System**: Create and manage announcements with modal display
 - **Suggestion Management**: View and manage user suggestions
+- **Automated Scheduling**: Background jobs for reservation reminders and queue management
 
 ### 👤 User Features
-- **Court Booking**: Browse and book available courts
+- **Court Booking**: Browse and book available courts with multiple payment options
 - **Equipment Rental**: Rent rackets with quantity and duration selection
 - **Reservation History**: View past and upcoming reservations
 - **Queue Management**: Join player queues and participate in matches
 - **Profile Management**: Update profile and view booking history
+- **Email Notifications**: Receive automated reminders for upcoming reservations and rental returns
+- **Modern Authentication**: Enhanced login and signup experience with improved UI/UX
 
 ---
 
@@ -429,6 +434,13 @@ CAPSTONE-2025-BUDZ-RESERVE-
 - Stock restoration after rental period
 - Valid ID requirement for safety
 
+### 📧 Email Notifications & Reminders
+- **Payment Receipts**: Automated email receipts after successful payments
+- **Reservation Reminders**: Email notifications sent 24 hours before reservation start time
+- **Reservation Ended**: Email notifications when reservations end
+- **Rental Reminders**: Automated reminders for equipment return deadlines
+- **Customizable Templates**: Handlebars-based email templates for all notifications
+
 ### 📊 Sales Reporting
 - Period-based filtering (Daily, Weekly, Monthly, Quarterly, Yearly)
 - Manual date range filtering
@@ -442,6 +454,14 @@ CAPSTONE-2025-BUDZ-RESERVE-
 - Queue history tracking
 - Access control (only users with active reservations)
 - Real-time status updates
+- Automated queue processing with scheduled tasks
+
+### 🎨 UI/UX Improvements
+- **Enhanced Login Page**: Modern design with improved form validation and user feedback
+- **Enhanced Signup Page**: Improved form layout with better error handling
+- **Payment Method Selection**: Visual payment method selection with icons
+- **Responsive Design**: Mobile-friendly interface across all pages
+- **Better Error Handling**: Clear error messages and validation feedback
 
 ### 🎨 Admin Dashboard
 - Daily metrics (Court Reservations, Sales, Racket Rentals)

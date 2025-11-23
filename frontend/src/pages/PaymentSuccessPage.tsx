@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, ArrowLeft, Home } from 'lucide-react'
+import { CheckCircle, ArrowLeft, Home, Calendar } from 'lucide-react'
 import { api } from '../lib/api'
 import { ReservationsModal } from '../components/modals/ReservationsModal'
 
@@ -326,9 +326,16 @@ export function PaymentSuccessPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex flex-col items-center justify-center gap-6 p-4">
-      <div className="w-full max-w-5xl">
-        <div className="bg-gradient-to-r from-slate-100 via-white to-slate-100 border border-slate-200 rounded-2xl px-6 py-5 shadow-sm overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 flex flex-col items-center justify-center gap-6 p-4 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        </div>
+        
+        <div className="w-full max-w-5xl relative z-10">
+        <div className="bg-gradient-to-r from-white via-slate-50 to-white border border-slate-200/60 rounded-3xl px-6 py-5 shadow-xl shadow-slate-200/50 overflow-hidden backdrop-blur-sm">
           <ol className="mx-auto flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             {steps.map((step, index) => {
               const state = getStepState(step.id)
@@ -405,100 +412,179 @@ export function PaymentSuccessPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full text-center">
-        {/* Success Icon */}
-        <div className="flex justify-center mb-6">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-12 h-12 text-green-600" />
+      <div className="bg-white rounded-3xl shadow-2xl shadow-slate-300/50 p-6 sm:p-8 lg:p-10 max-w-6xl w-full relative overflow-hidden">
+        {/* Decorative gradient overlay */}
+        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-500"></div>
+        
+        {/* Horizontal Layout: Success Message (Left) + Booking Summary (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mt-4">
+          {/* Left Column: Success Message */}
+          <div className="flex flex-col items-center lg:items-start justify-center text-center lg:text-left">
+            {/* Success Icon with animation */}
+            <div className="flex justify-center lg:justify-start mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-20"></div>
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30">
+                  <CheckCircle className="w-12 h-12 sm:w-14 sm:h-14 text-white" strokeWidth={2.5} />
+                </div>
           </div>
         </div>
 
         {/* Success Message */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-emerald-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
           Payment Successful!
         </h1>
         
-        <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 text-base sm:text-lg mb-6 lg:mb-8 max-w-md lg:max-w-none">
           Your badminton court reservation has been confirmed. You will receive a confirmation email shortly.
         </p>
 
-        {/* Booking Summary */}
+            {/* Action Buttons - Shown on left side for desktop */}
+            <div className="w-full lg:max-w-sm space-y-3 hidden lg:flex lg:flex-col lg:items-center lg:mx-auto">
+              <button
+                onClick={() => navigate('/booking')}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] transform"
+              >
+                <Calendar className="w-5 h-5" />
+                <span>Book Again</span>
+              </button>
+              
+              <div className="grid grid-cols-2 gap-3 w-full">
+                <button
+                  onClick={() => {
+                    window.location.href = '/#hero'
+                  }}
+                  className="bg-white border-2 border-blue-600 text-blue-600 py-3 px-4 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-300 flex items-center justify-center space-x-2 shadow-md hover:shadow-lg hover:scale-[1.02] transform"
+                >
+                  <Home className="w-5 h-5" />
+                  <span>Home</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowReservationModal(true)
+                  }}
+                  className="bg-white border-2 border-gray-300 text-gray-700 py-3 px-4 rounded-xl font-semibold hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 flex items-center justify-center space-x-2 shadow-md hover:shadow-lg hover:scale-[1.02] transform"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span>Bookings</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Booking Summary */}
         {bookingSummary && (
-          <div className="bg-gray-50 rounded-lg p-6 mb-6 text-left">
-            <h3 className="font-semibold text-gray-900 mb-4 text-center">Booking Summary</h3>
+          <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-6 sm:p-8 text-left border border-slate-200/60 shadow-inner">
+            <h3 className="font-bold text-xl text-gray-900 mb-6 text-center flex items-center justify-center gap-2">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Booking Summary
+            </h3>
             
             {/* Date and Reference */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Reservation Date</p>
-                <p className="text-sm text-gray-600">{bookingSummary.date}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Reservation Date</p>
+                <p className="text-base font-semibold text-gray-900">{bookingSummary.date}</p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-700">Reference Number</p>
-                <p className="text-sm text-gray-600">{bookingSummary.referenceNumber}</p>
+              <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Reference Number</p>
+                <p className="text-base font-semibold text-gray-900 font-mono">{bookingSummary.referenceNumber}</p>
               </div>
             </div>
 
             {/* Court Bookings */}
             {bookingSummary.courtBookings && bookingSummary.courtBookings.length > 0 && (
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Court Bookings</p>
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  Court Bookings
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {bookingSummary.courtBookings.map((booking: any, index: number) => (
-                  <div key={index} className="bg-white rounded p-3 mb-2">
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">{booking.court}</span> - {booking.schedule}
-                    </p>
-                    <p className="text-sm text-gray-500">₱{booking.subtotal}</p>
+                    <div key={index} className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{booking.court}</p>
+                          <p className="text-xs text-gray-600 mt-0.5 truncate">{booking.schedule}</p>
+                        </div>
+                        <p className="text-sm font-bold text-blue-600 whitespace-nowrap">₱{booking.subtotal.toLocaleString()}</p>
+                      </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
 
             {/* Equipment Bookings */}
             {bookingSummary.equipmentBookings && bookingSummary.equipmentBookings.length > 0 && (
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Equipment Bookings</p>
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  Equipment Bookings
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {bookingSummary.equipmentBookings.map((booking: any, index: number) => (
-                  <div key={index} className="bg-white rounded p-3 mb-2">
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">{booking.equipment}</span> - {booking.time}
-                    </p>
-                    <p className="text-sm text-gray-500">₱{booking.subtotal}</p>
+                    <div key={index} className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{booking.equipment}</p>
+                          <p className="text-xs text-gray-600 mt-0.5 truncate">{booking.time}</p>
+                        </div>
+                        <p className="text-sm font-bold text-indigo-600 whitespace-nowrap">₱{booking.subtotal.toLocaleString()}</p>
+                      </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
 
             {/* Payment Details */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Total Amount</p>
-                <p className="text-lg font-semibold text-gray-900">₱{bookingSummary.amount.toLocaleString()}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t-2 border-slate-200">
+              <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Total Amount</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">₱{bookingSummary.amount.toLocaleString()}</p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-700">Payment Method</p>
-                <p className="text-sm text-gray-600">{bookingSummary.paymentMethod}</p>
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Payment Method</p>
+                <p className="text-base font-semibold text-gray-900">{bookingSummary.paymentMethod}</p>
               </div>
             </div>
 
             {/* Status */}
+            {bookingSummary.status && (
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">{bookingSummary.status}</p>
+                <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full border border-blue-200">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <p className="text-sm font-medium">{bookingSummary.status}</p>
+                </div>
             </div>
+            )}
           </div>
         )}
 
         {/* Payment Details (fallback) */}
         {!bookingSummary && paymentDetails && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-            <h3 className="font-semibold text-gray-900 mb-2">Payment Details</h3>
+            <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-6 sm:p-8 text-left border border-slate-200/60 shadow-inner">
+              <h3 className="font-bold text-xl text-gray-900 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Payment Details
+              </h3>
             {paymentDetails.amount && (
-              <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 mb-2">
                 Amount: ₱{paymentDetails.amount.toLocaleString()}
               </p>
             )}
             {paymentDetails.reference && (
-              <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 mb-2">
                 Reference: {paymentDetails.reference}
               </p>
             )}
@@ -509,36 +595,63 @@ export function PaymentSuccessPage() {
             )}
           </div>
         )}
+        </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-3">
+        {/* Action Buttons - Shown at bottom for mobile/tablet */}
+        <div className="w-full max-w-md mx-auto space-y-3 mt-6 lg:hidden">
+          <button
+            onClick={() => navigate('/booking')}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] transform"
+          >
+            <Calendar className="w-5 h-5" />
+            <span>Book Again</span>
+          </button>
+          
+          <div className="grid grid-cols-2 gap-3 w-full">
           <button
             onClick={() => {
               window.location.href = '/#hero'
             }}
-            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+              className="bg-white border-2 border-blue-600 text-blue-600 py-3 px-4 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-300 flex items-center justify-center space-x-2 shadow-md hover:shadow-lg hover:scale-[1.02] transform"
           >
             <Home className="w-5 h-5" />
-            <span>Go to Home</span>
+              <span>Home</span>
           </button>
           
           <button
             onClick={() => {
               setShowReservationModal(true)
             }}
-            className="w-full border border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+              className="bg-white border-2 border-gray-300 text-gray-700 py-3 px-4 rounded-xl font-semibold hover:border-gray-400 hover:bg-gray-50 transition-all duration-300 flex items-center justify-center space-x-2 shadow-md hover:shadow-lg hover:scale-[1.02] transform"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>View Bookings</span>
+              <span>Bookings</span>
           </button>
+          </div>
         </div>
 
         {/* Additional Info */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>Important:</strong> Please arrive 15 minutes before your scheduled time. 
-            Bring a valid ID for verification.
-          </p>
+        <div className="mt-8 p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border border-blue-200/60 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-blue-900 mb-1">Important Reminders</p>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span>Please arrive 15 minutes before your scheduled time</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">•</span>
+                  <span>Bring a valid ID for verification</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
       </div>

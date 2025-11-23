@@ -18,8 +18,10 @@ export function AnnouncementModal() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [dontShowAgain, setDontShowAgain] = useState(false)
+  const [isManualOpen, setIsManualOpen] = useState(false)
 
-  const fetchActiveAnnouncements = useCallback(async () => {
+  const fetchActiveAnnouncements = useCallback(async (forceShow = false) => {
     if (!user || user.role === 'admin') {
       return
     }
@@ -31,7 +33,30 @@ export function AnnouncementModal() {
 
       setAnnouncements(items)
       setCurrentIndex(0)
-      setShowModal(items.length > 0)
+      
+      // If forceShow is true (manual open from profile dropdown), always show if there are announcements
+      // This bypasses the "don't show again" check
+      if (forceShow) {
+        setShowModal(items.length > 0)
+        setIsManualOpen(true)
+        return
+      }
+
+      // Check if user has permanently disabled auto-popup
+      const permanentlyDisabled = localStorage.getItem('announcement-modal-seen') === 'true'
+      if (permanentlyDisabled) {
+        // User checked "don't show again", so don't auto-popup
+        setShowModal(false)
+        return
+      }
+
+      // Auto-popup on every login (if there are announcements and "don't show again" is not checked)
+      if (items.length > 0) {
+        setShowModal(true)
+        setIsManualOpen(false)
+      } else {
+        setShowModal(false)
+      }
     } catch (error) {
       console.error('Error fetching announcement:', error)
     } finally {
@@ -47,12 +72,27 @@ export function AnnouncementModal() {
     setCurrentIndex((prev) => Math.max(prev - 1, 0))
   }
 
+  // Check for first login when user becomes authenticated
+  useEffect(() => {
+    if (!user || user.role === 'admin') {
+      return
+    }
+
+    // Small delay to ensure user is fully authenticated and page is rendered
+    const timer = setTimeout(() => {
+      fetchActiveAnnouncements(false)
+    }, 500)
+    
+    return () => clearTimeout(timer)
+  }, [user?.id]) // Only depend on user.id to check once per user login
+
+  // Handle manual open from profile dropdown
   useEffect(() => {
     const handleManualOpen = () => {
       if (!user || user.role === 'admin') {
         return
       }
-      fetchActiveAnnouncements()
+      fetchActiveAnnouncements(true)
     }
 
     window.addEventListener('open-announcement-modal', handleManualOpen)
@@ -61,8 +101,23 @@ export function AnnouncementModal() {
     }
   }, [user, fetchActiveAnnouncements])
 
+  // Check if "don't show again" was previously checked
+  useEffect(() => {
+    const permanentlyDisabled = localStorage.getItem('announcement-modal-seen') === 'true'
+    if (permanentlyDisabled) {
+      setDontShowAgain(true)
+    }
+  }, [])
+
   const handleClose = () => {
+    // If "Don't show again" is checked, save to localStorage (permanent)
+    // This will prevent auto-popup on future logins
+    if (dontShowAgain) {
+      localStorage.setItem('announcement-modal-seen', 'true')
+    }
+    
     setShowModal(false)
+    setIsManualOpen(false)
   }
 
   if (loading || !showModal || announcements.length === 0) {
@@ -206,7 +261,22 @@ export function AnnouncementModal() {
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50 px-6 py-4 mt-4 flex justify-end">
+          <div className="bg-gray-50 px-6 py-4 mt-4 flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dontShowAgain}
+                onChange={(e) => {
+                  setDontShowAgain(e.target.checked)
+                  // If unchecking, remove from localStorage
+                  if (!e.target.checked) {
+                    localStorage.removeItem('announcement-modal-seen')
+                  }
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+              />
+              <span>Don't show this again</span>
+            </label>
             <button
               onClick={handleClose}
               className="px-6 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-600/30 transition hover:brightness-110"

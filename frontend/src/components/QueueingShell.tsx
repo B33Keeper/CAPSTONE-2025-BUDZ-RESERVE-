@@ -89,13 +89,15 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const profileRef = useRef<HTMLDivElement>(null)
+  const hasShownModalRef = useRef(false)
 
-  // Listen for custom events when loading screen completes or access is granted
-  // This ensures the modal shows automatically on first login (after loading screen) 
-  // and when redirected to manage queueing page
+  // Listen for custom events when loading screen completes
+  // This ensures the modal shows automatically after clicking "Manage Queueing" 
+  // and after the loading screen completes
   useEffect(() => {
     // Only check on queueing pages
     if (!location.pathname.startsWith('/queueing')) {
+      hasShownModalRef.current = false // Reset when leaving queueing section
       return
     }
 
@@ -104,38 +106,33 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
       return
     }
 
+    // Reset the flag when navigating to queueing section (new navigation)
+    // This allows the modal to show again if user leaves and comes back
+    hasShownModalRef.current = false
+
     const checkAndShowInstructions = () => {
+      // Prevent showing modal multiple times if user navigates between queueing pages
+      if (hasShownModalRef.current) {
+        console.log('[QueueingShell] Modal already shown for this navigation')
+        return
+      }
+
       // Check if user has permanently disabled instructions
       const permanentlyDisabled = localStorage.getItem('queueing-instructions-seen') === 'true'
       if (permanentlyDisabled) {
         console.log('[QueueingShell] Instructions permanently disabled')
+        hasShownModalRef.current = true // Mark as shown even if disabled
         return
       }
 
-      // Check if this is the user's first time accessing queueing (first login)
-      const userId = user?.id
-      const firstAccessKey = userId ? `queueing-first-access-${userId}` : 'queueing-first-access'
-      const hasAccessedBefore = localStorage.getItem(firstAccessKey) === 'true'
-      
-      // Check if user has seen instructions in this session
-      const hasSeenInstructionsThisSession = sessionStorage.getItem('queueing-instructions-seen-this-session') === 'true'
-      
-      console.log('[QueueingShell] Checking instructions:', {
-        userId,
-        firstAccessKey,
-        hasAccessedBefore,
-        hasSeenInstructionsThisSession,
-        shouldShow: !hasAccessedBefore || !hasSeenInstructionsThisSession
-      })
-      
-      // Show on first access (first login) OR when redirected to queueing page (if not seen in this session)
-      if (!hasAccessedBefore || !hasSeenInstructionsThisSession) {
-        console.log('[QueueingShell] Showing instructions modal')
-        // Show after a small delay to ensure page is rendered
-        setTimeout(() => {
-          setShowInstructions(true)
-        }, 500)
-      }
+      // Show instructions modal automatically after loading screen
+      // (unless "Don't show again" is checked)
+      console.log('[QueueingShell] Showing instructions modal after loading screen')
+      hasShownModalRef.current = true
+      // Show after a small delay to ensure page is rendered
+      setTimeout(() => {
+        setShowInstructions(true)
+      }, 500)
     }
 
     const handleLoadingComplete = () => {
@@ -146,37 +143,19 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
       }, 500)
     }
 
-    const handleAccessGranted = () => {
-      console.log('[QueueingShell] Access granted event received')
-      // When access is granted, check and show instructions
-      // This handles the case when user is redirected to queueing page
-      setTimeout(() => {
-        checkAndShowInstructions()
-      }, 800)
-    }
-
-    // Listen for both events
+    // Listen for loading complete event (dispatched from Header after loading screen)
     window.addEventListener('queueing-loading-complete', handleLoadingComplete)
-    window.addEventListener('queueing-access-granted', handleAccessGranted)
     
-    // Check after loading screen duration (1.5s) + buffer
-    // This ensures we wait for loading screen to complete
-    const timer1 = setTimeout(() => {
-      console.log('[QueueingShell] First check after loading screen duration')
+    // Fallback: Check after a reasonable delay in case event doesn't fire
+    // This ensures the modal shows even if the event system fails
+    const fallbackTimer = setTimeout(() => {
+      console.log('[QueueingShell] Fallback check after delay')
       checkAndShowInstructions()
-    }, 2000) // After loading screen (1.5s) + fade out (0.3s) + buffer
-    
-    // Final fallback check
-    const timer2 = setTimeout(() => {
-      console.log('[QueueingShell] Final fallback check')
-      checkAndShowInstructions()
-    }, 3000) // Final fallback
+    }, 2500) // After loading screen (1.5s) + navigation delay (0.3s) + buffer
     
     return () => {
-      clearTimeout(timer1)
-      clearTimeout(timer2)
+      clearTimeout(fallbackTimer)
       window.removeEventListener('queueing-loading-complete', handleLoadingComplete)
-      window.removeEventListener('queueing-access-granted', handleAccessGranted)
     }
   }, [location.pathname, user])
 
