@@ -144,9 +144,7 @@ const groupReservations = (reservations: Reservation[]): GroupedReservation[] =>
         group.endTime = reservation.End_Time
       }
       const amount = Number(reservation.Total_Amount) || 0
-      if (amount > group.totalAmount) {
-        group.totalAmount = amount
-      }
+      group.totalAmount += amount
       if (reservationTimestamp > group.latestCreatedAt) {
         group.latestCreatedAt = reservationTimestamp
       }
@@ -182,17 +180,53 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
   const [rentalsMap, setRentalsMap] = useState<RentalsMap>({})
 
-  const itemsPerPage = useMemo(() => (isMobile ? 5 : 7), [isMobile])
+  const itemsPerPage = useMemo(() => 5, [])
 
   // Determine if reservation has already ended
   const isReservationEnded = (reservation: Reservation) => {
     try {
-      const endDateTime = new Date(`${reservation.Reservation_Date}T${reservation.End_Time}`)
-      if (isNaN(endDateTime.getTime())) return false
+      // Parse reservation date and end time
+      // Reservation_Date format: "YYYY-MM-DD" or Date object
+      // End_Time format: "HH:MM:SS" or "HH:MM"
+      const reservationDate = reservation.Reservation_Date
+      const endTime = reservation.End_Time
+      
+      if (!reservationDate || !endTime) {
+        console.warn('[ReservationsModal] Missing date or time:', { reservationDate, endTime })
+        return false
+      }
+      
+      // Format date string if it's a Date object
+      let dateStr = typeof reservationDate === 'string' 
+        ? reservationDate 
+        : new Date(reservationDate).toISOString().split('T')[0]
+      
+      // Format time string (handle both "HH:MM:SS" and "HH:MM" formats)
+      let timeStr = endTime
+      if (timeStr.split(':').length === 2) {
+        timeStr = `${timeStr}:00` // Add seconds if missing
+      }
+      
+      // Create end datetime string in ISO format
+      const endDateTimeStr = `${dateStr}T${timeStr}`
+      const endDateTime = new Date(endDateTimeStr)
+      
+      if (isNaN(endDateTime.getTime())) {
+        console.warn('[ReservationsModal] Invalid end datetime:', endDateTimeStr)
+        return false
+      }
+      
       const now = new Date()
-      return endDateTime < now
+      const hasEnded = endDateTime < now
+      
+      // Log for debugging
+      if (hasEnded) {
+        console.log(`[ReservationsModal] Reservation ${reservation.Reservation_ID} ended: ${endDateTime.toLocaleString()} < ${now.toLocaleString()}`)
+      }
+      
+      return hasEnded
     } catch (error) {
-      console.warn('[ReservationsModal] Failed to parse reservation end time:', error)
+      console.warn('[ReservationsModal] Failed to parse reservation end time:', error, reservation)
       return false
     }
   }
@@ -225,19 +259,31 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
       if (activeTab === 'current') {
         const beforeTabFilter = filteredReservations.length
         filteredReservations = filteredReservations.filter((res: Reservation) => {
+          const ended = isReservationEnded(res)
+          const isCancelledOrCompleted = res.Status === 'Cancelled' || res.Status === 'Completed'
+          
           // Show in "My Reservations" if:
           // 1. Reservation hasn't ended yet (booking period is still active)
           // 2. Status is not Cancelled or Completed
-          return !isReservationEnded(res) && res.Status !== 'Cancelled' && res.Status !== 'Completed'
+          const shouldShow = !ended && !isCancelledOrCompleted
+          
+          if (!shouldShow && ended) {
+            console.log(`[ReservationsModal] Moving reservation ${res.Reservation_ID} to history (ended)`)
+          }
+          
+          return shouldShow
         })
         console.log(`[ReservationsModal] Tab filter (current): ${beforeTabFilter} → ${filteredReservations.length}`)
       } else {
         const beforeTabFilter = filteredReservations.length
         filteredReservations = filteredReservations.filter((res: Reservation) => {
+          const ended = isReservationEnded(res)
+          const isCancelledOrCompleted = res.Status === 'Cancelled' || res.Status === 'Completed'
+          
           // Show in "History" if:
           // 1. Reservation has ended (booking period is done), OR
           // 2. Status is Cancelled or Completed
-          return isReservationEnded(res) || res.Status === 'Cancelled' || res.Status === 'Completed'
+          return ended || isCancelledOrCompleted
         })
         console.log(`[ReservationsModal] Tab filter (history): ${beforeTabFilter} → ${filteredReservations.length}`)
       }
@@ -245,12 +291,13 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
       console.log('[ReservationsModal] Final filtered reservations:', filteredReservations.length)
       const grouped = groupReservations(filteredReservations)
       
-      // Limit history tab to maximum 10 reservation groups
+      // Limit history tab to maximum 10 groups (transactions)
       if (activeTab === 'history') {
         const HISTORY_LIMIT = 10
         if (grouped.length > HISTORY_LIMIT) {
-          console.log(`[ReservationsModal] Limiting history to ${HISTORY_LIMIT} most recent reservation groups (had ${grouped.length})`)
-          grouped.splice(HISTORY_LIMIT) // Remove all items after index 10
+          console.log(`[ReservationsModal] Limiting history to ${HISTORY_LIMIT} most recent groups (had ${grouped.length})`)
+          setGroupedReservations(grouped.slice(0, HISTORY_LIMIT))
+          return
         }
       }
       
@@ -286,6 +333,7 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
       } catch (rentalsError: unknown) {
         console.error('[ReservationsModal] Error fetching rentals:', rentalsError)
       }
+      // Calculate total pages based on groups, not individual reservations
       const safeItemsPerPage = Math.max(itemsPerPage, 1)
       const newTotalPages = Math.max(1, Math.ceil(grouped.length / safeItemsPerPage))
       setTotalPages(newTotalPages)
@@ -302,6 +350,14 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
   useEffect(() => {
     if (isOpen) {
       fetchReservations()
+      
+      // Auto-refresh every 30 seconds to move ended reservations to history
+      const refreshInterval = setInterval(() => {
+        console.log('[ReservationsModal] Auto-refreshing to check for ended reservations...')
+        fetchReservations()
+      }, 30000) // Refresh every 30 seconds
+      
+      return () => clearInterval(refreshInterval)
     }
   }, [isOpen, fetchReservations])
 
@@ -357,10 +413,12 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
     return Number.isFinite(num) ? num.toFixed(2) : '0.00'
   }
 
-  // Pagination
+  // Pagination - work with groups, not individual reservations
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
-  const currentReservations = groupedReservations.slice(startIndex, endIndex)
+  
+  // Get groups for current page
+  const currentGroups = groupedReservations.slice(startIndex, endIndex)
 
   const formatRentalItems = (rentalItems: RentalItem[]): JSX.Element => {
     const visibleItems = rentalItems.slice(0, 3)
@@ -651,59 +709,81 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                         <ResponsiveTableHeaderCell className="font-bold text-gray-800">Price</ResponsiveTableHeaderCell>
                     </ResponsiveTableHeader>
                     <ResponsiveTableBody>
-                  {currentReservations.map((group, index) => {
-                    const rentalItems = group.reservations.flatMap(res => rentalsMap[res.Reservation_ID]?.items ?? [])
-                    const payments = group.reservations.flatMap(res => res.payments || [])
+                  {currentGroups.map((group, index) => {
+                    // Get all rental items from all reservations in this group
+                    const allRentalItems: RentalItem[] = []
+                    group.reservations.forEach(reservation => {
+                      const rentalItems = rentalsMap[reservation.Reservation_ID]?.items ?? []
+                      allRentalItems.push(...rentalItems)
+                    })
                     
-                    // Calculate display amount: use the reservation's Total_Amount
-                    // Sum all reservation Total_Amounts in the group (this handles legitimate multi-court bookings)
-                    // This is more accurate than summing payments, which can have duplicates
-                    const displayAmount = group.reservations.reduce((sum, res) => {
+                    // Get payment method from first reservation
+                    const firstReservation = group.reservations[0]
+                    const payments = firstReservation.payments || []
+                    
+                    // Calculate total amount for the group
+                    const groupTotalAmount = group.reservations.reduce((sum, res) => {
                       return sum + (Number(res.Total_Amount) || 0)
                     }, 0)
-                    const courts = group.courts.length > 0
-                      ? group.courts
-                      : group.reservations.map(res => res.court?.Court_Name || 'Unknown Court')
-
+                    
+                    // Format courts and times for display
+                    const courtsAndTimes = group.reservations.map(res => {
+                      const courtName = res.court?.Court_Name || 'Unknown Court'
+                      const timeRange = `${formatTime(res.Start_Time)} - ${formatTime(res.End_Time)}`
+                      return `${courtName} (${timeRange})`
+                    }).join(', ')
+                    
                     return (
-                      <ResponsiveTableRow key={group.key} className="hover:bg-blue-50/50 transition-colors duration-200 border-b border-gray-100">
-                            <ResponsiveTableCell className="font-medium text-gray-700">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <span className="text-xs font-bold text-blue-600">{startIndex + index + 1}</span>
-                                </div>
-                              </div>
-                            </ResponsiveTableCell>
-                            <ResponsiveTableCell className="font-medium text-gray-800">{formatDate(group.reservationDate)}</ResponsiveTableCell>
-                            <ResponsiveTableCell className="text-gray-700">
-                              <div className="flex items-center space-x-2">
+                      <ResponsiveTableRow 
+                        key={`${group.key}-${startIndex + index}`} 
+                        className="hover:bg-blue-50/50 transition-colors duration-200 border-b border-gray-100"
+                      >
+                        <ResponsiveTableCell className="font-medium text-gray-700">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-bold text-blue-600">{startIndex + index + 1}</span>
+                            </div>
+                          </div>
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell className="font-medium text-gray-800">
+                          {formatDate(group.reservationDate)}
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell className="text-gray-700">
+                          <div className="flex flex-col gap-1">
+                            {group.reservations.map((reservation, idx) => (
+                              <div key={idx} className="flex items-center space-x-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span>{`${formatTime(group.startTime)} - ${formatTime(group.endTime)}`}</span>
+                                <span className="text-sm">{`${formatTime(reservation.Start_Time)} - ${formatTime(reservation.End_Time)}`}</span>
                               </div>
-                            </ResponsiveTableCell>
-                            <ResponsiveTableCell hideOnMobile className="text-gray-700">
-                              <div className="flex flex-col gap-1">
-                                {courts.map((court, courtIndex) => (
-                                  <div key={`${group.key}-court-${courtIndex}`} className="flex items-center space-x-2">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                    <span>{court}</span>
-                                  </div>
-                                ))}
-                              </div>
-                          </ResponsiveTableCell>
-                            <ResponsiveTableCell hideOnMobile className="text-gray-700">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                                <span>{getPaymentMethod(payments)}</span>
-                              </div>
-                          </ResponsiveTableCell>
-                          <ResponsiveTableCell className="text-gray-700">
-                            {formatRentalItems(rentalItems)}
-                          </ResponsiveTableCell>
-                          <ResponsiveTableCell className="text-green-600">
-                            <span className="font-bold">₱{formatPrice(displayAmount)}</span>
-                          </ResponsiveTableCell>
-                        </ResponsiveTableRow>
+                            ))}
+                          </div>
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell hideOnMobile className="text-gray-700">
+                          <div className="flex flex-col gap-1">
+                            {group.reservations.map((reservation, idx) => {
+                              const courtName = reservation.court?.Court_Name || 'Unknown Court'
+                              return (
+                                <div key={idx} className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                  <span className="text-sm">{courtName}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell hideOnMobile className="text-gray-700">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            <span>{getPaymentMethod(payments)}</span>
+                          </div>
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell className="text-gray-700">
+                          {formatRentalItems(allRentalItems)}
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell className="text-green-600">
+                          <span className="font-bold">₱{formatPrice(groupTotalAmount)}</span>
+                        </ResponsiveTableCell>
+                      </ResponsiveTableRow>
                     )
                   })}
                     </ResponsiveTableBody>
@@ -711,7 +791,7 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                 </div>
 
                 {/* Empty State */}
-                {currentReservations.length === 0 && (
+                {groupedReservations.length === 0 && (
                     <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50/50 to-indigo-50/50 rounded-2xl m-4">
                       <div className="text-center p-8">
                         <div className="relative mb-6">

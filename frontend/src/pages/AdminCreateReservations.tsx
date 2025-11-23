@@ -976,7 +976,7 @@ export default function AdminCreateReservations() {
         
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
           <div className="bg-white rounded-lg shadow-lg p-6 mx-auto" style={{ maxWidth: 'calc(72rem + 400px)' }}>
-            <div className="bg-gradient-to-r from-slate-100 via-white to-slate-100 px-4 py-5 sm:px-6 rounded-t-lg -mx-6 -mt-6 mb-6">
+            <div className="bg-gradient-to-r from-slate-100 via-white to-slate-100 px-4 py-5 sm:px-6 rounded-t-lg -mx-6 -mt-6 mb-6 overflow-hidden">
               <ol className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center sm:gap-6">
                 {steps.map((step, index) => {
                   const state = getStepState(step.id)
@@ -1015,15 +1015,15 @@ export default function AdminCreateReservations() {
                   const styles = stateStyles[state]
 
                   return (
-                    <li key={step.id} className="flex flex-1 flex-col items-start gap-3 sm:flex-row sm:items-center">
-                      <div className="flex items-center gap-3">
+                    <li key={step.id} className="flex flex-1 flex-col items-start gap-3 sm:flex-row sm:items-center min-w-0">
+                      <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
                         <div
-                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-300 sm:h-10 sm:w-10 ${styles.circle}`}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-300 sm:h-10 sm:w-10 flex-shrink-0 ${styles.circle}`}
                           aria-current={isCurrent ? 'step' : undefined}
                         >
                           {styles.icon ?? step.id + 1}
                     </div>
-                        <div>
+                        <div className="min-w-0">
                           <p className={`text-sm font-semibold tracking-tight sm:text-base whitespace-nowrap ${styles.title}`}>{step.name}</p>
                           <p className={`text-xs font-medium sm:text-sm whitespace-nowrap ${styles.hint}`}>{step.hint}</p>
                   </div>

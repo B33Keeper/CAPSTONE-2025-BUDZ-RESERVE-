@@ -27,6 +27,85 @@ export function PaymentSuccessPage() {
     return 'upcoming'
   }
 
+  // Function to fetch payment method from backend
+  const fetchPaymentMethod = async (referenceNumber: string, checkoutSessionId?: string) => {
+    try {
+      console.log('[PaymentSuccessPage] Fetching payment method for reference:', referenceNumber, 'checkoutSessionId:', checkoutSessionId)
+      
+      // Fetch user's reservations to find the one with matching reference number
+      const response = await api.get('/reservations/my-reservations')
+      const reservations = response.data || []
+      
+      console.log('[PaymentSuccessPage] Total reservations found:', reservations.length)
+      
+      // Find ALL reservations with matching reference number or checkout session ID
+      // In a transaction with multiple courts, all reservations share the same reference number
+      const matchingReservations = reservations.filter((res: any) => 
+        res.Reference_Number === referenceNumber || 
+        res.Paymongo_Reference_Number === referenceNumber ||
+        (checkoutSessionId && res.Paymongo_Reference_Number === checkoutSessionId)
+      )
+      
+      console.log('[PaymentSuccessPage] Found', matchingReservations.length, 'reservations matching reference')
+      
+      // Check all matching reservations for payment method
+      // Since all reservations in a transaction share the same payment, we can check any of them
+      for (const reservation of matchingReservations) {
+        if (reservation.payments && reservation.payments.length > 0) {
+          const paymentMethod = reservation.payments[0].payment_method
+          console.log('[PaymentSuccessPage] Found payment method from reservation', reservation.Reservation_ID, ':', paymentMethod)
+          
+          // Update booking summary with actual payment method
+          setBookingSummary((prev: any) => ({
+            ...prev,
+            paymentMethod: paymentMethod || 'Processing...',
+            status: paymentMethod ? 'Payment completed successfully!' : 'Processing payment details...'
+          }))
+          
+          return paymentMethod
+        }
+      }
+      
+      // If not found by reference, try to find the most recent reservation (webhook might have just created it)
+      if (matchingReservations.length === 0 && reservations.length > 0) {
+        console.log('[PaymentSuccessPage] Reference not found, checking most recent reservations')
+        // Sort by created_at descending and check the most recent ones
+        const sortedReservations = [...reservations].sort((a: any, b: any) => {
+          const dateA = new Date(a.Created_at || 0).getTime()
+          const dateB = new Date(b.Created_at || 0).getTime()
+          return dateB - dateA
+        })
+        
+        // Check the most recent reservations (could be multiple in same transaction)
+        for (const reservation of sortedReservations.slice(0, 5)) { // Check up to 5 most recent
+          if (reservation.payments && reservation.payments.length > 0) {
+            const paymentMethod = reservation.payments[0].payment_method
+            console.log('[PaymentSuccessPage] Found payment method from most recent reservation:', paymentMethod)
+            
+            setBookingSummary((prev: any) => ({
+              ...prev,
+              paymentMethod: paymentMethod || 'Processing...',
+              status: paymentMethod ? 'Payment completed successfully!' : 'Processing payment details...'
+            }))
+            
+            return paymentMethod
+          }
+        }
+        
+        console.log('[PaymentSuccessPage] No payment method found in most recent reservations')
+      } else if (matchingReservations.length > 0) {
+        console.log('[PaymentSuccessPage] Found', matchingReservations.length, 'matching reservations but none have payments yet (webhook may still be processing)')
+      } else {
+        console.log('[PaymentSuccessPage] No reservation found matching reference:', referenceNumber)
+      }
+      
+      return null
+    } catch (error) {
+      console.error('[PaymentSuccessPage] Error fetching payment method:', error)
+      return null
+    }
+  }
+
   useEffect(() => {
     // Get payment details from URL parameters
     const paymentIntentId = searchParams.get('checkout_session_id')
@@ -43,14 +122,15 @@ export function PaymentSuccessPage() {
       if (bookingData && !hasProcessed.current && !isProcessing) {
         try {
           const parsedBookingData = JSON.parse(decodeURIComponent(bookingData));
+          const referenceNumber = parsedBookingData.referenceNumber || `REF${Date.now()}`
           const summary = {
             checkoutSessionId: paymentIntentId,
             amount: amount ? parseFloat(amount) : 0,
             date: parsedBookingData.selectedDate,
             courtBookings: parsedBookingData.courtBookings || [],
             equipmentBookings: parsedBookingData.equipmentBookings || [],
-            referenceNumber: parsedBookingData.referenceNumber || `REF${Date.now()}`,
-            paymentMethod: 'Processing...', // Will be updated after API call
+            referenceNumber: referenceNumber,
+            paymentMethod: paymentMethod || 'Processing...', // Use URL param if available, otherwise will be updated
             status: 'Processing payment details...'
           };
           
@@ -58,12 +138,29 @@ export function PaymentSuccessPage() {
           setPaymentDetails({
             paymentIntentId: paymentIntentId,
             amount: amount ? parseFloat(amount) : null,
-            reference: summary.referenceNumber
+            reference: referenceNumber
           });
           
-          // DISABLED: Frontend API calls to prevent duplication
-          // Reservations will be created by Paymongo webhooks
-          console.log('Frontend API calls disabled - using webhook-based processing');
+          // Try to fetch payment method from backend (webhook should have processed it)
+          if (!paymentMethod) {
+            // Try immediately first
+            fetchPaymentMethod(referenceNumber, paymentIntentId).then((method) => {
+              if (!method) {
+                // If not found immediately, poll for payment method (webhook may take a moment)
+                const pollInterval = setInterval(async () => {
+                  const fetchedMethod = await fetchPaymentMethod(referenceNumber, paymentIntentId)
+                  if (fetchedMethod) {
+                    clearInterval(pollInterval)
+                  }
+                }, 2000) // Poll every 2 seconds
+                
+                // Stop polling after 30 seconds
+                setTimeout(() => clearInterval(pollInterval), 30000)
+              }
+            })
+          }
+          
+          hasProcessed.current = true
           return; // Exit early
         } catch (error) {
           console.error('Error parsing booking data:', error);
@@ -83,14 +180,15 @@ export function PaymentSuccessPage() {
         if (bookingData) {
           try {
             const parsedBookingData = JSON.parse(decodeURIComponent(bookingData));
+            const referenceNumber = parsedBookingData.referenceNumber || `REF${Date.now()}`
             const summary = {
               checkoutSessionId: actualCheckoutSessionId,
               amount: amount ? parseFloat(amount) : 0,
               date: parsedBookingData.selectedDate,
               courtBookings: parsedBookingData.courtBookings || [],
               equipmentBookings: parsedBookingData.equipmentBookings || [],
-              referenceNumber: parsedBookingData.referenceNumber || `REF${Date.now()}`,
-              paymentMethod: 'Processing...', // Will be updated after API call
+              referenceNumber: referenceNumber,
+              paymentMethod: paymentMethod || 'Processing...',
               status: 'Processing payment details...'
             };
             
@@ -98,11 +196,29 @@ export function PaymentSuccessPage() {
             setPaymentDetails({
               paymentIntentId: actualCheckoutSessionId,
               amount: amount ? parseFloat(amount) : null,
-              reference: summary.referenceNumber
+              reference: referenceNumber
             });
             
-            // DISABLED: Frontend API calls to prevent duplication
-            // Reservations will be created by Paymongo webhooks
+            // Try to fetch payment method from backend (webhook should have processed it)
+            if (!paymentMethod) {
+              // Try immediately first
+              fetchPaymentMethod(referenceNumber, actualCheckoutSessionId).then((method) => {
+                if (!method) {
+                  // If not found immediately, poll for payment method (webhook may take a moment)
+                  const pollInterval = setInterval(async () => {
+                    const fetchedMethod = await fetchPaymentMethod(referenceNumber, actualCheckoutSessionId)
+                    if (fetchedMethod) {
+                      clearInterval(pollInterval)
+                    }
+                  }, 2000) // Poll every 2 seconds
+                  
+                  // Stop polling after 30 seconds
+                  setTimeout(() => clearInterval(pollInterval), 30000)
+                }
+              })
+            }
+            
+            hasProcessed.current = true
             return; // Exit early if we found the checkout session ID
           } catch (error) {
             console.error('Error parsing booking data:', error);
@@ -116,14 +232,15 @@ export function PaymentSuccessPage() {
     if (bookingData && !hasProcessed.current && !isProcessing) {
       try {
         const parsedBookingData = JSON.parse(decodeURIComponent(bookingData));
+        const referenceNumber = parsedBookingData.referenceNumber || `REF${Date.now()}`
         const summary = {
           checkoutSessionId: 'Processing...',
           amount: amount ? parseFloat(amount) : 0,
           date: parsedBookingData.selectedDate,
           courtBookings: parsedBookingData.courtBookings || [],
           equipmentBookings: parsedBookingData.equipmentBookings || [],
-          referenceNumber: parsedBookingData.referenceNumber || `REF${Date.now()}`,
-          paymentMethod: 'Processing...',
+          referenceNumber: referenceNumber,
+          paymentMethod: paymentMethod || 'Processing...',
           status: 'Processing payment details...'
         };
         
@@ -131,11 +248,29 @@ export function PaymentSuccessPage() {
         setPaymentDetails({
           paymentIntentId: 'Processing...',
           amount: amount ? parseFloat(amount) : null,
-          reference: summary.referenceNumber
+          reference: referenceNumber
         });
         
-        // DISABLED: Frontend API calls to prevent duplication
-        // Reservations will be created by Paymongo webhooks
+        // Try to fetch payment method from backend (webhook should have processed it)
+        if (!paymentMethod) {
+          // Try immediately first
+          fetchPaymentMethod(referenceNumber).then((method) => {
+            if (!method) {
+              // If not found immediately, poll for payment method (webhook may take a moment)
+              const pollInterval = setInterval(async () => {
+                const fetchedMethod = await fetchPaymentMethod(referenceNumber)
+                if (fetchedMethod) {
+                  clearInterval(pollInterval)
+                }
+              }, 2000) // Poll every 2 seconds
+              
+              // Stop polling after 30 seconds
+              setTimeout(() => clearInterval(pollInterval), 30000)
+            }
+          })
+        }
+        
+        hasProcessed.current = true
         return; // Exit early
       } catch (error) {
         console.error('Error parsing booking data:', error);
@@ -193,8 +328,8 @@ export function PaymentSuccessPage() {
     <>
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex flex-col items-center justify-center gap-6 p-4">
       <div className="w-full max-w-5xl">
-        <div className="bg-gradient-to-r from-slate-100 via-white to-slate-100 border border-slate-200 rounded-2xl px-4 py-5 shadow-sm">
-          <ol className="mx-auto flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <div className="bg-gradient-to-r from-slate-100 via-white to-slate-100 border border-slate-200 rounded-2xl px-6 py-5 shadow-sm overflow-hidden">
+          <ol className="mx-auto flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             {steps.map((step, index) => {
               const state = getStepState(step.id)
               const isLast = index === steps.length - 1
@@ -232,22 +367,22 @@ export function PaymentSuccessPage() {
               const styles = stateStyles[state]
 
               return (
-                <li key={step.id} className="flex flex-1 flex-col items-start gap-3 sm:flex-row sm:items-center">
-                  <div className="flex items-center gap-3">
+                <li key={step.id} className="flex flex-1 flex-col items-start gap-3 sm:flex-row sm:items-center sm:min-w-0">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     <div
-                      className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-300 sm:h-10 sm:w-10 ${styles.circle}`}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all duration-300 sm:h-10 sm:w-10 flex-shrink-0 ${styles.circle}`}
                       aria-current={isCurrent ? 'step' : undefined}
                     >
                       {styles.icon ?? step.id}
                     </div>
-                    <div>
-                      <p className={`text-sm font-semibold tracking-tight sm:text-base whitespace-nowrap ${styles.title}`}>{step.name}</p>
-                      <p className={`text-xs font-medium sm:text-sm whitespace-nowrap ${styles.hint}`}>{step.hint}</p>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold tracking-tight sm:text-base ${styles.title}`}>{step.name}</p>
+                      <p className={`text-xs font-medium sm:text-sm ${styles.hint}`}>{step.hint}</p>
                     </div>
                   </div>
 
                   {!isLast && (
-                    <div className="ml-12 hidden flex-1 sm:flex">
+                    <div className="ml-12 hidden flex-1 sm:flex min-w-0">
                       <div
                         className={`h-1 w-full rounded-full transition-all duration-300 ${
                           isCompleted ? 'bg-emerald-300' : isCurrent ? 'bg-blue-400' : 'bg-slate-200'
