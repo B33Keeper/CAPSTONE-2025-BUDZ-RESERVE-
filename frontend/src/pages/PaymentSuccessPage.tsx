@@ -396,50 +396,6 @@ export function PaymentSuccessPage() {
             <ArrowLeft className="w-5 h-5" />
             <span>View Bookings</span>
           </button>
-          
-          {/* Test Webhook Button - Remove in production */}
-          {import.meta.env.DEV && (
-            <button
-              onClick={async () => {
-                try {
-                  const testData = {
-                    checkoutSessionId: 'cs_test123',
-                    paymentId: 'pay_test123',
-                    paymentMethod: 'paymaya', // Test with PayMaya
-                    amount: bookingSummary?.totalAmount || 220,
-                    bookingData: bookingSummary ? {
-                      userId: 1,
-                      selectedDate: bookingSummary.date,
-                      courtBookings: bookingSummary.courtBookings,
-                      equipmentBookings: bookingSummary.equipmentBookings,
-                      referenceNumber: bookingSummary.referenceNumber
-                    } : null,
-                    customerName: 'Test Customer',
-                    customerEmail: 'test@example.com',
-                    customerPhone: '+639123456789',
-                    customerAddress: 'Test Address'
-                  };
-                  
-                  const response = await fetch('http://localhost:3001/api/webhook/test-webhook', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(testData)
-                  });
-                  
-                  const result = await response.json();
-                  alert('Webhook test completed! Check database for new reservation.');
-                } catch (error) {
-                  console.error('Webhook test error:', error);
-                  alert('Webhook test failed. Check console.');
-                }
-              }}
-              className="w-full bg-yellow-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-yellow-700 transition-colors"
-            >
-              🧪 Test Webhook (Dev Only)
-            </button>
-          )}
         </div>
 
         {/* Additional Info */}

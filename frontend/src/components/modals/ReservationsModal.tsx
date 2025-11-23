@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, ChevronLeft, ChevronRight, Filter, Menu, Receipt } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Filter, Menu } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -220,22 +220,40 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
       }
 
       // Filter by tab (current vs history)
+      // My Reservations: Show only reservations that haven't ended yet (regardless of status, except cancelled/completed)
+      // History: Show only reservations that have ended OR are cancelled/completed (max 10)
       if (activeTab === 'current') {
         const beforeTabFilter = filteredReservations.length
-        filteredReservations = filteredReservations.filter((res: Reservation) => 
-          (res.Status === 'Confirmed' || res.Status === 'Pending') && !isReservationEnded(res)
-        )
+        filteredReservations = filteredReservations.filter((res: Reservation) => {
+          // Show in "My Reservations" if:
+          // 1. Reservation hasn't ended yet (booking period is still active)
+          // 2. Status is not Cancelled or Completed
+          return !isReservationEnded(res) && res.Status !== 'Cancelled' && res.Status !== 'Completed'
+        })
         console.log(`[ReservationsModal] Tab filter (current): ${beforeTabFilter} → ${filteredReservations.length}`)
       } else {
         const beforeTabFilter = filteredReservations.length
-        filteredReservations = filteredReservations.filter((res: Reservation) => 
-          res.Status === 'Completed' || res.Status === 'Cancelled' || isReservationEnded(res)
-        )
+        filteredReservations = filteredReservations.filter((res: Reservation) => {
+          // Show in "History" if:
+          // 1. Reservation has ended (booking period is done), OR
+          // 2. Status is Cancelled or Completed
+          return isReservationEnded(res) || res.Status === 'Cancelled' || res.Status === 'Completed'
+        })
         console.log(`[ReservationsModal] Tab filter (history): ${beforeTabFilter} → ${filteredReservations.length}`)
       }
 
       console.log('[ReservationsModal] Final filtered reservations:', filteredReservations.length)
       const grouped = groupReservations(filteredReservations)
+      
+      // Limit history tab to maximum 10 reservation groups
+      if (activeTab === 'history') {
+        const HISTORY_LIMIT = 10
+        if (grouped.length > HISTORY_LIMIT) {
+          console.log(`[ReservationsModal] Limiting history to ${HISTORY_LIMIT} most recent reservation groups (had ${grouped.length})`)
+          grouped.splice(HISTORY_LIMIT) // Remove all items after index 10
+        }
+      }
+      
       setGroupedReservations(grouped)
       
       // Fetch rentals for these reservations
@@ -294,32 +312,6 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
     setCurrentPage(prev => Math.max(1, Math.min(prev, newTotalPages)))
   }, [itemsPerPage, groupedReservations.length])
 
-  // Handle receipt download/view
-  const handleReceipt = async (reservation: Reservation) => {
-    try {
-      if (reservation.Paymongo_Reference_Number) {
-        // Get receipt from Paymongo
-        const response = await api.get(`/payment/receipt/${reservation.Paymongo_Reference_Number}`)
-        
-        if (response.data.success && response.data.data) {
-          // Open receipt in new tab or download
-          const receiptUrl = response.data.data.receipt_url
-          if (receiptUrl) {
-            window.open(receiptUrl, '_blank')
-          } else {
-            toast.error('Receipt not available')
-          }
-        } else {
-          toast.error('Failed to retrieve receipt')
-        }
-      } else {
-        toast.error('No payment reference found for this reservation')
-      }
-    } catch (error: unknown) {
-      console.error('Error getting receipt:', error)
-      toast.error(`Failed to retrieve receipt: ${getErrorMessage(error)}`)
-    }
-  }
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -662,12 +654,16 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                   {currentReservations.map((group, index) => {
                     const rentalItems = group.reservations.flatMap(res => rentalsMap[res.Reservation_ID]?.items ?? [])
                     const payments = group.reservations.flatMap(res => res.payments || [])
-                    const paid = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
-                    const displayAmount = paid > 0 ? paid : group.totalAmount
+                    
+                    // Calculate display amount: use the reservation's Total_Amount
+                    // Sum all reservation Total_Amounts in the group (this handles legitimate multi-court bookings)
+                    // This is more accurate than summing payments, which can have duplicates
+                    const displayAmount = group.reservations.reduce((sum, res) => {
+                      return sum + (Number(res.Total_Amount) || 0)
+                    }, 0)
                     const courts = group.courts.length > 0
                       ? group.courts
                       : group.reservations.map(res => res.court?.Court_Name || 'Unknown Court')
-                    const receiptReservation = group.reservations.find(res => res.Paymongo_Reference_Number)
 
                     return (
                       <ResponsiveTableRow key={group.key} className="hover:bg-blue-50/50 transition-colors duration-200 border-b border-gray-100">
@@ -705,19 +701,7 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                             {formatRentalItems(rentalItems)}
                           </ResponsiveTableCell>
                           <ResponsiveTableCell className="text-green-600">
-                            <div className="flex flex-col items-start gap-1">
-                              <span className="font-bold">₱{formatPrice(displayAmount)}</span>
-                              {receiptReservation?.Paymongo_Reference_Number && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleReceipt(receiptReservation)}
-                                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-lg px-2 py-1 bg-blue-50 hover:bg-blue-100 transition-colors"
-                                >
-                                  <Receipt className="w-3.5 h-3.5" />
-                                  View receipt
-                                </button>
-                              )}
-                            </div>
+                            <span className="font-bold">₱{formatPrice(displayAmount)}</span>
                           </ResponsiveTableCell>
                         </ResponsiveTableRow>
                     )

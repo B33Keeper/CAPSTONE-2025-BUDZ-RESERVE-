@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 // import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { ScheduleModule } from '@nestjs/schedule';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 
@@ -28,11 +27,12 @@ import { HealthController } from './health.controller';
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: [
+        '.env', // Current directory
+        '../.env', // Parent directory (root)
+        './backend/.env', // Backend directory
+      ],
     }),
-
-    // Task Scheduling
-    ScheduleModule.forRoot(),
 
     // Email configuration
     MailerModule.forRootAsync({

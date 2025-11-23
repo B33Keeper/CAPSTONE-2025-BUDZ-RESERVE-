@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner, TableColumn, TableIndex } from 'typeor
 export class AddUserIdToQueueTables1737129600000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Check if user_id column already exists in queue_players
-    const queuePlayersTable = await queryRunner.getTable('queue_players');
+    let queuePlayersTable = await queryRunner.getTable('queue_players');
     const hasUserIdInPlayers = queuePlayersTable?.findColumnByName('user_id');
 
     if (!hasUserIdInPlayers) {
@@ -16,10 +16,12 @@ export class AddUserIdToQueueTables1737129600000 implements MigrationInterface {
           default: 1,
         }),
       );
+      // Refresh table reference after adding column
+      queuePlayersTable = await queryRunner.getTable('queue_players');
     }
 
     // Check if user_id column already exists in queue_matches
-    const queueMatchesTable = await queryRunner.getTable('queue_matches');
+    let queueMatchesTable = await queryRunner.getTable('queue_matches');
     const hasUserIdInMatches = queueMatchesTable?.findColumnByName('user_id');
 
     if (!hasUserIdInMatches) {
@@ -32,10 +34,12 @@ export class AddUserIdToQueueTables1737129600000 implements MigrationInterface {
           default: 1,
         }),
       );
+      // Refresh table reference after adding column
+      queueMatchesTable = await queryRunner.getTable('queue_matches');
     }
 
     // Create indexes for better query performance
-    const queuePlayersIndexExists = await queryRunner.hasIndex('queue_players', 'idx_queue_players_user_id');
+    const queuePlayersIndexExists = queuePlayersTable?.indices?.some(idx => idx.name === 'idx_queue_players_user_id');
     if (!queuePlayersIndexExists) {
       await queryRunner.createIndex(
         'queue_players',
@@ -46,7 +50,7 @@ export class AddUserIdToQueueTables1737129600000 implements MigrationInterface {
       );
     }
 
-    const queueMatchesIndexExists = await queryRunner.hasIndex('queue_matches', 'idx_queue_matches_user_id');
+    const queueMatchesIndexExists = queueMatchesTable?.indices?.some(idx => idx.name === 'idx_queue_matches_user_id');
     if (!queueMatchesIndexExists) {
       await queryRunner.createIndex(
         'queue_matches',
@@ -69,24 +73,26 @@ export class AddUserIdToQueueTables1737129600000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove indexes
-    const queuePlayersIndexExists = await queryRunner.hasIndex('queue_players', 'idx_queue_players_user_id');
+    let queuePlayersTable = await queryRunner.getTable('queue_players');
+    const queuePlayersIndexExists = queuePlayersTable?.indices?.some(idx => idx.name === 'idx_queue_players_user_id');
     if (queuePlayersIndexExists) {
       await queryRunner.dropIndex('queue_players', 'idx_queue_players_user_id');
     }
 
-    const queueMatchesIndexExists = await queryRunner.hasIndex('queue_matches', 'idx_queue_matches_user_id');
+    let queueMatchesTable = await queryRunner.getTable('queue_matches');
+    const queueMatchesIndexExists = queueMatchesTable?.indices?.some(idx => idx.name === 'idx_queue_matches_user_id');
     if (queueMatchesIndexExists) {
       await queryRunner.dropIndex('queue_matches', 'idx_queue_matches_user_id');
     }
 
     // Remove columns
-    const queuePlayersTable = await queryRunner.getTable('queue_players');
+    queuePlayersTable = await queryRunner.getTable('queue_players');
     const hasUserIdInPlayers = queuePlayersTable?.findColumnByName('user_id');
     if (hasUserIdInPlayers) {
       await queryRunner.dropColumn('queue_players', 'user_id');
     }
 
-    const queueMatchesTable = await queryRunner.getTable('queue_matches');
+    queueMatchesTable = await queryRunner.getTable('queue_matches');
     const hasUserIdInMatches = queueMatchesTable?.findColumnByName('user_id');
     if (hasUserIdInMatches) {
       await queryRunner.dropColumn('queue_matches', 'user_id');

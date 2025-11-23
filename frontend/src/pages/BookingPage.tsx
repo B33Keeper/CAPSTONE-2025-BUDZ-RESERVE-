@@ -236,6 +236,17 @@ export function BookingPage() {
     loadData()
   }, [])
 
+  // Refresh availability data when selectedDate changes or when returning to booking page
+  useEffect(() => {
+    if (selectedDate && courts.length > 0 && currentStep === 2) {
+      // Reload availability data to reflect latest reservations (including newly created ones)
+      // Only refresh when on step 2 (time & court selection) to avoid unnecessary calls
+      console.log('[BookingPage] Refreshing availability data for date:', selectedDate)
+      loadAvailabilityData(selectedDate)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, currentStep])
+
   // Load availability data when date is selected
   const loadAvailabilityData = async (date: string) => {
     if (!date) return
@@ -316,9 +327,14 @@ export function BookingPage() {
       })
       
       // Remove from bookings
-      setCourtBookings(prev => prev.filter(booking => 
-        !(booking.court === courtName && booking.schedule === time)
-      ))
+      setCourtBookings(prev => {
+        const filtered = prev.filter(booking => 
+          !(booking.court === courtName && booking.schedule === time)
+        )
+        console.log('[BookingPage] Removing booking:', { court: courtName, schedule: time })
+        console.log('[BookingPage] Total bookings after remove:', filtered.length, filtered)
+        return filtered
+      })
     } else {
       // Select the cell
       setSelectedCells(prev => new Set(prev).add(cellKey))
@@ -329,7 +345,12 @@ export function BookingPage() {
         schedule: time,
         subtotal: Number(price)
       }
-      setCourtBookings(prev => [...prev, newBooking])
+      console.log('[BookingPage] Adding new booking:', newBooking)
+      setCourtBookings(prev => {
+        const updated = [...prev, newBooking]
+        console.log('[BookingPage] Total bookings after add:', updated.length, updated)
+        return updated
+      })
     }
   }
 
@@ -347,11 +368,15 @@ export function BookingPage() {
       // Find the time slot in availability data
       const timeSlot = courtAvailability.find(slot => {
         const formatTime = (time: string) => {
-          const [hours, minutes] = time.split(':')
-          const hour = parseInt(hours)
+          // Handle both "10:00:00" and "10:00" formats
+          const timeParts = time.split(':')
+          const hour = parseInt(timeParts[0], 10)
+          const minutes = timeParts[1] || '00'
           const ampm = hour >= 12 ? 'pm' : 'am'
           const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-          return `${displayHour}:${minutes} ${ampm}`
+          // Format minutes to always show 2 digits (remove seconds if present)
+          const displayMinutes = minutes.padStart(2, '0').substring(0, 2)
+          return `${displayHour}:${displayMinutes} ${ampm}`
         }
         const slotTime = `${formatTime(slot.start_time)} - ${formatTime(slot.end_time)}`
         return slotTime === time
@@ -1474,13 +1499,21 @@ export function BookingPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {courtBookings.map((booking, index) => (
-                        <tr key={index}>
-                          <td className="border border-gray-300 px-4 py-2">{booking.court}</td>
-                          <td className="border border-gray-300 px-4 py-2">{booking.schedule}</td>
-                          <td className="border border-gray-300 px-4 py-2">{booking.subtotal}</td>
-                        </tr>
-                      ))}
+                      {courtBookings.map((booking, index) => {
+                        // Ensure each court-time combination is displayed as a separate row
+                        console.log(`[BookingPage] Displaying booking ${index + 1}:`, {
+                          court: booking.court,
+                          schedule: booking.schedule,
+                          subtotal: booking.subtotal
+                        })
+                        return (
+                          <tr key={`${booking.court}-${booking.schedule}-${index}`}>
+                            <td className="border border-gray-300 px-4 py-2 font-medium">{booking.court}</td>
+                            <td className="border border-gray-300 px-4 py-2">{booking.schedule}</td>
+                            <td className="border border-gray-300 px-4 py-2 font-medium">₱{booking.subtotal.toLocaleString()}</td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
