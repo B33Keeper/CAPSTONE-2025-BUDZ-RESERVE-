@@ -124,11 +124,18 @@ export class ReservationsService {
   }
 
   async findByUser(userId: number): Promise<Reservation[]> {
-    return this.reservationsRepository.find({
+    const reservations = await this.reservationsRepository.find({
       where: { User_ID: userId, Is_Admin_Created: false },
       relations: ['court', 'payments'],
       order: { Created_at: 'DESC' },
     });
+    
+    console.log(`[findByUser] User ID: ${userId}, Found ${reservations.length} reservations`);
+    reservations.forEach(res => {
+      console.log(`  - Reservation ${res.Reservation_ID}: Status=${res.Status}, Date=${res.Reservation_Date}, Court=${res.Court_ID}, Is_Admin_Created=${res.Is_Admin_Created}`);
+    });
+    
+    return reservations;
   }
 
   async findOne(id: number): Promise<Reservation> {
@@ -156,24 +163,61 @@ export class ReservationsService {
   }
 
   async getAvailability(courtId: number, date: string): Promise<any[]> {
+    // Parse the date string to ensure consistent format
+    // Handle both YYYY-MM-DD and other date formats
+    let targetDate: Date;
+    if (date.includes('T')) {
+      targetDate = new Date(date);
+    } else {
+      // Assume YYYY-MM-DD format
+      const [year, month, day] = date.split('-').map(Number);
+      targetDate = new Date(year, month - 1, day);
+    }
+    targetDate.setHours(0, 0, 0, 0);
+    
+    // Find all confirmed reservations for this court and date
+    // Use Between or date comparison that handles date-only matching
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    console.log(`[Availability] Querying: Court ${courtId}, Date: ${date}, StartOfDay: ${startOfDay.toISOString()}, EndOfDay: ${endOfDay.toISOString()}`);
+    
     const reservations = await this.reservationsRepository.find({
       where: {
         Court_ID: courtId,
-        Reservation_Date: new Date(date),
+        Reservation_Date: Between(startOfDay, endOfDay),
         Status: ReservationStatus.CONFIRMED,
       },
-      select: ['Start_Time', 'End_Time'],
+      select: ['Start_Time', 'End_Time', 'Reservation_ID', 'Reservation_Date'],
+    });
+    
+    console.log(`[Availability] Court ${courtId}, Date: ${date}, Found ${reservations.length} reservations`);
+    reservations.forEach(res => {
+      console.log(`  - Reservation ${res.Reservation_ID}: ${res.Reservation_Date} ${res.Start_Time} - ${res.End_Time}`);
     });
 
-    // Generate time slots (8 AM to 11 PM, 1-hour slots)
+    // Generate time slots (8 AM to 11 PM, 1-hour slots) to match frontend display
+    // But check ALL reservations for the day, regardless of their time
     const timeSlots = [];
     for (let hour = 8; hour < 23; hour++) {
       const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
       const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
       
-      const isReserved = reservations.some(res => 
-        res.Start_Time <= startTime && res.End_Time > startTime
-      );
+      // Check if this slot overlaps with any reservation
+      // A slot is reserved if:
+      // 1. Reservation starts before slot ends AND reservation ends after slot starts
+      // This handles all overlap cases: partial overlaps, complete containment, etc.
+      const isReserved = reservations.some(res => {
+        const resStart = res.Start_Time;
+        const resEnd = res.End_Time;
+        
+        // Check for overlap: reservation overlaps with slot if:
+        // resStart < slotEnd AND resEnd > slotStart
+        // This works for any time, including early morning reservations
+        return resStart < endTime && resEnd > startTime;
+      });
 
       timeSlots.push({
         start_time: startTime,
@@ -181,6 +225,16 @@ export class ReservationsService {
         available: !isReserved,
       });
     }
+
+    // Log any reservations outside the displayed time range for debugging
+    const displayedHours = { start: 8, end: 23 };
+    reservations.forEach(res => {
+      const resStartHour = parseInt(res.Start_Time.split(':')[0]);
+      const resEndHour = parseInt(res.End_Time.split(':')[0]);
+      if (resStartHour < displayedHours.start || resEndHour > displayedHours.end) {
+        console.log(`[Availability] Warning: Reservation ${res.Reservation_ID} (${res.Start_Time} - ${res.End_Time}) is outside displayed hours (${displayedHours.start}:00 - ${displayedHours.end}:00)`);
+      }
+    });
 
     return timeSlots;
   }

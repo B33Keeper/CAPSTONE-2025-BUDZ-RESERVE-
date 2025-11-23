@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 
@@ -18,8 +18,6 @@ export function AnnouncementModal() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
-  const hasAutoShownRef = useRef(false)
-  const lastUserIdRef = useRef<number | null>(null)
 
   const fetchActiveAnnouncements = useCallback(async () => {
     if (!user || user.role === 'admin') {
@@ -48,31 +46,6 @@ export function AnnouncementModal() {
   const handlePreviousAnnouncement = () => {
     setCurrentIndex((prev) => Math.max(prev - 1, 0))
   }
-
-  useEffect(() => {
-    if (!user || user.role === 'admin') {
-      setAnnouncements([])
-      setCurrentIndex(0)
-      setShowModal(false)
-      setLoading(false)
-      hasAutoShownRef.current = false
-      lastUserIdRef.current = null
-      return
-    }
-
-    if (lastUserIdRef.current !== user.id) {
-      hasAutoShownRef.current = false
-      lastUserIdRef.current = user.id
-    }
-
-    if (hasAutoShownRef.current) {
-      setLoading(false)
-      return
-    }
-
-    hasAutoShownRef.current = true
-    fetchActiveAnnouncements()
-  }, [user, fetchActiveAnnouncements])
 
   useEffect(() => {
     const handleManualOpen = () => {
