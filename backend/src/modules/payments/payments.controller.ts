@@ -13,12 +13,20 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PaymentsService } from './payments.service';
+import { EquipmentRentalSchedulerService } from './equipment-rental-scheduler.service';
+import { EquipmentService } from '../equipment/equipment.service';
+import { EmailReceiptService } from './email-receipt.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
 @ApiTags('payments')
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(
+    private readonly paymentsService: PaymentsService,
+    private readonly rentalSchedulerService: EquipmentRentalSchedulerService,
+    private readonly equipmentService: EquipmentService,
+    private readonly emailReceiptService: EmailReceiptService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -111,5 +119,132 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payment status updated successfully' })
   updateStatus(@Param('id', ParseIntPipe) id: number, @Body('status') status: string) {
     return this.paymentsService.updateStatus(id, status);
+  }
+
+  @Get('debug/reservations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Debug: Check reservation data being fetched' })
+  @ApiResponse({ status: 200, description: 'Debug information retrieved successfully' })
+  async debugReservations() {
+    try {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      
+      // Get sales report result
+      const salesReportResult = await this.paymentsService.getSalesReport(todayStart, todayEnd);
+      
+      // Get debug data from service
+      const debugData = await this.paymentsService.debugReservationsData(todayStart, todayEnd);
+      
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        dateRange: {
+          todayStart: todayStart.toISOString(),
+          todayEnd: todayEnd.toISOString(),
+        },
+        salesReportResult: {
+          recordsFound: salesReportResult.data.length,
+          summary: salesReportResult.summary,
+        },
+        databaseQuery: debugData.summary,
+        dateRangeReservations: debugData.dateRangeReservations,
+        recentReservations: debugData.allReservations.slice(0, 10),
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  @Get('debug/equipment-rentals')
+  @ApiOperation({ summary: 'Debug: Check equipment availability and expired rentals' })
+  @ApiResponse({ status: 200, description: 'Debug information retrieved successfully' })
+  async debugEquipmentRentals() {
+    try {
+      // Get all equipment with availability
+      const equipment = await this.equipmentService.findAll();
+      
+      // Manually check for expired rentals
+      const schedulerResult = await this.rentalSchedulerService.manualCheckExpiredRentals();
+      
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        equipment: equipment.map((eq: any) => ({
+          id: eq.id,
+          name: eq.equipment_name,
+          total_stocks: eq.stocks,
+          available_stock: eq.available_stock ?? eq.stocks,
+          active_rentals: eq.active_rentals ?? 0,
+          status: eq.status,
+        })),
+        scheduler: {
+          message: schedulerResult.message || 'Scheduler check completed',
+          expiredRentalsFound: schedulerResult.expiredRentalsFound || 0,
+          processedCount: schedulerResult.processedCount || 0,
+          emailSentCount: schedulerResult.emailSentCount || 0,
+          processedItems: schedulerResult.processedItems || [],
+        },
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  @Post('debug/test-rental-email')
+  @ApiOperation({ summary: 'Debug: Test equipment return reminder email' })
+  @ApiResponse({ status: 200, description: 'Test email sent successfully' })
+  async testRentalEmail(@Body() body?: {
+    email?: string;
+    equipmentName?: string;
+    quantity?: number;
+  }) {
+    try {
+      const testEmail = body?.email || 'test@example.com';
+      const equipmentName = body?.equipmentName || 'YONEX Arcsaber 7 Play';
+      const quantity = body?.quantity || 2;
+      const rentalEndTime = new Date().toLocaleString('en-PH', {
+        timeZone: 'Asia/Manila',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const result = await this.emailReceiptService.sendEquipmentReturnReminder({
+        customerName: 'Test Customer',
+        customerEmail: testEmail,
+        equipmentName: equipmentName,
+        quantity: quantity,
+        rentalEndTime: rentalEndTime,
+      });
+
+      return {
+        success: result,
+        message: result 
+          ? `Test email sent successfully to ${testEmail}` 
+          : 'Failed to send test email',
+        email: testEmail,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Unknown error',
+        timestamp: new Date().toISOString(),
+      };
+    }
   }
 }

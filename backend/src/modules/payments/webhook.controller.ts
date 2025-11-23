@@ -428,9 +428,19 @@ export class WebhookController {
   private async createEquipmentRentalsFromBooking(
     userId: number,
     reservationId: number,
-    equipmentBookings: Array<{ equipment: string; time: string; subtotal?: number; quantity?: number }>,
+    equipmentBookings: Array<{ equipment: string; time: string; subtotal?: number; quantity?: number; startTime?: string }>,
   ) {
     if (!reservationId || !userId) return;
+
+    // Get reservation to get date and start time
+    const reservation = await this.reservationRepository.findOne({
+      where: { Reservation_ID: reservationId },
+    });
+
+    if (!reservation) {
+      this.logger.warn(`Reservation ${reservationId} not found for equipment rental`);
+      return;
+    }
 
     const rental = this.rentalRepository.create({
       reservation_id: reservationId,
@@ -438,6 +448,9 @@ export class WebhookController {
       total_amount: 0,
     });
     const savedRental = await this.rentalRepository.save(rental);
+
+    // Get default start time from first court booking if available
+    const defaultStartTime = reservation.Start_Time || null;
 
     let total = 0;
     for (const b of equipmentBookings) {
@@ -452,6 +465,28 @@ export class WebhookController {
       const hourlyPrice = equipmentRow ? Number(equipmentRow.price) : Number(((b.subtotal || 0) / Math.max(1, hours * quantity)).toFixed(2)) || 0;
       const subtotal = b.subtotal != null && b.subtotal > 0 ? Number(b.subtotal) : Number((hourlyPrice * hours * quantity).toFixed(2));
 
+      // Calculate rental start and end times
+      // IMPORTANT: Rental starts when the court booking starts (reservation Start_Time)
+      // This ensures equipment is available during the customer's court booking period
+      const reservationDate = reservation.Reservation_Date;
+      // Always use the reservation's Start_Time (when court booking starts)
+      const courtStartTime = reservation.Start_Time || defaultStartTime;
+      
+      let rentalStartTime: Date | null = null;
+      let rentalEndTime: Date | null = null;
+      
+      if (courtStartTime && reservationDate) {
+        // Parse time string (HH:MM:SS or HH:MM)
+        const [startHour, startMin] = courtStartTime.split(':').map(Number);
+        const dateObj = new Date(reservationDate);
+        // Rental starts when the court booking starts
+        rentalStartTime = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), startHour, startMin || 0, 0);
+        
+        // Calculate end time by adding rental hours to the court start time
+        rentalEndTime = new Date(rentalStartTime);
+        rentalEndTime.setHours(rentalEndTime.getHours() + hours);
+      }
+
       const item = this.rentalItemRepository.create({
         rental_id: savedRental.id,
         equipment_id: equipmentRow ? equipmentRow.id : 0,
@@ -459,8 +494,17 @@ export class WebhookController {
         hours,
         hourly_price: hourlyPrice,
         subtotal,
-      });
+        rental_start_time: rentalStartTime,
+        rental_end_time: rentalEndTime,
+        stock_restored: false,
+        notification_sent: false,
+      } as Partial<EquipmentRentalItem>);
       await this.rentalItemRepository.save(item);
+      
+      // Note: Stock is now calculated dynamically based on active rentals
+      // No need to decrease stock permanently - available stock = total_stock - active_rentals
+      this.logger.log(`Created rental item for ${equipmentRow?.equipment_name || 'unknown'}, quantity: ${quantity}, hours: ${hours}`);
+      
       total += subtotal;
     }
 

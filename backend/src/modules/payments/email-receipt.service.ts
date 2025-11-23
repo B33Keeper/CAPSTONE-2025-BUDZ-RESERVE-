@@ -193,4 +193,38 @@ export class EmailReceiptService {
       return false;
     }
   }
+
+  async sendEquipmentReturnReminder(data: {
+    customerName: string;
+    customerEmail: string;
+    equipmentName: string;
+    quantity: number;
+    rentalEndTime: string;
+  }): Promise<boolean> {
+    try {
+      const emailData = {
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        equipmentName: data.equipmentName,
+        quantity: data.quantity,
+        rentalEndTime: data.rentalEndTime,
+        appName: this.configService.get('APP_NAME', 'Budz Reserve'),
+        appUrl: this.configService.get('FRONTEND_URL', 'http://localhost:3000'),
+        supportEmail: this.configService.get('SUPPORT_EMAIL', 'support@budzreserve.com'),
+      };
+
+      await this.mailerService.sendMail({
+        to: data.customerEmail,
+        subject: `Equipment Return Reminder - ${data.equipmentName}`,
+        template: 'equipment-return-reminder',
+        context: emailData,
+      });
+
+      this.logger.log(`Equipment return reminder sent successfully to ${data.customerEmail}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send equipment return reminder:`, error);
+      return false;
+    }
+  }
 }

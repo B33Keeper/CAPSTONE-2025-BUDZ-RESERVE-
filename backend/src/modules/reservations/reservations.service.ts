@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, Like } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -17,6 +17,8 @@ import { PaymongoQrPhCode } from '../payments/types/paymongo.types';
 
 @Injectable()
 export class ReservationsService {
+  private readonly logger = new Logger(ReservationsService.name);
+
   constructor(
     @InjectRepository(Reservation)
     private reservationsRepository: Repository<Reservation>,
@@ -136,6 +138,85 @@ export class ReservationsService {
     });
     
     return reservations;
+  }
+
+  /**
+   * Check if user has active reservations (pending or confirmed, not expired)
+   * Active means: Status is PENDING or CONFIRMED, and reservation period hasn't ended
+   */
+  async checkQueueingAccess(userId: number): Promise<{ hasAccess: boolean; message?: string; reservations?: any[] }> {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Get all reservations for user with PENDING or CONFIRMED status
+    const reservations = await this.reservationsRepository.find({
+      where: [
+        { User_ID: userId, Status: ReservationStatus.PENDING },
+        { User_ID: userId, Status: ReservationStatus.CONFIRMED },
+      ],
+      order: { Reservation_Date: 'ASC', Start_Time: 'ASC' },
+    });
+
+    if (reservations.length === 0) {
+      return {
+        hasAccess: false,
+        message: 'You need an active reservation to access the queueing system. Please book a court first.',
+      };
+    }
+
+    // Check if any reservation is currently active (not expired)
+    const activeReservations = reservations.filter((reservation) => {
+      const reservationDate = new Date(reservation.Reservation_Date);
+      const reservationDateOnly = new Date(
+        reservationDate.getFullYear(),
+        reservationDate.getMonth(),
+        reservationDate.getDate(),
+      );
+
+      // Parse start and end times
+      const [startHour, startMin] = reservation.Start_Time.split(':').map(Number);
+      const [endHour, endMin] = reservation.End_Time.split(':').map(Number);
+
+      // Create datetime objects for start and end
+      const startDateTime = new Date(reservationDateOnly);
+      startDateTime.setHours(startHour, startMin || 0, 0, 0);
+
+      const endDateTime = new Date(reservationDateOnly);
+      endDateTime.setHours(endHour, endMin || 0, 0, 0);
+
+      // Check if reservation period hasn't ended yet
+      // Allow access if: reservation date is today or future, and end time hasn't passed
+      const isFutureOrToday = reservationDateOnly >= today;
+      const hasNotEnded = endDateTime > now;
+
+      return isFutureOrToday && hasNotEnded;
+    });
+
+    if (activeReservations.length === 0) {
+      return {
+        hasAccess: false,
+        message: 'Your reservation period has ended. You can no longer access the queueing system.',
+        reservations: reservations.map((r) => ({
+          id: r.Reservation_ID,
+          date: r.Reservation_Date,
+          startTime: r.Start_Time,
+          endTime: r.End_Time,
+          status: r.Status,
+        })),
+      };
+    }
+
+    return {
+      hasAccess: true,
+      reservations: activeReservations.map((r) => ({
+        id: r.Reservation_ID,
+        date: r.Reservation_Date,
+        startTime: r.Start_Time,
+        endTime: r.End_Time,
+        status: r.Status,
+        courtId: r.Court_ID,
+      })),
+    };
   }
 
   async findOne(id: number): Promise<Reservation> {
@@ -455,28 +536,68 @@ export class ReservationsService {
       const reservationDate = new Date(date);
       reservationDate.setHours(0, 0, 0, 0);
 
-      // Check if user has an existing reservation with the same court, date, and time
-      const existingReservation = await this.reservationsRepository.findOne({
+      this.logger.debug(`[Duplicate Check] User: ${userId}, Court: ${courtId}, Date: ${date}, Time: ${startTime} - ${endTime}`);
+
+      // Normalize time formats - ensure consistent format (HH:MM:SS)
+      const normalizeTime = (time: string): string => {
+        // Remove any whitespace
+        time = time.trim();
+        // If time is in HH:MM format, add :00 for seconds
+        if (time.match(/^\d{1,2}:\d{2}$/)) {
+          return time + ':00';
+        }
+        // If time is in HH:MM:SS format, return as is
+        if (time.match(/^\d{1,2}:\d{2}:\d{2}$/)) {
+          return time;
+        }
+        return time;
+      };
+
+      const normalizedStartTime = normalizeTime(startTime);
+      const normalizedEndTime = normalizeTime(endTime);
+
+      this.logger.debug(`[Duplicate Check] Normalized times: ${normalizedStartTime} - ${normalizedEndTime}`);
+
+      // Find all confirmed reservations for this user, court, and date
+      // We'll compare times manually to handle format differences
+      const reservations = await this.reservationsRepository.find({
         where: {
           User_ID: userId,
           Court_ID: courtId,
           Reservation_Date: reservationDate,
-          Start_Time: startTime,
-          End_Time: endTime,
           Status: ReservationStatus.CONFIRMED,
         },
       });
 
-      if (existingReservation) {
+      this.logger.debug(`[Duplicate Check] Found ${reservations.length} existing reservations for this user/court/date`);
+
+      // Check if any reservation matches the time slot (handling format differences)
+      const isDuplicate = reservations.some(res => {
+        const resStart = normalizeTime(res.Start_Time);
+        const resEnd = normalizeTime(res.End_Time);
+        
+        this.logger.debug(`[Duplicate Check] Comparing: Reservation ${res.Reservation_ID} (${resStart} - ${resEnd}) vs Requested (${normalizedStartTime} - ${normalizedEndTime})`);
+        
+        // Compare normalized times
+        const matches = resStart === normalizedStartTime && resEnd === normalizedEndTime;
+        if (matches) {
+          this.logger.warn(`[Duplicate Check] ⚠️ Duplicate found! Reservation ID: ${res.Reservation_ID}`);
+        }
+        return matches;
+      });
+
+      if (isDuplicate) {
+        this.logger.warn(`[Duplicate Check] ❌ Duplicate reservation detected for User ${userId}, Court ${courtId}, Date ${date}, Time ${normalizedStartTime}-${normalizedEndTime}`);
         return {
           isDuplicate: true,
           message: 'You have already booked this court for the same date and time.',
         };
       }
 
+      this.logger.debug(`[Duplicate Check] ✅ No duplicate found`);
       return { isDuplicate: false };
     } catch (error) {
-      console.error('Error checking duplicate reservation:', error);
+      this.logger.error('Error checking duplicate reservation:', error);
       // Return false on error to allow booking (fail-safe)
       return { isDuplicate: false };
     }
@@ -868,6 +989,8 @@ export class ReservationsService {
     hours: number | null,
     excludeReservationId?: number,
   ): Promise<number> {
+    const now = new Date();
+    
     const query = this.equipmentRentalItemRepository
       .createQueryBuilder('item')
       .innerJoin(EquipmentRental, 'rental', 'rental.id = item.rental_id')
@@ -876,7 +999,10 @@ export class ReservationsService {
       .andWhere('reservation.Reservation_Date = :reservationDate', { reservationDate })
       .andWhere('reservation.Status IN (:...statuses)', {
         statuses: [ReservationStatus.CONFIRMED, ReservationStatus.PENDING, ReservationStatus.COMPLETED],
-      });
+      })
+      // Only count active rentals (not expired and stock not restored)
+      .andWhere('(item.rental_end_time IS NULL OR item.rental_end_time > :now)', { now })
+      .andWhere('item.stock_restored = :stockRestored', { stockRestored: false });
 
     if (excludeReservationId) {
       query.andWhere('reservation.Reservation_ID != :excludeReservationId', { excludeReservationId });
@@ -1046,6 +1172,28 @@ export class ReservationsService {
       const hourlyPrice = equipmentRow ? Number(equipmentRow.price) : Number(((b.subtotal || 0) / Math.max(1, hours * quantity)).toFixed(2)) || 0;
       const subtotal = b.subtotal != null && b.subtotal > 0 ? Number(b.subtotal) : Number((hourlyPrice * hours * quantity).toFixed(2));
 
+      // Calculate rental start and end times
+      // IMPORTANT: Rental starts when the court booking starts (reservation Start_Time)
+      // This ensures equipment is available during the customer's court booking period
+      const reservationDate = this.formatDateOnly(reservation.Reservation_Date);
+      // Always use the reservation's Start_Time (when court booking starts)
+      const courtStartTime = this.ensureTimeFormat(reservation.Start_Time);
+      
+      let rentalStartTime: Date | null = null;
+      let rentalEndTime: Date | null = null;
+      
+      if (courtStartTime && reservationDate) {
+        // Parse date and time to create rental start datetime
+        // Rental starts when the court booking starts
+        const [startHour, startMin] = courtStartTime.split(':').map(Number);
+        const [year, month, day] = reservationDate.split('-').map(Number);
+        rentalStartTime = new Date(year, month - 1, day, startHour, startMin, 0);
+        
+        // Calculate end time by adding rental hours to the court start time
+        rentalEndTime = new Date(rentalStartTime);
+        rentalEndTime.setHours(rentalEndTime.getHours() + hours);
+      }
+
       const item = this.equipmentRentalItemRepository.create({
         rental_id: savedRental.id,
         equipment_id: equipmentRow ? equipmentRow.id : 0,
@@ -1053,8 +1201,17 @@ export class ReservationsService {
         hours,
         hourly_price: hourlyPrice,
         subtotal,
-      });
+        rental_start_time: rentalStartTime,
+        rental_end_time: rentalEndTime,
+        stock_restored: false,
+        notification_sent: false,
+      } as Partial<EquipmentRentalItem>);
       await this.equipmentRentalItemRepository.save(item);
+      
+      // Note: Stock is now calculated dynamically based on active rentals
+      // No need to decrease stock permanently - available stock = total_stock - active_rentals
+      this.logger.log(`Created rental item for ${equipmentRow?.equipment_name || 'unknown'}, quantity: ${quantity}, hours: ${hours}`);
+      
       total += subtotal;
     }
 

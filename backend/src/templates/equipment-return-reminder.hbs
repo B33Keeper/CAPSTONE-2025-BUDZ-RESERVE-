@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipment Return Reminder - {{appName}}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #ff9800;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff9800;
+            margin-bottom: 10px;
+        }
+        .reminder-title {
+            font-size: 24px;
+            color: #333;
+            margin: 0;
+        }
+        .alert-box {
+            background: #fff3cd;
+            border-left: 4px solid #ff9800;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .alert-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        .equipment-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .equipment-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ff9800;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .important-notice {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .notice-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #721c24;
+            margin-bottom: 10px;
+        }
+        .notice-text {
+            color: #721c24;
+            margin-bottom: 10px;
+        }
+        .action-box {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .action-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+            .info-row {
+                flex-direction: column;
+            }
+            .info-label {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">{{appName}}</div>
+            <h1 class="reminder-title">Equipment Return Reminder</h1>
+        </div>
+
+        <div class="alert-box">
+            <div class="alert-title">⏰ Rental Period Ended</div>
+            <p style="color: #856404; margin: 0;">
+                Your equipment rental period has ended. Please return the equipment to the counter as soon as possible.
+            </p>
+        </div>
+
+        <div class="equipment-info">
+            <div class="equipment-name">{{equipmentName}}</div>
+            <div class="info-row">
+                <span class="info-label">Quantity:</span>
+                <span class="info-value">{{quantity}} item(s)</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Rental End Time:</span>
+                <span class="info-value">{{rentalEndTime}}</span>
+            </div>
+        </div>
+
+        <div class="important-notice">
+            <div class="notice-title">⚠️ Important Notice</div>
+            <p class="notice-text">
+                Please return the rented equipment to the counter immediately. 
+                The equipment availability has been restored in our system, and other customers may now book it.
+            </p>
+            <p class="notice-text">
+                Failure to return equipment on time may result in additional charges or restrictions on future rentals.
+            </p>
+        </div>
+
+        <div class="action-box">
+            <div class="action-title">What to do next?</div>
+            <p style="color: #007bff; margin: 0;">
+                Please visit our facility and return the equipment to the counter. 
+                Our staff will be happy to assist you.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Thank you for choosing {{appName}}!</p>
+            <p>If you have any questions, please contact us at <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+            <p>Visit us at <a href="{{appUrl}}">{{appUrl}}</a></p>
+            <p style="margin-top: 20px; font-size: 12px; color: #999;">
+                This is an automated reminder. Please return the equipment promptly.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

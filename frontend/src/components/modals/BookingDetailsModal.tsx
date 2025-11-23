@@ -12,6 +12,7 @@ interface EquipmentBooking {
   equipment: string
   time: string
   subtotal: number
+  quantity?: number
 }
 
 interface BookingDetailsModalProps {
@@ -164,6 +165,7 @@ export function BookingDetailsModal({
                   <thead>
                     <tr className="bg-gray-100">
                       <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Equipment</th>
+                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Quantity</th>
                       <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Time</th>
                       <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Subtotal</th>
                     </tr>
@@ -172,6 +174,7 @@ export function BookingDetailsModal({
                     {equipmentBookings.map((booking, index) => (
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="border border-gray-300 px-4 py-3">{booking.equipment}</td>
+                        <td className="border border-gray-300 px-4 py-3">{booking.quantity || 1}</td>
                         <td className="border border-gray-300 px-4 py-3">{booking.time}</td>
                         <td className="border border-gray-300 px-4 py-3 font-medium">₱{booking.subtotal.toLocaleString()}</td>
                       </tr>

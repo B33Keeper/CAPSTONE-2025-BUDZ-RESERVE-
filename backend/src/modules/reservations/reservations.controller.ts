@@ -185,4 +185,13 @@ export class ReservationsController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.reservationsService.remove(id);
   }
+
+  @Get('check/queueing-access')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Check if user has access to queueing system' })
+  @ApiResponse({ status: 200, description: 'Access check completed' })
+  checkQueueingAccess(@Request() req: any) {
+    return this.reservationsService.checkQueueingAccess(req.user.id);
+  }
 }

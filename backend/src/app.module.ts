@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 // import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 
@@ -68,6 +69,9 @@ import { HealthController } from './health.controller';
         limit: 100, // 100 requests per minute
       },
     ]),
+
+    // Scheduler
+    ScheduleModule.forRoot(),
 
     // Database
     DatabaseModule,

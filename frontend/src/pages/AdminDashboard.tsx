@@ -158,25 +158,10 @@ const AdminDashboard = () => {
   }, [])
 
   const calculateDailyRacketRentals = useCallback(
-    (reservations: any[], salesReportItems?: any[]) => {
-      let rentalTotal = 0
-
-      if (Array.isArray(salesReportItems) && salesReportItems.length > 0) {
-        rentalTotal = salesReportItems.reduce((sum, item) => {
-          const rentals = Array.isArray(item?.equipmentRentals) ? item.equipmentRentals : []
-          if (rentals.length === 0) return sum
-
-          const rentalCount = rentals.reduce((innerSum: number, rental: any) => {
-            const quantity = Number(rental?.quantity ?? rental?.hours ?? 0)
-            return innerSum + (Number.isNaN(quantity) ? 0 : quantity)
-          }, 0)
-
-          return sum + rentalCount
-        }, 0)
-      }
-
-      if (rentalTotal > 0 || !Array.isArray(reservations)) {
-        return rentalTotal
+    (reservations: any[]) => {
+      // Calculate from reservations CREATED today
+      if (!Array.isArray(reservations) || reservations.length === 0) {
+        return 0
       }
 
       return reservations.reduce((sum, reservation) => {
@@ -202,18 +187,15 @@ const AdminDashboard = () => {
       
       console.log('Fetching dashboard data...')
       
-      // Get today's date range for daily data
+      // Get today's date for daily data
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
       
       // Fetch all data in parallel
-      const [userCountData, courtCountData, availableCourtCountData, salesReportData, reservationsData] = await Promise.all([
+      const [userCountData, courtCountData, availableCourtCountData, reservationsData] = await Promise.all([
         api.get('/users/count'),
         apiServices.getCourtCount(),
         apiServices.getAvailableCourtCount(),
-        api.get('/payments/sales-report?period=daily'),
         api.get('/reservations')
       ])
       
@@ -222,27 +204,57 @@ const AdminDashboard = () => {
       const currentYear = today.getFullYear()
       const safeReservations: any[] = Array.isArray(reservationsData.data) ? reservationsData.data : []
 
+      // IMPORTANT: Filter by Created_at (when reservation was created) for daily dashboard metrics
+      // This ensures "Daily Reservations" shows reservations created today, not bookings for today
       const todayReservations = safeReservations.filter((reservation: any) => {
-        const createdAt = reservation.Created_at || reservation.created_at || reservation.Reservation_Date
-        if (!createdAt) return false
-        const reservationDate = new Date(createdAt)
-        if (isNaN(reservationDate.getTime())) return false
-        reservationDate.setHours(0, 0, 0, 0)
+        // Use Created_at as the primary source (when reservation was created)
+        const createdDateValue = reservation.Created_at || reservation.created_at || reservation.Created_At
+        if (!createdDateValue) return false
+        
+        const createdDate = new Date(createdDateValue)
+        if (isNaN(createdDate.getTime())) return false
+        createdDate.setHours(0, 0, 0, 0)
 
-        if (reservationDate.getFullYear() === currentYear) {
-          const monthIndex = reservationDate.getMonth()
-          monthsAccumulator[monthIndex] = (monthsAccumulator[monthIndex] || 0) + 1
+        // Track monthly data for all reservations in current year (use Reservation_Date for monthly chart)
+        const reservationDateValue = reservation.Reservation_Date || reservation.reservation_date
+        if (reservationDateValue) {
+          const reservationDate = new Date(reservationDateValue)
+          if (!isNaN(reservationDate.getTime()) && reservationDate.getFullYear() === currentYear) {
+            const monthIndex = reservationDate.getMonth()
+            monthsAccumulator[monthIndex] = (monthsAccumulator[monthIndex] || 0) + 1
+          }
         }
 
-        return reservationDate.getTime() === today.getTime()
+        // Only include reservations created today
+        return createdDate.getTime() === today.getTime()
       })
       
-      // Get daily sales from sales report with reservation fallback
-      const dailySalesAmount = salesReportData.data?.summary?.totalIncome || 0
-      const fallbackDailySales = calculateDailySalesFromReservations(todayReservations)
-      const finalDailySales = dailySalesAmount > 0 ? dailySalesAmount : fallbackDailySales
-      const reportItems = Array.isArray(salesReportData.data?.data) ? salesReportData.data.data : []
-      const totalDailyRacketRentals = calculateDailyRacketRentals(todayReservations, reportItems)
+      // IMPORTANT: Calculate daily sales and racket rentals from reservations CREATED today
+      // This ensures consistency with Daily Reservations count (all use Created_at)
+      // Use todayReservations (filtered by Created_at = today) instead of sales report
+      const finalDailySales = calculateDailySalesFromReservations(todayReservations)
+      
+      console.log('Daily Sales Calculation:', {
+        todayReservationsCount: todayReservations.length,
+        finalDailySales,
+        reservationsWithAmount: todayReservations.filter((r: any) => {
+          const amount = extractReservationAmount(r)
+          return amount > 0
+        }).length
+      })
+      
+      // Calculate racket rentals from reservations CREATED today
+      // IMPORTANT: Use todayReservations (filtered by Created_at = today)
+      const totalDailyRacketRentals = calculateDailyRacketRentals(todayReservations)
+      
+      console.log('Daily Racket Rentals Calculation:', {
+        todayReservationsCount: todayReservations.length,
+        totalDailyRacketRentals,
+        reservationsWithRentals: todayReservations.filter((r: any) => {
+          const count = extractRacketRentalCount(r)
+          return count > 0
+        }).length
+      })
       
       const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
       const monthlyData = monthLabels.map((label, index) => ({
@@ -258,8 +270,6 @@ const AdminDashboard = () => {
         availableCourtCount: availableCourtCountData,
         dailyReservations: todayReservations.length,
         dailySales: finalDailySales,
-        fallbackDailySales,
-        dailySalesAmount,
         monthlyData,
         yearlyTotal,
         totalDailyRacketRentals
@@ -444,11 +454,11 @@ const AdminDashboard = () => {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8 animate-fadeInUp">
-            {/* Daily Reservation */}
+            {/* Daily Court Reservation */}
             <div className="bg-gray-800 text-white p-4 sm:p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:transform hover:scale-105 hover:-translate-y-1 group cursor-pointer">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Daily Reservation</p>
+                  <p className="text-gray-300 text-xs sm:text-sm group-hover:text-gray-200 transition-colors truncate">Daily Court Reservation</p>
                   <div className="text-2xl sm:text-3xl font-bold group-hover:text-green-300 transition-colors">
                     {loading ? (
                       <div className="flex items-center space-x-1 sm:space-x-2 text-white">

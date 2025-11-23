@@ -32,8 +32,8 @@ export function BookingPage() {
   const [tempSelectedDate, setTempSelectedDate] = useState('')
   // Default to first sheet, but will be updated when courts are loaded
   const [activeTab, setActiveTab] = useState('Sheet 1')
-  const [racketQuantity, setRacketQuantity] = useState(0)
-  const [racketTime, setRacketTime] = useState(1)
+  const [racketQuantities, setRacketQuantities] = useState<Map<string, number>>(new Map())
+  const [racketTimes, setRacketTimes] = useState<Map<string, number>>(new Map())
   const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set())
   const [currentStep, setCurrentStep] = useState(1)
   const [dateError, setDateError] = useState('')
@@ -59,6 +59,9 @@ export function BookingPage() {
   const [duplicateMessage, setDuplicateMessage] = useState('')
   const [isTermsAccepted, setIsTermsAccepted] = useState(false)
   const [autoProceedAfterTerms, setAutoProceedAfterTerms] = useState(false)
+  const [showDebugModal, setShowDebugModal] = useState(false)
+  const [debugData, setDebugData] = useState<any>(null)
+  const [loadingDebug, setLoadingDebug] = useState(false)
   
   const DATE_WINDOW_DAYS = 28
   const today = new Date()
@@ -406,11 +409,23 @@ export function BookingPage() {
   }
 
   const handleRacketQuantityChange = (racketName: string, newQuantity: number) => {
-    setRacketQuantity(newQuantity)
+    // Update quantity for this specific racket
+    setRacketQuantities(prev => {
+      const newMap = new Map(prev)
+      if (newQuantity === 0) {
+        newMap.delete(racketName)
+      } else {
+        newMap.set(racketName, newQuantity)
+      }
+      return newMap
+    })
     
     // Find the equipment to get its price
     const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
     const price = Number(equipmentItem?.price) || 100 // Default to 100 if not found
+    
+    // Get the time for this specific racket (default to 1 if not set)
+    const racketTime = racketTimes.get(racketName) || 1
     
     if (newQuantity === 0) {
       // Remove from bookings if quantity is 0
@@ -436,11 +451,19 @@ export function BookingPage() {
   }
 
   const handleRacketTimeChange = (racketName: string, newTime: number) => {
-    setRacketTime(newTime)
+    // Update time for this specific racket
+    setRacketTimes(prev => {
+      const newMap = new Map(prev)
+      newMap.set(racketName, newTime)
+      return newMap
+    })
     
     // Find the equipment to get its price
     const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
     const price = Number(equipmentItem?.price) || 100 // Default to 100 if not found
+    
+    // Get the quantity for this specific racket
+    const racketQuantity = racketQuantities.get(racketName) || 0
     
     // Update existing booking with new time
     if (racketQuantity > 0) {
@@ -1313,9 +1336,59 @@ export function BookingPage() {
 
           {activeTab === 'Rent an racket' && (
             <div>
-              <p className="text-sm text-gray-600 mb-4">
-                Equipment rental rates vary by item. Check individual prices below.
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-gray-600">
+                  Equipment rental rates vary by item. Check individual prices below.
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      setLoadingDebug(true)
+                      setShowDebugModal(true)
+                      try {
+                        const response = await api.get('/payments/debug/equipment-rentals')
+                        setDebugData(response.data)
+                      } catch (error: any) {
+                        setDebugData({
+                          success: false,
+                          error: error.response?.data?.message || error.message || 'Failed to fetch debug data',
+                        })
+                      } finally {
+                        setLoadingDebug(false)
+                      }
+                    }}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Debug Equipment
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const email = prompt('Enter email address to send test notification:', 'test@example.com')
+                      if (email) {
+                        try {
+                          const response = await api.post('/payments/debug/test-rental-email', { email })
+                          if (response.data.success) {
+                            alert(`✅ Test email sent successfully to ${email}!\n\nPlease check your inbox (and spam folder).`)
+                          } else {
+                            alert(`❌ Failed to send email: ${response.data.error || 'Unknown error'}`)
+                          }
+                        } catch (error: any) {
+                          alert(`❌ Error: ${error.response?.data?.error || error.message || 'Failed to send test email'}`)
+                        }
+                      }
+                    }}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Test Email
+                  </button>
+                </div>
+              </div>
               {loading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -1350,16 +1423,16 @@ export function BookingPage() {
                             isRacketBooked(item.equipment_name) ? 'border-green-500 ring-4 ring-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-green-200' : 'border-gray-200 hover:border-blue-400'
                           }`}>
                             {/* Premium Badge */}
-                            {item.stocks > 5 && (
+                            {(item.available_stock ?? item.stocks) > 5 && (
                               <div className="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
                                 Popular
                               </div>
                             )}
                             
                             {/* Stock Badge */}
-                            {item.stocks > 0 && (
+                            {(item.available_stock ?? item.stocks) > 0 && (
                               <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-bounce">
-                                {item.stocks}
+                                {item.available_stock ?? item.stocks}
                               </div>
                             )}
                             
@@ -1396,10 +1469,10 @@ export function BookingPage() {
                               {/* Stock Status with Animation */}
                               <div className="flex items-center justify-center space-x-2">
                                 <div className={`w-3 h-3 rounded-full animate-pulse ${
-                                  item.stocks > 0 ? 'bg-green-500 shadow-green-200 shadow-lg' : 'bg-red-500 shadow-red-200 shadow-lg'
+                                  (item.available_stock ?? item.stocks) > 0 ? 'bg-green-500 shadow-green-200 shadow-lg' : 'bg-red-500 shadow-red-200 shadow-lg'
                                 }`}></div>
                                 <p className="text-xs sm:text-sm text-gray-600 font-medium">
-                                  {item.stocks > 0 ? `${item.stocks} available` : 'Out of stock'}
+                                  {(item.available_stock ?? item.stocks) > 0 ? `${item.available_stock ?? item.stocks} available` : 'Out of stock'}
                                 </p>
                               </div>
                               
@@ -1440,7 +1513,7 @@ export function BookingPage() {
                               <div className="flex items-center justify-center">
                 <input
                                   type="number"
-                                  value={racketTime}
+                                  value={racketTimes.get(item.equipment_name) || 1}
                                   onChange={(e) => handleRacketTimeChange(item.equipment_name, Number(e.target.value))}
                                   onClick={(e) => e.stopPropagation()}
                                   className="w-20 px-3 py-2 border border-gray-300 rounded text-sm text-center"
@@ -1454,18 +1527,20 @@ export function BookingPage() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    const newQuantity = Math.max(0, racketQuantity - 1)
+                                    const currentQuantity = racketQuantities.get(item.equipment_name) || 0
+                                    const newQuantity = Math.max(0, currentQuantity - 1)
                                     handleRacketQuantityChange(item.equipment_name, newQuantity)
                                   }}
                                   className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
                                 >
                                   -
                                 </button>
-                                <span className="w-12 text-center text-lg font-medium">{racketQuantity}</span>
+                                <span className="w-12 text-center text-lg font-medium">{racketQuantities.get(item.equipment_name) || 0}</span>
                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    const newQuantity = Math.min(item.stocks, racketQuantity + 1)
+                                    const currentQuantity = racketQuantities.get(item.equipment_name) || 0
+                                    const newQuantity = Math.min(item.available_stock ?? item.stocks, currentQuantity + 1)
                                     handleRacketQuantityChange(item.equipment_name, newQuantity)
                                   }}
                                   className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
@@ -1526,6 +1601,7 @@ export function BookingPage() {
                     <thead>
                       <tr className="bg-gray-100">
                         <th className="border border-gray-300 px-4 py-2 text-left">Equipment</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Quantity</th>
                         <th className="border border-gray-300 px-4 py-2 text-left">Time:</th>
                         <th className="border border-gray-300 px-4 py-2 text-left">Sub total</th>
                       </tr>
@@ -1534,6 +1610,7 @@ export function BookingPage() {
                       {equipmentBookings.map((booking, index) => (
                         <tr key={index}>
                           <td className="border border-gray-300 px-4 py-2">{booking.equipment}</td>
+                          <td className="border border-gray-300 px-4 py-2">{booking.quantity || 1}</td>
                           <td className="border border-gray-300 px-4 py-2">{booking.time}</td>
                           <td className="border border-gray-300 px-4 py-2">{booking.subtotal}</td>
                         </tr>
@@ -1667,6 +1744,167 @@ export function BookingPage() {
         </div>
       )}
 
+      {/* Debug Modal */}
+      {showDebugModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-purple-600 text-white px-6 py-4 font-semibold flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Equipment Rental Debug Information
+              </span>
+              <button
+                onClick={() => setShowDebugModal(false)}
+                className="text-white hover:text-gray-200 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {loadingDebug ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading debug information...</p>
+                </div>
+              ) : debugData ? (
+                <div className="space-y-6">
+                  {/* Status */}
+                  <div className={`p-4 rounded-lg ${debugData.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-3 h-3 rounded-full ${debugData.success ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                      <span className="font-semibold">{debugData.success ? 'Success' : 'Error'}</span>
+                    </div>
+                    <p className="text-sm text-gray-600">Timestamp: {debugData.timestamp}</p>
+                    {debugData.error && (
+                      <p className="text-sm text-red-600 mt-2">Error: {debugData.error}</p>
+                    )}
+                  </div>
+
+                  {/* Equipment Availability */}
+                  {debugData.equipment && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Equipment Availability</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300 rounded-lg">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="border border-gray-300 px-4 py-2 text-left">Equipment</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Total Stock</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Active Rentals</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Available Stock</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {debugData.equipment.map((eq: any, index: number) => (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-4 py-2 font-medium">{eq.name}</td>
+                                <td className="border border-gray-300 px-4 py-2">{eq.total_stocks}</td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <span className={`px-2 py-1 rounded ${eq.active_rentals > 0 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'}`}>
+                                    {eq.active_rentals}
+                                  </span>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <span className={`px-2 py-1 rounded font-semibold ${eq.available_stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                    {eq.available_stock}
+                                  </span>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <span className={`px-2 py-1 rounded text-xs ${eq.available_stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                    {eq.available_stock > 0 ? 'Available' : 'Unavailable'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scheduler Results */}
+                  {debugData.scheduler && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Scheduler Check Results</h3>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                        <p className="text-sm text-gray-700">
+                          <strong>Message:</strong> {debugData.scheduler.message}
+                        </p>
+                        <div className="grid grid-cols-3 gap-4 mt-3">
+                          <div className="bg-white rounded p-3">
+                            <p className="text-xs text-gray-500 mb-1">Expired Rentals Found</p>
+                            <p className="text-lg font-bold text-orange-600">{debugData.scheduler.expiredRentalsFound || 0}</p>
+                          </div>
+                          <div className="bg-white rounded p-3">
+                            <p className="text-xs text-gray-500 mb-1">Processed</p>
+                            <p className="text-lg font-bold text-blue-600">{debugData.scheduler.processedCount || 0}</p>
+                          </div>
+                          <div className="bg-white rounded p-3">
+                            <p className="text-xs text-gray-500 mb-1">Emails Sent</p>
+                            <p className="text-lg font-bold text-green-600">{debugData.scheduler.emailSentCount || 0}</p>
+                          </div>
+                        </div>
+                        {debugData.scheduler.processedItems && debugData.scheduler.processedItems.length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-sm font-semibold text-gray-700 mb-2">Processed Items:</p>
+                            <div className="space-y-2">
+                              {debugData.scheduler.processedItems.map((item: any, idx: number) => (
+                                <div key={idx} className="bg-white rounded p-2 text-xs">
+                                  <p><strong>{item.equipmentName}</strong> (Qty: {item.quantity}) - {item.emailSent ? '✅ Email sent' : '❌ Email not sent'}</p>
+                                  <p className="text-gray-500">Ended: {new Date(item.rentalEndTime).toLocaleString()}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Refresh Button */}
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <button
+                      onClick={() => setShowDebugModal(false)}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setLoadingDebug(true)
+                        try {
+                          const response = await api.get('/payments/debug/equipment-rentals')
+                          setDebugData(response.data)
+                        } catch (error: any) {
+                          setDebugData({
+                            success: false,
+                            error: error.response?.data?.message || error.message || 'Failed to fetch debug data',
+                          })
+                        } finally {
+                          setLoadingDebug(false)
+                        }
+                      }}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No debug data available. Click Refresh to load.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Duplicate Reservation Modal */}
       {showDuplicateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
@@ -1695,8 +1933,14 @@ export function BookingPage() {
                 </p>
               </div>
               <div className="flex justify-end">
-                <button 
-                  onClick={() => setShowDuplicateModal(false)} 
+                <button
+                  onClick={() => {
+                    setShowDuplicateModal(false)
+                    // Refresh availability data to show updated reservation status
+                    if (selectedDate) {
+                      loadAvailabilityData(selectedDate)
+                    }
+                  }} 
                   className="px-6 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors font-medium"
                 >
                   I Understand

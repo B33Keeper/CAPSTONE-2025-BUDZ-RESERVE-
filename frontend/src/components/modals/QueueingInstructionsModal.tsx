@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useAuthStore } from '@/store/authStore'
 
 interface QueueingInstructionsModalProps {
   isOpen: boolean
@@ -7,6 +8,7 @@ interface QueueingInstructionsModalProps {
 
 export function QueueingInstructionsModal({ isOpen, onClose }: QueueingInstructionsModalProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const { user } = useAuthStore()
 
   useEffect(() => {
     // Check if user has permanently disabled instructions
@@ -21,6 +23,16 @@ export function QueueingInstructionsModal({ isOpen, onClose }: QueueingInstructi
   }
 
   const handleClose = () => {
+    // Get user ID to track per-user first access
+    const userId = user?.id
+    
+    // Mark that user has accessed queueing system (first time flag)
+    if (userId) {
+      localStorage.setItem(`queueing-first-access-${userId}`, 'true')
+    } else {
+      localStorage.setItem('queueing-first-access', 'true')
+    }
+    
     // If "Don't show again" is checked, save to localStorage (permanent)
     if (dontShowAgain) {
       localStorage.setItem('queueing-instructions-seen', 'true')

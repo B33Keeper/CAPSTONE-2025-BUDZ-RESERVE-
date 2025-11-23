@@ -59,6 +59,46 @@ const AdminSalesReport = () => {
     }).format(price)
   }
 
+  // Calculate date range based on selected period
+  const getPeriodDateRange = () => {
+    const today = new Date()
+    today.setHours(23, 59, 59, 999) // End of today
+    
+    let startDate = new Date()
+    
+    switch (selectedPeriod) {
+      case 'daily':
+        // For daily, only show today's data
+        startDate.setHours(0, 0, 0, 0)
+        return { start: startDate, end: today }
+      
+      case 'weekly':
+        startDate.setDate(today.getDate() - 6) // Past 6 days + today = 7 days
+        startDate.setHours(0, 0, 0, 0)
+        return { start: startDate, end: today }
+      
+      case 'monthly':
+        startDate.setMonth(today.getMonth() - 1) // Past month
+        startDate.setHours(0, 0, 0, 0)
+        return { start: startDate, end: today }
+      
+      case 'quarterly':
+        startDate.setMonth(today.getMonth() - 3) // Past 3 months
+        startDate.setHours(0, 0, 0, 0)
+        return { start: startDate, end: today }
+      
+      case 'yearly':
+        startDate.setFullYear(today.getFullYear() - 1) // Past year
+        startDate.setHours(0, 0, 0, 0)
+        return { start: startDate, end: today }
+      
+      default:
+        startDate.setHours(0, 0, 0, 0)
+        return { start: startDate, end: today }
+    }
+  }
+  
+
   const periods = [
     { value: 'daily', label: 'Daily' },
     { value: 'weekly', label: 'Weekly' },
@@ -171,12 +211,16 @@ const AdminSalesReport = () => {
       })
 
       // Calculate summary from filtered data
+      // Count individual court reservations (not transactions)
       const filteredSummary = dataToExport.reduce(
         (acc, item) => {
-          acc.totalReservations += 1
+          // Count courts by splitting comma-separated court names
+          const courtCount = item.courtName ? item.courtName.split(',').length : 1
+          acc.totalReservations += courtCount
           acc.totalIncome += item.price
           if (item.status === 'cancelled') {
-            acc.totalCancellations += 1
+            // Count cancelled courts, not transactions
+            acc.totalCancellations += courtCount
           }
           return acc
         },
@@ -189,9 +233,8 @@ const AdminSalesReport = () => {
       doc.text('Summary', 14, finalY + 15)
       
       doc.setFontSize(10)
-      doc.text(`Total Reservations: ${filteredSummary.totalReservations}`, 14, finalY + 25)
+      doc.text(`Total Court Reservations: ${filteredSummary.totalReservations}`, 14, finalY + 25)
       doc.text(`Total Income: ${formatPrice(filteredSummary.totalIncome)}`, 14, finalY + 32)
-      doc.text(`Total Cancellations: ${filteredSummary.totalCancellations}`, 14, finalY + 39)
 
       // Save the PDF
       const filename = `Sales_Report_${periodLabel}_${date}.pdf`
@@ -226,21 +269,24 @@ const AdminSalesReport = () => {
   }, [])
 
   // Fetch sales report data
-  const fetchSalesReport = async (period: string) => {
+  const fetchSalesReport = async (period: string, forceRefresh = false) => {
     try {
       setLoading(true)
-      console.log(`[SalesReport] Fetching sales report for period: ${period}`)
+      console.log(`[SalesReport] Fetching sales report for period: ${period}`, { forceRefresh })
       const response = await api.get(`/payments/sales-report?period=${period}`)
       console.log(`[SalesReport] Response:`, response.data)
       if (response.data) {
         setSalesData(response.data.data || [])
         setSummary(response.data.summary || { totalReservations: 0, totalIncome: 0, totalCancellations: 0 })
-        setCurrentPage(1) // Reset to first page when changing period
+        if (forceRefresh) {
+          setCurrentPage(1) // Reset to first page when refreshing
+        }
       }
     } catch (error: any) {
       console.error('Error fetching sales report:', error)
       console.error('Error details:', error.response?.data || error.message)
       setSalesData([])
+      setSummary({ totalReservations: 0, totalIncome: 0, totalCancellations: 0 })
     } finally {
       setLoading(false)
     }
@@ -289,13 +335,23 @@ const AdminSalesReport = () => {
   }
 
   // Filter data by search query and date range
+  // IMPORTANT: Backend filters by Created_at (when reservation was created) for period buttons
+  // Manual date filters (From/To) filter by Reservation_Date (when court is booked) - this is intentional
+  // Period buttons = "reservations created in this period"
+  // Manual date filters = "reservations booked for this date range"
   const filteredData = salesData.filter(item => {
-    // Filter by date range
+    // Filter by date range (manual date filters - filters by Reservation_Date/booking date)
     if (dateFrom || dateTo) {
       const itemDate = parseDate(item.date)
       if (itemDate) {
         const fromDate = dateFrom ? new Date(dateFrom) : null
         const toDate = dateTo ? new Date(dateTo) : null
+        
+        // Validate date range
+        if (fromDate && toDate && fromDate > toDate) {
+          // Invalid range - don't filter (show all)
+          return true
+        }
         
         // Set time to start of day for fromDate
         if (fromDate) {
@@ -488,7 +544,14 @@ const AdminSalesReport = () => {
                   <input
                     type="date"
                     value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
+                    onChange={(e) => {
+                      setDateFrom(e.target.value)
+                      // Validate: if To date is set and From > To, show warning
+                      if (e.target.value && dateTo && new Date(e.target.value) > new Date(dateTo)) {
+                        console.warn('Invalid date range: From date is after To date')
+                      }
+                    }}
+                    max={dateTo || undefined}
                     className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
                   />
                 </div>
@@ -497,7 +560,14 @@ const AdminSalesReport = () => {
                   <input
                     type="date"
                     value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
+                    onChange={(e) => {
+                      setDateTo(e.target.value)
+                      // Validate: if From date is set and To < From, show warning
+                      if (e.target.value && dateFrom && new Date(e.target.value) < new Date(dateFrom)) {
+                        console.warn('Invalid date range: To date is before From date')
+                      }
+                    }}
+                    min={dateFrom || undefined}
                     className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
                   />
                 </div>
@@ -534,8 +604,23 @@ const AdminSalesReport = () => {
                 ))}
               </div>
 
-              {/* Right Side: Download Button and Search Filter */}
+              {/* Right Side: Refresh, Download Button and Search Filter */}
               <div className="flex items-center gap-4">
+                {/* Refresh Button */}
+                <button
+                  onClick={() => {
+                    fetchSalesReport(selectedPeriod, true)
+                  }}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md font-medium transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+                  title="Refresh data"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+                
                 {/* Download Report Button */}
                 <button
                   onClick={handleDownload}
@@ -578,6 +663,40 @@ const AdminSalesReport = () => {
               </div>
             ) : (
               <>
+                {/* Date Display */}
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700">Report Date:</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {(() => {
+                        // If manual date filters are set, use those
+                        if (dateFrom || dateTo) {
+                          if (dateFrom && dateTo) {
+                            return `${new Date(dateFrom).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} - ${new Date(dateTo).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                          } else if (dateFrom) {
+                            return `From ${new Date(dateFrom).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                          } else {
+                            return `Until ${new Date(dateTo).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                          }
+                        }
+                        // Otherwise, use calculated period date range
+                        const periodRange = getPeriodDateRange()
+                        const startDateStr = periodRange.start.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                        const endDateStr = periodRange.end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                        
+                        // For daily, just show the date
+                        if (selectedPeriod === 'daily') {
+                          return endDateStr
+                        }
+                        // For other periods, show the range
+                        return `${startDateStr} - ${endDateStr}`
+                      })()}
+                    </span>
+                  </div>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
@@ -602,6 +721,9 @@ const AdminSalesReport = () => {
                                   {searchQuery && (dateFrom || dateTo) ? (
                                     <>
                                       No sales data matches your search "{searchQuery}" and date range
+                                      {dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo) && (
+                                        <span className="block mt-2 text-red-500 text-xs">⚠️ Invalid date range: From date is after To date</span>
+                                      )}
                                     </>
                                   ) : searchQuery ? (
                                     <>No sales data matches your search "{searchQuery}"</>
@@ -611,12 +733,20 @@ const AdminSalesReport = () => {
                                       {dateFrom && dateTo && (
                                         <> ({new Date(dateFrom).toLocaleDateString()} - {new Date(dateTo).toLocaleDateString()})</>
                                       )}
+                                      {dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo) && (
+                                        <span className="block mt-2 text-red-500 text-xs">⚠️ Invalid date range: From date is after To date</span>
+                                      )}
                                     </>
                                   )}
                                 </p>
                               </div>
                             ) : (
-                              'No sales data available for the selected period'
+                              <div>
+                                <p className="text-lg font-medium mb-2">No sales data available</p>
+                                <p className="text-sm text-gray-400">
+                                  No reservations found for the selected period ({selectedPeriod})
+                                </p>
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -694,15 +824,22 @@ const AdminSalesReport = () => {
                       </div>
                       <div className="flex-1">
                         <div className="text-sm text-gray-600 mb-1">
-                          Total Reservations
-                          {(dateFrom || dateTo || searchQuery) && (
+                          Total Court Reservations
+                          {(dateFrom || dateTo || searchQuery || selectedPeriod === 'daily') && (
                             <span className="text-xs text-gray-400 ml-2">(Filtered)</span>
                           )}
                         </div>
                         <div className="text-2xl font-bold text-gray-900">
-                          {(dateFrom || dateTo || searchQuery) 
-                            ? filteredData.length 
-                            : summary.totalReservations}
+                          {/* Count individual court reservations from filtered transactions */}
+                          {(() => {
+                            // Count courts by splitting comma-separated court names in each transaction
+                            // Each transaction can have multiple courts (e.g., "Court 1, Court 2")
+                            return filteredData.reduce((total, item) => {
+                              // Count courts by splitting the comma-separated court names
+                              const courtCount = item.courtName ? item.courtName.split(',').length : 1
+                              return total + courtCount
+                            }, 0)
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -719,15 +856,14 @@ const AdminSalesReport = () => {
                       <div className="flex-1">
                         <div className="text-sm text-gray-600 mb-1">
                           Total Income
-                          {(dateFrom || dateTo || searchQuery) && (
+                          {(dateFrom || dateTo || searchQuery || selectedPeriod === 'daily') && (
                             <span className="text-xs text-gray-400 ml-2">(Filtered)</span>
                           )}
                         </div>
                         <div className="text-2xl font-bold text-green-600">
+                          {/* Always calculate from filtered data to ensure accuracy */}
                           {formatPrice(
-                            (dateFrom || dateTo || searchQuery)
-                              ? filteredData.reduce((sum, item) => sum + item.price, 0)
-                              : summary.totalIncome
+                            filteredData.reduce((sum, item) => sum + item.price, 0)
                           )}
                         </div>
                       </div>

@@ -90,59 +90,95 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
   const location = useLocation()
   const profileRef = useRef<HTMLDivElement>(null)
 
+  // Listen for custom events when loading screen completes or access is granted
+  // This ensures the modal shows automatically on first login (after loading screen) 
+  // and when redirected to manage queueing page
   useEffect(() => {
     // Only check on queueing pages
     if (!location.pathname.startsWith('/queueing')) {
       return
     }
 
-    // Check if user has permanently disabled instructions
-    const permanentlyDisabled = localStorage.getItem('queueing-instructions-seen') === 'true'
-    if (permanentlyDisabled) {
-      return // Don't show if user has permanently disabled it
+    // Wait for user to be available
+    if (!user) {
+      return
     }
 
-    // Check if user has seen instructions in this session
-    const hasSeenInstructionsThisSession = sessionStorage.getItem('queueing-instructions-seen-this-session') === 'true'
-    if (!hasSeenInstructionsThisSession) {
-      // Wait a bit longer to ensure loading screen is completely gone
-      // Loading screen: 1.5s + fade out: 0.3s = 1.8s, then add buffer for page render
-      const timer = setTimeout(() => {
-        setShowInstructions(true)
-      }, 2000) // 2 seconds should be enough
-      return () => clearTimeout(timer)
-    }
-  }, [location.pathname])
-
-  // Also listen for custom event when loading screen completes (from Header)
-  useEffect(() => {
-    const handleLoadingComplete = () => {
-      // Only check on queueing pages
-      if (!location.pathname.startsWith('/queueing')) {
-        return
-      }
-
+    const checkAndShowInstructions = () => {
       // Check if user has permanently disabled instructions
       const permanentlyDisabled = localStorage.getItem('queueing-instructions-seen') === 'true'
       if (permanentlyDisabled) {
+        console.log('[QueueingShell] Instructions permanently disabled')
         return
       }
 
+      // Check if this is the user's first time accessing queueing (first login)
+      const userId = user?.id
+      const firstAccessKey = userId ? `queueing-first-access-${userId}` : 'queueing-first-access'
+      const hasAccessedBefore = localStorage.getItem(firstAccessKey) === 'true'
+      
       // Check if user has seen instructions in this session
       const hasSeenInstructionsThisSession = sessionStorage.getItem('queueing-instructions-seen-this-session') === 'true'
-      if (!hasSeenInstructionsThisSession) {
-        // Small delay after loading screen is confirmed gone
+      
+      console.log('[QueueingShell] Checking instructions:', {
+        userId,
+        firstAccessKey,
+        hasAccessedBefore,
+        hasSeenInstructionsThisSession,
+        shouldShow: !hasAccessedBefore || !hasSeenInstructionsThisSession
+      })
+      
+      // Show on first access (first login) OR when redirected to queueing page (if not seen in this session)
+      if (!hasAccessedBefore || !hasSeenInstructionsThisSession) {
+        console.log('[QueueingShell] Showing instructions modal')
+        // Show after a small delay to ensure page is rendered
         setTimeout(() => {
           setShowInstructions(true)
         }, 500)
       }
     }
 
-    window.addEventListener('queueing-loading-complete', handleLoadingComplete)
-    return () => {
-      window.removeEventListener('queueing-loading-complete', handleLoadingComplete)
+    const handleLoadingComplete = () => {
+      console.log('[QueueingShell] Loading complete event received')
+      // Wait a bit longer after loading screen completes to ensure page is fully rendered
+      setTimeout(() => {
+        checkAndShowInstructions()
+      }, 500)
     }
-  }, [location.pathname])
+
+    const handleAccessGranted = () => {
+      console.log('[QueueingShell] Access granted event received')
+      // When access is granted, check and show instructions
+      // This handles the case when user is redirected to queueing page
+      setTimeout(() => {
+        checkAndShowInstructions()
+      }, 800)
+    }
+
+    // Listen for both events
+    window.addEventListener('queueing-loading-complete', handleLoadingComplete)
+    window.addEventListener('queueing-access-granted', handleAccessGranted)
+    
+    // Check after loading screen duration (1.5s) + buffer
+    // This ensures we wait for loading screen to complete
+    const timer1 = setTimeout(() => {
+      console.log('[QueueingShell] First check after loading screen duration')
+      checkAndShowInstructions()
+    }, 2000) // After loading screen (1.5s) + fade out (0.3s) + buffer
+    
+    // Final fallback check
+    const timer2 = setTimeout(() => {
+      console.log('[QueueingShell] Final fallback check')
+      checkAndShowInstructions()
+    }, 3000) // Final fallback
+    
+    return () => {
+      clearTimeout(timer1)
+      clearTimeout(timer2)
+      window.removeEventListener('queueing-loading-complete', handleLoadingComplete)
+      window.removeEventListener('queueing-access-granted', handleAccessGranted)
+    }
+  }, [location.pathname, user])
 
   // Close dropdown when clicking outside
   useEffect(() => {

@@ -128,8 +128,30 @@ export function LoginPage() {
       if (user?.role === 'admin') {
         navigate('/admin')
       } else if (returnUrl) {
-        // Redirect to the intended destination (booking page)
-        navigate(returnUrl)
+        // If returnUrl is /queueing, check if user has access before redirecting
+        if (returnUrl.startsWith('/queueing')) {
+          try {
+            const { apiServices } = await import('@/lib/apiServices')
+            const accessCheck = await apiServices.checkQueueingAccess()
+            
+            if (!accessCheck.hasAccess) {
+              // User doesn't have reservation, show error and redirect to home
+              toast.error(accessCheck.message || 'You need an active reservation to access the queueing system.')
+              navigate('/')
+            } else {
+              // User has access, redirect to queueing page
+              navigate(returnUrl)
+            }
+          } catch (error: any) {
+            // If check fails, show error and redirect to home
+            console.error('Error checking queueing access:', error)
+            toast.error('Failed to verify reservation access. Please try again.')
+            navigate('/')
+          }
+        } else {
+          // For other returnUrls (like /booking), redirect normally
+          navigate(returnUrl)
+        }
       } else {
         navigate('/')
       }

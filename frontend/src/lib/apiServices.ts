@@ -11,6 +11,8 @@ export interface Court {
 }
 
 export interface Equipment {
+  available_stock?: number;
+  active_rentals?: number;
   id: number
   equipment_name: string
   stocks: number
@@ -202,7 +204,12 @@ export const apiServices = {
   },
 
   async getMyReservations(): Promise<Reservation[]> {
-    const response = await api.get('/reservations/my')
+    const response = await api.get('/reservations/my-reservations')
+    return response.data
+  },
+
+  async checkQueueingAccess(): Promise<{ hasAccess: boolean; message?: string; reservations?: any[] }> {
+    const response = await api.get('/reservations/check/queueing-access')
     return response.data
   },
 

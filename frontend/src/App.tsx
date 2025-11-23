@@ -12,6 +12,7 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { PaymentSuccessPage } from '@/pages/PaymentSuccessPage'
 import { PaymentFailedPage } from '@/pages/PaymentFailedPage'
 import { QueueingPage } from '@/pages/QueueingPage'
+import { ProtectedQueueingRoute } from '@/components/ProtectedQueueingRoute'
 import { QueuePlayersPage } from '@/pages/QueuePlayersPage'
 import { QueueSettingsPage } from '@/pages/QueueSettingsPage'
 import { QueueMatchHistoryPage } from '@/pages/QueueMatchHistoryPage'
@@ -134,40 +135,40 @@ function App() {
         <Route
           path="/queueing"
           element={
-            <ProtectedRoute>
+            <ProtectedQueueingRoute>
               <QueueingPage />
-            </ProtectedRoute>
+            </ProtectedQueueingRoute>
           }
         />
         <Route
           path="/queueing/players"
           element={
-            <ProtectedRoute>
+            <ProtectedQueueingRoute>
               <QueuePlayersPage />
-            </ProtectedRoute>
+            </ProtectedQueueingRoute>
           }
         />
         <Route
           path="/queueing/history"
           element={
-            <ProtectedRoute>
+            <ProtectedQueueingRoute>
               <QueueMatchHistoryPage />
-            </ProtectedRoute>
+            </ProtectedQueueingRoute>
           }
         />
         <Route
           path="/queueing/settings"
           element={
-            <ProtectedRoute>
+            <ProtectedQueueingRoute>
               <QueueSettingsPage />
-            </ProtectedRoute>
+            </ProtectedQueueingRoute>
           }
         />
       </Routes>
       <Toaster
         position="top-center"
         containerStyle={{
-          top: '20px',
+          top: '100px', // Position below header (main header ~72px, queueing header ~90-100px)
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 9999,

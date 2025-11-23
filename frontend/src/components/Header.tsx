@@ -135,7 +135,7 @@ export function Header() {
     }, 600)
   }
 
-  const handleManageQueueingClick = () => {
+  const handleManageQueueingClick = async () => {
     triggerQueueingAnimation()
     if (!isAuthenticated) {
       toast.error('Login to proceed')
@@ -143,14 +143,28 @@ export function Header() {
       return
     }
     
-    // Show loading screen
-    setShowQueueingLoading(true)
-    
-    // Wait for animation, then navigate
-    // The loading screen will hide automatically when navigation completes (via useEffect)
-    setTimeout(() => {
-      navigate('/queueing')
-    }, 1500) // 1.5 seconds loading animation
+    // Check if user has active reservation before navigating
+    try {
+      const { apiServices } = await import('@/lib/apiServices')
+      const accessCheck = await apiServices.checkQueueingAccess()
+      
+      if (!accessCheck.hasAccess) {
+        toast.error(accessCheck.message || 'You need an active reservation to access the queueing system.')
+        return
+      }
+      
+      // Show loading screen
+      setShowQueueingLoading(true)
+      
+      // Wait for animation, then navigate
+      // The loading screen will hide automatically when navigation completes (via useEffect)
+      setTimeout(() => {
+        navigate('/queueing')
+      }, 1500) // 1.5 seconds loading animation
+    } catch (error: any) {
+      console.error('Error checking queueing access:', error)
+      toast.error('Failed to verify reservation access. Please try again.')
+    }
   }
 
   const triggerAnnouncementModal = () => {

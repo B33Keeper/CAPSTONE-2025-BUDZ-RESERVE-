@@ -90,6 +90,8 @@ export class PaymentsService {
       console.log(`[SalesReport Service] Found ${reservations.length} total reservations`);
       
       // Step 1: Find all reservations with completed payments in date range
+      // IMPORTANT: Filter by Created_at (when reservation was created), not Reservation_Date (when court is booked)
+      // This ensures daily reports show reservations created today, regardless of booking date
       const reservationsWithPayments = reservations.filter(reservation => {
         const hasCompletedPayment = reservation.payments && reservation.payments.some(
           (payment: Payment) => payment.status === PaymentStatus.COMPLETED
@@ -97,16 +99,21 @@ export class PaymentsService {
         
         if (!hasCompletedPayment) return false;
         
-        const completedPayment = reservation.payments.find(
-          (payment: Payment) => payment.status === PaymentStatus.COMPLETED
-        );
+        // Filter by Created_at (when reservation was created), not Reservation_Date (when court is booked)
+        // This ensures that reservations are counted on the day they were created, not when the court is booked
+        const createdDate = new Date(reservation.Created_at);
+        // Set time to start of day for comparison
+        createdDate.setHours(0, 0, 0, 0);
         
-        if (completedPayment) {
-          const paymentDate = new Date(completedPayment.created_at);
-          return paymentDate >= startDate && paymentDate <= endDate;
-        }
+        // Normalize startDate and endDate to start of day for accurate comparison
+        const normalizedStartDate = new Date(startDate);
+        normalizedStartDate.setHours(0, 0, 0, 0);
+        const normalizedEndDate = new Date(endDate);
+        normalizedEndDate.setHours(23, 59, 59, 999);
         
-        return false;
+        // Compare created date with the date range
+        // Only include reservations where the created date falls within the range
+        return createdDate >= normalizedStartDate && createdDate <= normalizedEndDate;
       });
       
       console.log(`[SalesReport Service] Found ${reservationsWithPayments.length} reservations with completed payments in date range`);
@@ -125,7 +132,13 @@ export class PaymentsService {
       console.log(`[SalesReport Service] Found ${transactionReferenceNumbers.size} unique transaction reference numbers`);
       
       // Step 3: Include ALL reservations that share the same Reference_Number or Paymongo_Reference_Number
-      // This ensures we get all reservations from the same transaction, even if they don't have payments linked
+      // BUT only if they were also created within the date range (to prevent including old reservations from same transaction)
+      // This ensures we get all reservations from the same transaction created in the date range
+      const normalizedStartDate = new Date(startDate);
+      normalizedStartDate.setHours(0, 0, 0, 0);
+      const normalizedEndDate = new Date(endDate);
+      normalizedEndDate.setHours(23, 59, 59, 999);
+      
       const seenReservationIds = new Set<number>();
       const filteredReservations = reservations.filter(reservation => {
         // Skip if we've already processed this reservation ID (avoid duplicates)
@@ -133,7 +146,16 @@ export class PaymentsService {
           return false;
         }
         
-        // Include if it has a matching reference number (same transaction)
+        // Check if reservation was created within the date range
+        const createdDate = new Date(reservation.Created_at);
+        createdDate.setHours(0, 0, 0, 0);
+        const isInDateRange = createdDate >= normalizedStartDate && createdDate <= normalizedEndDate;
+        
+        if (!isInDateRange) {
+          return false; // Skip reservations created outside the date range
+        }
+        
+        // Include if it has a matching reference number (same transaction) AND was created in date range
         const matchesReference = reservation.Reference_Number && transactionReferenceNumbers.has(reservation.Reference_Number);
         const matchesPaymongoRef = reservation.Paymongo_Reference_Number && transactionReferenceNumbers.has(reservation.Paymongo_Reference_Number);
         
@@ -224,7 +246,7 @@ export class PaymentsService {
           reservations: [],
           payment: completedPayment || null, // May be null initially, will be set from first reservation with payment
           customerName: reservation.user?.name || 'Unknown',
-          date: completedPayment?.created_at || reservation.Reservation_Date,
+          date: reservation.Reservation_Date, // IMPORTANT: Use reservation date, not payment date
           paymentMethod: completedPayment?.payment_method || 'Unknown',
           totalAmount: 0,
           equipmentRentals: [],
@@ -239,7 +261,8 @@ export class PaymentsService {
       // Update payment info if this reservation has a payment and the group doesn't have one yet
       if (!transaction.payment && completedPayment) {
         transaction.payment = completedPayment;
-        transaction.date = completedPayment.created_at || reservation.Reservation_Date;
+        // IMPORTANT: Keep using reservation date, not payment date
+        transaction.date = reservation.Reservation_Date;
         transaction.paymentMethod = completedPayment.payment_method || 'Unknown';
         console.log(`[SalesReport] Updated transaction ${transactionKey} with payment info from reservation ${reservation.Reservation_ID}`);
       }
@@ -347,12 +370,18 @@ export class PaymentsService {
 
       console.log(`[SalesReport] Transaction ${transactionKey}: ${transaction.reservations.length} reservations, Customer: ${transaction.customerName}, Courts: ${courtsDisplay}, Times: ${timesDisplay}, Total: ${transaction.totalAmount}`);
 
+      // Use reservation date (not payment date) for the report entry
+      // This ensures the date shown matches the date filter
+      const reportDate = transaction.reservations[0]?.Reservation_Date 
+        ? formatDate(transaction.reservations[0].Reservation_Date)
+        : formatDate(transaction.date);
+      
       reportData.push({
         reservationId: transaction.reservations[0].Reservation_ID, // Use first reservation ID as identifier
         customerName: transaction.customerName,
         courtName: courtsDisplay, // Show all courts in the transaction
         time: timesDisplay, // Show all time slots in the transaction
-        date: formatDate(transaction.date),
+        date: reportDate, // Use reservation date, not payment date
         paymentMethod: transaction.paymentMethod,
         price: transaction.totalAmount, // Total amount for the entire transaction (sum of individual reservation prices)
         status: transaction.isCancelled ? 'cancelled' : 'completed',
@@ -370,5 +399,75 @@ export class PaymentsService {
         totalCancellations,
       },
     };
+  }
+
+  async debugReservationsData(startDate: Date, endDate: Date) {
+    try {
+      // Fetch all reservations with relations (same as getSalesReport)
+      const allReservations = await this.reservationsRepository.find({
+        relations: ['user', 'court', 'payments'],
+        order: { Created_at: 'DESC' },
+        take: 50, // Limit to last 50 for debugging
+      });
+
+      // Filter by Created_at for date range
+      const dateRangeReservations = allReservations.filter(reservation => {
+        const createdDate = new Date(reservation.Created_at);
+        createdDate.setHours(0, 0, 0, 0);
+        const normalizedStartDate = new Date(startDate);
+        normalizedStartDate.setHours(0, 0, 0, 0);
+        const normalizedEndDate = new Date(endDate);
+        normalizedEndDate.setHours(23, 59, 59, 999);
+        return createdDate >= normalizedStartDate && createdDate <= normalizedEndDate;
+      });
+
+      // Get reservations with completed payments
+      const withCompletedPayments = allReservations.filter(reservation => {
+        return reservation.payments && reservation.payments.some(
+          (payment: Payment) => payment.status === PaymentStatus.COMPLETED
+        );
+      });
+
+      return {
+        allReservations: allReservations.map((r: any) => ({
+          id: r.Reservation_ID,
+          created_at: r.Created_at,
+          created_at_iso: new Date(r.Created_at).toISOString(),
+          reservation_date: r.Reservation_Date,
+          reservation_date_iso: new Date(r.Reservation_Date).toISOString(),
+          reference_number: r.Reference_Number,
+          paymongo_reference: r.Paymongo_Reference_Number,
+          status: r.Status,
+          total_amount: r.Total_Amount,
+          has_payment: r.payments && r.payments.length > 0,
+          payment_status: r.payments?.map((p: any) => p.status).join(', ') || 'none',
+          user: r.user?.name || 'Unknown',
+          court: r.court?.Court_Name || 'Unknown',
+        })),
+        dateRangeReservations: dateRangeReservations.map((r: any) => ({
+          id: r.Reservation_ID,
+          created_at: r.Created_at,
+          created_at_iso: new Date(r.Created_at).toISOString(),
+          reservation_date: r.Reservation_Date,
+          reservation_date_iso: new Date(r.Reservation_Date).toISOString(),
+          reference_number: r.Reference_Number,
+          paymongo_reference: r.Paymongo_Reference_Number,
+          status: r.Status,
+          total_amount: r.Total_Amount,
+          has_payment: r.payments && r.payments.length > 0,
+          payment_status: r.payments?.map((p: any) => p.status).join(', ') || 'none',
+          user: r.user?.name || 'Unknown',
+          court: r.court?.Court_Name || 'Unknown',
+        })),
+        summary: {
+          totalReservations: allReservations.length,
+          dateRangeReservations: dateRangeReservations.length,
+          withCompletedPayments: withCompletedPayments.length,
+        },
+      };
+    } catch (error) {
+      console.error('[PaymentsService] Error in debugReservationsData:', error);
+      throw error;
+    }
   }
 }
