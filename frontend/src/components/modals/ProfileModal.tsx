@@ -7,6 +7,7 @@ import { api } from '@/lib/api'
 import { resolveImageUrl } from '@/lib/imageUtils'
 import toast from 'react-hot-toast'
 import { User, Mail, Phone, Calendar, Save, Upload, Lock, X } from 'lucide-react'
+import { formatPHPhoneNumber } from '@/lib/validation'
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -58,19 +59,20 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       age: user?.age || 0,
       sex: (user?.sex as 'Male' | 'Female') || 'Male',
       email: user?.email || '',
-      contact_number: user?.contact_number || '',
+      contact_number: user?.contact_number ? formatPHPhoneNumber(user.contact_number) : '',
     },
   })
 
   // Update form values when user data changes
   useEffect(() => {
     if (user) {
+      const formattedContact = user.contact_number ? formatPHPhoneNumber(user.contact_number) : ''
       profileForm.reset({
         name: user.name || '',
         age: user.age || 0,
         sex: (user.sex as 'Male' | 'Female') || 'Male',
         email: user.email || '',
-        contact_number: user.contact_number || '',
+        contact_number: formattedContact,
       })
     }
   }, [user, profileForm])
@@ -592,8 +594,12 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         {...profileForm.register('contact_number')}
                         type="tel"
                         className="w-full pl-16 sm:pl-20 pr-6 py-4 sm:py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg"
-                        placeholder="Enter your contact number"
+                        placeholder="+63 9XX XXX XXXX"
                         autoComplete="tel"
+                        onChange={(e) => {
+                          const formatted = formatPHPhoneNumber(e.target.value)
+                          profileForm.setValue('contact_number', formatted, { shouldValidate: true })
+                        }}
                       />
                     </div>
                     {profileForm.formState.errors.contact_number && (

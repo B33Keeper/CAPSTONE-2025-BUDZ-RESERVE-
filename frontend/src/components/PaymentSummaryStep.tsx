@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { formatPHPhoneNumber } from '../lib/validation';
 
 interface BookingItem {
   courtName: string;
@@ -44,9 +45,11 @@ export function PaymentSummaryStep({
   }, [user]);
 
   const handleInputChange = (field: string, value: string) => {
+    // Format phone number if it's the contactNumber field
+    const formattedValue = field === 'contactNumber' ? formatPHPhoneNumber(value) : value;
     setUserInfo(prev => ({
       ...prev,
-      [field]: value
+      [field]: formattedValue
     }));
   };
 
@@ -111,7 +114,7 @@ export function PaymentSummaryStep({
                   type="tel"
                   value={userInfo.contactNumber}
                   onChange={(e) => handleInputChange('contactNumber', e.target.value)}
-                  placeholder="Enter your Contact Number"
+                  placeholder="+63 9XX XXX XXXX"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm hover:shadow-md"
                   required
                 />

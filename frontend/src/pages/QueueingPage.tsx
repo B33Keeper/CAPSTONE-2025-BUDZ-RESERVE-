@@ -9,6 +9,7 @@ import {
   type QueueMatchPlayer,
   type QueueingCourtStatus
 } from '@/lib/apiServices'
+import { getErrorMessage } from '@/lib/errorUtils'
 
 type CourtCard = {
   id: number
@@ -278,6 +279,13 @@ export function QueueingPage() {
   const handleClearCourts = useCallback(async () => {
     if (courts.length === 0 || isClearingCourts) return
 
+    // Check if there are active matches before attempting to clear
+    if (activeMatches.length > 0) {
+      toast.error('Cannot clear courts while there are active matches in progress.')
+      setConfirmClearModal(false)
+      return
+    }
+
     try {
       setIsClearingCourts(true)
       await apiServices.clearQueueingCourts()
@@ -285,12 +293,16 @@ export function QueueingPage() {
       toast.success('All queue courts removed.')
     } catch (error) {
       console.error('[QueueingPage] Failed to clear queue courts:', error)
-      toast.error('Unable to clear courts. Please try again.')
+      const errorMessage = getErrorMessage(
+        error,
+        'Unable to clear courts. Please try again.'
+      )
+      toast.error(errorMessage)
     } finally {
       setIsClearingCourts(false)
       setConfirmClearModal(false)
     }
-  }, [courts, isClearingCourts])
+  }, [courts, isClearingCourts, activeMatches])
 
   const handleDeclareMatchWinner = useCallback(
     async (winner: 'teamA' | 'teamB' | 'draw') => {

@@ -5,6 +5,7 @@ import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
 import { galleryApiService, GalleryItem, getImageUrl } from '@/lib/galleryApiService'
 import toast from 'react-hot-toast'
+import { ShuttlecockLoader } from '@/components/ShuttlecockLoader'
 
 const UploadPhoto = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
@@ -292,9 +293,9 @@ const UploadPhoto = () => {
 
           {/* Photos Grid */}
           {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <span className="ml-4 text-gray-600 text-lg">Loading photos...</span>
+            <div className="flex flex-col justify-center items-center py-20">
+              <ShuttlecockLoader size="lg" />
+              <span className="mt-4 text-gray-600 text-lg">Loading photos...</span>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fadeInUp">
@@ -377,8 +378,8 @@ const UploadPhoto = () => {
                 <div className="flex flex-col items-center justify-center h-48 sm:h-56 p-6">
                   {uploading ? (
                     <div className="flex flex-col items-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                      <p className="text-blue-600 font-medium">Uploading...</p>
+                      <ShuttlecockLoader size="md" />
+                      <p className="mt-4 text-blue-600 font-medium">Uploading...</p>
                     </div>
                   ) : (
                     <>
@@ -524,7 +525,7 @@ const UploadPhoto = () => {
               >
                 {uploading ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <ShuttlecockLoader size="xs" showProgressBar={false} className="mr-2" />
                     <span>Uploading...</span>
                   </>
                 ) : (

@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore'
 import { resolveImageUrl } from '@/lib/imageUtils'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+import { ShuttlecockLoader } from '@/components/ShuttlecockLoader'
 
 interface CourtBooking {
   court: string
@@ -1228,8 +1229,8 @@ export function BookingPage() {
               <div className="hidden sm:block overflow-x-auto rounded-lg ring-1 ring-gray-200 shadow-sm">
                  {loading ? (
                    <div className="text-center py-8">
-                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                     <p className="mt-2 text-gray-600">Loading courts...</p>
+                     <ShuttlecockLoader size="md" />
+                     <p className="mt-4 text-gray-600">Loading courts...</p>
                    </div>
                  ) : error ? (
                    <div className="text-center py-8">
@@ -1243,8 +1244,8 @@ export function BookingPage() {
                    </div>
                  ) : loadingAvailability ? (
                    <div className="text-center py-8">
-                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                     <p className="mt-2 text-gray-600">Loading availability data...</p>
+                     <ShuttlecockLoader size="md" />
+                     <p className="mt-4 text-gray-600">Loading availability data...</p>
                    </div>
                  ) : (
                   <table className="w-full border-collapse" role="grid">
@@ -1391,8 +1392,8 @@ export function BookingPage() {
               </div>
               {loading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-2 text-gray-600">Loading equipment...</p>
+                  <ShuttlecockLoader size="md" />
+                  <p className="mt-4 text-gray-600">Loading equipment...</p>
                 </div>
               ) : error ? (
                 <div className="text-center py-8">
@@ -1767,8 +1768,8 @@ export function BookingPage() {
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
               {loadingDebug ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-                  <p className="mt-2 text-gray-600">Loading debug information...</p>
+                  <ShuttlecockLoader size="md" />
+                  <p className="mt-4 text-gray-600">Loading debug information...</p>
                 </div>
               ) : debugData ? (
                 <div className="space-y-6">

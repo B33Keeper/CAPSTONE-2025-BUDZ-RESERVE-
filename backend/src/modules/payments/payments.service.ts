@@ -4,7 +4,7 @@ import { Repository, Between } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ReservationsService } from '../reservations/reservations.service';
-import { Reservation } from '../reservations/entities/reservation.entity';
+import { Reservation, ReservationStatus } from '../reservations/entities/reservation.entity';
 import { PaymentStatus } from './entities/payment.entity';
 import { EquipmentRental } from './entities/equipment-rental.entity';
 import { EquipmentRentalItem } from './entities/equipment-rental-item.entity';
@@ -77,98 +77,40 @@ export class PaymentsService {
 
   async getSalesReport(startDate: Date, endDate: Date) {
     console.log(`[SalesReport Service] Fetching sales report between ${startDate.toISOString()} and ${endDate.toISOString()}`);
+    console.log(`[SalesReport Service] Using SAME logic as Admin Dashboard - fetch ALL reservations, filter by Created_at`);
     
-    // Fetch all reservations with their relations (same approach as my-reservations endpoint)
-    // This matches how ReservationsService.findByUser() fetches data
+    // Fetch all reservations exactly like Admin Dashboard does (same as /reservations endpoint)
     let reservations;
     try {
-      console.log(`[SalesReport Service] Querying all reservations with relations...`);
+      console.log(`[SalesReport Service] Querying all reservations with relations (same as Admin Dashboard)...`);
       reservations = await this.reservationsRepository.find({
         relations: ['user', 'court', 'payments'],
         order: { Created_at: 'DESC' },
       });
       console.log(`[SalesReport Service] Found ${reservations.length} total reservations`);
       
-      // Step 1: Find all reservations with completed payments in date range
-      // IMPORTANT: Filter by Created_at (when reservation was created), not Reservation_Date (when court is booked)
-      // This ensures daily reports show reservations created today, regardless of booking date
-      const reservationsWithPayments = reservations.filter(reservation => {
-        const hasCompletedPayment = reservation.payments && reservation.payments.some(
-          (payment: Payment) => payment.status === PaymentStatus.COMPLETED
-        );
-        
-        if (!hasCompletedPayment) return false;
-        
-        // Filter by Created_at (when reservation was created), not Reservation_Date (when court is booked)
-        // This ensures that reservations are counted on the day they were created, not when the court is booked
-        const createdDate = new Date(reservation.Created_at);
-        // Set time to start of day for comparison
-        createdDate.setHours(0, 0, 0, 0);
-        
-        // Normalize startDate and endDate to start of day for accurate comparison
-        const normalizedStartDate = new Date(startDate);
-        normalizedStartDate.setHours(0, 0, 0, 0);
-        const normalizedEndDate = new Date(endDate);
-        normalizedEndDate.setHours(23, 59, 59, 999);
-        
-        // Compare created date with the date range
-        // Only include reservations where the created date falls within the range
-        return createdDate >= normalizedStartDate && createdDate <= normalizedEndDate;
-      });
-      
-      console.log(`[SalesReport Service] Found ${reservationsWithPayments.length} reservations with completed payments in date range`);
-      
-      // Step 2: Collect all Reference_Number and Paymongo_Reference_Number from these reservations
-      const transactionReferenceNumbers = new Set<string>();
-      reservationsWithPayments.forEach(reservation => {
-        if (reservation.Reference_Number) {
-          transactionReferenceNumbers.add(reservation.Reference_Number);
-        }
-        if (reservation.Paymongo_Reference_Number) {
-          transactionReferenceNumbers.add(reservation.Paymongo_Reference_Number);
-        }
-      });
-      
-      console.log(`[SalesReport Service] Found ${transactionReferenceNumbers.size} unique transaction reference numbers`);
-      
-      // Step 3: Include ALL reservations that share the same Reference_Number or Paymongo_Reference_Number
-      // BUT only if they were also created within the date range (to prevent including old reservations from same transaction)
-      // This ensures we get all reservations from the same transaction created in the date range
+      // Filter by Created_at (when reservation was created) - EXACTLY like Admin Dashboard
+      // This matches AdminDashboard.tsx line 225-245
       const normalizedStartDate = new Date(startDate);
       normalizedStartDate.setHours(0, 0, 0, 0);
       const normalizedEndDate = new Date(endDate);
       normalizedEndDate.setHours(23, 59, 59, 999);
       
-      const seenReservationIds = new Set<number>();
       const filteredReservations = reservations.filter(reservation => {
-        // Skip if we've already processed this reservation ID (avoid duplicates)
-        if (seenReservationIds.has(reservation.Reservation_ID)) {
-          return false;
-        }
+        // Use Created_at as the primary source (when reservation was created) - SAME as Admin Dashboard
+        const createdDateValue = reservation.Created_at;
+        if (!createdDateValue) return false;
         
-        // Check if reservation was created within the date range
-        const createdDate = new Date(reservation.Created_at);
+        const createdDate = new Date(createdDateValue);
+        if (isNaN(createdDate.getTime())) return false;
         createdDate.setHours(0, 0, 0, 0);
-        const isInDateRange = createdDate >= normalizedStartDate && createdDate <= normalizedEndDate;
         
-        if (!isInDateRange) {
-          return false; // Skip reservations created outside the date range
-        }
-        
-        // Include if it has a matching reference number (same transaction) AND was created in date range
-        const matchesReference = reservation.Reference_Number && transactionReferenceNumbers.has(reservation.Reference_Number);
-        const matchesPaymongoRef = reservation.Paymongo_Reference_Number && transactionReferenceNumbers.has(reservation.Paymongo_Reference_Number);
-        
-        if (matchesReference || matchesPaymongoRef) {
-          seenReservationIds.add(reservation.Reservation_ID);
-          return true;
-        }
-        
-        return false;
+        // Only include reservations created in the date range - SAME as Admin Dashboard
+        return createdDate >= normalizedStartDate && createdDate <= normalizedEndDate;
       });
       
       reservations = filteredReservations;
-      console.log(`[SalesReport Service] Expanded to ${reservations.length} total reservations (including all from same transactions)`);
+      console.log(`[SalesReport Service] Found ${reservations.length} reservations created in date range (same logic as Admin Dashboard)`);
     } catch (error) {
       console.error(`[SalesReport Service] ERROR fetching reservations:`, error);
       console.error(`[SalesReport Service] Error stack:`, error.stack);
@@ -207,47 +149,43 @@ export class PaymentsService {
       });
     };
 
-    // Group reservations by transaction
-    // IMPORTANT: All reservations from the same transaction share the same Reference_Number and Paymongo_Reference_Number
-    // We need to group them first, then find the payment for the group
-    for (const reservation of reservations) {
-      // PRIMARY GROUPING: Use Reference_Number or Paymongo_Reference_Number
-      // All reservations created from the same PayMongo payment share these values
-      let transactionKey = reservation.Reference_Number || reservation.Paymongo_Reference_Number;
+      // Group reservations by transaction (same grouping logic, but don't require completed payments)
+      // IMPORTANT: All reservations from the same transaction share the same Reference_Number and Paymongo_Reference_Number
+      for (const reservation of reservations) {
+        // Skip cancelled reservations (SAME as Admin Dashboard - excludes cancelled)
+        if (reservation.Status === ReservationStatus.CANCELLED) {
+          continue;
+        }
+        
+        // PRIMARY GROUPING: Use Reference_Number or Paymongo_Reference_Number
+        // All reservations created from the same PayMongo payment share these values
+        let transactionKey = reservation.Reference_Number || reservation.Paymongo_Reference_Number;
+        
+        // FALLBACK: If no reference numbers, try to use payment transaction_id (any payment, not just completed)
+        const anyPayment = reservation.payments && reservation.payments.length > 0 
+          ? reservation.payments[0] 
+          : null;
+        
+        if (!transactionKey && anyPayment?.transaction_id) {
+          transactionKey = anyPayment.transaction_id;
+        }
+        
+        // FALLBACK: Last resort - unique key per reservation
+        if (!transactionKey) {
+          transactionKey = `${reservation.Reservation_Date}_${reservation.Start_Time}_${reservation.End_Time}_${reservation.Reservation_ID}`;
+        }
       
-      // FALLBACK: If no reference numbers, try to use payment transaction_id
-      // But first check if reservation has a payment
-      const completedPayment = reservation.payments?.find(
-        (payment: Payment) => payment.status === PaymentStatus.COMPLETED
-      );
-      
-      if (!transactionKey && completedPayment?.transaction_id) {
-        transactionKey = completedPayment.transaction_id;
-      }
-      
-      // FALLBACK: Last resort - unique key per reservation (shouldn't happen)
-      if (!transactionKey) {
-        transactionKey = `${reservation.Reservation_Date}_${reservation.Start_Time}_${reservation.End_Time}_${reservation.Reservation_ID}`;
-      }
-      
-      // Skip if no completed payment (but log it for debugging)
-      if (!completedPayment) {
-        console.log(`[SalesReport] WARNING: Reservation ${reservation.Reservation_ID} has no completed payment but will still be grouped by transactionKey=${transactionKey}`);
-        // Continue to include it in the group, we'll find the payment from another reservation in the same group
-      }
-      
-      console.log(`[SalesReport] Processing reservation ${reservation.Reservation_ID}: Reference_Number=${reservation.Reference_Number}, Paymongo_Reference_Number=${reservation.Paymongo_Reference_Number}, PaymentTransactionID=${completedPayment?.transaction_id}, TransactionKey=${transactionKey}`);
+      console.log(`[SalesReport] Processing reservation ${reservation.Reservation_ID}: Reference_Number=${reservation.Reference_Number}, Paymongo_Reference_Number=${reservation.Paymongo_Reference_Number}, PaymentTransactionID=${anyPayment?.transaction_id}, TransactionKey=${transactionKey}`);
       
       if (!transactionMap.has(transactionKey)) {
         // Create new transaction group
-        // Use the payment from this reservation, or we'll find one from another reservation in the group
         console.log(`[SalesReport] Creating new transaction group: ${transactionKey}`);
         transactionMap.set(transactionKey, {
           reservations: [],
-          payment: completedPayment || null, // May be null initially, will be set from first reservation with payment
+          payment: anyPayment || null, // Use any payment, not just completed
           customerName: reservation.user?.name || 'Unknown',
-          date: reservation.Reservation_Date, // IMPORTANT: Use reservation date, not payment date
-          paymentMethod: completedPayment?.payment_method || 'Unknown',
+          date: reservation.Reservation_Date,
+          paymentMethod: anyPayment?.payment_method || 'Pending',
           totalAmount: 0,
           equipmentRentals: [],
           courts: [],
@@ -259,11 +197,10 @@ export class PaymentsService {
       const transaction = transactionMap.get(transactionKey)!;
       
       // Update payment info if this reservation has a payment and the group doesn't have one yet
-      if (!transaction.payment && completedPayment) {
-        transaction.payment = completedPayment;
-        // IMPORTANT: Keep using reservation date, not payment date
+      if (!transaction.payment && anyPayment) {
+        transaction.payment = anyPayment;
         transaction.date = reservation.Reservation_Date;
-        transaction.paymentMethod = completedPayment.payment_method || 'Unknown';
+        transaction.paymentMethod = anyPayment.payment_method || 'Pending';
         console.log(`[SalesReport] Updated transaction ${transactionKey} with payment info from reservation ${reservation.Reservation_ID}`);
       }
       
@@ -282,17 +219,27 @@ export class PaymentsService {
       const timeStr = `${formatTime(reservation.Start_Time)}-${formatTime(reservation.End_Time)}`;
       transaction.times.push(timeStr); // Allow duplicates to show all time slots
 
-      // Add individual reservation amount to total
-      const reservationAmount = Number(reservation.Total_Amount) || 0;
-      const finalAmount = reservationAmount > 0 ? reservationAmount : (completedPayment ? Number(completedPayment.amount) || 0 : 0);
-      transaction.totalAmount += finalAmount;
-      
-      console.log(`[SalesReport] Transaction ${transactionKey}: Added reservation ${reservation.Reservation_ID} - Court: ${courtName}, Time: ${timeStr}, Amount: ${finalAmount}, Total so far: ${transaction.totalAmount}`);
-
-      // Check if any reservation is cancelled
-      if (reservation.Status === 'Cancelled') {
-        transaction.isCancelled = true;
+      // Calculate amount EXACTLY like Admin Dashboard does (extractReservationAmount logic)
+      // First try payments (sum of all payment amounts, not just completed)
+      let reservationAmount = 0;
+      if (reservation.payments && Array.isArray(reservation.payments)) {
+        reservationAmount = reservation.payments.reduce((sum: number, payment: any) => {
+          const amount = Number(payment?.amount ?? 0);
+          return sum + (isNaN(amount) ? 0 : amount);
+        }, 0);
       }
+      
+      // If no payments, fall back to Total_Amount (SAME as Admin Dashboard)
+      if (reservationAmount === 0) {
+        reservationAmount = Number(reservation.Total_Amount) || 0;
+      }
+      
+      transaction.totalAmount += reservationAmount;
+      
+      console.log(`[SalesReport] Transaction ${transactionKey}: Added reservation ${reservation.Reservation_ID} - Court: ${courtName}, Time: ${timeStr}, Amount: ${reservationAmount}, Total so far: ${transaction.totalAmount}`);
+
+      // Note: Cancelled reservations are already filtered out at the start of the loop,
+      // so we don't need to check for cancelled status here
 
       // Fetch equipment rentals for this reservation
       try {
@@ -301,31 +248,38 @@ export class PaymentsService {
           relations: ['items'],
         });
 
-        if (rental && rental.items && rental.items.length > 0) {
-          const items = await this.equipmentRentalItemRepository.find({
-            where: { rental_id: rental.id },
-          });
+        if (rental) {
+          // Add equipment rental total amount to transaction total
+          const rentalTotalAmount = Number(rental.total_amount) || 0;
+          transaction.totalAmount += rentalTotalAmount;
+          console.log(`[SalesReport] Transaction ${transactionKey}: Added equipment rental total ${rentalTotalAmount} for reservation ${reservation.Reservation_ID}, New total: ${transaction.totalAmount}`);
 
-          for (const item of items) {
-            const equipment = await this.equipmentRepository.findOne({
-              where: { id: item.equipment_id },
+          if (rental.items && rental.items.length > 0) {
+            const items = await this.equipmentRentalItemRepository.find({
+              where: { rental_id: rental.id },
             });
 
-            // Check if this equipment is already in the transaction's equipment list
-            const existingEquipment = transaction.equipmentRentals.find(
-              (eq: any) => eq.equipmentName === (equipment?.equipment_name || 'Equipment') && eq.hours === item.hours
-            );
-
-            if (existingEquipment) {
-              // Add to quantity if same equipment and hours
-              existingEquipment.quantity += item.quantity;
-            } else {
-              // Add new equipment
-              transaction.equipmentRentals.push({
-                equipmentName: equipment?.equipment_name || 'Equipment',
-                quantity: item.quantity,
-                hours: item.hours,
+            for (const item of items) {
+              const equipment = await this.equipmentRepository.findOne({
+                where: { id: item.equipment_id },
               });
+
+              // Check if this equipment is already in the transaction's equipment list
+              const existingEquipment = transaction.equipmentRentals.find(
+                (eq: any) => eq.equipmentName === (equipment?.equipment_name || 'Equipment') && eq.hours === item.hours
+              );
+
+              if (existingEquipment) {
+                // Add to quantity if same equipment and hours
+                existingEquipment.quantity += item.quantity;
+              } else {
+                // Add new equipment
+                transaction.equipmentRentals.push({
+                  equipmentName: equipment?.equipment_name || 'Equipment',
+                  quantity: item.quantity,
+                  hours: item.hours,
+                });
+              }
             }
           }
         }
@@ -350,11 +304,19 @@ export class PaymentsService {
     });
 
     for (const [transactionKey, transaction] of sortedTransactions) {
-      // Skip transactions without payments (they shouldn't be in the sales report)
+      // CRITICAL FIX: Include ALL transactions created today, even if they don't have completed payments yet
+      // This ensures reservations created at 8am-10am are included even if payment isn't completed
+      // We'll use Total_Amount from reservation if payment amount is not available
       if (!transaction.payment) {
-        console.log(`[SalesReport] WARNING: Transaction ${transactionKey} has no payment, skipping from report`);
-        continue;
+        console.log(`[SalesReport] Transaction ${transactionKey} has no completed payment, but including it (using Total_Amount from reservations)`);
+        // Don't skip - include it with reservation Total_Amount
       }
+      
+      // IMPORTANT: Include ALL transactions created in the date range, regardless of:
+      // - Whether the reservation period (Reservation_Date + End_Time) has ended
+      // - Payment status (include even if payment isn't completed yet)
+      // - Reservation status (Cancelled reservations are still included, just marked as cancelled)
+      // Sales report shows all sales created today until the day is finished
       
       // Count each transaction as 1 reservation (not individual courts)
       totalReservations += 1;

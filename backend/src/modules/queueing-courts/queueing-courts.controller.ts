@@ -6,14 +6,19 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 import { QueueingCourtsService } from './queueing-courts.service';
 import { CreateQueueingCourtDto } from './dto/create-queueing-court.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('queueing-courts')
 @Controller('queueing-courts')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class QueueingCourtsController {
   constructor(
     private readonly queueingCourtsService: QueueingCourtsService,
@@ -33,8 +38,8 @@ export class QueueingCourtsController {
 
   @Delete()
   @ApiOperation({ summary: 'Delete all queueing courts' })
-  removeAll() {
-    return this.queueingCourtsService.removeAll();
+  removeAll(@Request() req: any) {
+    return this.queueingCourtsService.removeAll(req.user.id);
   }
 
   @Delete(':id')

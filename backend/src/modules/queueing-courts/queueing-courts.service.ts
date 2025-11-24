@@ -81,11 +81,14 @@ export class QueueingCourtsService {
     await this.queueingCourtsRepository.delete(id);
   }
 
-  async removeAll(): Promise<void> {
-    // Only prevent clearing all courts if there are ACTIVE matches
+  async removeAll(userId: number): Promise<void> {
+    // Only prevent clearing all courts if there are ACTIVE matches for THIS user
     // PENDING matches can be reassigned, COMPLETED/CANCELLED matches don't matter
     const hasActiveMatches = await this.queueMatchesRepository.count({
-      where: { status: QueueMatchStatus.ACTIVE },
+      where: { 
+        status: QueueMatchStatus.ACTIVE,
+        userId: userId,
+      },
     });
 
     if (hasActiveMatches > 0) {
@@ -94,13 +97,13 @@ export class QueueingCourtsService {
       );
     }
 
-    // Clear court references from all matches (pending, completed, cancelled)
+    // Clear court references from this user's matches (pending, completed, cancelled)
     // This allows pending matches to be reassigned later
     await this.queueMatchesRepository
       .createQueryBuilder()
       .update()
       .set({ courtId: null, courtName: null })
-      .where('court_id IS NOT NULL')
+      .where('court_id IS NOT NULL AND user_id = :userId', { userId })
       .execute();
 
     // Use query builder to delete all records instead of clear() which uses TRUNCATE

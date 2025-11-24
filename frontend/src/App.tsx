@@ -27,6 +27,7 @@ import UploadPhoto from '@/pages/UploadPhoto'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AnnouncementModal } from '@/components/modals/AnnouncementModal'
 import { Toaster } from 'react-hot-toast'
+import { ShuttlecockLoader } from '@/components/ShuttlecockLoader'
 
 function App() {
   const { checkAuth, isAuthenticated } = useAuthStore()
@@ -38,8 +39,8 @@ function App() {
   const { isLoading } = useAuthStore()
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        <ShuttlecockLoader size="lg" />
       </div>
     )
   }

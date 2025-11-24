@@ -63,7 +63,7 @@ export class QueueMatch {
   @Column({ name: 'court_id', nullable: true })
   courtId: number | null;
 
-  @ManyToOne(() => QueueingCourt, { nullable: true })
+  @ManyToOne(() => QueueingCourt, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'court_id' })
   court: QueueingCourt | null;
 

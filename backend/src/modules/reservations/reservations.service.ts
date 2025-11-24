@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, Like } from 'typeorm';
+import { Repository, Between, Like, In } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Reservation, ReservationStatus } from './entities/reservation.entity';
 import { Payment, PaymentMethod, PaymentStatus } from '../payments/entities/payment.entity';
@@ -119,10 +119,38 @@ export class ReservationsService {
   }
 
   async findAll(): Promise<Reservation[]> {
-    return this.reservationsRepository.find({
-      relations: ['user', 'court'],
+    const reservations = await this.reservationsRepository.find({
+      relations: ['user', 'court', 'payments'],
       order: { Created_at: 'DESC' },
     });
+
+    // Fetch equipment rentals for all reservations
+    if (reservations.length > 0) {
+      const reservationIds = reservations.map(r => r.Reservation_ID);
+      const equipmentRentals = await this.equipmentRentalRepository.find({
+        where: { reservation_id: In(reservationIds) },
+        relations: ['items'],
+      });
+
+      // Group rentals by reservation_id
+      const rentalsByReservation = new Map<number, EquipmentRental[]>();
+      equipmentRentals.forEach(rental => {
+        const resId = rental.reservation_id;
+        if (!rentalsByReservation.has(resId)) {
+          rentalsByReservation.set(resId, []);
+        }
+        rentalsByReservation.get(resId)!.push(rental);
+      });
+
+      // Attach rentals to reservations
+      reservations.forEach(reservation => {
+        const rentals = rentalsByReservation.get(reservation.Reservation_ID) || [];
+        (reservation as any).rentals = rentals;
+        (reservation as any).equipmentRentals = rentals; // Support both property names
+      });
+    }
+
+    return reservations;
   }
 
   async findByUser(userId: number): Promise<Reservation[]> {

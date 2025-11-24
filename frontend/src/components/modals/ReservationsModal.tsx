@@ -13,6 +13,7 @@ import {
   ResponsiveTableRow, 
   ResponsiveTableCell 
 } from '@/components/ui/ResponsiveTable'
+import { ShuttlecockLoader } from '@/components/ShuttlecockLoader'
 
 interface Reservation {
   Reservation_ID: number
@@ -679,11 +680,8 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                    <div className="relative">
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 mx-auto mb-6"></div>
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent absolute top-0 left-1/2 transform -translate-x-1/2"></div>
-                    </div>
-                    <p className="text-gray-600 font-medium">Loading reservations...</p>
+                  <ShuttlecockLoader size="lg" />
+                  <p className="mt-6 text-gray-600 font-medium">Loading reservations...</p>
                 </div>
               </div>
             ) : (
@@ -704,19 +702,23 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                   {currentGroups.map((group, index) => {
                     // Get all rental items from all reservations in this group
                     const allRentalItems: RentalItem[] = []
+                    let totalRentalAmount = 0
                     group.reservations.forEach(reservation => {
                       const rentalItems = rentalsMap[reservation.Reservation_ID]?.items ?? []
                       allRentalItems.push(...rentalItems)
+                      // Add equipment rental total to the group total
+                      const rentalTotal = rentalsMap[reservation.Reservation_ID]?.total ?? 0
+                      totalRentalAmount += rentalTotal
                     })
                     
                     // Get payment method from first reservation
                     const firstReservation = group.reservations[0]
                     const payments = firstReservation.payments || []
                     
-                    // Calculate total amount for the group
+                    // Calculate total amount for the group (court bookings + equipment rentals)
                     const groupTotalAmount = group.reservations.reduce((sum, res) => {
                       return sum + (Number(res.Total_Amount) || 0)
-                    }, 0)
+                    }, 0) + totalRentalAmount
                     
                     // Format courts and times for display
                     const courtsAndTimes = group.reservations.map(res => {

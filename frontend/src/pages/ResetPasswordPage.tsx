@@ -4,11 +4,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import api from '@/lib/api'
 import { getErrorMessage } from '@/lib/errorUtils'
 import { PASSWORD_REGEX } from '@/lib/validation'
 import { useAuthStore } from '@/store/authStore'
+import { ShuttlecockLoader } from '@/components/ShuttlecockLoader'
 
 const resetPasswordSchema = z
   .object({
@@ -200,7 +201,7 @@ export function ResetPasswordPage() {
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <ShuttlecockLoader size="xs" showProgressBar={false} className="mr-2" />
                   Resetting Password...
                 </>
               ) : (

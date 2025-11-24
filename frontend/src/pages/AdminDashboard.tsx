@@ -118,6 +118,22 @@ const AdminDashboard = () => {
 
     if (rentalsArray.length > 0) {
       const totalFromRentals = rentalsArray.reduce((sum: number, rental: any) => {
+        // Check if rental has items array (nested structure from backend)
+        if (Array.isArray(rental.items) && rental.items.length > 0) {
+          const itemsTotal = rental.items.reduce((itemSum: number, item: any) => {
+            const itemQuantity = Number(
+              item?.quantity ??
+              item?.Quantity ??
+              item?.qty ??
+              item?.count ??
+              0
+            )
+            return itemSum + (isNaN(itemQuantity) ? 0 : itemQuantity)
+          }, 0)
+          return sum + itemsTotal
+        }
+        
+        // Fallback: try to get quantity directly from rental
         const quantity = Number(
           rental?.quantity ??
           rental?.Quantity ??
@@ -316,13 +332,20 @@ const AdminDashboard = () => {
       nextMidnight.setHours(24, 0, 0, 0)
       const msUntilMidnight = nextMidnight.getTime() - now.getTime()
 
+      console.log(`[Dashboard] Midnight reset scheduled in ${Math.round(msUntilMidnight / 1000 / 60)} minutes`)
+
       midnightTimer = setTimeout(async () => {
+        console.log('[Dashboard] Midnight reset triggered - Resetting daily metrics')
         setDailyReservations(0)
         setDailySales(0)
         setDailyRacketRentals(0)
 
+        // Wait a moment to ensure state is reset, then fetch fresh data
+        await new Promise(resolve => setTimeout(resolve, 100))
         await fetchDashboardData(true)
-        scheduleMidnightRefresh()
+        
+        console.log('[Dashboard] Fresh data fetched after midnight reset')
+        scheduleMidnightRefresh() // Schedule next midnight
       }, Math.max(msUntilMidnight, 0))
     }
 
@@ -613,48 +636,88 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="relative mt-4">
-                  <div className="flex items-end gap-3 sm:gap-4 h-52 sm:h-60 px-2 sm:px-4">
-                    {monthlyReservationData.map(({ label, count }, index) => {
-                      const maxValue = maxMonthlyReservation || 1
-                      const heightPercentage = Math.max(6, (count / maxValue) * 100)
-                      const isCurrentMonth = new Date().getMonth() === index
-                      return (
-                        <div key={label} className="relative flex-1 min-w-[2.5rem]">
-                          <div
-                            className={`group flex h-full flex-col justify-end rounded-full bg-gradient-to-t from-blue-500/30 via-blue-400/70 to-blue-500 ${
-                              isCurrentMonth ? 'shadow-[0_10px_30px_-12px_rgba(59,130,246,0.6)]' : 'opacity-80'
-                            } transition-all duration-300 hover:scale-105`}
-                            style={{ height: `${heightPercentage}%` }}
-                          >
-                            <div className="relative">
-                              <div className="absolute inset-x-0 -top-8 flex justify-center">
-                                <div className="scale-0 rounded-full bg-blue-600 px-2 py-1 text-xs font-semibold text-white shadow-md transition-all duration-200 group-hover:scale-100">
-                                  {count} reservations
+                  {/* Chart Container with Grid Background */}
+                  <div className="relative bg-white/50 rounded-2xl p-4 sm:p-6 border border-blue-100/50">
+                    {/* Y-axis grid lines */}
+                    <div className="absolute inset-0 flex flex-col justify-between p-4 sm:p-6 pointer-events-none">
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <div key={i} className="border-t border-blue-100/40"></div>
+                      ))}
+                    </div>
+                    
+                    {/* Chart Bars */}
+                    <div className="relative flex items-end gap-2 sm:gap-3 h-52 sm:h-64 px-2 sm:px-4">
+                      {monthlyReservationData.map(({ label, count }, index) => {
+                        const maxValue = Math.max(maxMonthlyReservation, 1)
+                        const heightPercentage = maxValue > 0 ? Math.max(8, (count / maxValue) * 90) : 8
+                        const isCurrentMonth = new Date().getMonth() === index
+                        return (
+                          <div key={label} className="relative flex-1 min-w-[2rem] sm:min-w-[2.5rem] flex flex-col items-center">
+                            {/* Current Month Badge - Positioned above the chart area */}
+                            {isCurrentMonth && (
+                              <div className="absolute -top-12 sm:-top-14 inset-x-0 flex justify-center z-20">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-md ring-2 ring-blue-200">
+                                  Current
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Bar Container */}
+                            <div className="relative w-full h-full flex flex-col justify-end">
+                              {/* Bar */}
+                              <div
+                                className={`group relative w-full rounded-t-lg bg-gradient-to-t ${
+                                  isCurrentMonth 
+                                    ? 'from-blue-600 via-blue-500 to-blue-400 shadow-lg shadow-blue-500/50' 
+                                    : 'from-blue-400/70 via-blue-300/70 to-blue-400/50'
+                                } transition-all duration-500 hover:shadow-xl hover:scale-105 cursor-pointer border-2 ${
+                                  isCurrentMonth ? 'border-blue-600' : 'border-blue-300/50'
+                                }`}
+                                style={{ height: `${heightPercentage}%`, minHeight: '8px' }}
+                              >
+                                {/* Value label on hover */}
+                                <div className="absolute inset-x-0 -top-10 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                                  <div className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg whitespace-nowrap">
+                                    {count}
+                                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
+                                      <div className="border-4 border-transparent border-t-blue-600"></div>
+                                    </div>
+                                  </div>
                                 </div>
+                                
+                                {/* Bar value display (always visible if > 0) */}
+                                {count > 0 && (
+                                  <div className="absolute inset-x-0 -top-6 flex justify-center">
+                                    <span className="text-xs font-semibold text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      {count}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                              <div className="absolute inset-x-0 -top-3 flex justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                <div className="h-2 w-2 rotate-45 bg-blue-600"></div>
+                            </div>
+                            
+                            {/* Month Label */}
+                            <div className="mt-3 text-center">
+                              <div className={`text-xs sm:text-sm font-semibold uppercase tracking-wider ${
+                                isCurrentMonth ? 'text-blue-600' : 'text-slate-500'
+                              }`}>
+                                {label}
                               </div>
                             </div>
                           </div>
-                          <div className="mt-3 text-center text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
-                            {label}
-                          </div>
-                          {isCurrentMonth && (
-                            <div className="absolute -top-6 inset-x-0 flex justify-center">
-                              <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold text-blue-600 shadow-sm ring-1 ring-blue-100">
-                                Current
-                              </span>
-                            </div>
-                          )}
+                        )
+                      })}
+                      {monthlyReservationData.length === 0 && (
+                        <div className="flex h-full w-full items-center justify-center absolute inset-0">
+                          <p className="text-sm text-slate-500">No reservation data recorded for this year yet.</p>
                         </div>
-                      )
-                    })}
-                    {monthlyReservationData.length === 0 && (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <p className="text-sm text-slate-500">No reservation data recorded for this year yet.</p>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                    
+                    {/* X-axis label */}
+                    <div className="mt-2 text-center">
+                      <p className="text-xs text-slate-400 uppercase tracking-wider">Months</p>
+                    </div>
                   </div>
                   <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {monthlyReservationData

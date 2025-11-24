@@ -548,7 +548,7 @@ export class PayMongoService {
               send_email_receipt: true,
               show_description: true,
               show_line_items: true,
-              cancel_url: returnUrl || `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/booking`,
+              cancel_url: `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/payment/failed`,
               success_url: bookingData ? 
                 `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/payment/success?checkout_session_id={CHECKOUT_SESSION_ID}&amount=${amount}&bookingData=${encodeURIComponent(JSON.stringify(bookingData))}` :
                 (returnUrl || `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/payment/success`),
