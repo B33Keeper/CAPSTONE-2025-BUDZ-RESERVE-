@@ -12,14 +12,14 @@ RUN apk add --no-cache \
     git
 
 # Copy package files first for better layer caching
-COPY backend/package*.json ./
+COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
 # Use npm ci for faster, reliable, reproducible builds
 RUN npm ci && npm cache clean --force
 
 # Copy source code
-COPY backend/ ./
+COPY . .
 
 # Build the application
 RUN npm run build
@@ -37,7 +37,7 @@ RUN apk add --no-cache \
     curl
 
 # Copy package files
-COPY backend/package*.json ./
+COPY package*.json ./
 
 # Install only production dependencies
 RUN npm ci --omit=dev && npm cache clean --force
