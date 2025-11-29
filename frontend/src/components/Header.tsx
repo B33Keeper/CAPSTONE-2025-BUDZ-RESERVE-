@@ -75,23 +75,45 @@ export function Header() {
   }
 
   const scrollToSection = (sectionId: string) => {
+    setIsMenuOpen(false)
+    
     // If we're not on the homepage, navigate there first
     if (window.location.pathname !== '/') {
       navigate('/')
       // Wait for navigation to complete, then scroll
+      // Use requestAnimationFrame to batch DOM operations and prevent forced reflow
       setTimeout(() => {
-        const element = document.getElementById(sectionId)
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' })
-        }
+        requestAnimationFrame(() => {
+          const element = document.getElementById(sectionId)
+          if (element) {
+            // Use requestAnimationFrame again to ensure layout is ready
+            requestAnimationFrame(() => {
+              // Use block: 'start' for better performance, and check for reduced motion preference
+              const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+              element.scrollIntoView({ 
+                behavior: prefersReducedMotion ? 'auto' : 'smooth',
+                block: 'start'
+              })
+            })
+          }
+        })
       }, 100)
     } else {
-      const element = document.getElementById(sectionId)
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' })
-      }
+      // Batch DOM reads/writes using requestAnimationFrame to prevent forced reflow
+      requestAnimationFrame(() => {
+        const element = document.getElementById(sectionId)
+        if (element) {
+          requestAnimationFrame(() => {
+            // Use block: 'start' for better performance, and check for reduced motion preference
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            element.scrollIntoView({ 
+              behavior: prefersReducedMotion ? 'auto' : 'smooth',
+              block: 'start'
+            })
+          })
+        }
+      })
     }
-    setIsMenuOpen(false)
   }
 
   // Helper function to check if we're on a page that shouldn't highlight navigation

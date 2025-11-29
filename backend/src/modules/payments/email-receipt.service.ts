@@ -35,6 +35,12 @@ interface PaymentReceiptData {
     timeSlot: string;
     duration: number;
   };
+  orderItems?: Array<{
+    name: string;
+    price: string;
+    quantity: number;
+    total: string;
+  }>;
 }
 
 @Injectable()
@@ -88,14 +94,11 @@ export class EmailReceiptService {
         amount: formattedAmount,
         description,
         status: status.toUpperCase(),
-        paidAt: paidAt ? new Date(paidAt).toLocaleString('en-PH', {
+        paidAt: paidAt ? new Date(paidAt).toLocaleDateString('en-US', {
           timeZone: 'Asia/Manila',
           year: 'numeric',
           month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
+          day: 'numeric'
         }) : 'N/A',
         customerName,
         customerEmail,
@@ -112,6 +115,7 @@ export class EmailReceiptService {
         netAmount: formattedNetAmount,
         referenceNumber: referenceNumber || paymentId,
         reservationDetails,
+        orderItems: paymentData.orderItems,
         appName: this.configService.get('APP_NAME', 'Budz Reserve'),
         appUrl: this.configService.get('FRONTEND_URL', 'http://localhost:3000'),
         supportEmail: this.configService.get('SUPPORT_EMAIL', 'support@budzreserve.com')
@@ -135,17 +139,24 @@ export class EmailReceiptService {
   }
 
   private getPaymentMethodDisplayName(type: string, last4?: string): string {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'card':
         return `**** **** **** ${last4 || '****'}`;
       case 'gcash':
         return 'GCash';
       case 'paymaya':
-        return 'PayMaya';
+      case 'maya':
+        return 'Maya';
       case 'grab_pay':
+      case 'grabpay':
         return 'GrabPay';
+      case 'cash':
+        return 'Cash';
+      case 'qr_ph':
+      case 'qrph':
+        return 'QR Ph';
       default:
-        return type.toUpperCase();
+        return type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
     }
   }
 

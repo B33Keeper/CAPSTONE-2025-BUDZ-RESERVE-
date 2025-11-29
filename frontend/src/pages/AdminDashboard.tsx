@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 import { apiServices } from '@/lib/apiServices'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
+import { AdminHeader } from '@/components/AdminHeader'
+import toast from 'react-hot-toast'
 
 const AdminDashboard = () => {
-  const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const navigate = useNavigate()
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard')
   const [userCount, setUserCount] = useState(0)
   const [courtCount, setCourtCount] = useState(0)
@@ -20,34 +21,6 @@ const AdminDashboard = () => {
   const [yearlyReservationTotal, setYearlyReservationTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // Helper function to format role
-  const formatRole = (role?: string) => {
-    if (!role) return 'User'
-    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
-  }
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowUserDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
 
   // Format price for display
   const formatPrice = (price: number) => {
@@ -100,8 +73,27 @@ const AdminDashboard = () => {
         return sum
       }
 
-      const amount = extractReservationAmount(reservation)
-      return sum + amount
+      // Get reservation amount (court fees)
+      const reservationAmount = extractReservationAmount(reservation)
+      
+      // Get equipment rental amount (if any)
+      let equipmentRentalAmount = 0
+      const rentalsArray = Array.isArray(reservation.rentals)
+        ? reservation.rentals
+        : Array.isArray(reservation.equipmentRentals)
+          ? reservation.equipmentRentals
+          : []
+      
+      if (rentalsArray.length > 0) {
+        equipmentRentalAmount = rentalsArray.reduce((rentalSum: number, rental: any) => {
+          // Use total_amount from rental (same as sales report)
+          const rentalTotal = Number(rental?.total_amount ?? rental?.totalAmount ?? 0)
+          return rentalSum + (isNaN(rentalTotal) ? 0 : rentalTotal)
+        }, 0)
+      }
+      
+      // Return sum of reservation amount + equipment rental amount (same as sales report)
+      return sum + reservationAmount + equipmentRentalAmount
     }, 0)
   }, [extractReservationAmount])
 
@@ -305,6 +297,9 @@ const AdminDashboard = () => {
     } catch (error: any) {
       console.error('Error fetching dashboard data:', error)
       console.error('Error details:', error.response?.data)
+      if (!isRefresh) {
+        toast.error('Failed to load dashboard data. Please try again.')
+      }
       setLoading(false)
       setRefreshing(false)
     }
@@ -317,7 +312,10 @@ const AdminDashboard = () => {
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchDashboardData(true)
+      // Defer the async work to prevent blocking the main thread
+      setTimeout(() => {
+        void fetchDashboardData(true)
+      }, 0)
     }, 30000) // 30 seconds
 
     return () => clearInterval(interval)
@@ -390,86 +388,37 @@ const AdminDashboard = () => {
       ` }} />
       
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 overflow-visible backdrop-blur-sm bg-white/95">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 overflow-visible">
-          <div className="flex justify-between items-center h-14 sm:h-16 relative">
-            {/* Logo */}
-            <div className="flex items-center">
-              <img 
-                src="/assets/icons/BBC ICON.png" 
-                alt="BBC Logo" 
-                className="h-12 w-12 sm:h-16 sm:w-16 lg:h-24 lg:w-24 object-contain hover:scale-105 transition-transform duration-200" 
-              />
-            </div>
-
-            {/* Right Side - Admin Profile */}
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  <img
-                    src={user?.profile_picture || '/assets/img/home-page/Ellipse 1.png'}
-                    alt="Profile"
-                    className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-gray-200"
-                  />
-                  <div className="text-left hidden sm:block">
-                    <div className="text-xs sm:text-sm font-medium text-gray-900">{user?.name || user?.username || 'User'}</div>
-                    <div className="text-xs text-gray-500">{formatRole(user?.role)}</div>
-                  </div>
-                  <svg 
-                    className={`w-3 h-3 sm:w-4 sm:h-4 text-gray-400 ${showUserDropdown ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
-                       style={{
-                         position: 'absolute',
-                         top: '100%',
-                         right: '0',
-                         marginTop: '0.5rem'
-                       }}>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center space-x-2 px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader />
 
       {/* Main Content with Sidebar */}
-      <div className="flex">
-        <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
+      <div className="pt-14 sm:pt-16">
+        <AdminSidebar 
+          activeItem={activeSidebarItem} 
+          onItemChange={setActiveSidebarItem}
+        />
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
+        <main className="p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn transition-all duration-300 md:ml-64">
           {/* Welcome Section */}
           <div className="mb-8">
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8 animate-slideDown">
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-6 lg:space-y-0">
+            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-3xl shadow-2xl border border-gray-200/60 p-8 sm:p-10 animate-slideDown backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                 <div className="flex-1">
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
-                    Welcome Admin!
-                  </h1>
-                  <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
-                    Dashboard Overview - Manage your badminton court operations efficiently
-                  </p>
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-2">
+                        Welcome Admin!
+                      </h1>
+                      <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+                        Dashboard Overview - Manage your badminton court operations efficiently
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -886,19 +835,6 @@ const AdminDashboard = () => {
                     </svg>
                   </div>
                   <span className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-yellow-700 transition-colors text-center">Sales Report</span>
-                </button>
-
-                {/* Create Reservations */}
-                <button
-                  onClick={() => navigate('/admin/create-reservations')}
-                  className="flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl hover:from-teal-100 hover:to-cyan-100 transition-all duration-300 hover:scale-105 hover:shadow-lg border-2 border-teal-200 hover:border-teal-400 group"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-teal-500 rounded-lg flex items-center justify-center mb-3 group-hover:bg-teal-600 transition-colors group-hover:scale-110">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-teal-700 transition-colors text-center">Create Reservations</span>
                 </button>
 
                 {/* View Suggestions */}

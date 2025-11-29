@@ -19,10 +19,10 @@ import { QueueMatchHistoryPage } from '@/pages/QueueMatchHistoryPage'
 import AdminDashboard from '@/pages/AdminDashboard'
 import AdminManageCourts from '@/pages/AdminManageCourts'
 import AdminManageRackets from '@/pages/AdminManageRackets'
+import AdminCreateReservations from '@/pages/AdminCreateReservations'
 import AdminSalesReport from '@/pages/AdminSalesReport'
 import AdminViewSuggestions from '@/pages/AdminViewSuggestions'
 import AdminCreateAnnouncement from '@/pages/AdminCreateAnnouncement'
-import AdminCreateReservations from '@/pages/AdminCreateReservations'
 import UploadPhoto from '@/pages/UploadPhoto'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AnnouncementModal } from '@/components/modals/AnnouncementModal'
@@ -94,6 +94,14 @@ function App() {
           }
         />
         <Route 
+          path="/admin/create-reservations" 
+          element={
+            <ProtectedRoute>
+              <AdminCreateReservations />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
           path="/admin/sales-report" 
           element={
             <ProtectedRoute>
@@ -114,14 +122,6 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminCreateAnnouncement />
-            </ProtectedRoute>
-          }
-        />
-        <Route 
-          path="/admin/create-reservations" 
-          element={
-            <ProtectedRoute>
-              <AdminCreateReservations />
             </ProtectedRoute>
           }
         />

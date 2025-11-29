@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Receipt - {{appName}}</title>
+    <title>Payment Receipt - Budz Badminton Court</title>
     <style>
         * {
             margin: 0;
@@ -13,392 +13,281 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #2c3e50;
-            background-color: #f5f7fa;
-            padding: 40px 20px;
+            color: #333333;
+            background-color: #f5f5f5;
+            padding: 0;
+            margin: 0;
         }
         .email-wrapper {
-            max-width: 650px;
+            max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
         }
-        .container {
-            background: #ffffff;
-            padding: 0;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-        }
         .header {
-            text-align: center;
-            padding: 40px 30px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .logo {
-            font-size: 32px;
-            font-weight: 700;
+            background-color: #4a4a4a;
             color: #ffffff;
+            padding: 30px 40px;
+            text-align: left;
+        }
+        .receipt-from {
+            font-size: 12px;
+            color: #cccccc;
             margin-bottom: 8px;
-            letter-spacing: 0.5px;
-        }
-        .receipt-title {
-            font-size: 22px;
-            font-weight: 600;
-            color: #ffffff;
-            margin: 0;
-            opacity: 0.95;
-        }
-        .header-divider {
-            height: 2px;
-            background: rgba(255, 255, 255, 0.3);
-            margin: 20px 0 0;
-        }
-        .section {
-            background: #ffffff;
-            padding: 30px;
-            margin: 0;
-            border-bottom: 1px solid #e8ecef;
-        }
-        .section:last-of-type {
-            border-bottom: none;
-        }
-        .section-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #2c3e50;
-            margin-bottom: 20px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            font-size: 14px;
         }
-        .info-row {
+        .merchant-name {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+        .reference {
+            font-size: 13px;
+            color: #cccccc;
+            margin-top: 8px;
+        }
+        .reference-label {
+            font-weight: 600;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 40px;
+        }
+        .greeting {
+            font-size: 16px;
+            color: #333333;
+            margin-bottom: 16px;
+        }
+        .thank-you {
+            font-size: 14px;
+            color: #666666;
+            margin-bottom: 30px;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 24px 0;
+        }
+        .section-title {
+            font-size: 11px;
+            color: #999999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .order-item {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 16px;
             padding-bottom: 16px;
-            border-bottom: 1px solid #f0f0f0;
         }
-        .info-row:last-child {
+        .order-item:last-child {
             margin-bottom: 0;
             padding-bottom: 0;
-            border-bottom: none;
         }
-        .info-label {
-            font-weight: 600;
-            color: #6c757d;
-            font-size: 14px;
-            flex: 0 0 40%;
-        }
-        .info-value {
-            color: #2c3e50;
-            font-size: 14px;
-            text-align: right;
+        .item-details {
             flex: 1;
-            word-break: break-word;
         }
-        .status {
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.5px;
+        .item-name {
+            font-size: 14px;
+            color: #333333;
+            margin-bottom: 4px;
         }
-        .status.PAID {
-            background: #d4edda;
-            color: #155724;
+        .item-price {
+            font-size: 12px;
+            color: #999999;
         }
-        .status.SUCCEEDED {
-            background: #d4edda;
-            color: #155724;
-        }
-        .status.FAILED {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .status.PENDING {
-            background: #fff3cd;
-            color: #856404;
-        }
-        .payment-summary {
-            background: #f8f9fa;
-            padding: 30px;
-            border-top: 1px solid #e8ecef;
-            border-bottom: 1px solid #e8ecef;
-        }
-        .total-amount {
-            font-size: 42px;
-            font-weight: 700;
-            color: #007bff;
-            text-align: center;
-            margin: 20px 0 30px;
-            letter-spacing: -1px;
-        }
-        .amount-label {
-            text-align: center;
-            color: #6c757d;
-            font-size: 13px;
+        .item-total {
+            font-size: 14px;
+            color: #333333;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            text-align: right;
         }
-        .payment-breakdown {
-            background: #ffffff;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
+        .amount-paid {
+            margin: 30px 0;
         }
-        .breakdown-row {
+        .amount-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #333333;
+            margin-top: 8px;
+        }
+        .payment-description {
+            margin: 30px 0;
+        }
+        .description-text {
+            font-size: 14px;
+            color: #333333;
+        }
+        .billed-to {
+            margin: 30px 0;
+        }
+        .billed-name {
+            font-size: 14px;
+            color: #333333;
+            margin-top: 8px;
+        }
+        .payment-info {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 12px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #f0f0f0;
+            margin: 30px 0;
         }
-        .breakdown-row:last-child {
-            margin-bottom: 0;
-            padding-bottom: 0;
-            border-bottom: none;
+        .payment-method-col,
+        .date-paid-col {
+            flex: 1;
         }
-        .breakdown-label {
-            color: #6c757d;
+        .payment-method-value,
+        .date-paid-value {
             font-size: 14px;
+            color: #333333;
+            margin-top: 8px;
         }
-        .breakdown-value {
-            color: #2c3e50;
-            font-weight: 600;
-            font-size: 14px;
-        }
-        .net-amount-row {
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 2px solid #e8ecef;
-        }
-        .net-amount-label {
-            color: #2c3e50;
-            font-weight: 700;
-            font-size: 15px;
-        }
-        .net-amount-value {
-            color: #28a745;
-            font-weight: 700;
-            font-size: 18px;
-        }
-        .billing-info {
-            background: #ffffff;
-        }
-        .billing-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 14px;
-        }
-        .billing-info .info-value {
-            color: #2c3e50;
-        }
-        .billing-info .info-value a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        .billing-info .info-value a:hover {
-            text-decoration: underline;
-        }
-        .reservation-details {
-            background: #e7f3ff;
-            padding: 30px;
-            border-left: 4px solid #007bff;
-        }
-        .reservation-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #007bff;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 14px;
+        .contact-info {
+            margin-top: 40px;
+            font-size: 13px;
+            color: #666666;
+            line-height: 1.6;
         }
         .footer {
+            background-color: #4a4a4a;
+            color: #cccccc;
+            padding: 30px 40px;
+            font-size: 11px;
+            line-height: 1.6;
             text-align: center;
-            padding: 40px 30px;
-            background: #f8f9fa;
-            color: #6c757d;
-            font-size: 14px;
-            line-height: 1.8;
         }
-        .footer p {
-            margin-bottom: 12px;
+        .footer-text {
+            margin-bottom: 16px;
         }
-        .footer p:last-child {
-            margin-bottom: 0;
-        }
-        .footer a {
-            color: #007bff;
-            text-decoration: none;
+        .paymongo-logo {
+            color: #ffffff;
             font-weight: 600;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-        }
-        .footer-note {
-            margin-top: 24px;
-            padding-top: 24px;
-            border-top: 1px solid #dee2e6;
             font-size: 12px;
-            color: #999;
-        }
-        .divider {
-            height: 1px;
-            background: #e8ecef;
-            margin: 0;
+            letter-spacing: 0.5px;
+            margin-top: 16px;
         }
         @media (max-width: 600px) {
-            body {
-                padding: 20px 10px;
+            .content {
+                padding: 30px 20px;
             }
-            .section {
-                padding: 20px;
+            .header {
+                padding: 24px 20px;
             }
-            .payment-summary {
-                padding: 20px;
+            .merchant-name {
+                font-size: 24px;
             }
-            .total-amount {
-                font-size: 36px;
+            .amount-value {
+                font-size: 28px;
             }
-            .info-row {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .info-label {
-                margin-bottom: 6px;
-                flex: 1;
-            }
-            .info-value {
-                text-align: left;
-            }
-            .breakdown-row {
+            .payment-info {
                 flex-direction: column;
             }
-            .breakdown-value {
-                margin-top: 4px;
+            .payment-method-col,
+            .date-paid-col {
+                margin-bottom: 20px;
             }
         }
     </style>
 </head>
 <body>
     <div class="email-wrapper">
-        <div class="container">
-            <div class="header">
-                <div class="logo">{{appName}}</div>
-                <h1 class="receipt-title">Payment Receipt</h1>
-                <div class="header-divider"></div>
+        <!-- Header -->
+        <div class="header">
+            <div class="receipt-from">Your receipt from</div>
+            <div class="merchant-name">Budz Badminton Court</div>
+            <div class="reference">
+                <span class="reference-label">Reference:</span> ##REF{{referenceNumber}}
             </div>
+        </div>
 
-            <div class="section">
-                <div class="section-title">Transaction Details</div>
-                <div class="info-row">
-                    <span class="info-label">Receipt Number:</span>
-                    <span class="info-value">{{referenceNumber}}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Payment ID:</span>
-                    <span class="info-value">{{paymentId}}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Date:</span>
-                    <span class="info-value">{{paidAt}}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Status:</span>
-                    <span class="status {{status}}">{{status}}</span>
-                </div>
-            </div>
+        <!-- Content -->
+        <div class="content">
+            <!-- Greeting -->
+            <div class="greeting">Hi {{customerName}},</div>
+            <div class="thank-you">Thank you for your payment. Here's a copy of your receipt.</div>
 
-            <div class="payment-summary">
-                <div class="section-title" style="text-align: center; margin-bottom: 10px;">Payment Summary</div>
-                <div class="amount-label">Total Amount Paid</div>
-                <div class="total-amount">{{amount}}</div>
-                
-                <div class="payment-breakdown">
-                    <div class="breakdown-row">
-                        <span class="breakdown-label">Description:</span>
-                        <span class="breakdown-value">{{description}}</span>
-                    </div>
-                    <div class="breakdown-row">
-                        <span class="breakdown-label">Payment Method:</span>
-                        <span class="breakdown-value">{{paymentMethod.displayName}}</span>
-                    </div>
-                    <div class="breakdown-row">
-                        <span class="breakdown-label">Processing Fee:</span>
-                        <span class="breakdown-value">{{fee}}</span>
-                    </div>
-                    <div class="breakdown-row net-amount-row">
-                        <span class="net-amount-label">Net Amount:</span>
-                        <span class="net-amount-value">{{netAmount}}</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Divider -->
+            <div class="divider"></div>
 
-            {{#if reservationDetails}}
-            <div class="reservation-details">
-                <div class="reservation-title">Reservation Details</div>
-                <div class="info-row">
-                    <span class="info-label">Court:</span>
-                    <span class="info-value">{{reservationDetails.courtName}}</span>
+            <!-- Order Details -->
+            <div class="section-title">Order details</div>
+            {{#if orderItems}}
+                {{#each orderItems}}
+                <div class="order-item">
+                    <div class="item-details">
+                        <div class="item-name">{{this.name}} ({{this.price}}) x {{this.quantity}}</div>
+                    </div>
+                    <div class="item-total">{{this.total}}</div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Date:</span>
-                    <span class="info-value">{{reservationDetails.date}}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Time Slot:</span>
-                    <span class="info-value">{{reservationDetails.timeSlot}}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Duration:</span>
-                    <span class="info-value">{{reservationDetails.duration}} hours</span>
-                </div>
-            </div>
-            {{/if}}
-
-            <div class="billing-info section">
-                <div class="billing-title">Billing Information</div>
-                <div class="info-row">
-                    <span class="info-label">Name:</span>
-                    <span class="info-value">{{customerName}}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Email:</span>
-                    <span class="info-value"><a href="mailto:{{customerEmail}}">{{customerEmail}}</a></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Phone:</span>
-                    <span class="info-value">{{customerPhone}}</span>
-                </div>
-                {{#if billingAddress.fullAddress}}
-                <div class="info-row">
-                    <span class="info-label">Address:</span>
-                    <span class="info-value">{{billingAddress.fullAddress}}</span>
+                {{/each}}
+            {{else}}
+                {{#if reservationDetails}}
+                <div class="order-item">
+                    <div class="item-details">
+                        <div class="item-name">Court Reservation ({{reservationDetails.courtPrice}}) x 1</div>
+                    </div>
+                    <div class="item-total">{{reservationDetails.courtTotal}}</div>
                 </div>
                 {{/if}}
+            {{/if}}
+
+            <!-- Divider -->
+            <div class="divider"></div>
+
+            <!-- Amount Paid -->
+            <div class="amount-paid">
+                <div class="section-title">Amount paid</div>
+                <div class="amount-value">{{amount}}</div>
             </div>
 
-            <div class="footer">
-                <p style="font-size: 16px; font-weight: 600; color: #2c3e50; margin-bottom: 16px;">
-                    Thank you for choosing {{appName}}!
-                </p>
-                <p>If you have any questions, please contact us at <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
-                <p>Visit us at <a href="{{appUrl}}">{{appUrl}}</a></p>
-                <div class="footer-note">
-                    This is an automated receipt. Please keep this for your records.
+            <!-- Divider -->
+            <div class="divider"></div>
+
+            <!-- Payment Description -->
+            <div class="payment-description">
+                <div class="section-title">Payment description</div>
+                <div class="description-text">{{description}}</div>
+            </div>
+
+            <!-- Divider -->
+            <div class="divider"></div>
+
+            <!-- Billed To -->
+            <div class="billed-to">
+                <div class="section-title">Billed to</div>
+                <div class="billed-name">{{customerName}}</div>
+            </div>
+
+            <!-- Divider -->
+            <div class="divider"></div>
+
+            <!-- Payment Method and Date Paid -->
+            <div class="payment-info">
+                <div class="payment-method-col">
+                    <div class="section-title">Payment method</div>
+                    <div class="payment-method-value">{{paymentMethod.displayName}}</div>
+                </div>
+                <div class="date-paid-col">
+                    <div class="section-title">Date paid</div>
+                    <div class="date-paid-value">{{paidAt}}</div>
                 </div>
             </div>
+
+            <!-- Contact Information -->
+            <div class="contact-info">
+                If you have any questions about this payment, contact Budz Badminton Court at {{supportEmail}}.
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-text">
+                You're receiving this e-mail because you made a purchase at Budz Badminton Court, which partners with PayMongo to provide invoicing and payment processing.
+            </div>
+            <div class="paymongo-logo">paymongo</div>
         </div>
     </div>
 </body>

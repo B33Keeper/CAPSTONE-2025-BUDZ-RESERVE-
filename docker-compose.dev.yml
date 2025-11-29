@@ -75,7 +75,7 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    command: sh -c "npm run start:container"
+    command: sh -c "npm install && npm run start:container"
     environment:
       NODE_ENV: development
       DB_HOST: mysql
@@ -91,6 +91,9 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "1000"
       NODE_OPTIONS: "--max-old-space-size=4096"
+      PAYMONGO_SECRET_KEY: sk_test_placeholder_key_for_development
+      PAYMONGO_PUBLIC_KEY: pk_test_placeholder_key_for_development
+      PAYMONGO_WEBHOOK_SECRET: whsk_test_placeholder_webhook_secret
     ports:
       - "3001:3001"
     volumes:

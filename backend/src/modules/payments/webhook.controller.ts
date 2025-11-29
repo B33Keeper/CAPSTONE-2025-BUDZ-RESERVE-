@@ -284,6 +284,23 @@ export class WebhookController {
       this.logger.log(`💳 Payment Method: ${payment.attributes.source?.type || 'Unknown'}`);
       this.logger.log(`📊 Status: ${payment.attributes.status}`);
       
+      // CRITICAL: Idempotency check - prevent duplicate processing if webhook is called multiple times
+      const transactionId = payment.id; // PayMongo payment ID is the transaction ID
+      const existingPayment = await this.paymentRepository.findOne({
+        where: { transaction_id: transactionId },
+      });
+      
+      if (existingPayment) {
+        // This is expected behavior - PayMongo may send the same webhook multiple times
+        // The system correctly prevents duplicate processing
+        this.logger.log(
+          `✅ Duplicate webhook detected and safely ignored: Payment ${transactionId} was already processed. ` +
+          `Existing payment ID: ${existingPayment.id}, Reservation ID: ${existingPayment.reservation_id}. ` +
+          `This is normal - PayMongo may send webhooks multiple times. System prevented duplicate processing.`
+        );
+        return; // Exit early - payment already processed
+      }
+      
       // Create reservation FIRST if booking data is in metadata or provided by caller (checkout session)
       let reservationId = 0;
       let createdReservations: Reservation[] = [];
@@ -319,7 +336,7 @@ export class WebhookController {
       // This ensures all reservations in the same transaction have payment information
       const totalAmount = payment.attributes.amount / 100; // Convert from centavos
       const paymentMethod = this.mapPaymentMethod(payment.attributes.source?.type);
-      const transactionId = payment.id;
+      // transactionId is already declared above for idempotency check
       const referenceNumber = createdReservations.length > 0 
         ? createdReservations[0].Reference_Number 
         : `REF${Date.now()}`;
@@ -384,30 +401,7 @@ export class WebhookController {
         this.logger.error('Error saving equipment rentals:', e);
       }
       
-      // Send detailed receipt email
-      try {
-        await this.emailReceiptService.sendPaymentReceipt({
-          paymentId: payment.id,
-          amount: payment.attributes.amount,
-          currency: payment.attributes.currency,
-          description: payment.attributes.description,
-          status: payment.attributes.status,
-          paidAt: payment.attributes.paid_at ? new Date(payment.attributes.paid_at * 1000) : new Date(),
-          customerName: payment.attributes.billing.name,
-          customerEmail: payment.attributes.billing.email,
-          customerPhone: payment.attributes.billing.phone,
-          billingAddress: payment.attributes.billing.address,
-          paymentMethod: {
-            type: payment.attributes.source?.type || 'UNKNOWN',
-            last4: '****', // Paymongo source object doesn't have last4 property
-          },
-          fee: payment.attributes.fee,
-          netAmount: payment.attributes.net_amount,
-        });
-        this.logger.log('📧 Payment receipt email sent successfully');
-      } catch (emailError) {
-        this.logger.warn('⚠️ Failed to send payment receipt email:', emailError);
-      }
+      // Custom email receipt removed - PayMongo receipt will be sent automatically
 
       this.logger.log('───────────────────────────────────────────────────────────');
       this.logger.log('✅ Payment processing completed successfully!');

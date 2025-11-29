@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { apiServices, Court, Equipment, TimeSlot } from '@/lib/apiServices'
 import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsModal'
 import { BookingDetailsModal } from '@/components/modals/BookingDetailsModal'
+import { RacketConfigurationModal } from '@/components/modals/RacketConfigurationModal'
 import { PaymentSummaryStep } from '@/components/PaymentSummaryStep'
 import { PaymentService } from '@/lib/paymentService'
 import { useAuthStore } from '@/store/authStore'
@@ -22,6 +23,7 @@ interface EquipmentBooking {
   time: string
   subtotal: number
     quantity?: number
+  selectedCourtSchedules?: string[] // Array of "court-schedule" keys to associate with
 }
 
 interface CellStatus {
@@ -35,7 +37,7 @@ export function BookingPage() {
   const [activeTab, setActiveTab] = useState('Sheet 1')
   const [racketQuantities, setRacketQuantities] = useState<Map<string, number>>(new Map())
   const [racketTimes, setRacketTimes] = useState<Map<string, number>>(new Map())
-  const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set())
+  const [selectedRacketForModal, setSelectedRacketForModal] = useState<Equipment | null>(null)
   const [currentStep, setCurrentStep] = useState(1)
   const [dateError, setDateError] = useState('')
 
@@ -52,9 +54,15 @@ export function BookingPage() {
   const [error, setError] = useState<string | null>(null)
   const [availabilityData, setAvailabilityData] = useState<Map<number, any[]>>(new Map())
   const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [equipmentAvailability, setEquipmentAvailability] = useState<Map<number, number>>(new Map()) // equipmentId -> available stock
+  const [loadingEquipmentAvailability, setLoadingEquipmentAvailability] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false)
   const [showEquipmentGuard, setShowEquipmentGuard] = useState(false)
+  const [showCourtTimeRequiredModal, setShowCourtTimeRequiredModal] = useState(false)
+  const [showCourtScheduleSelectionModal, setShowCourtScheduleSelectionModal] = useState(false)
+  const [pendingRacketForScheduleSelection, setPendingRacketForScheduleSelection] = useState<Equipment | null>(null)
+  const [selectedCourtSchedulesForRacket, setSelectedCourtSchedulesForRacket] = useState<Set<string>>(new Set())
   const [referenceNumber, setReferenceNumber] = useState('')
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicateMessage, setDuplicateMessage] = useState('')
@@ -322,6 +330,8 @@ export function BookingPage() {
     
     const isSelected = selectedCells.has(cellKey)
     
+    // Batch state updates using React's automatic batching, then defer API calls
+    // to prevent blocking the main thread and causing forced reflows
     if (isSelected) {
       // Deselect the cell
       setSelectedCells(prev => {
@@ -339,6 +349,19 @@ export function BookingPage() {
         console.log('[BookingPage] Total bookings after remove:', filtered.length, filtered)
         return filtered
       })
+      
+      // Defer API call to prevent blocking click handler and causing forced reflow
+      // Only reload availability if there are still selected cells
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (selectedCells.size > 0) {
+            loadEquipmentAvailabilityForSchedules()
+          } else {
+            // Clear availability when all cells are deselected
+            setEquipmentAvailability(new Map())
+          }
+        }, 0)
+      })
     } else {
       // Select the cell
       setSelectedCells(prev => new Set(prev).add(cellKey))
@@ -355,8 +378,169 @@ export function BookingPage() {
         console.log('[BookingPage] Total bookings after add:', updated.length, updated)
         return updated
       })
+      
+      // Defer API call to prevent blocking click handler and causing forced reflow
+      // Load availability for all selected schedules (including the newly selected one)
+      // This ensures rentals from existing reservations are properly reflected in stock
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          // Always use loadEquipmentAvailabilityForSchedules to check all selected schedules
+          // This ensures that when selecting a schedule with existing rentals, stock is properly reduced
+          // The function will handle the case when there are no bookings yet
+          loadEquipmentAvailabilityForSchedules()
+        }, 0)
+      })
     }
   }
+
+  // Parse schedule string to get start time and hours
+  const parseScheduleToStartTimeAndHours = (schedule: string): { startTime: string; hours: number } | null => {
+    // Parse schedule like "9:00 am - 10:00 am" or "9:00 AM - 10:00 AM"
+    const timeMatch = schedule.match(/(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)/i)
+    
+    if (!timeMatch) {
+      return null
+    }
+
+    const [, startHour, startMin, startPeriod, endHour, endMin, endPeriod] = timeMatch
+    
+    const convertTo24Hour = (hour: number, period: string, minute: number): number => {
+      let h = parseInt(hour.toString())
+      if (period.toUpperCase() === 'PM' && h !== 12) {
+        h += 12
+      } else if (period.toUpperCase() === 'AM' && h === 12) {
+        h = 0
+      }
+      return h * 60 + parseInt(minute.toString()) // Return minutes from midnight
+    }
+
+    const startMinutes = convertTo24Hour(parseInt(startHour), startPeriod, parseInt(startMin))
+    const endMinutes = convertTo24Hour(parseInt(endHour), endPeriod, parseInt(endMin))
+    const hours = (endMinutes - startMinutes) / 60
+
+    const startHour24 = Math.floor(startMinutes / 60)
+    const startMin24 = startMinutes % 60
+    const startTime = `${startHour24.toString().padStart(2, '0')}:${startMin24.toString().padStart(2, '0')}:00`
+
+    return { startTime, hours }
+  }
+
+  // Load equipment availability for a specific schedule
+  const loadEquipmentAvailabilityForSchedule = async (courtName: string, schedule: string) => {
+    if (!selectedDate) return
+
+    try {
+      setLoadingEquipmentAvailability(true)
+      const timeInfo = parseScheduleToStartTimeAndHours(schedule)
+      
+      if (!timeInfo) {
+        console.error('Failed to parse schedule:', schedule)
+        return
+      }
+
+      const availability = await apiServices.getEquipmentAvailability(
+        selectedDate,
+        timeInfo.startTime,
+        timeInfo.hours
+      )
+
+      // Update equipment availability map
+      // For single schedule, set directly (no merging needed)
+      // For multiple schedules, this will be called multiple times and merged in loadEquipmentAvailabilityForSchedules
+      const newAvailability = new Map<number, number>()
+      availability.forEach((item: any) => {
+        const equipmentItem = equipment.find(eq => eq.equipment_name === item.equipment_name)
+        if (equipmentItem) {
+          // Set the available stock for this specific schedule
+          // The backend already calculates reserved quantity for this schedule's time range
+          newAvailability.set(equipmentItem.id, item.available || 0)
+        }
+      })
+      
+      setEquipmentAvailability(newAvailability)
+    } catch (error) {
+      console.error('Error loading equipment availability:', error)
+    } finally {
+      setLoadingEquipmentAvailability(false)
+    }
+  }
+
+  // Load equipment availability for all selected schedules (for multiple schedules)
+  // Only reduces stock when specific schedule cells are selected
+  const loadEquipmentAvailabilityForSchedules = async () => {
+    if (!selectedDate || courtBookings.length === 0 || selectedCells.size === 0) {
+      // If no schedule cells selected, clear availability map to show full stock
+      setEquipmentAvailability(new Map())
+      return
+    }
+
+    try {
+      setLoadingEquipmentAvailability(true)
+      
+      // IMPORTANT: When multiple schedules are selected, we need to check availability for EACH schedule
+      // because rentals spanning multiple schedules should reduce stock in ALL schedule cells
+      if (courtBookings.length === 1) {
+        // Single schedule - just load for that schedule
+        await loadEquipmentAvailabilityForSchedule(courtBookings[0].court, courtBookings[0].schedule)
+      } else {
+        // Multiple schedules - load availability for each schedule separately
+        // This ensures rentals spanning multiple schedules are counted in each schedule's availability
+        const availabilityMap = new Map<number, number>()
+        
+        for (const booking of courtBookings) {
+          try {
+            const timeInfo = parseScheduleToStartTimeAndHours(booking.schedule)
+            if (timeInfo) {
+              const availability = await apiServices.getEquipmentAvailability(
+                selectedDate,
+                timeInfo.startTime,
+                timeInfo.hours
+              )
+              
+              // Merge availability - use the minimum available stock across all schedules
+              // (since a rental spanning multiple schedules affects all of them)
+              availability.forEach((item: any) => {
+                const equipmentItem = equipment.find(eq => eq.equipment_name === item.equipment_name)
+                if (equipmentItem) {
+                  const currentAvailable = availabilityMap.get(equipmentItem.id) ?? equipmentItem.stocks ?? 0
+                  const scheduleAvailable = item.available || 0
+                  // Use the minimum - if one schedule shows less availability, use that
+                  availabilityMap.set(equipmentItem.id, Math.min(currentAvailable, scheduleAvailable))
+                }
+              })
+            }
+          } catch (error) {
+            console.error(`Error loading availability for schedule ${booking.schedule}:`, error)
+          }
+        }
+        
+        setEquipmentAvailability(availabilityMap)
+      }
+    } catch (error) {
+      console.error('Error loading equipment availability for schedules:', error)
+    } finally {
+      setLoadingEquipmentAvailability(false)
+    }
+  }
+
+  // Update equipment availability when court bookings change
+  // Only calculate reduced availability when schedule cells are actually selected
+  useEffect(() => {
+    if (selectedDate && courtBookings.length > 0 && selectedCells.size > 0) {
+      // Add a small delay to ensure state is fully updated before loading availability
+      // This is important when selecting a schedule that already has racket rentals
+      // The backend will check for existing rentals and reduce stock accordingly
+      const timeoutId = setTimeout(() => {
+        loadEquipmentAvailabilityForSchedules()
+      }, 100)
+      
+      return () => clearTimeout(timeoutId)
+    } else {
+      // Clear availability map when no schedule cells are selected
+      // This ensures full stock is shown when no cells are selected
+      setEquipmentAvailability(new Map())
+    }
+  }, [courtBookings, selectedDate, selectedCells.size])
 
   const getCellStatus = (courtId: number, time: string): CellStatus => {
     const cellKey = `COURT ${courtId}-${time}`
@@ -398,18 +582,60 @@ export function BookingPage() {
   
 
   const handleRacketClick = (racketName: string) => {
-    setFlippedCards(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(racketName)) {
-        newSet.delete(racketName)
+    // Check if user has selected a date and at least one court booking
+    if (!selectedDate || courtBookings.length === 0) {
+      setShowCourtTimeRequiredModal(true)
+      return
+    }
+    
+    const selectedEquipment = equipment.find(eq => eq.equipment_name === racketName)
+    if (selectedEquipment) {
+      // Check if this racket is already booked
+      const existingBooking = equipmentBookings.find(b => b.equipment === racketName)
+      
+      // If multiple court bookings exist, show schedule selection modal first
+      if (courtBookings.length > 1) {
+        setPendingRacketForScheduleSelection(selectedEquipment)
+        // Pre-select schedules if this racket is already booked
+        if (existingBooking?.selectedCourtSchedules && existingBooking.selectedCourtSchedules.length > 0) {
+          setSelectedCourtSchedulesForRacket(new Set(existingBooking.selectedCourtSchedules))
+        } else {
+          setSelectedCourtSchedulesForRacket(new Set())
+        }
+        setShowCourtScheduleSelectionModal(true)
       } else {
-        newSet.add(racketName)
+        // Single court booking, proceed directly to racket configuration
+      setSelectedRacketForModal(selectedEquipment)
       }
-      return newSet
-    })
+    }
   }
 
-  const handleRacketQuantityChange = (racketName: string, newQuantity: number) => {
+  const handleRacketModalConfirm = (racketName: string, quantity: number, time: number) => {
+    // Get selected court schedules for this racket
+    const selectedSchedules = selectedCourtSchedulesForRacket.size > 0 
+      ? Array.from(selectedCourtSchedulesForRacket)
+      : courtBookings.length === 1 
+        ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`]
+        : []
+    
+    handleRacketQuantityChange(racketName, quantity, selectedSchedules)
+    handleRacketTimeChange(racketName, time, selectedSchedules)
+  }
+
+  const handleCourtScheduleSelectionConfirm = () => {
+    if (selectedCourtSchedulesForRacket.size === 0) {
+      toast.error('Please select at least one court schedule')
+      return
+    }
+    
+    if (pendingRacketForScheduleSelection) {
+      setShowCourtScheduleSelectionModal(false)
+      setSelectedRacketForModal(pendingRacketForScheduleSelection)
+      setPendingRacketForScheduleSelection(null)
+    }
+  }
+
+  const handleRacketQuantityChange = (racketName: string, newQuantity: number, selectedSchedules?: string[]) => {
     // Update quantity for this specific racket
     setRacketQuantities(prev => {
       const newMap = new Map(prev)
@@ -428,21 +654,22 @@ export function BookingPage() {
     // Get the time for this specific racket (default to 1 if not set)
     const racketTime = racketTimes.get(racketName) || 1
     
+    // Get existing booking to preserve selected schedules if they exist
+    const existingBooking = equipmentBookings.find(b => b.equipment === racketName)
+    const schedulesToUse = selectedSchedules || existingBooking?.selectedCourtSchedules || 
+      (courtBookings.length === 1 ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`] : [])
+    
     if (newQuantity === 0) {
       // Remove from bookings if quantity is 0
       setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
-      setFlippedCards(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(racketName)
-        return newSet
-      })
     } else {
       // Add or update booking
       const newBooking: EquipmentBooking = {
         equipment: racketName,
         time: `${racketTime} hr`,
         subtotal: price * racketTime * newQuantity,
-        quantity: newQuantity
+        quantity: newQuantity,
+        selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
       }
       setEquipmentBookings(prev => {
         const filtered = prev.filter(booking => booking.equipment !== racketName)
@@ -451,7 +678,7 @@ export function BookingPage() {
     }
   }
 
-  const handleRacketTimeChange = (racketName: string, newTime: number) => {
+  const handleRacketTimeChange = (racketName: string, newTime: number, selectedSchedules?: string[]) => {
     // Update time for this specific racket
     setRacketTimes(prev => {
       const newMap = new Map(prev)
@@ -466,13 +693,19 @@ export function BookingPage() {
     // Get the quantity for this specific racket
     const racketQuantity = racketQuantities.get(racketName) || 0
     
+    // Get existing booking to preserve selected schedules if they exist
+    const existingBooking = equipmentBookings.find(b => b.equipment === racketName)
+    const schedulesToUse = selectedSchedules || existingBooking?.selectedCourtSchedules || 
+      (courtBookings.length === 1 ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`] : [])
+    
     // Update existing booking with new time
     if (racketQuantity > 0) {
       const newBooking: EquipmentBooking = {
         equipment: racketName,
         time: `${newTime} hr`,
         subtotal: price * newTime * racketQuantity,
-        quantity: racketQuantity
+        quantity: racketQuantity,
+        selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
       }
       setEquipmentBookings(prev => {
         const filtered = prev.filter(booking => booking.equipment !== racketName)
@@ -781,6 +1014,11 @@ export function BookingPage() {
     }
     const formattedDate = dateObj.toISOString().split('T')[0]
 
+    // CRITICAL: Refresh availability data before checking duplicates
+    // This ensures we have the latest reservation data (including newly confirmed reservations)
+    console.log('[BookingPage] Refreshing availability data before duplicate check...')
+    await loadAvailabilityData(selectedDate)
+
     // Check each court booking for duplicates
     for (const booking of courtBookings) {
       const courtId = getCourtIdFromName(booking.court)
@@ -830,12 +1068,88 @@ export function BookingPage() {
         setReferenceNumber(refNumber)
       }
 
-      // Calculate total amount
+      // Prepare booking data for metadata
+      // Split equipment bookings with multiple schedules into separate bookings (one per schedule)
+      // Each schedule should be a separate rental with its own price and stock reduction
+      const expandedEquipmentBookings: any[] = []
+      equipmentBookings.forEach(booking => {
+        if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 1) {
+          // Split into separate bookings for each schedule
+          // Each schedule is a separate rental, so each should have the full price
+          booking.selectedCourtSchedules.forEach(scheduleKey => {
+            const [courtName, schedule] = scheduleKey.split('-')
+            const courtBooking = courtBookings.find(cb => cb.court === courtName && cb.schedule === schedule)
+            
+            let startTime: string | undefined
+            if (courtBooking) {
+              try {
+                const { startTime: st } = parseScheduleToTimes(courtBooking.schedule)
+                startTime = st
+              } catch (e) {
+                console.error('Error parsing schedule:', e)
+              }
+            }
+            
+            // Calculate the price per schedule based on equipment price and time
+            // Each schedule is a separate rental, so each should have the full price
+            const equipmentItem = equipment.find(eq => eq.equipment_name === booking.equipment)
+            const price = Number(equipmentItem?.price) || 100
+            const timeMatch = booking.time.match(/(\d+(?:\.\d+)?)\s*hr/i)
+            const hours = timeMatch ? parseFloat(timeMatch[1]) : 1
+            const quantity = booking.quantity || 1
+            // Each schedule gets the full price (price * hours * quantity) since it's a separate rental
+            const subtotalPerSchedule = price * hours * quantity
+            
+            expandedEquipmentBookings.push({
+              equipment: booking.equipment,
+              time: booking.time,
+              subtotal: subtotalPerSchedule,
+              quantity: quantity,
+              startTime: startTime,
+              selectedCourtSchedules: [scheduleKey] // Single schedule per booking
+            })
+          })
+        } else {
+          // Single schedule or no schedules - keep as is
+          let startTime: string | undefined
+          if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+            const selectedBookings = courtBookings.filter(cb => 
+              booking.selectedCourtSchedules?.includes(`${cb.court}-${cb.schedule}`)
+            )
+            if (selectedBookings.length > 0) {
+              try {
+                const { startTime: st } = parseScheduleToTimes(selectedBookings[0].schedule)
+                startTime = st
+              } catch (e) {
+                console.error('Error parsing schedule:', e)
+              }
+            }
+          } else if (courtBookings.length === 1) {
+            try {
+              const { startTime: st } = parseScheduleToTimes(courtBookings[0].schedule)
+              startTime = st
+            } catch (e) {
+              console.error('Error parsing schedule:', e)
+            }
+          }
+          
+          expandedEquipmentBookings.push({
+            equipment: booking.equipment,
+            time: booking.time,
+            subtotal: booking.subtotal,
+            quantity: booking.quantity || 1,
+            startTime: startTime,
+            selectedCourtSchedules: booking.selectedCourtSchedules
+          })
+        }
+      })
+
+      // Calculate total amount from expanded equipment bookings
+      // This ensures the total reflects the split bookings (each schedule gets full price)
       const courtTotal = courtBookings.reduce((sum, booking) => sum + booking.subtotal, 0)
-      const equipmentTotal = equipmentBookings.reduce((sum, booking) => sum + booking.subtotal, 0)
+      const equipmentTotal = expandedEquipmentBookings.reduce((sum, booking) => sum + booking.subtotal, 0)
       const calculatedTotalAmount = courtTotal + equipmentTotal
 
-      // Prepare booking data for metadata
       const bookingData = {
         userId: user?.id || 1, // Use user from auth context
         selectedDate,
@@ -844,12 +1158,7 @@ export function BookingPage() {
           schedule: booking.schedule,
           subtotal: booking.subtotal
         })),
-        equipmentBookings: equipmentBookings.map(booking => ({
-          equipment: booking.equipment,
-          time: booking.time,
-          subtotal: booking.subtotal,
-          quantity: booking.quantity || 1
-        })),
+        equipmentBookings: expandedEquipmentBookings,
         referenceNumber: referenceNumber || Date.now().toString() + Math.random().toString(36).substr(2, 5).toUpperCase()
       }
 
@@ -889,17 +1198,8 @@ export function BookingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Add custom CSS for flip animation */}
+      {/* Add custom CSS for animations */}
       <style>{`
-        .transform-style-preserve-3d {
-          transform-style: preserve-3d;
-        }
-        .backface-hidden {
-          backface-visibility: hidden;
-        }
-        .rotate-y-180 {
-          transform: rotateY(180deg);
-        }
         @keyframes fade-in {
           from {
             opacity: 0;
@@ -995,58 +1295,58 @@ export function BookingPage() {
         </div>
 
       {/* Main Content */}
-      <div className="p-6">
-         <div className="bg-white rounded-lg shadow-lg p-6 mx-auto" style={{ maxWidth: 'calc(72rem + 400px)' }}>
+      <div className="p-3 sm:p-4 md:p-6">
+         <div className="bg-white rounded-lg shadow-lg p-3 sm:p-4 md:p-6 mx-auto" style={{ maxWidth: 'calc(72rem + 400px)' }}>
           {currentStep === 1 && (
              <>
                {/* Date Selection Header */}
-               <div className="bg-gray-600 text-white px-6 py-4 rounded-t-lg -mx-6 -mt-6 mb-6 shadow">
-                 <h2 className="text-base sm:text-lg font-semibold">Select from the available dates below</h2>
-                <p className="text-blue-100 text-xs sm:text-sm mt-1">
+               <div className="bg-gray-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-t-lg -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 mb-4 sm:mb-6 shadow">
+                 <h2 className="text-sm sm:text-base md:text-lg font-semibold">Select from the available dates below</h2>
+                <p className="text-blue-100 text-[10px] sm:text-xs md:text-sm mt-1">
                   Choose a date to proceed to court and time selection
                 </p>
                </div>
                
               {/* Rolling Date Selection */}
-              <div className="bg-white rounded-lg ring-1 ring-gray-200 p-4 sm:p-6">
-                <div className="mb-4 text-center">
-                  <span className="block text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-400">
+              <div className="bg-white rounded-lg ring-1 ring-gray-200 p-3 sm:p-4 md:p-6">
+                <div className="mb-3 sm:mb-4 text-center">
+                  <span className="block text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.35em] text-gray-400">
                     Upcoming {DATE_WINDOW_DAYS} days
                   </span>
-                  <span className="mt-1 block text-lg sm:text-xl font-bold text-gray-800 tracking-tight">
+                  <span className="mt-1 block text-base sm:text-lg md:text-xl font-bold text-gray-800 tracking-tight">
                     {selectionWindowMonthLabel}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 md:gap-4">
                   {dateOptions.map((date) => {
                     const isoDate = formatDateToISODate(date)
                     const isSelected = tempSelectedDate === isoDate
                     const isToday = date.toDateString() === today.toDateString()
                     const monthLabel = date.toLocaleDateString('en-US', { month: 'short' })
-                    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' })
+                    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' })
                     
                     return (
                       <button
                         key={isoDate}
                         type="button"
                         onClick={() => handleDateSelection(isoDate, true)}
-                        className={`relative flex flex-col items-center justify-center rounded-2xl border-2 px-4 py-4 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
+                        className={`relative flex flex-col items-center justify-center rounded-xl sm:rounded-2xl border-2 px-2 py-3 sm:px-4 sm:py-4 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
                           isSelected
                             ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
                             : 'border-orange-200 bg-white text-gray-900 shadow-sm hover:border-orange-400 hover:-translate-y-1 hover:shadow-lg'
                         }`}
                       >
-                        <span className="text-xs font-semibold uppercase tracking-wide text-orange-500">
+                        <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-orange-500">
                           {monthLabel}
                         </span>
-                        <span className="text-2xl sm:text-3xl font-bold leading-none mt-1">
+                        <span className="text-xl sm:text-2xl md:text-3xl font-bold leading-none mt-0.5 sm:mt-1">
                           {date.getDate()}
                         </span>
-                        <span className="mt-1 text-xs sm:text-sm font-medium text-gray-500">
+                        <span className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm font-medium text-gray-500 line-clamp-1">
                           {dayOfWeek}
                         </span>
                         {isToday && (
-                          <span className="mt-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">
+                          <span className="mt-1 sm:mt-2 inline-flex items-center rounded-full bg-green-100 px-1.5 sm:px-2.5 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-green-700">
                             Today
                           </span>
                         )}
@@ -1064,10 +1364,10 @@ export function BookingPage() {
                )}
 
                {/* Proceed Button for Step 1 */}
-               <div className="text-center mt-6">
+               <div className="text-center mt-4 sm:mt-6">
                  <button 
                    onClick={handleProceedFromDateSelection}
-                   className="inline-flex items-center justify-center px-8 py-3 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                   className="inline-flex items-center justify-center px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto max-w-xs sm:max-w-none"
                    disabled={!tempSelectedDate}
                  >
                    Proceed
@@ -1079,17 +1379,17 @@ export function BookingPage() {
           {currentStep === 2 && (
             <>
               {/* Section Header with Tabs inside */}
-              <div className="bg-gray-600 text-white px-4 py-2 rounded-t-lg -mx-6 -mt-6 mb-6">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-medium">Select from the available time and court:</h2>
+              <div className="bg-gray-600 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-t-lg -mx-6 -mt-6 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <h2 className="text-base sm:text-lg font-medium">Select from the available time and court:</h2>
                   
                   {/* Tabs inside the header container */}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 -mx-3 sm:mx-0 px-3 sm:px-0">
                     {tabs.map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${
+                        className={`px-2.5 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs md:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                           activeTab === tab
                             ? 'bg-white text-gray-900'
                             : 'bg-gray-500 text-gray-100 hover:bg-gray-400'
@@ -1104,7 +1404,7 @@ export function BookingPage() {
               </div>
 
           {/* Selected Date */}
-          <div className="mb-6 flex justify-center">
+          <div className="mb-4 sm:mb-6 flex justify-center px-2">
             {(() => {
               const selectedDateDetails = getDateDisplayDetails(selectedDate)
                     const dayLabel = selectedDateDetails?.dayName ?? null
@@ -1112,10 +1412,10 @@ export function BookingPage() {
                     const dayInitial = (dayLabel ?? selectedDate).charAt(0) || 'D'
 
               return (
-                <div className="flex max-w-lg flex-col gap-3 rounded-2xl border border-blue-200 bg-white/90 px-5 py-4 text-center shadow-[0_20px_45px_-20px_rgba(37,99,235,0.45)] ring-1 ring-blue-100 backdrop-blur">
-                  <div className="flex items-center justify-center gap-3 text-blue-600">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200">
-                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <div className="flex w-full sm:max-w-lg flex-col gap-2 sm:gap-3 rounded-xl sm:rounded-2xl border border-blue-200 bg-white/90 px-3 sm:px-5 py-3 sm:py-4 text-center shadow-[0_20px_45px_-20px_rgba(37,99,235,0.45)] ring-1 ring-blue-100 backdrop-blur">
+                  <div className="flex items-center justify-center gap-2 sm:gap-3 text-blue-600">
+                    <span className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200">
+                      <svg className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="4" width="18" height="18" rx="2" />
                         <path d="M16 2v4" />
                         <path d="M8 2v4" />
@@ -1123,15 +1423,15 @@ export function BookingPage() {
                         <path d="M9.5 16.5l1.5 1.5 4-4" />
                       </svg>
                     </span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.35em] text-blue-500">
+                    <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.35em] text-blue-500">
                       Selected Date
                     </span>
                   </div>
-                  <p className="text-lg font-semibold text-blue-700">
-                    <span className="mr-2 rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold uppercase tracking-wide text-blue-600">
+                  <p className="text-sm sm:text-base md:text-lg font-semibold text-blue-700 break-words">
+                    <span className="mr-1 sm:mr-2 rounded-full bg-blue-100 px-2 sm:px-3 py-0.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-blue-600">
                       {dayLabel || dayInitial}
                     </span>
-                    {formattedDate}
+                    <span className="block sm:inline mt-1 sm:mt-0">{formattedDate}</span>
                   </p>
                 </div>
               )
@@ -1146,50 +1446,50 @@ export function BookingPage() {
             return (
               <div>
                 {/* Legend */}
-                <div className="mb-6 flex flex-wrap justify-center gap-3 text-xs sm:text-sm">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-white px-3 py-1.5 shadow-sm">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-50 text-green-600 ring-1 ring-green-400">
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div className="mb-4 sm:mb-6 flex flex-wrap justify-center gap-2 sm:gap-3 text-[10px] sm:text-xs md:text-sm">
+                  <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-green-200 bg-white px-2 sm:px-3 py-1 sm:py-1.5 shadow-sm">
+                    <span className="flex h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 items-center justify-center rounded-full bg-green-50 text-green-600 ring-1 ring-green-400">
+                      <svg className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 6L9 17l-5-5" />
                       </svg>
                     </span>
-                    <span className="font-medium text-gray-700">Available</span>
+                    <span className="font-medium text-gray-700 text-[10px] sm:text-xs md:text-sm">Available</span>
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-gray-500 bg-gray-700 px-3 py-1.5 text-white shadow-sm">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-600 text-white">
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-gray-500 bg-gray-700 px-2 sm:px-3 py-1 sm:py-1.5 text-white shadow-sm">
+                    <span className="flex h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 items-center justify-center rounded-full bg-gray-600 text-white">
+                      <svg className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="11" width="18" height="11" rx="2" />
                         <path d="M7 11V7a5 5 0 0110 0v4" />
                       </svg>
                     </span>
-                    <span className="font-medium">Reserved</span>
+                    <span className="font-medium text-[10px] sm:text-xs md:text-sm">Reserved</span>
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-yellow-500 bg-yellow-300 px-3 py-1.5 text-black shadow-sm">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-yellow-400 text-yellow-900">
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-yellow-500 bg-yellow-300 px-2 sm:px-3 py-1 sm:py-1.5 text-black shadow-sm">
+                    <span className="flex h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 items-center justify-center rounded-full bg-yellow-400 text-yellow-900">
+                      <svg className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M11 3h2l.4 2M5 7h14l1 5H4l1-5z" />
                         <path d="M7 13v6h10v-6" />
                         <path d="M10 17h4" />
                       </svg>
                     </span>
-                    <span className="font-medium">Maintenance</span>
+                    <span className="font-medium text-[10px] sm:text-xs md:text-sm">Maintenance</span>
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400 bg-green-200 px-3 py-1.5 text-gray-900 shadow-sm">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white">
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-emerald-400 bg-green-200 px-2 sm:px-3 py-1 sm:py-1.5 text-gray-900 shadow-sm">
+                    <span className="flex h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 items-center justify-center rounded-full bg-green-500 text-white">
+                      <svg className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 17l5 3-1.9-5.9L19 9l-6-.2L12 3l-1 5.8L5 9l3.9 5.1L7 20z" />
                       </svg>
                     </span>
-                    <span className="font-medium">Selected</span>
+                    <span className="font-medium text-[10px] sm:text-xs md:text-sm">Selected</span>
                   </div>
                 </div>
 
                 {/* Mobile-friendly cards */}
-                <div className="sm:hidden space-y-4">
+                <div className="sm:hidden space-y-3">
                   {generateTimeSlots().map((timeSlot) => (
                     <div key={timeSlot.id} className="rounded-lg ring-1 ring-gray-200 overflow-hidden">
-                      <div className="bg-gray-100 px-4 py-2 text-sm font-medium text-slate-700">{timeSlot.display}</div>
-                      <div className="grid grid-cols-2 gap-2 p-3">
+                      <div className="bg-gray-100 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700">{timeSlot.display}</div>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-3 p-2 sm:p-3">
                         {sheetCourts.map((court) => {
                           const slotStatus = getCellStatus(court.Court_Id, timeSlot.display).status
                           const displayState = deriveCellDisplayState(slotStatus, court.Status)
@@ -1205,17 +1505,17 @@ export function BookingPage() {
                               aria-label={ariaLabel}
                               disabled={!canInteract}
                               onClick={() => canInteract && handleCellClick(court.Court_Id, court.Court_Name, timeSlot.display, court.Price)}
-                              className={`flex flex-col gap-2 rounded-xl px-3 py-3 text-left text-xs transition-all duration-200 ${config.containerClass} disabled:cursor-not-allowed disabled:opacity-85 disabled:shadow-none disabled:transform-none ${
+                              className={`flex flex-col gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-2.5 sm:py-3 text-left text-xs transition-all duration-200 ${config.containerClass} disabled:cursor-not-allowed disabled:opacity-85 disabled:shadow-none disabled:transform-none ${
                                 canInteract ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 active:scale-[0.99]' : 'opacity-95'
                               }`}
                             >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-semibold text-gray-900">{court.Court_Name}</span>
-                                {renderStatusBadge(displayState)}
+                              <div className="flex items-start sm:items-center justify-between gap-1.5 sm:gap-2">
+                                <span className="text-xs sm:text-sm font-semibold text-gray-900 line-clamp-1">{court.Court_Name}</span>
+                                <div className="flex-shrink-0">{renderStatusBadge(displayState)}</div>
                               </div>
-                              <div className="flex items-end justify-between gap-2">
-                                <span className={config.priceClass}>{formatCurrency(court.Price)}</span>
-                                <span className={config.helperClass}>{config.helperText}</span>
+                              <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-1 sm:gap-2">
+                                <span className={`${config.priceClass} text-xs sm:text-sm`}>{formatCurrency(court.Price)}</span>
+                                <span className={`${config.helperClass} text-[9px] sm:text-[10px]`}>{config.helperText}</span>
                               </div>
                           </button>
                         )
@@ -1337,11 +1637,11 @@ export function BookingPage() {
 
           {activeTab === 'Rent an racket' && (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-600">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
+                <p className="text-xs sm:text-sm text-gray-600 flex-1">
                   Equipment rental rates vary by item. Check individual prices below.
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={async () => {
                       setLoadingDebug(true)
@@ -1358,12 +1658,13 @@ export function BookingPage() {
                         setLoadingDebug(false)
                       }
                     }}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium flex items-center gap-2"
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Debug Equipment
+                    <span className="hidden sm:inline">Debug Equipment</span>
+                    <span className="sm:hidden">Debug</span>
                   </button>
                   <button
                     onClick={async () => {
@@ -1381,12 +1682,13 @@ export function BookingPage() {
                         }
                       }
                     }}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium flex items-center gap-2"
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    Test Email
+                    <span className="hidden sm:inline">Test Email</span>
+                    <span className="sm:hidden">Test</span>
                   </button>
                 </div>
               </div>
@@ -1406,156 +1708,107 @@ export function BookingPage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
-                  {equipment.map((item, index) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+                  {equipment.map((item, index) => {
+                    // Get availability: if schedule cells are selected, use schedule-specific availability, otherwise use default stocks from admin
+                    const availableStock = selectedCells.size > 0 && equipmentAvailability.has(item.id)
+                      ? equipmentAvailability.get(item.id) ?? 0
+                      : (item.stocks ?? 0)
+                    
+                    return (
                     <div
                       key={item.id}
-                      className="relative h-80 sm:h-72 md:h-80 lg:h-84 cursor-pointer group animate-fade-in"
+                      className="relative h-auto min-h-[280px] sm:h-72 md:h-80 lg:h-84 cursor-pointer group animate-fade-in"
                       style={{ animationDelay: `${index * 100}ms` }}
                       onClick={() => handleRacketClick(item.equipment_name)}
                     >
-                    {/* Flip Card Container */}
-                      <div className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${
-                        flippedCards.has(item.equipment_name) ? 'rotate-y-180' : ''
+                      <div className={`relative bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 lg:p-6 h-full flex flex-col justify-between items-center hover:shadow-2xl hover:scale-105 hover:-translate-y-2 transition-all duration-500 group-hover:border-blue-400 group-hover:from-blue-50 group-hover:to-blue-100 ${
+                        isRacketBooked(item.equipment_name) ? 'border-green-500 ring-4 ring-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-green-200' : 'border-gray-200 hover:border-blue-400'
                       }`}>
-                        {/* Front of Card */}
-                        <div className="absolute inset-0 w-full h-full backface-hidden">
-                          <div className={`relative bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 rounded-2xl p-3 sm:p-4 md:p-6 h-full flex flex-col justify-between items-center hover:shadow-2xl hover:scale-105 hover:-translate-y-2 transition-all duration-500 group-hover:border-blue-400 group-hover:from-blue-50 group-hover:to-blue-100 ${
-                            isRacketBooked(item.equipment_name) ? 'border-green-500 ring-4 ring-green-200 bg-gradient-to-br from-green-50 to-green-100 shadow-green-200' : 'border-gray-200 hover:border-blue-400'
-                          }`}>
-                            {/* Premium Badge */}
-                            {(item.available_stock ?? item.stocks) > 5 && (
-                              <div className="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
-                                Popular
-                              </div>
-                            )}
-                            
-                            {/* Stock Badge */}
-                            {(item.available_stock ?? item.stocks) > 0 && (
-                              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-bounce">
-                                {item.available_stock ?? item.stocks}
-                              </div>
-                            )}
-                            
-                            {/* Equipment Image Container */}
-                            <div className="flex-1 flex items-center justify-center w-full mb-4 relative">
-                              <div className="relative group/image">
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500"></div>
-                                <div className="relative w-full h-20 sm:h-24 md:h-32 bg-white rounded-lg shadow-sm overflow-hidden">
-                            <img
-                              src={item.image_path ? resolveImageUrl(item.image_path) : '/assets/img/equipments/racket-removebg-preview.png'}
-                              alt={item.equipment_name}
-                                    className="w-full h-full object-contain object-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-2"
-                                    style={{
-                                      filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
-                                      background: 'transparent'
-                                    }}
-                                  />
-                                </div>
-                                {/* Floating particles effect */}
-                                <div className="absolute inset-0 pointer-events-none">
-                                  <div className="absolute top-2 left-2 w-1 h-1 bg-blue-400 rounded-full animate-ping"></div>
-                                  <div className="absolute top-4 right-3 w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
-                                  <div className="absolute bottom-3 left-4 w-1 h-1 bg-green-400 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Equipment Info */}
-                            <div className="w-full text-center space-y-3">
-                              <h3 className="font-bold text-sm sm:text-base md:text-lg text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-all duration-300 transform group-hover:scale-105">
-                                {item.equipment_name}
-                              </h3>
-                              
-                              {/* Stock Status with Animation */}
-                              <div className="flex items-center justify-center space-x-2">
-                                <div className={`w-3 h-3 rounded-full animate-pulse ${
-                                  (item.available_stock ?? item.stocks) > 0 ? 'bg-green-500 shadow-green-200 shadow-lg' : 'bg-red-500 shadow-red-200 shadow-lg'
-                                }`}></div>
-                                <p className="text-xs sm:text-sm text-gray-600 font-medium">
-                                  {(item.available_stock ?? item.stocks) > 0 ? `${item.available_stock ?? item.stocks} available` : 'Out of stock'}
-                                </p>
-                              </div>
-                              
-                              {/* Enhanced Price Display */}
-                              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl px-4 py-2 border border-blue-200 shadow-sm group-hover:shadow-md transition-all duration-300">
-                                <p className="text-sm sm:text-base font-bold text-blue-600 group-hover:text-blue-700">
-                                  ₱{item.price}/hour
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Enhanced Hover Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-purple-500/0 group-hover:from-blue-500/10 group-hover:to-purple-500/10 rounded-2xl transition-all duration-500 flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110">
-                                <div className="bg-white rounded-full p-3 shadow-xl border-2 border-blue-200">
-                                  <svg className="w-6 h-6 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Selection Indicator */}
-                            {isRacketBooked(item.equipment_name) && (
-                              <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
-                                Selected
-                              </div>
-                            )}
+                        {/* Premium Badge */}
+                        {availableStock > 5 && (
+                          <div className="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                            Popular
                           </div>
-                        </div>
-                      
-                      {/* Back of Card (Configuration) */}
-                      <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-4 md:p-6 h-full flex flex-col justify-center items-center shadow-lg">
-                          <div className="space-y-6 w-full">
-                            <div className="text-center">
-                              <label className="block text-sm font-medium mb-3">Time:</label>
-                              <div className="flex items-center justify-center">
-                <input
-                                  type="number"
-                                  value={racketTimes.get(item.equipment_name) || 1}
-                                  onChange={(e) => handleRacketTimeChange(item.equipment_name, Number(e.target.value))}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-20 px-3 py-2 border border-gray-300 rounded text-sm text-center"
-                                />
-                                <span className="ml-2 text-sm">/hr</span>
-                              </div>
-              </div>
-                            <div className="text-center">
-                              <label className="block text-sm font-medium mb-3">Quantity:</label>
-                              <div className="flex items-center justify-center space-x-4">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    const currentQuantity = racketQuantities.get(item.equipment_name) || 0
-                                    const newQuantity = Math.max(0, currentQuantity - 1)
-                                    handleRacketQuantityChange(item.equipment_name, newQuantity)
-                                  }}
-                                  className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
-                                >
-                                  -
-                                </button>
-                                <span className="w-12 text-center text-lg font-medium">{racketQuantities.get(item.equipment_name) || 0}</span>
-                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    const currentQuantity = racketQuantities.get(item.equipment_name) || 0
-                                    const newQuantity = Math.min(item.available_stock ?? item.stocks, currentQuantity + 1)
-                                    handleRacketQuantityChange(item.equipment_name, newQuantity)
-                                  }}
-                                  className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
-                                >
-                                  +
-                </button>
-              </div>
+                        )}
+                        
+                        {/* Stock Badge */}
+                        {availableStock > 0 && (
+                          <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-lg animate-bounce">
+                            {availableStock}
+                          </div>
+                        )}
+                        
+                        {/* Equipment Image Container */}
+                        <div className="flex-1 flex items-center justify-center w-full mb-3 sm:mb-4 relative">
+                          <div className="relative group/image">
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-purple-200 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500"></div>
+                            <div className="relative w-full h-24 sm:h-24 md:h-28 lg:h-32 bg-white rounded-lg shadow-sm overflow-hidden">
+                              <img
+                                src={item.image_path ? resolveImageUrl(item.image_path) : '/assets/img/equipments/racket-removebg-preview.png'}
+                                alt={item.equipment_name}
+                                className="w-full h-full object-contain object-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-2"
+                                style={{
+                                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
+                                  background: 'transparent'
+                                }}
+                              />
+                            </div>
+                            {/* Floating particles effect */}
+                            <div className="absolute inset-0 pointer-events-none">
+                              <div className="absolute top-2 left-2 w-1 h-1 bg-blue-400 rounded-full animate-ping"></div>
+                              <div className="absolute top-4 right-3 w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
+                              <div className="absolute bottom-3 left-4 w-1 h-1 bg-green-400 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
                             </div>
                           </div>
                         </div>
+                        
+                        {/* Equipment Info */}
+                        <div className="w-full text-center space-y-2 sm:space-y-3">
+                          <h3 className="font-bold text-xs sm:text-sm md:text-base lg:text-lg text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-all duration-300 transform group-hover:scale-105 px-1">
+                            {item.equipment_name}
+                          </h3>
+                          
+                          {/* Stock Status with Animation */}
+                          <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                            <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full animate-pulse ${
+                              availableStock > 0 ? 'bg-green-500 shadow-green-200 shadow-lg' : 'bg-red-500 shadow-red-200 shadow-lg'
+                            }`}></div>
+                            <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 font-medium line-clamp-1">
+                              {availableStock > 0 ? `${availableStock} available${courtBookings.length > 0 ? ' for selected schedule' : ''}` : 'Out of stock'}
+                            </p>
+                          </div>
+                          
+                          {/* Enhanced Price Display */}
+                          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg sm:rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 border border-blue-200 shadow-sm group-hover:shadow-md transition-all duration-300">
+                            <p className="text-xs sm:text-sm md:text-base font-bold text-blue-600 group-hover:text-blue-700">
+                              ₱{item.price}/hour
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Enhanced Hover Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-purple-500/0 group-hover:from-blue-500/10 group-hover:to-purple-500/10 rounded-2xl transition-all duration-500 flex items-center justify-center">
+                          <div className="opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110">
+                            <div className="bg-white rounded-full p-3 shadow-xl border-2 border-blue-200">
+                              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Selection Indicator */}
+                        {isRacketBooked(item.equipment_name) && (
+                          <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                            Selected
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -1603,19 +1856,51 @@ export function BookingPage() {
                       <tr className="bg-gray-100">
                         <th className="border border-gray-300 px-4 py-2 text-left">Equipment</th>
                         <th className="border border-gray-300 px-4 py-2 text-left">Quantity</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left">Time:</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Time</th>
+                        {courtBookings.length > 1 && (
+                          <th className="border border-gray-300 px-4 py-2 text-left">For Court Schedule(s)</th>
+                        )}
                         <th className="border border-gray-300 px-4 py-2 text-left">Sub total</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {equipmentBookings.map((booking, index) => (
+                      {equipmentBookings.map((booking, index) => {
+                        // Get the court schedules this equipment is associated with
+                        const associatedSchedules = booking.selectedCourtSchedules 
+                          ? courtBookings.filter(cb => 
+                              booking.selectedCourtSchedules?.includes(`${cb.court}-${cb.schedule}`)
+                            )
+                          : courtBookings.length === 1 
+                            ? [courtBookings[0]]
+                            : []
+                        
+                        return (
                         <tr key={index}>
                           <td className="border border-gray-300 px-4 py-2">{booking.equipment}</td>
                           <td className="border border-gray-300 px-4 py-2">{booking.quantity || 1}</td>
                           <td className="border border-gray-300 px-4 py-2">{booking.time}</td>
-                          <td className="border border-gray-300 px-4 py-2">{booking.subtotal}</td>
-                        </tr>
-                      ))}
+                            {courtBookings.length > 1 && (
+                              <td className="border border-gray-300 px-4 py-2">
+                                {associatedSchedules.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {associatedSchedules.map((schedule, idx) => (
+                                      <span 
+                                        key={idx}
+                                        className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium"
+                                      >
+                                        {schedule.court} - {schedule.schedule}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 text-sm">Not specified</span>
+                                )}
+                              </td>
+                            )}
+                            <td className="border border-gray-300 px-4 py-2">{formatCurrency(booking.subtotal)}</td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
             </div>
@@ -1639,12 +1924,12 @@ export function BookingPage() {
           )}
 
                {/* Proceed and Back Buttons */}
-               <div className="flex justify-center space-x-4 mt-8">
+               <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 sm:space-x-4 mt-6 sm:mt-8 px-2">
                 <button
                    onClick={() => handleBackToStep(1)}
-                   className="flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                   className="flex items-center justify-center px-5 sm:px-6 py-2.5 sm:py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base w-full sm:w-auto"
                 >
-                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                    </svg>
                   Back
@@ -1661,7 +1946,7 @@ export function BookingPage() {
                     }
                     setShowBookingDetailsModal(true)
                   }}
-                   className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium"
+                   className="bg-blue-600 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg hover:bg-blue-700 font-medium text-sm sm:text-base w-full sm:w-auto"
                 >
                    Proceed to Payment
                 </button>
@@ -1710,6 +1995,32 @@ export function BookingPage() {
       />
 
       {/* Booking Details Modal */}
+      <RacketConfigurationModal
+        isOpen={selectedRacketForModal !== null}
+        onClose={() => {
+          setSelectedRacketForModal(null)
+          // Reset selected court schedules when closing
+          setSelectedCourtSchedulesForRacket(new Set())
+        }}
+        equipment={selectedRacketForModal}
+        initialQuantity={selectedRacketForModal ? (racketQuantities.get(selectedRacketForModal.equipment_name) || 0) : 0}
+        initialTime={selectedRacketForModal ? (racketTimes.get(selectedRacketForModal.equipment_name) || 1) : 1}
+        scheduleSpecificAvailability={
+          // Only show reduced availability if schedule cells are selected AND availability has been calculated
+          selectedRacketForModal && selectedCells.size > 0 && courtBookings.length > 0 && equipmentAvailability.has(selectedRacketForModal.id)
+            ? equipmentAvailability.get(selectedRacketForModal.id) ?? undefined
+            : undefined
+        }
+        onConfirm={(quantity, time) => {
+          if (selectedRacketForModal) {
+            handleRacketModalConfirm(selectedRacketForModal.equipment_name, quantity, time)
+            // Reset selected court schedules after confirmation
+            setSelectedCourtSchedulesForRacket(new Set())
+          }
+        }}
+        resolveImageUrl={resolveImageUrl}
+      />
+
       <BookingDetailsModal
         isOpen={showBookingDetailsModal}
         onClose={() => setShowBookingDetailsModal(false)}
@@ -1739,6 +2050,176 @@ export function BookingPage() {
               <p className="text-gray-600 text-sm">Select a date and time slot for a court first, then you can add racket rentals.</p>
               <div className="flex justify-end gap-2 pt-2">
                 <button onClick={() => setShowEquipmentGuard(false)} className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Got it</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Require court and time selection before racket rental */}
+      {showCourtTimeRequiredModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-orange-600 text-white px-6 py-4 font-semibold flex items-center gap-2">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>Select Court and Time First</span>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-start space-x-3">
+                <svg className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-gray-800 font-medium mb-2">Please select a court and time first</p>
+                  <p className="text-gray-600 text-sm">
+                    Before you can rent a racket, you need to select a date, court, and time slot for your booking.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Steps to follow:</strong>
+                </p>
+                <ol className="list-decimal list-inside text-sm text-blue-700 mt-2 space-y-1">
+                  <li>Select a date from the calendar</li>
+                  <li>Choose a court and time slot</li>
+                  <li>Then you can add racket rentals</li>
+                </ol>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button 
+                  onClick={() => setShowCourtTimeRequiredModal(false)} 
+                  className="px-6 py-2 rounded-md bg-orange-600 text-white hover:bg-orange-700 transition-colors font-medium"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Select court schedule(s) for racket rental */}
+      {showCourtScheduleSelectionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="bg-blue-600 text-white px-6 py-4 font-semibold flex items-center gap-2">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              <span>Select Court Schedule(s) for Racket Rental</span>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-start space-x-3">
+                <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-gray-800 font-medium mb-2">
+                    You have selected multiple court schedules
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    Please select which court schedule(s) you want to use this racket for. You can select one or both schedules.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-gray-700">Available Court Schedules:</p>
+                  {courtBookings.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allSelected = selectedCourtSchedulesForRacket.size === courtBookings.length
+                        if (allSelected) {
+                          setSelectedCourtSchedulesForRacket(new Set())
+                        } else {
+                          const allSchedules = new Set(courtBookings.map(b => `${b.court}-${b.schedule}`))
+                          setSelectedCourtSchedulesForRacket(allSchedules)
+                        }
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium underline"
+                    >
+                      {selectedCourtSchedulesForRacket.size === courtBookings.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {courtBookings.map((booking, index) => {
+                    const scheduleKey = `${booking.court}-${booking.schedule}`
+                    const isSelected = selectedCourtSchedulesForRacket.has(scheduleKey)
+                    
+                    return (
+                      <label
+                        key={index}
+                        className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const newSet = new Set(selectedCourtSchedulesForRacket)
+                            if (e.target.checked) {
+                              newSet.add(scheduleKey)
+                            } else {
+                              newSet.delete(scheduleKey)
+                            }
+                            setSelectedCourtSchedulesForRacket(newSet)
+                          }}
+                          className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900">{booking.court}</span>
+                            <span className="text-gray-500">•</span>
+                            <span className="text-gray-700">{booking.schedule}</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Subtotal: {formatCurrency(booking.subtotal)}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-800">
+                  <strong>Note:</strong> The racket rental will be associated with the selected court schedule(s). 
+                  You can select multiple schedules if you want to use the racket for all of them.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setShowCourtScheduleSelectionModal(false)
+                    setPendingRacketForScheduleSelection(null)
+                    setSelectedCourtSchedulesForRacket(new Set())
+                  }}
+                  className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCourtScheduleSelectionConfirm}
+                  className="px-6 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Continue
+                </button>
               </div>
             </div>
           </div>
@@ -1930,7 +2411,8 @@ export function BookingPage() {
               </div>
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> To avoid duplicate bookings, you cannot book the same court for the same date and time slot again.
+                  <strong>Note:</strong> This slot may have been booked in a previous session. The page will refresh to show the latest availability. 
+                  If you believe this is an error, please check your existing reservations or contact support.
                 </p>
               </div>
               <div className="flex justify-end">

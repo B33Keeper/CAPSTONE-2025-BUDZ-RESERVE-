@@ -89,10 +89,13 @@ export function AnnouncementModal() {
   // Handle manual open from profile dropdown
   useEffect(() => {
     const handleManualOpen = () => {
-      if (!user || user.role === 'admin') {
-        return
-      }
-      fetchActiveAnnouncements(true)
+      // Defer work to prevent blocking the main thread
+      setTimeout(() => {
+        if (!user || user.role === 'admin') {
+          return
+        }
+        void fetchActiveAnnouncements(true)
+      }, 0)
     }
 
     window.addEventListener('open-announcement-modal', handleManualOpen)

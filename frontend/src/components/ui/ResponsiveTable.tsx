@@ -50,8 +50,12 @@ export function ResponsiveTableHeaderCell({
     return null
   }
 
+  // If className includes text-center, text-right, or text-left, use it; otherwise default to text-left
+  const hasTextAlign = className.includes('text-center') || className.includes('text-right') || className.includes('text-left')
+  const defaultAlign = hasTextAlign ? '' : 'text-left'
+
   return (
-    <th className={`px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-700 ${className}`}>
+    <th className={`px-2 sm:px-4 py-3 text-xs sm:text-sm font-medium text-gray-700 ${defaultAlign} ${className}`}>
       {children}
     </th>
   )
@@ -95,8 +99,12 @@ export function ResponsiveTableCell({
     return null
   }
 
+  // If className includes text-center, text-right, or text-left, use it; otherwise default to text-left
+  const hasTextAlign = className.includes('text-center') || className.includes('text-right') || className.includes('text-left')
+  const defaultAlign = hasTextAlign ? '' : 'text-left'
+
   return (
-    <td className={`px-2 sm:px-4 py-3 text-xs sm:text-sm text-gray-900 ${className}`}>
+    <td className={`px-2 sm:px-4 py-3 text-xs sm:text-sm text-gray-900 ${defaultAlign} ${className}`}>
       {children}
     </td>
   )

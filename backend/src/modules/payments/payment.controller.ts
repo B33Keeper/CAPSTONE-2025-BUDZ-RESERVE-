@@ -241,34 +241,7 @@ export class PaymentController {
         }
       }
 
-      // Send email receipt if payment is successful
-      if (paymentResult.paymentIntent.attributes.status === 'succeeded') {
-        try {
-          await this.emailReceiptService.sendPaymentConfirmation({
-            paymentId: paymentResult.paymentIntent.id,
-            amount: paymentResult.paymentIntent.attributes.amount,
-            currency: paymentResult.paymentIntent.attributes.currency,
-            description: paymentResult.paymentIntent.attributes.description,
-            status: paymentResult.paymentIntent.attributes.status,
-            paidAt: new Date(),
-            customerName: billingInfo.name,
-            customerEmail: billingInfo.email,
-            customerPhone: billingInfo.phone,
-            billingAddress: billingInfo.address,
-            paymentMethod: {
-              type: paymentMethodType,
-              last4: paymentResult.paymentMethod.attributes.details?.last4,
-              exp_month: paymentResult.paymentMethod.attributes.details?.exp_month,
-              exp_year: paymentResult.paymentMethod.attributes.details?.exp_year,
-            },
-            fee: 0, // Paymongo doesn't provide fee in payment intent
-            netAmount: paymentResult.paymentIntent.attributes.amount,
-            referenceNumber: savedPayment?.reference_number,
-          });
-        } catch (emailError) {
-          this.logger.warn('Failed to send payment confirmation email:', emailError);
-        }
-      }
+      // Custom email receipt removed - PayMongo receipt will be sent automatically
 
       return {
         success: true,
@@ -380,6 +353,49 @@ export class PaymentController {
       return {
         success: false,
         message: error.message || 'Failed to create checkout session with source',
+      };
+    }
+  }
+
+  // Create payment source with QR code for specific provider
+  @Post('create-source')
+  async createSource(@Body() body: { amount: number; type: string; paymentIntentId: string; returnUrl?: string }) {
+    try {
+      const { amount, type, paymentIntentId, returnUrl } = body;
+      
+      if (!amount || amount <= 0) {
+        throw new Error('Invalid amount');
+      }
+
+      if (!paymentIntentId) {
+        throw new Error('Payment intent ID is required');
+      }
+
+      // Create payment source with the specified type (gcash, paymaya, grab_pay)
+      const source = await this.payMongoService.createPaymentSource(
+        amount,
+        'PHP',
+        type,
+        returnUrl
+      );
+
+      // Attach source to payment intent
+      const attachedIntent = await this.payMongoService.attachPaymentSource(paymentIntentId, source.id);
+
+      return {
+        success: true,
+        data: {
+          source,
+          paymentIntent: attachedIntent,
+          qrCode: source.attributes.qr?.data || null,
+          checkoutUrl: source.attributes.redirect?.checkout_url || null
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error creating payment source:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to create payment source',
       };
     }
   }

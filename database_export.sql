@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: mysql:3306
--- Generation Time: Nov 23, 2025 at 06:16 AM
+-- Generation Time: Nov 29, 2025 at 08:29 PM
 -- Server version: 8.4.7
 -- PHP Version: 8.3.26
 
@@ -46,7 +46,8 @@ CREATE TABLE `announcements` (
 INSERT INTO `announcements` (`id`, `title`, `content`, `image_url`, `announcement_type`, `is_active`, `created_by`, `created_at`, `updated_at`) VALUES
 (11, 'Queueing Schedule', NULL, '/uploads/announcements/1763665735979-747450007.jpg', 'image', 1, 8, '2025-11-20 19:08:56.006388', '2025-11-20 19:12:35.000000'),
 (12, 'Queueing schedule', NULL, '/uploads/announcements/1763665802776-592725168.jpg', 'image', 1, 8, '2025-11-20 19:10:02.803080', '2025-11-20 19:28:01.000000'),
-(13, 'Queueing Schedule', NULL, '/uploads/announcements/1763665822974-992925982.jpg', 'image', 1, 8, '2025-11-20 19:10:23.005518', '2025-11-20 19:28:14.000000');
+(13, 'Queueing Schedule', NULL, '/uploads/announcements/1763665822974-992925982.jpg', 'image', 1, 8, '2025-11-20 19:10:23.005518', '2025-11-20 19:28:14.000000'),
+(15, 'dadsad', NULL, '/uploads/announcements/1763939103734-49088419.png', 'image', 0, 8, '2025-11-23 23:05:03.747252', '2025-11-24 03:37:09.000000');
 
 -- --------------------------------------------------------
 
@@ -107,12 +108,12 @@ CREATE TABLE `equipments` (
 --
 
 INSERT INTO `equipments` (`id`, `equipment_name`, `stocks`, `price`, `status`, `created_at`, `updated_at`, `image_path`, `unit`, `weight`, `tension`) VALUES
-(1, 'Yonex GR 303', 1, 150.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:06:20.000000', '/uploads/equipments/1763665580696-174217441.png', 'Head Heavy', '5U', '30lbs'),
-(2, 'Li-Ning Blaze 100', 15, 80.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:06:33.000000', '/uploads/equipments/1763665593089-172220678.png', NULL, NULL, NULL),
-(3, 'YONEX Arcsaber 7 Play', 25, 100.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:06:59.000000', '/uploads/equipments/1763665619009-798561788.png', NULL, NULL, NULL),
-(4, 'Victor Thruster', 30, 15.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:07:04.000000', '/uploads/equipments/1763665624609-30605186.png', NULL, NULL, NULL),
-(5, 'Apacs Power', 50, 20.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-20 19:07:11.000000', '/uploads/equipments/1763665631982-619789640.png', NULL, NULL, NULL),
-(6, 'AlpSport', 10, 100.00, 'Available', '2025-11-07 04:47:49.382927', '2025-11-20 19:07:18.000000', '/uploads/equipments/1763665638634-241461592.png', NULL, NULL, NULL);
+(1, 'Yonex GR 303', 5, 150.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-23 13:43:03.000000', '/uploads/equipments/1763665580696-174217441.png', 'Head Heavy', '5U', '30lbs'),
+(2, 'Li-Ning Blaze 100', 5, 80.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-23 22:59:44.000000', '/uploads/equipments/1763938769872-935997635.png', 'heavy', '5u', '30lbs'),
+(3, 'YONEX Arcsaber 7 Play', 25, 100.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-23 23:05:39.000000', '/uploads/equipments/1763939139699-706814749.png', 'heavy', '5u', '35lbs'),
+(4, 'Victor Thruster', 5, 15.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-27 00:11:35.000000', '/uploads/equipments/1763665624609-30605186.png', 'Head Heavy', '5u', '29lbs'),
+(5, 'Apacs Power', 5, 20.00, 'Available', '2025-10-14 20:58:18.817183', '2025-11-27 00:11:56.000000', '/uploads/equipments/1763665631982-619789640.png', 'Lightweight', '4U', '33lbs'),
+(6, 'AlpSport', 5, 100.00, 'Available', '2025-11-07 04:47:49.382927', '2025-11-27 00:12:17.000000', '/uploads/equipments/1763665638634-241461592.png', 'Balance', '4U', '33lbs');
 
 -- --------------------------------------------------------
 
@@ -135,23 +136,21 @@ CREATE TABLE `equipment_rentals` (
 --
 
 INSERT INTO `equipment_rentals` (`id`, `reservation_id`, `user_id`, `total_amount`, `notes`, `created_at`, `updated_at`) VALUES
-(1, 149, 1, 320.00, NULL, '2025-10-30 13:28:13.824265', '2025-10-30 13:28:13.000000'),
-(2, 150, 1, 230.00, NULL, '2025-10-30 13:41:20.933232', '2025-10-30 13:41:21.000000'),
-(3, 151, 1, 40.00, NULL, '2025-10-31 01:09:06.393895', '2025-10-31 01:09:06.000000'),
-(4, 153, 1, 150.00, NULL, '2025-10-31 01:11:10.242484', '2025-10-31 01:11:10.000000'),
-(5, 155, 1, 150.00, NULL, '2025-10-31 01:12:10.932383', '2025-10-31 01:12:10.000000'),
-(6, 157, 1, 160.00, NULL, '2025-10-31 01:13:53.678911', '2025-10-31 01:13:53.000000'),
-(7, 158, 1, 300.00, NULL, '2025-10-31 01:15:07.527575', '2025-10-31 01:15:07.000000'),
-(8, 159, 1, 80.00, NULL, '2025-10-31 02:43:00.793482', '2025-10-31 02:43:00.000000'),
-(9, 161, 1, 300.00, NULL, '2025-10-31 02:44:45.240235', '2025-10-31 02:44:45.000000'),
-(10, 164, 1, 150.00, NULL, '2025-10-31 03:18:09.102222', '2025-10-31 03:18:09.000000'),
-(11, 170, 1, 150.00, NULL, '2025-11-09 10:32:35.929218', '2025-11-09 10:32:35.000000'),
-(12, 172, 1, 150.00, NULL, '2025-11-10 12:56:23.445954', '2025-11-10 12:56:23.000000'),
-(13, 173, 1, 300.00, NULL, '2025-11-10 14:09:37.333748', '2025-11-10 14:09:37.000000'),
-(14, 177, 1, 80.00, NULL, '2025-11-10 20:27:49.580969', '2025-11-10 20:27:49.000000'),
-(15, 189, 11, 20.00, NULL, '2025-11-17 09:15:09.229248', '2025-11-17 09:15:09.000000'),
-(16, 212, 11, 180.00, NULL, '2025-11-23 05:42:55.368366', '2025-11-23 05:42:55.000000'),
-(17, 212, 11, 180.00, NULL, '2025-11-23 05:42:55.789104', '2025-11-23 05:42:55.000000');
+(155, 459, 11, 20.00, NULL, '2025-11-29 16:41:01.555785', '2025-11-29 16:41:01.000000'),
+(156, 462, 8, 20.00, NULL, '2025-11-29 18:46:53.371053', '2025-11-29 18:46:53.000000'),
+(157, 465, 8, 750.00, NULL, '2025-11-29 19:11:05.885929', '2025-11-29 19:11:05.000000'),
+(158, 467, 20, 150.00, NULL, '2025-11-29 19:34:44.294532', '2025-11-29 19:34:44.000000'),
+(159, 468, 20, 20.00, NULL, '2025-11-29 19:34:44.392989', '2025-11-29 19:34:44.000000'),
+(160, 469, 8, 160.00, NULL, '2025-11-29 19:45:34.342642', '2025-11-29 19:45:34.000000'),
+(161, 470, 8, 160.00, NULL, '2025-11-29 19:45:34.422709', '2025-11-29 19:45:34.000000'),
+(162, 471, 11, 500.00, NULL, '2025-11-29 19:47:04.252389', '2025-11-29 19:47:04.000000'),
+(163, 473, 11, 1000.00, NULL, '2025-11-29 19:53:04.212725', '2025-11-29 19:53:04.000000'),
+(164, 475, 8, 300.00, NULL, '2025-11-29 20:10:44.846293', '2025-11-29 20:10:44.000000'),
+(165, 476, 8, 300.00, NULL, '2025-11-29 20:10:44.970910', '2025-11-29 20:10:45.000000'),
+(166, 477, 11, 600.00, NULL, '2025-11-29 20:18:56.324745', '2025-11-29 20:18:56.000000'),
+(167, 479, 11, 330.00, NULL, '2025-11-29 20:21:12.523593', '2025-11-29 20:21:12.000000'),
+(168, 482, 8, 20.00, NULL, '2025-11-29 20:23:30.803308', '2025-11-29 20:23:30.000000'),
+(169, 483, 8, 20.00, NULL, '2025-11-29 20:23:30.873125', '2025-11-29 20:23:30.000000');
 
 -- --------------------------------------------------------
 
@@ -167,34 +166,84 @@ CREATE TABLE `equipment_rental_items` (
   `hours` int NOT NULL,
   `hourly_price` decimal(10,2) NOT NULL,
   `subtotal` decimal(10,2) NOT NULL,
-  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `rental_start_time` datetime DEFAULT NULL,
+  `rental_end_time` datetime DEFAULT NULL,
+  `stock_restored` tinyint NOT NULL DEFAULT '0',
+  `notification_sent` tinyint NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data for table `equipment_rental_items`
 --
 
-INSERT INTO `equipment_rental_items` (`id`, `rental_id`, `equipment_id`, `quantity`, `hours`, `hourly_price`, `subtotal`, `created_at`) VALUES
-(1, 1, 2, 1, 2, 80.00, 320.00, '2025-10-30 13:28:13.892574'),
-(2, 2, 1, 1, 1, 150.00, 150.00, '2025-10-30 13:41:20.955639'),
-(3, 2, 2, 1, 1, 80.00, 80.00, '2025-10-30 13:41:20.998462'),
-(4, 3, 5, 1, 2, 20.00, 40.00, '2025-10-31 01:09:06.419475'),
-(5, 4, 1, 1, 1, 150.00, 150.00, '2025-10-31 01:11:10.270803'),
-(6, 5, 1, 1, 1, 150.00, 150.00, '2025-10-31 01:12:10.952737'),
-(7, 6, 2, 1, 2, 80.00, 160.00, '2025-10-31 01:13:53.733347'),
-(8, 7, 3, 1, 3, 100.00, 300.00, '2025-10-31 01:15:07.551766'),
-(9, 8, 2, 1, 1, 80.00, 80.00, '2025-10-31 02:43:00.824241'),
-(10, 9, 1, 2, 1, 150.00, 300.00, '2025-10-31 02:44:45.301931'),
-(11, 10, 1, 1, 1, 150.00, 150.00, '2025-10-31 03:18:09.132273'),
-(12, 11, 1, 1, 1, 150.00, 150.00, '2025-11-09 10:32:35.975569'),
-(13, 12, 1, 1, 1, 150.00, 150.00, '2025-11-10 12:56:23.494898'),
-(14, 13, 1, 1, 2, 150.00, 300.00, '2025-11-10 14:09:37.389912'),
-(15, 14, 2, 1, 1, 80.00, 80.00, '2025-11-10 20:27:49.625485'),
-(16, 15, 5, 1, 1, 20.00, 20.00, '2025-11-17 09:15:09.253039'),
-(17, 16, 5, 1, 1, 20.00, 20.00, '2025-11-23 05:42:55.387990'),
-(18, 16, 2, 2, 1, 80.00, 160.00, '2025-11-23 05:42:55.421683'),
-(19, 17, 5, 1, 1, 20.00, 20.00, '2025-11-23 05:42:55.816813'),
-(20, 17, 2, 2, 1, 80.00, 160.00, '2025-11-23 05:42:55.836416');
+INSERT INTO `equipment_rental_items` (`id`, `rental_id`, `equipment_id`, `quantity`, `hours`, `hourly_price`, `subtotal`, `created_at`, `rental_start_time`, `rental_end_time`, `stock_restored`, `notification_sent`) VALUES
+(195, 155, 5, 1, 1, 20.00, 20.00, '2025-11-29 16:41:01.574021', '2025-11-30 10:00:00', '2025-11-30 11:00:00', 0, 0),
+(196, 156, 5, 1, 1, 20.00, 20.00, '2025-11-29 18:46:53.418749', '2025-11-30 08:00:00', '2025-11-30 09:00:00', 0, 0),
+(197, 157, 1, 5, 1, 150.00, 750.00, '2025-11-29 19:11:05.910455', '2025-11-30 13:00:00', '2025-11-30 14:00:00', 0, 0),
+(198, 158, 1, 1, 1, 150.00, 150.00, '2025-11-29 19:34:44.335961', '2025-11-30 21:00:00', '2025-11-30 22:00:00', 0, 0),
+(199, 159, 5, 1, 1, 20.00, 20.00, '2025-11-29 19:34:44.416327', '2025-11-30 22:00:00', '2025-11-30 23:00:00', 0, 0),
+(200, 160, 2, 2, 1, 80.00, 160.00, '2025-11-29 19:45:34.377044', '2025-12-01 08:00:00', '2025-12-01 09:00:00', 0, 0),
+(201, 161, 2, 2, 1, 80.00, 160.00, '2025-11-29 19:45:34.447145', '2025-12-01 09:00:00', '2025-12-01 10:00:00', 0, 0),
+(202, 162, 6, 5, 1, 100.00, 500.00, '2025-11-29 19:47:04.277911', '2025-12-01 10:00:00', '2025-12-01 11:00:00', 0, 0),
+(203, 163, 6, 5, 1, 100.00, 500.00, '2025-11-29 19:53:04.224745', '2025-12-01 12:00:00', '2025-12-01 13:00:00', 0, 0),
+(204, 163, 6, 5, 1, 100.00, 500.00, '2025-11-29 19:53:04.237373', '2025-12-01 12:00:00', '2025-12-01 13:00:00', 0, 0),
+(205, 164, 6, 3, 1, 100.00, 300.00, '2025-11-29 20:10:44.890475', '2025-12-01 21:00:00', '2025-12-01 22:00:00', 0, 0),
+(206, 165, 6, 3, 1, 100.00, 300.00, '2025-11-29 20:10:45.024555', '2025-12-01 22:00:00', '2025-12-01 23:00:00', 0, 0),
+(207, 166, 1, 2, 1, 150.00, 300.00, '2025-11-29 20:18:56.340708', '2025-12-02 08:00:00', '2025-12-02 09:00:00', 0, 0),
+(208, 166, 1, 2, 1, 150.00, 300.00, '2025-11-29 20:18:56.359321', '2025-12-02 08:00:00', '2025-12-02 09:00:00', 0, 0),
+(209, 167, 6, 1, 1, 100.00, 100.00, '2025-11-29 20:21:12.554576', '2025-12-03 08:00:00', '2025-12-03 09:00:00', 0, 0),
+(210, 167, 1, 1, 1, 150.00, 150.00, '2025-11-29 20:21:12.585617', '2025-12-03 08:00:00', '2025-12-03 09:00:00', 0, 0),
+(211, 167, 2, 1, 1, 80.00, 80.00, '2025-11-29 20:21:12.629406', '2025-12-03 08:00:00', '2025-12-03 09:00:00', 0, 0),
+(212, 168, 5, 1, 1, 20.00, 20.00, '2025-11-29 20:23:30.830626', '2025-11-30 15:00:00', '2025-11-30 16:00:00', 0, 0),
+(213, 169, 5, 1, 1, 20.00, 20.00, '2025-11-29 20:23:30.899837', '2025-11-30 16:00:00', '2025-11-30 17:00:00', 0, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `fee_management`
+--
+
+CREATE TABLE `fee_management` (
+  `id` int NOT NULL,
+  `player_id` int NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `player_name` varchar(120) NOT NULL,
+  `player_sex` enum('male','female') NOT NULL,
+  `games_played` int NOT NULL DEFAULT '0',
+  `shuttle_fee` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `court_fee` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `payment_status` enum('paid','unpaid') NOT NULL DEFAULT 'unpaid',
+  `fee_date` date NOT NULL,
+  `notes` text,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `fee_management_history`
+--
+
+CREATE TABLE `fee_management_history` (
+  `id` int NOT NULL,
+  `player_id` int NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `player_name` varchar(120) NOT NULL,
+  `player_sex` enum('male','female') NOT NULL,
+  `games_played` int NOT NULL DEFAULT '0',
+  `shuttle_fee` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `court_fee` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `payment_status` enum('paid','unpaid') NOT NULL DEFAULT 'unpaid',
+  `fee_date` date NOT NULL,
+  `paid_at` timestamp NULL DEFAULT NULL,
+  `notes` text,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -223,7 +272,8 @@ INSERT INTO `gallery` (`id`, `title`, `description`, `image_path`, `status`, `so
 (3, 'Group Photo 3', 'Client group photo from competition', '/assets/img/home-page/GALLERY/IMAGE 3.jpg', 'active', 3, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189'),
 (4, 'Group Photo 4', 'Client group photo from match', '/assets/img/home-page/GALLERY/IMAGE 4.jpg', 'active', 4, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189'),
 (5, 'Group Photo 5', 'Client group photo from championship', '/assets/img/home-page/GALLERY/IMAGE 5.jpg', 'active', 5, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189'),
-(6, 'Group Photo 6', 'Client group photo from finals', '/assets/img/home-page/GALLERY/IMAGE 6.jpg', 'active', 6, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189');
+(6, 'Group Photo 6', 'Client group photo from finals', '/assets/img/home-page/GALLERY/IMAGE 6.jpg', 'active', 6, '2025-10-23 02:23:55.779686', '2025-10-23 02:23:56.071189'),
+(7, 'sdadvasd', NULL, '/uploads/gallery/1763886260743-445033276.jpg', 'active', 0, '2025-11-23 08:24:20.762591', '2025-11-23 08:24:20.762591');
 
 -- --------------------------------------------------------
 
@@ -243,6 +293,31 @@ CREATE TABLE `migrations` (
 
 INSERT INTO `migrations` (`id`, `timestamp`, `name`) VALUES
 (1, 1737129600000, 'AddUserIdToQueueTables1737129600000');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int NOT NULL,
+  `type` enum('equipment_rental_expired') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `message` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT '0',
+  `equipment_rental_item_id` int DEFAULT NULL,
+  `user_id` int DEFAULT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `type`, `title`, `message`, `is_read`, `equipment_rental_item_id`, `user_id`, `created_at`, `updated_at`) VALUES
+(1, 'equipment_rental_expired', 'Equipment Return Reminder - Apacs Power', 'Ivan Louis Cielo needs to return 1 Apacs Power(s). Rental period ended on November 29, 2025 at 05:00 PM.', 1, 187, 11, '2025-11-29 09:55:00.418778', '2025-11-29 10:13:39.000000');
 
 -- --------------------------------------------------------
 
@@ -268,86 +343,31 @@ CREATE TABLE `payments` (
 --
 
 INSERT INTO `payments` (`id`, `reservation_id`, `amount`, `payment_method`, `status`, `transaction_id`, `reference_number`, `notes`, `created_at`, `updated_at`) VALUES
-(68, 127, 220.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761209997804', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 08:59:57.824040', '2025-10-23 08:59:57.824040'),
-(69, 126, 220.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761209997808', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 08:59:57.832210', '2025-10-23 08:59:57.832210'),
-(70, 128, 250.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761210255760', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:04:15.770842', '2025-10-23 09:04:15.770842'),
-(71, 129, 250.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761210255805', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:04:15.810440', '2025-10-23 09:04:15.810440'),
-(72, 130, 250.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761210306710', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:05:06.748664', '2025-10-23 09:05:06.748664'),
-(73, 131, 250.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761210306850', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:05:06.867594', '2025-10-23 09:05:06.867594'),
-(74, 132, 250.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761210412805', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:06:52.829794', '2025-10-23 09:06:52.829794'),
-(75, 133, 250.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761210413207', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:06:53.219679', '2025-10-23 09:06:53.219679'),
-(76, 134, 250.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761210429129', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:07:09.171961', '2025-10-23 09:07:09.171961'),
-(77, 135, 250.00, 'GCash', 'Completed', '{CHECKOUT_SESSION_ID}', 'REF1761210429282', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:07:09.302054', '2025-10-23 09:07:09.302054'),
-(79, 136, 220.00, 'Maya', 'Completed', 'pay_818hur8BGQvst4DnLEyrYL9g', 'REF1761213773964', 'Badminton Court Booking - October 31, 2025', '2025-10-23 10:02:53.972219', '2025-10-23 10:02:53.972219'),
-(80, 137, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1761213789495', 'Test payment - paymaya', '2025-10-23 10:03:09.503216', '2025-10-23 10:03:09.503216'),
-(81, 138, 250.00, 'GrabPay', 'Completed', 'pay_coF9JHRWYN4JagiWDsvMFtP1', 'REF1761214193180', 'Badminton Court Booking - October 31, 2025', '2025-10-23 10:09:53.191372', '2025-10-23 10:09:53.191372'),
-(82, 139, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1761814731593', 'Test payment - paymaya', '2025-10-30 08:58:51.599719', '2025-10-30 08:58:51.599719'),
-(83, 140, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1761816776719', 'Test payment - paymaya', '2025-10-30 09:32:56.724713', '2025-10-30 09:32:56.724713'),
-(84, 141, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1761818092523', 'Test payment - paymaya', '2025-10-30 09:54:52.529734', '2025-10-30 09:54:52.529734'),
-(85, 142, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1761818265035', 'Test payment - paymaya', '2025-10-30 09:57:45.042454', '2025-10-30 09:57:45.042454'),
-(86, 143, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1761820897448', 'Test payment - paymaya', '2025-10-30 10:41:37.453059', '2025-10-30 10:41:37.453059'),
-(87, 144, 250.00, 'GrabPay', 'Completed', 'pay_wgyXjDbe6pSZiJzKn6Wwj2rB', 'REF1761823157168', 'Badminton Court Booking - November 3, 2025', '2025-10-30 11:19:17.174508', '2025-10-30 11:19:17.174508'),
-(88, 145, 350.00, 'GCash', 'Completed', 'pay_gn1XHrmK9XSaBNc3zBXMKuCi', 'REF1761823251011', 'Badminton Court Booking - December 10, 2025', '2025-10-30 11:20:51.019615', '2025-10-30 11:20:51.019615'),
-(90, 146, 370.00, 'GrabPay', 'Completed', 'pay_kupruQghp4qaLKLPTURbuFVd', 'REF1761825279474', 'Badminton Court Booking - October 31, 2025', '2025-10-30 11:54:39.479324', '2025-10-30 11:54:39.479324'),
-(91, 147, 750.00, 'GrabPay', 'Completed', 'pay_vNLam3keKEEuLgYahNh5V4AF', 'REF1761828198209', 'Badminton Court Booking - February 24, 2026', '2025-10-30 12:43:18.215466', '2025-10-30 12:43:18.215466'),
-(92, 148, 550.00, 'GCash', 'Completed', 'pay_ioESVFmK2TQUdibbpVKuDZfw', 'REF1761830333249', 'Badminton Court Booking - January 1, 2026', '2025-10-30 13:18:53.267687', '2025-10-30 13:18:53.267687'),
-(93, 149, 570.00, 'Maya', 'Completed', 'pay_YdSshtGyX2uyqJofw7pLMhTo', 'REF1761830893785', 'Badminton Court Booking - December 25, 2025', '2025-10-30 13:28:13.790329', '2025-10-30 13:28:13.790329'),
-(94, 150, 480.00, 'Maya', 'Completed', 'pay_ipjteGNvKBJ4TDtJsnHxaN7P', 'REF1761831680901', 'Badminton Court Booking - December 20, 2025', '2025-10-30 13:41:20.908500', '2025-10-30 13:41:20.908500'),
-(95, 151, 640.00, 'GrabPay', 'Completed', 'pay_nhDhTvbYdGCcqN4xHGukNVmk', 'REF1761872946367', 'Badminton Court Booking - November 25, 2025', '2025-10-31 01:09:06.373445', '2025-10-31 01:09:06.373445'),
-(96, 153, 650.00, 'Maya', 'Completed', 'pay_ZeXSheEG7uGFXw5VFfdsZ2vq', 'REF1761873070189', 'Badminton Court Booking - January 1, 2026', '2025-10-31 01:11:10.200240', '2025-10-31 01:11:10.200240'),
-(97, 155, 650.00, 'Maya', 'Completed', 'pay_ZeXSheEG7uGFXw5VFfdsZ2vq', 'REF1761873130909', 'Badminton Court Booking - January 1, 2026', '2025-10-31 01:12:10.913757', '2025-10-31 01:12:10.913757'),
-(98, 157, 410.00, 'GrabPay', 'Completed', 'pay_EsGWksE8J8wprQSSMTkLVGpu', 'REF1761873233625', 'Badminton Court Booking - February 2, 2026', '2025-10-31 01:13:53.632449', '2025-10-31 01:13:53.632449'),
-(99, 158, 550.00, 'Maya', 'Completed', 'pay_hqk3PsSh5G235MiBb5L1GAZt', 'REF1761873307493', 'Badminton Court Booking - October 31, 2025', '2025-10-31 01:15:07.500067', '2025-10-31 01:15:07.500067'),
-(100, 159, 580.00, 'GrabPay', 'Completed', 'pay_ar2LUR4cdfPnSNVkNjz5YD1D', 'REF1761878580723', 'Badminton Court Booking - October 31, 2025', '2025-10-31 02:43:00.735427', '2025-10-31 02:43:00.735427'),
-(101, 161, 900.00, 'Maya', 'Completed', 'pay_aEAQhkY7acsRqEyiV1U9dQ17', 'REF1761878685183', 'Badminton Court Booking - October 31, 2025', '2025-10-31 02:44:45.194355', '2025-10-31 02:44:45.194355'),
-(102, 163, 250.00, 'Maya', 'Completed', 'pay_cHWzQisrsfeu8rPsXiWzPFic', 'REF1761880104045', 'Badminton Court Booking - November 25, 2025', '2025-10-31 03:08:24.072206', '2025-10-31 03:08:24.072206'),
-(103, 164, 400.00, 'GrabPay', 'Completed', 'pay_jXPVqN7b5F8qKJvuRZVCqAE5', 'REF1761880689055', 'Badminton Court Booking - January 1, 2026', '2025-10-31 03:18:09.077328', '2025-10-31 03:18:09.077328'),
-(104, 165, 500.00, 'Maya', 'Completed', 'pay_sxTigqvKzPHcr9krJsZWosPf', 'REF1761908683810', 'Badminton Court Booking - October 31, 2025', '2025-10-31 11:04:43.816536', '2025-10-31 11:04:43.816536'),
-(105, 168, 220.00, 'Cash', 'Completed', 'CASH1762498094914113', '17624980931341YI1V', 'Payment received in cash', '2025-11-07 06:48:14.920804', '2025-11-07 06:48:14.920804'),
-(106, 169, 220.00, 'Cash', 'Completed', 'CASH1762498311082300', '1762498306407FK9U8', 'Payment received in cash', '2025-11-07 06:51:51.122687', '2025-11-07 06:51:51.122687'),
-(107, 170, 650.00, 'GCash', 'Completed', 'pay_7uDtcRsYYVgPSwUz7CTXauPF', 'REF1762684355890', 'Badminton Court Booking - November 9, 2025', '2025-11-09 10:32:35.898406', '2025-11-09 10:32:35.898406'),
-(108, 172, 400.00, 'Maya', 'Completed', 'pay_kiBPbghLYJCGxUzbapmoPpwx', 'REF1762779383405', 'Badminton Court Booking - November 10, 2025', '2025-11-10 12:56:23.410232', '2025-11-10 12:56:23.410232'),
-(110, 173, 550.00, 'GCash', 'Completed', 'pay_t4HTJBPkRwYsc5LhK4ow4NJ7', 'REF1762783777259', 'Badminton Court Booking - November 11, 2025', '2025-11-10 14:09:37.265497', '2025-11-10 14:09:37.265497'),
-(111, 174, 250.00, 'QR Ph', 'Pending', 'code_M4FKmbq8Ub6y4VtnZ1ULBkpS', '17628015056865P7LE', 'Pay via QR Ph code generated (code_M4FKmbq8Ub6y4VtnZ1ULBkpS). Notes: Reservation 17628015056865P7LE', '2025-11-10 19:05:14.809018', '2025-11-10 19:05:14.809018'),
-(112, 175, 250.00, 'GCash', 'Completed', 'pay_ZDmoDQPhrGP7owJEQUrTnrTt', 'REF1762804195560', 'Badminton Court Booking - November 12, 2025', '2025-11-10 19:49:55.565379', '2025-11-10 19:49:55.565379'),
-(113, 176, 250.00, 'QR Ph', 'Pending', 'code_h2wsstMJfZ7JV9tZDnsLzqGG', '1762805594490ET20G', 'Pay via QR Ph code generated (code_h2wsstMJfZ7JV9tZDnsLzqGG). Notes: Reservation 1762805594490ET20G', '2025-11-10 20:13:21.720927', '2025-11-10 20:13:21.720927'),
-(114, 177, 330.00, 'GrabPay', 'Completed', 'pay_hRvUdYVRBLVbkG3Xnfjfpi9D', 'REF1762806469519', 'Badminton Court Booking - November 11, 2025', '2025-11-10 20:27:49.528375', '2025-11-10 20:27:49.528375'),
-(115, 178, 500.00, 'GCash', 'Completed', 'pay_ymgt6DFc9rsdrWh52iBCnwG7', 'REF1762806652522', 'Badminton Court Booking - November 11, 2025', '2025-11-10 20:30:52.529046', '2025-11-10 20:30:52.529046'),
-(116, 180, 250.00, 'Cash', 'Completed', 'CASH1762811042621656', '1762811037910CU6GX', 'Payment received in cash - Walk-in customer: NATHAN | Contact: +639498680515 | Email: zhiky090924@gmail.com', '2025-11-10 21:44:02.641470', '2025-11-10 21:44:02.641470'),
-(117, 181, 250.00, 'GCash', 'Completed', 'pay_6WWEtfLLZRMi2mgrTgj9BX7s', 'REF1762811603171', 'Badminton Court Booking - 2025-11-12', '2025-11-10 21:53:23.179321', '2025-11-10 21:53:23.179321'),
-(118, 182, 250.00, 'QR Ph', 'Pending', 'code_NVWVnA46NbENrnAykqMWsWnn', '1762856697767WD3LZ', 'Pay via QR Ph code generated (code_NVWVnA46NbENrnAykqMWsWnn). Notes: Reservation 1762856697767WD3LZ - POGI. Walk-in customer: POGI | Contact: 09498680515 | Email: baktolbomb@gmail.com', '2025-11-11 10:25:03.160569', '2025-11-11 10:25:03.160569'),
-(119, 183, 250.00, 'QR Ph', 'Pending', 'code_GskUjaSRhb4qAqgLUfBf1Cph', '1762856990342G4BDC', 'Pay via QR Ph code generated (code_GskUjaSRhb4qAqgLUfBf1Cph). Notes: Reservation 1762856990342G4BDC - filbert. Walk-in customer: filbert | Contact: 09498680515 | Email: zhiky090924@gmail.com', '2025-11-11 10:29:52.770267', '2025-11-11 10:29:52.770267'),
-(120, 184, 250.00, 'QR Ph', 'Pending', 'code_z2QhpvnJX6CbTH2w8WdoFfbA', '1762857078784NQSLY', 'Pay via QR Ph code generated (code_z2QhpvnJX6CbTH2w8WdoFfbA). Notes: Reservation 1762857078784NQSLY - POGI NAMAN NETO. Walk-in customer: POGI NAMAN NETO | Contact: 09498680515 | Email: baktolbomb@gmail.com', '2025-11-11 10:31:21.157893', '2025-11-11 10:31:21.157893'),
-(121, 185, 500.00, 'QR Ph', 'Pending', 'code_CqNxQjrg9kftKnJfK82yHksn', '17628602956507KXW8', 'Pay via QR Ph code generated (code_CqNxQjrg9kftKnJfK82yHksn). Notes: Reservation 17628602956507KXW8 - NATHAN. Walk-in customer: NATHAN | Contact: +639498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:25:18.559415', '2025-11-11 11:25:18.559415'),
-(122, 187, 250.00, 'QR Ph', 'Pending', 'code_xwntBEC3HLFXf628sHxCvkKt', '1762861756706JQP83', 'Pay via QR Ph code generated (code_xwntBEC3HLFXf628sHxCvkKt). Notes: Reservation 1762861756706JQP83 - kukurikabu. Walk-in customer: kukurikabu | Contact: 09498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:49:23.183615', '2025-11-11 11:49:23.183615'),
-(123, 188, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1763370662799', 'Test payment - paymaya', '2025-11-17 09:11:02.802705', '2025-11-17 09:11:02.802705'),
-(124, 189, 270.00, 'Cash', 'Completed', 'CASH176337090928155', '1763370907250DO7DH', 'Payment received in cash - Walk-in customer: Ivan Louis Cielo | Contact: 09366274094 | Email: cieloivanlouis@gmail.com', '2025-11-17 09:15:09.284738', '2025-11-17 09:15:09.284738'),
-(125, 190, 250.00, 'QR Ph', 'Pending', 'code_oYECzaU5cvFTK9FAneas8a7i', '1763640187618HRO60', 'Pay via QR Ph code generated (code_oYECzaU5cvFTK9FAneas8a7i). Notes: Reservation 1763640187618HRO60 - Ivan Louis Cielo. Walk-in customer: Ivan Louis Cielo | Contact: 09366274094 | Email: cieloivanlouis@gmail.com', '2025-11-20 12:03:41.470987', '2025-11-20 12:03:41.470987'),
-(126, 191, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1763795044962', 'Test payment - paymaya', '2025-11-22 07:04:04.966440', '2025-11-22 07:04:04.966440'),
-(127, 194, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1763798825036', 'Test payment - paymaya', '2025-11-22 08:07:05.040908', '2025-11-22 08:07:05.040908'),
-(128, 195, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1763801877901', 'Test payment - paymaya', '2025-11-22 08:57:57.905205', '2025-11-22 08:57:57.905205'),
-(129, 196, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1763803804358', 'Test payment - paymaya', '2025-11-22 09:30:04.362408', '2025-11-22 09:30:04.362408'),
-(130, 197, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1763803972165', 'Test payment - paymaya', '2025-11-22 09:32:52.169974', '2025-11-22 09:32:52.169974'),
-(131, 198, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1763804374079', 'Test payment - paymaya', '2025-11-22 09:39:34.082114', '2025-11-22 09:39:34.082114'),
-(132, 199, 220.00, 'Maya', 'Completed', 'pay_test123', 'REF1763804710695', 'Test payment - paymaya', '2025-11-22 09:45:10.698143', '2025-11-22 09:45:10.698143'),
-(133, 200, 250.00, 'GCash', 'Completed', 'pay_D3vmfkhUntxsJASzqg4jsypE', 'REF1763872902382', 'Badminton Court Booking - 2025-11-23', '2025-11-23 04:41:42.414637', '2025-11-23 04:41:42.414637'),
-(134, 201, 250.00, 'GCash', 'Completed', 'pay_D3vmfkhUntxsJASzqg4jsypE', 'REF1763872903072', 'Badminton Court Booking - 2025-11-23', '2025-11-23 04:41:43.076043', '2025-11-23 04:41:43.076043'),
-(135, 202, 250.00, 'GCash', 'Completed', 'pay_35ruNmnKqoUMmpURFBzoWADK', 'REF1763873405009', 'Badminton Court Booking - 2025-11-23', '2025-11-23 04:50:05.027336', '2025-11-23 04:50:05.027336'),
-(136, 203, 250.00, 'GCash', 'Completed', 'pay_35ruNmnKqoUMmpURFBzoWADK', 'REF1763873405438', 'Badminton Court Booking - 2025-11-23', '2025-11-23 04:50:05.441804', '2025-11-23 04:50:05.441804'),
-(137, 204, 250.00, 'GrabPay', 'Completed', 'pay_Gs7k6eGeFX5DqEa95KuQJ2Q7', 'REF1763874033221', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:00:33.230766', '2025-11-23 05:00:33.230766'),
-(138, 205, 250.00, 'GrabPay', 'Completed', 'pay_Gs7k6eGeFX5DqEa95KuQJ2Q7', 'REF1763874033718', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:00:33.725175', '2025-11-23 05:00:33.725175'),
-(139, 206, 250.00, 'GCash', 'Completed', 'pay_q8KY4dSH6uFfvQuguavbGR3f', 'REF1763874115610', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:01:55.614603', '2025-11-23 05:01:55.614603'),
-(140, 207, 250.00, 'GCash', 'Completed', 'pay_q8KY4dSH6uFfvQuguavbGR3f', 'REF1763874115915', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:01:55.918162', '2025-11-23 05:01:55.918162'),
-(141, 208, 250.00, 'GrabPay', 'Completed', 'pay_7Pd8bd7V9c94b3jEQGxNgmQq', 'REF1763874580209', 'Badminton Court Booking - 2025-11-24', '2025-11-23 05:09:40.216114', '2025-11-23 05:09:40.216114'),
-(142, 209, 250.00, 'GrabPay', 'Completed', 'pay_7Pd8bd7V9c94b3jEQGxNgmQq', 'REF1763874580594', 'Badminton Court Booking - 2025-11-24', '2025-11-23 05:09:40.597407', '2025-11-23 05:09:40.597407'),
-(143, 210, 250.00, 'Maya', 'Completed', 'pay_4gFBu41rJxicXw2JoezzTe85', 'REF1763875260591', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:21:00.596239', '2025-11-23 05:21:00.596239'),
-(144, 210, 250.00, 'Maya', 'Completed', 'pay_4gFBu41rJxicXw2JoezzTe85', 'REF1763875261017', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:21:01.021260', '2025-11-23 05:21:01.021260'),
-(145, 211, 250.00, 'GCash', 'Completed', 'pay_uCkWxW9VWV5jtEFd6g8oeMiS', 'REF1763876138385', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:35:38.389315', '2025-11-23 05:35:38.389315'),
-(146, 211, 250.00, 'GCash', 'Completed', 'pay_uCkWxW9VWV5jtEFd6g8oeMiS', 'REF1763876138867', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:35:38.869942', '2025-11-23 05:35:38.869942'),
-(147, 212, 900.00, 'GrabPay', 'Completed', 'pay_Gc2k83cWkX6Y3nvKMMgXeEQr', 'REF1763876575345', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:42:55.351378', '2025-11-23 05:42:55.351378'),
-(148, 212, 900.00, 'GrabPay', 'Completed', 'pay_Gc2k83cWkX6Y3nvKMMgXeEQr', 'REF1763876575760', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:42:55.766658', '2025-11-23 05:42:55.766658'),
-(149, 215, 750.00, 'GrabPay', 'Completed', 'pay_B3JrS9SJXQ8KDLXKskeBTHTR', 'REF1763876737222', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:45:37.225957', '2025-11-23 05:45:37.225957'),
-(150, 215, 750.00, 'GrabPay', 'Completed', 'pay_B3JrS9SJXQ8KDLXKskeBTHTR', 'REF1763876737679', 'Badminton Court Booking - 2025-11-23', '2025-11-23 05:45:37.687004', '2025-11-23 05:45:37.687004');
+(554, 460, 250.00, 'Maya', 'Completed', 'pay_5GZSaMgCxaVhJbjy7NVt6eQw', '1764434435381PQEXO', 'Badminton Court Booking - 2025-11-30', '2025-11-29 16:41:01.529117', '2025-11-29 16:41:01.529117'),
+(555, 459, 250.00, 'Maya', 'Completed', 'pay_5GZSaMgCxaVhJbjy7NVt6eQw', '1764434435381PQEXO', 'Badminton Court Booking - 2025-11-30', '2025-11-29 16:41:01.534372', '2025-11-29 16:41:01.534372'),
+(556, 461, 220.00, 'GCash', 'Completed', 'admin_cash_1764441923923', 'REF1764441924539', 'Payment via Paymongo - admin_cash_1764441923923', '2025-11-29 18:45:24.542748', '2025-11-29 18:45:24.542748'),
+(557, 462, 490.00, 'GCash', 'Completed', 'admin_qrph_1764442013252', 'REF1764442013348', 'Payment via Paymongo - admin_qrph_1764442013252', '2025-11-29 18:46:53.350814', '2025-11-29 18:46:53.350814'),
+(558, 463, 490.00, 'GCash', 'Completed', 'admin_qrph_1764442013252', 'REF1764442013461', 'Payment via Paymongo - admin_qrph_1764442013252', '2025-11-29 18:46:53.464593', '2025-11-29 18:46:53.464593'),
+(559, 464, 250.00, 'GCash', 'Completed', 'admin_cash_1764443352728', 'REF1764443352783', 'Payment via Paymongo - admin_cash_1764443352728', '2025-11-29 19:09:12.786454', '2025-11-29 19:09:12.786454'),
+(560, 465, 1000.00, 'GCash', 'Completed', 'admin_cash_1764443465783', 'REF1764443465863', 'Payment via Paymongo - admin_cash_1764443465783', '2025-11-29 19:11:05.864811', '2025-11-29 19:11:05.864811'),
+(561, 466, 250.00, 'GCash', 'Completed', 'admin_cash_1764443710045', 'REF1764443710196', 'Payment via Paymongo - admin_cash_1764443710045', '2025-11-29 19:15:10.218448', '2025-11-29 19:15:10.218448'),
+(562, 467, 670.00, 'GCash', 'Completed', 'admin_cash_1764444883573', 'REF1764444884265', 'Payment via Paymongo - admin_cash_1764444883573', '2025-11-29 19:34:44.268010', '2025-11-29 19:34:44.268010'),
+(563, 468, 670.00, 'GCash', 'Completed', 'admin_cash_1764444883573', 'REF1764444884378', 'Payment via Paymongo - admin_cash_1764444883573', '2025-11-29 19:34:44.380010', '2025-11-29 19:34:44.380010'),
+(564, 469, 820.00, 'GCash', 'Completed', 'admin_cash_1764445534183', 'REF1764445534321', 'Payment via Paymongo - admin_cash_1764445534183', '2025-11-29 19:45:34.322768', '2025-11-29 19:45:34.322768'),
+(565, 470, 820.00, 'GCash', 'Completed', 'admin_cash_1764445534183', 'REF1764445534409', 'Payment via Paymongo - admin_cash_1764445534183', '2025-11-29 19:45:34.411887', '2025-11-29 19:45:34.411887'),
+(566, 471, 220.00, 'GrabPay', 'Completed', 'pay_CMHErPzTpj4FnqNTwfYpxoGX', '1764445611478AH9E4', 'Badminton Court Booking - 2025-12-01', '2025-11-29 19:47:04.177494', '2025-11-29 19:47:04.177494'),
+(567, 472, 250.00, 'GrabPay', 'Completed', 'pay_CMHErPzTpj4FnqNTwfYpxoGX', '1764445611478AH9E4', 'Badminton Court Booking - 2025-12-01', '2025-11-29 19:47:04.178516', '2025-11-29 19:47:04.178516'),
+(568, 474, 250.00, 'Maya', 'Completed', 'pay_AERL9NB7vJkV8j7qbJbTS9er', '1764445975181LNU05', 'Badminton Court Booking - 2025-12-01', '2025-11-29 19:53:04.197091', '2025-11-29 19:53:04.197091'),
+(569, 473, 220.00, 'Maya', 'Completed', 'pay_AERL9NB7vJkV8j7qbJbTS9er', '1764445975181LNU05', 'Badminton Court Booking - 2025-12-01', '2025-11-29 19:53:04.198238', '2025-11-29 19:53:04.198238'),
+(570, 475, 1100.00, 'GCash', 'Completed', 'admin_cash_1764447044663', 'REF1764447044816', 'Payment via Paymongo - admin_cash_1764447044663', '2025-11-29 20:10:44.823053', '2025-11-29 20:10:44.823053'),
+(571, 476, 1100.00, 'GCash', 'Completed', 'admin_cash_1764447044663', 'REF1764447044945', 'Payment via Paymongo - admin_cash_1764447044663', '2025-11-29 20:10:44.948714', '2025-11-29 20:10:44.948714'),
+(572, 477, 250.00, 'GrabPay', 'Completed', 'pay_phbqEu9P2r1QtVqPzEtW81o5', '1764447505163O4TS2', 'Badminton Court Booking - 2025-12-02', '2025-11-29 20:18:56.296027', '2025-11-29 20:18:56.296027'),
+(573, 478, 220.00, 'GrabPay', 'Completed', 'pay_phbqEu9P2r1QtVqPzEtW81o5', '1764447505163O4TS2', 'Badminton Court Booking - 2025-12-02', '2025-11-29 20:18:56.297158', '2025-11-29 20:18:56.297158'),
+(574, 479, 220.00, 'GrabPay', 'Completed', 'pay_xrWMbS4rxzzW8V1jMaBsrQya', '1764447659383NVCLR', 'Badminton Court Booking - 2025-12-03', '2025-11-29 20:21:12.464266', '2025-11-29 20:21:12.464266'),
+(575, 481, 250.00, 'GrabPay', 'Completed', 'pay_xrWMbS4rxzzW8V1jMaBsrQya', '1764447659383NVCLR', 'Badminton Court Booking - 2025-12-03', '2025-11-29 20:21:12.467070', '2025-11-29 20:21:12.467070'),
+(576, 480, 250.00, 'GrabPay', 'Completed', 'pay_xrWMbS4rxzzW8V1jMaBsrQya', '1764447659383NVCLR', 'Badminton Court Booking - 2025-12-03', '2025-11-29 20:21:12.465574', '2025-11-29 20:21:12.465574'),
+(577, 482, 510.00, 'GCash', 'Completed', 'admin_cash_1764447810711', 'REF1764447810790', 'Payment via Paymongo - admin_cash_1764447810711', '2025-11-29 20:23:30.791535', '2025-11-29 20:23:30.791535'),
+(578, 483, 510.00, 'GCash', 'Completed', 'admin_cash_1764447810711', 'REF1764447810859', 'Payment via Paymongo - admin_cash_1764447810711', '2025-11-29 20:23:30.861919', '2025-11-29 20:23:30.861919');
 
 -- --------------------------------------------------------
 
@@ -362,15 +382,6 @@ CREATE TABLE `queueing_courts` (
   `created_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `queueing_courts`
---
-
-INSERT INTO `queueing_courts` (`id`, `name`, `status`, `created_at`, `updated_at`) VALUES
-(20, 'Court 1', 'available', '2025-11-21 20:51:27.205213', '2025-11-22 07:06:01.000000'),
-(21, 'Court 2', 'available', '2025-11-21 20:51:29.196099', '2025-11-21 23:06:08.000000'),
-(22, 'Court 3', 'available', '2025-11-21 20:51:31.917685', '2025-11-21 20:51:31.917685');
 
 -- --------------------------------------------------------
 
@@ -393,6 +404,60 @@ CREATE TABLE `queue_matches` (
   `winner` enum('teamA','teamB','draw') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `user_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `queue_matches`
+--
+
+INSERT INTO `queue_matches` (`id`, `gameType`, `status`, `teamA`, `teamB`, `court_id`, `court_name`, `started_at`, `completed_at`, `created_at`, `updated_at`, `winner`, `user_id`) VALUES
+(144, 'mens-doubles', 'completed', '[{\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 135, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-23 08:21:51', '2025-11-23 08:22:00', '2025-11-23 08:21:50.906662', '2025-11-24 05:34:52.000000', 'teamA', 11),
+(145, 'mens-doubles', 'completed', '[{\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 135, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-23 08:22:36', '2025-11-23 08:32:37', '2025-11-23 08:22:35.522298', '2025-11-24 05:34:52.000000', 'teamB', 11),
+(146, 'mens-doubles', 'completed', '[{\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 135, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', NULL, 'Court 2', '2025-11-23 08:32:38', '2025-11-23 14:56:21', '2025-11-23 08:22:48.710203', '2025-11-23 14:56:21.000000', 'teamA', 11),
+(147, 'mens-doubles', 'completed', '[{\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', '[{\"id\": 135, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}, {\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-23 15:17:02', '2025-11-23 15:45:00', '2025-11-23 15:17:02.389460', '2025-11-24 05:34:52.000000', 'teamA', 11),
+(148, 'mixed-doubles', 'cancelled', '[{\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 139, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 138, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-23 15:45:01', '2025-11-23 15:45:08', '2025-11-23 15:17:20.835935', '2025-11-24 05:34:52.000000', NULL, 11),
+(149, 'mixed-doubles', 'completed', '[{\"id\": 135, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}, {\"id\": 139, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 138, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-23 21:08:27', '2025-11-23 21:08:50', '2025-11-23 21:08:27.293739', '2025-11-24 05:34:52.000000', 'teamB', 11),
+(150, 'mixed-doubles', 'completed', '[{\"id\": 135, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}, {\"id\": 138, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', '[{\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 139, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-23 22:55:45', '2025-11-23 22:57:28', '2025-11-23 22:55:45.071410', '2025-11-24 05:34:52.000000', 'teamA', 11),
+(151, 'mens-doubles', 'completed', '[{\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 142, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}]', '[{\"id\": 143, \"sex\": \"male\", \"name\": \"Benito\", \"skill\": \"Advanced\"}, {\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', NULL, 'Court 2', '2025-11-23 22:56:10', '2025-11-23 22:56:25', '2025-11-23 22:56:09.870424', '2025-11-23 22:56:25.000000', 'teamA', 11),
+(152, 'mens-doubles', 'completed', '[{\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 142, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}]', '[{\"id\": 135, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}, {\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-23 22:57:28', '2025-11-23 22:57:33', '2025-11-23 22:56:21.147471', '2025-11-24 05:34:54.000000', 'teamA', 11),
+(153, 'mens-doubles', 'completed', '[{\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', '[{\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 142, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-23 23:02:51', '2025-11-23 23:03:37', '2025-11-23 23:02:51.495680', '2025-11-24 05:34:52.000000', 'teamA', 11),
+(154, 'mixed-doubles', 'completed', '[{\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 138, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', '[{\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 139, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, 'Court 2', '2025-11-23 23:03:48', '2025-11-23 23:03:51', '2025-11-23 23:03:14.323304', '2025-11-23 23:03:50.000000', 'teamA', 11),
+(155, 'womens-doubles', 'completed', '[{\"id\": 139, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 138, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}]', '[{\"id\": 140, \"sex\": \"female\", \"name\": \"lala\", \"skill\": \"Advanced\"}, {\"id\": 141, \"sex\": \"female\", \"name\": \"lele\", \"skill\": \"Advanced\"}]', NULL, 'Court 2', '2025-11-23 23:03:33', '2025-11-23 23:03:47', '2025-11-23 23:03:32.509121', '2025-11-23 23:03:47.000000', 'teamA', 11),
+(156, 'mixed-doubles', 'completed', '[{\"id\": 146, \"sex\": \"male\", \"name\": \"levy\", \"skill\": \"Intermediate\"}, {\"id\": 147, \"sex\": \"female\", \"name\": \"mitch\", \"skill\": \"Beginner\"}]', '[{\"id\": 149, \"sex\": \"male\", \"name\": \"bunorks\", \"skill\": \"Beginner\"}, {\"id\": 148, \"sex\": \"female\", \"name\": \"rose\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-24 01:12:59', '2025-11-24 01:13:32', '2025-11-24 01:12:58.860218', '2025-11-24 05:34:52.000000', 'teamA', 18),
+(157, 'mixed-doubles', 'active', '[{\"id\": 149, \"sex\": \"male\", \"name\": \"bunorks\", \"skill\": \"Beginner\"}, {\"id\": 147, \"sex\": \"female\", \"name\": \"mitch\", \"skill\": \"Beginner\"}]', '[{\"id\": 146, \"sex\": \"male\", \"name\": \"levy\", \"skill\": \"Intermediate\"}, {\"id\": 148, \"sex\": \"female\", \"name\": \"rose\", \"skill\": \"Intermediate\"}]', NULL, 'Court 2', '2025-11-24 01:13:32', NULL, '2025-11-24 01:13:25.045240', '2025-11-24 01:13:32.000000', NULL, 18),
+(158, 'mens-doubles', 'completed', '[{\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', '[{\"id\": 145, \"sex\": \"male\", \"name\": \"Benito\", \"skill\": \"Advanced\"}, {\"id\": 142, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-24 03:32:29', '2025-11-24 03:33:53', '2025-11-24 03:32:29.019179', '2025-11-24 05:34:52.000000', 'teamA', 11),
+(159, 'mixed-doubles', 'cancelled', '[{\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 141, \"sex\": \"female\", \"name\": \"lele\", \"skill\": \"Advanced\"}]', '[{\"id\": 139, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-24 03:33:53', '2025-11-24 03:34:17', '2025-11-24 03:33:37.369972', '2025-11-24 05:34:54.000000', NULL, 11),
+(160, 'mixed-doubles', 'completed', '[{\"id\": 144, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}, {\"id\": 141, \"sex\": \"female\", \"name\": \"lele\", \"skill\": \"Advanced\"}]', '[{\"id\": 142, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}, {\"id\": 139, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-24 03:34:33', '2025-11-24 05:00:29', '2025-11-24 03:34:33.460797', '2025-11-24 05:34:52.000000', 'teamA', 11),
+(161, 'mens-doubles', 'completed', '[{\"id\": 136, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 142, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}]', '[{\"id\": 144, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}, {\"id\": 145, \"sex\": \"male\", \"name\": \"Benito\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-24 05:00:30', '2025-11-24 05:00:35', '2025-11-24 03:35:02.933517', '2025-11-24 05:34:52.000000', 'teamA', 11),
+(162, 'mens-doubles', 'cancelled', '[{\"id\": 134, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 142, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}]', '[{\"id\": 137, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 144, \"sex\": \"male\", \"name\": \"Filbert\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-24 05:00:35', '2025-11-24 05:00:39', '2025-11-24 03:35:02.972105', '2025-11-24 05:34:52.000000', NULL, 11),
+(163, 'mens-doubles', 'completed', '[{\"id\": 155, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 157, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 163, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 160, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-26 00:57:53', '2025-11-26 02:09:04', '2025-11-26 00:57:52.589977', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(164, 'mens-doubles', 'completed', '[{\"id\": 155, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 157, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 163, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 160, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-26 21:14:59', '2025-11-27 00:20:50', '2025-11-26 21:14:59.133951', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(165, 'mens-doubles', 'cancelled', '[{\"id\": 155, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 157, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 160, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 163, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-27 00:20:51', '2025-11-27 00:20:52', '2025-11-26 21:15:06.602981', '2025-11-29 19:06:37.000000', NULL, 11),
+(166, 'mens-doubles', 'completed', '[{\"id\": 169, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 168, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 170, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 167, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-28 18:28:15', '2025-11-28 18:53:58', '2025-11-28 18:28:14.669580', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(169, 'mens-doubles', 'completed', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-28 19:59:51', '2025-11-28 21:35:33', '2025-11-28 19:59:51.052047', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(170, 'mens-doubles', 'completed', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-28 21:35:34', '2025-11-28 21:35:39', '2025-11-28 20:00:47.504956', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(171, 'mens-doubles', 'completed', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-28 21:35:39', '2025-11-28 21:36:02', '2025-11-28 20:25:40.881896', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(172, 'mens-doubles', 'completed', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}]', '[{\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-28 21:36:02', '2025-11-28 21:36:09', '2025-11-28 20:25:40.936703', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(173, 'mens-doubles', 'completed', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-28 21:36:09', '2025-11-28 21:36:13', '2025-11-28 20:25:40.941760', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(174, 'mens-doubles', 'cancelled', '[{\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-28 21:39:44', '2025-11-28 21:45:34', '2025-11-28 21:39:43.837737', '2025-11-29 19:06:37.000000', NULL, 11),
+(178, 'womens-doubles', 'cancelled', '[{\"id\": 176, \"sex\": \"female\", \"name\": \"Jerse\", \"skill\": \"Intermediate\"}, {\"id\": 179, \"sex\": \"female\", \"name\": \"Keke\", \"skill\": \"Beginner\"}]', '[{\"id\": 177, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 178, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-28 22:09:05', '2025-11-28 22:10:55', '2025-11-28 22:09:04.938824', '2025-11-29 19:06:37.000000', NULL, 11),
+(179, 'womens-doubles', 'cancelled', '[{\"id\": 177, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 179, \"sex\": \"female\", \"name\": \"Keke\", \"skill\": \"Beginner\"}]', '[{\"id\": 176, \"sex\": \"female\", \"name\": \"Jerse\", \"skill\": \"Intermediate\"}, {\"id\": 178, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-28 22:09:05', '2025-11-28 22:10:58', '2025-11-28 22:09:04.979890', '2025-11-29 19:06:37.000000', NULL, 11),
+(180, 'womens-doubles', 'cancelled', '[{\"id\": 178, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Beginner\"}, {\"id\": 179, \"sex\": \"female\", \"name\": \"Keke\", \"skill\": \"Beginner\"}]', '[{\"id\": 176, \"sex\": \"female\", \"name\": \"Jerse\", \"skill\": \"Intermediate\"}, {\"id\": 177, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-28 22:09:05', '2025-11-28 22:10:59', '2025-11-28 22:09:04.988286', '2025-11-29 19:06:37.000000', NULL, 11),
+(181, 'mens-doubles', 'completed', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-28 22:10:55', '2025-11-28 22:20:19', '2025-11-28 22:09:20.779500', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(182, 'mens-doubles', 'completed', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-28 22:20:19', '2025-11-28 23:34:38', '2025-11-28 22:09:20.786833', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(184, 'womens-doubles', 'completed', '[{\"id\": 177, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 179, \"sex\": \"female\", \"name\": \"Keke\", \"skill\": \"Beginner\"}]', '[{\"id\": 176, \"sex\": \"female\", \"name\": \"Jerse\", \"skill\": \"Intermediate\"}, {\"id\": 178, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-28 22:19:15', '2025-11-28 22:20:21', '2025-11-28 22:19:14.666891', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(185, 'womens-doubles', 'completed', '[{\"id\": 177, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 178, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Beginner\"}]', '[{\"id\": 176, \"sex\": \"female\", \"name\": \"Jerse\", \"skill\": \"Intermediate\"}, {\"id\": 179, \"sex\": \"female\", \"name\": \"Keke\", \"skill\": \"Beginner\"}]', NULL, NULL, '2025-11-28 22:20:21', '2025-11-28 23:34:39', '2025-11-28 22:19:14.756766', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(259, 'mens-doubles', 'completed', '[{\"id\": 191, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 190, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 192, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 189, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-29 00:15:39', '2025-11-29 00:15:58', '2025-11-29 00:15:38.848592', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(260, 'womens-doubles', 'completed', '[{\"id\": 195, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}, {\"id\": 196, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 194, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 193, \"sex\": \"female\", \"name\": \"jersey\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-29 00:15:50', '2025-11-29 00:15:59', '2025-11-29 00:15:50.194065', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(261, 'mixed-doubles', 'completed', '[{\"id\": 191, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 194, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 192, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 195, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-29 00:16:11', '2025-11-29 00:16:15', '2025-11-29 00:16:11.377058', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(262, 'mens-doubles', 'completed', '[{\"id\": 191, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 190, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 192, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 189, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-29 00:23:00', '2025-11-29 10:02:23', '2025-11-29 00:23:00.438807', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(335, 'womens-doubles', 'completed', '[{\"id\": 195, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}, {\"id\": 196, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 193, \"sex\": \"female\", \"name\": \"jersey\", \"skill\": \"Intermediate\"}, {\"id\": 197, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-29 00:23:15', '2025-11-29 10:02:25', '2025-11-29 00:23:14.556400', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(341, 'mixed-doubles', 'completed', '[{\"id\": 192, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 196, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 189, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}, {\"id\": 197, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-29 10:02:54', '2025-11-29 11:29:32', '2025-11-29 10:02:54.268066', '2025-11-29 19:06:37.000000', 'teamB', 11),
+(377, 'womens-doubles', 'completed', '[{\"id\": 224, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 226, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 223, \"sex\": \"female\", \"name\": \"jerse\", \"skill\": \"Intermediate\"}, {\"id\": 225, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-29 13:47:34', '2025-11-29 13:54:46', '2025-11-29 13:47:33.536285', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(378, 'womens-doubles', 'completed', '[{\"id\": 224, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 225, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}]', '[{\"id\": 223, \"sex\": \"female\", \"name\": \"jerse\", \"skill\": \"Intermediate\"}, {\"id\": 226, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-29 13:54:46', '2025-11-29 13:54:48', '2025-11-29 13:47:33.555699', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(379, 'womens-doubles', 'completed', '[{\"id\": 223, \"sex\": \"female\", \"name\": \"jerse\", \"skill\": \"Intermediate\"}, {\"id\": 224, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 225, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}, {\"id\": 226, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-29 13:54:48', '2025-11-29 13:54:50', '2025-11-29 13:47:33.560117', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(380, 'womens-doubles', 'completed', '[{\"id\": 225, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}, {\"id\": 226, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 223, \"sex\": \"female\", \"name\": \"jersey\", \"skill\": \"Beginner\"}, {\"id\": 224, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-29 14:00:46', '2025-11-29 15:16:49', '2025-11-29 14:00:46.411690', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(383, 'mens-doubles', 'completed', '[{\"id\": 220, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}, {\"id\": 221, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', '[{\"id\": 219, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 222, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', NULL, NULL, '2025-11-29 14:00:52', '2025-11-29 15:16:53', '2025-11-29 14:00:52.049199', '2025-11-29 19:06:37.000000', 'teamA', 11),
+(386, 'womens-doubles', 'completed', '[{\"id\": 233, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 234, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}]', '[{\"id\": 232, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}, {\"id\": 235, \"sex\": \"female\", \"name\": \"raval\", \"skill\": \"Intermediate\"}]', NULL, NULL, '2025-11-29 15:00:57', '2025-11-29 15:16:51', '2025-11-29 15:00:57.357074', '2025-11-29 19:06:37.000000', 'teamA', 11);
 
 -- --------------------------------------------------------
 
@@ -422,16 +487,45 @@ CREATE TABLE `queue_matches_history` (
 --
 
 INSERT INTO `queue_matches_history` (`id`, `user_id`, `original_id`, `court_id`, `court_name`, `started_at`, `completed_at`, `winner`, `created_at`, `updated_at`, `archived_at`, `gameType`, `teamA`, `teamB`) VALUES
-(1, 11, 132, 20, 'Court 1', '2025-11-21 22:23:24', '2025-11-21 22:23:26', 'teamA', '2025-11-21 22:23:23.992000', '2025-11-21 22:23:26.000000', '2025-11-21 22:23:26', 'mens-doubles', '[{\"id\": 106, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 104, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 105, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 103, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
-(2, 11, 133, 20, 'Court 1', '2025-11-21 22:30:24', '2025-11-21 22:30:27', 'teamA', '2025-11-21 22:30:23.979000', '2025-11-21 22:30:26.000000', '2025-11-21 22:30:27', 'mens-doubles', '[{\"id\": 109, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 108, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 110, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 107, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
-(3, 11, 134, 20, 'Court 1', '2025-11-21 22:35:19', '2025-11-21 22:35:22', 'teamA', '2025-11-21 22:35:18.570000', '2025-11-21 22:35:21.000000', '2025-11-21 22:35:22', 'mens-doubles', '[{\"id\": 113, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 112, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 114, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 111, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
-(4, 11, 135, 20, 'Court 1', '2025-11-21 22:35:29', '2025-11-21 22:35:45', 'teamA', '2025-11-21 22:35:29.382000', '2025-11-21 22:35:45.000000', '2025-11-21 22:35:45', 'mens-doubles', '[{\"id\": 113, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 112, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 114, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 111, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
-(5, 11, 136, 21, 'Court 2', '2025-11-21 22:35:45', '2025-11-21 22:35:52', 'teamB', '2025-11-21 22:35:41.823000', '2025-11-21 22:35:51.000000', '2025-11-21 22:35:52', 'mens-doubles', '[{\"id\": 114, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 112, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 113, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 111, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
-(6, 11, 137, 20, 'Court 1', '2025-11-21 23:05:05', '2025-11-21 23:06:06', 'teamB', '2025-11-21 23:05:05.498000', '2025-11-21 23:06:06.000000', '2025-11-21 23:06:06', 'mens-doubles', '[{\"id\": 117, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 116, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 118, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 115, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
-(7, 11, 138, 21, 'Court 2', '2025-11-21 23:06:06', '2025-11-21 23:06:08', 'teamA', '2025-11-21 23:05:10.511000', '2025-11-21 23:06:08.000000', '2025-11-21 23:06:08', 'mens-doubles', '[{\"id\": 117, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 118, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', '[{\"id\": 116, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}, {\"id\": 115, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
-(8, 11, 139, 20, 'Court 1', '2025-11-21 23:06:55', '2025-11-21 23:10:30', 'teamA', '2025-11-21 23:06:54.686000', '2025-11-21 23:10:29.000000', '2025-11-21 23:10:30', 'mens-doubles', '[{\"id\": 122, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 121, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 123, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 120, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
-(9, 11, 142, 20, 'Court 1', '2025-11-21 23:19:04', '2025-11-21 23:32:51', 'teamA', '2025-11-21 23:19:03.684000', '2025-11-21 23:32:50.000000', '2025-11-21 23:32:51', 'mens-doubles', '[{\"id\": 129, \"sex\": \"male\", \"name\": \"Adasdad\", \"skill\": \"Advanced\"}, {\"id\": 132, \"sex\": \"male\", \"name\": \"dsadxsad\", \"skill\": \"Advanced\"}]', '[{\"id\": 131, \"sex\": \"male\", \"name\": \"adsadsad\", \"skill\": \"Advanced\"}, {\"id\": 130, \"sex\": \"male\", \"name\": \"dsadasd\", \"skill\": \"Advanced\"}]'),
-(10, 11, 143, 20, 'Court 1', '2025-11-22 06:58:39', '2025-11-22 07:06:01', 'teamA', '2025-11-22 06:58:38.866000', '2025-11-22 07:06:00.000000', '2025-11-22 07:06:01', 'mens-doubles', '[{\"id\": 133, \"sex\": \"male\", \"name\": \"dasdvasdas\", \"skill\": \"Advanced\"}, {\"id\": 132, \"sex\": \"male\", \"name\": \"dsadxsad\", \"skill\": \"Advanced\"}]', '[{\"id\": 131, \"sex\": \"male\", \"name\": \"adsadsad\", \"skill\": \"Advanced\"}, {\"id\": 130, \"sex\": \"male\", \"name\": \"dsadasd\", \"skill\": \"Advanced\"}]');
+(26, 11, 163, 30, 'Court 1', '2025-11-26 00:57:53', '2025-11-26 02:09:04', 'teamB', '2025-11-26 00:57:52.589000', '2025-11-26 02:09:03.000000', '2025-11-26 02:09:04', 'mens-doubles', '[{\"id\": 155, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 157, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 163, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 160, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
+(27, 11, 164, 30, 'Court 1', '2025-11-26 21:14:59', '2025-11-27 00:20:50', 'teamB', '2025-11-26 21:14:59.133000', '2025-11-27 00:20:50.000000', '2025-11-27 00:20:50', 'mens-doubles', '[{\"id\": 155, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 157, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 163, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 160, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
+(28, 11, 166, 30, 'Court 1', '2025-11-28 18:28:15', '2025-11-28 18:53:58', 'teamA', '2025-11-28 18:28:14.669000', '2025-11-28 18:53:58.000000', '2025-11-28 18:53:58', 'mens-doubles', '[{\"id\": 169, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 168, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 170, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 167, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}]'),
+(29, 11, 169, 30, 'Court 1', '2025-11-28 19:59:51', '2025-11-28 21:35:33', 'teamA', '2025-11-28 19:59:51.052000', '2025-11-28 21:35:33.000000', '2025-11-28 21:35:34', 'mens-doubles', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]'),
+(30, 11, 170, 31, 'Court 2', '2025-11-28 21:35:34', '2025-11-28 21:35:39', 'teamB', '2025-11-28 20:00:47.504000', '2025-11-28 21:35:38.000000', '2025-11-28 21:35:39', 'mens-doubles', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]'),
+(31, 11, 171, 31, 'Court 2', '2025-11-28 21:35:39', '2025-11-28 21:36:02', 'teamB', '2025-11-28 20:25:40.881000', '2025-11-28 21:36:02.000000', '2025-11-28 21:36:02', 'mens-doubles', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]'),
+(32, 11, 172, 31, 'Court 2', '2025-11-28 21:36:02', '2025-11-28 21:36:09', 'teamB', '2025-11-28 20:25:40.936000', '2025-11-28 21:36:08.000000', '2025-11-28 21:36:09', 'mens-doubles', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}]', '[{\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]'),
+(33, 11, 173, 31, 'Court 2', '2025-11-28 21:36:09', '2025-11-28 21:36:13', 'teamB', '2025-11-28 20:25:40.941000', '2025-11-28 21:36:13.000000', '2025-11-28 21:36:14', 'mens-doubles', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]'),
+(34, 11, 181, 30, 'Court 1', '2025-11-28 22:10:55', '2025-11-28 22:20:19', 'teamA', '2025-11-28 22:09:20.779000', '2025-11-28 22:20:18.000000', '2025-11-28 22:20:19', 'mens-doubles', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]'),
+(35, 11, 184, 31, 'Court 2', '2025-11-28 22:19:15', '2025-11-28 22:20:21', 'teamA', '2025-11-28 22:19:14.666000', '2025-11-28 22:20:20.000000', '2025-11-28 22:20:21', 'womens-doubles', '[{\"id\": 177, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 179, \"sex\": \"female\", \"name\": \"Keke\", \"skill\": \"Beginner\"}]', '[{\"id\": 176, \"sex\": \"female\", \"name\": \"Jerse\", \"skill\": \"Intermediate\"}, {\"id\": 178, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Beginner\"}]'),
+(36, 11, 182, 30, 'Court 1', '2025-11-28 22:20:19', '2025-11-28 23:34:38', 'teamA', '2025-11-28 22:09:20.786000', '2025-11-28 23:34:37.000000', '2025-11-28 23:34:38', 'mens-doubles', '[{\"id\": 171, \"sex\": \"male\", \"name\": \"dfadaw\", \"skill\": \"Advanced\"}, {\"id\": 174, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]', '[{\"id\": 173, \"sex\": \"male\", \"name\": \"dasda\", \"skill\": \"Advanced\"}, {\"id\": 175, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]'),
+(37, 11, 185, 31, 'Court 2', '2025-11-28 22:20:21', '2025-11-28 23:34:39', 'teamB', '2025-11-28 22:19:14.756000', '2025-11-28 23:34:39.000000', '2025-11-28 23:34:39', 'womens-doubles', '[{\"id\": 177, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 178, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Beginner\"}]', '[{\"id\": 176, \"sex\": \"female\", \"name\": \"Jerse\", \"skill\": \"Intermediate\"}, {\"id\": 179, \"sex\": \"female\", \"name\": \"Keke\", \"skill\": \"Beginner\"}]'),
+(38, 11, 259, 30, 'Court 1', '2025-11-29 00:15:39', '2025-11-29 00:15:58', 'teamA', '2025-11-29 00:15:38.848000', '2025-11-29 00:15:58.000000', '2025-11-29 00:15:58', 'mens-doubles', '[{\"id\": 191, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 190, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 192, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 189, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]'),
+(39, 11, 260, 31, 'Court 2', '2025-11-29 00:15:50', '2025-11-29 00:15:59', 'teamB', '2025-11-29 00:15:50.194000', '2025-11-29 00:15:59.000000', '2025-11-29 00:15:59', 'womens-doubles', '[{\"id\": 195, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}, {\"id\": 196, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 194, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 193, \"sex\": \"female\", \"name\": \"jersey\", \"skill\": \"Intermediate\"}]'),
+(40, 11, 261, 30, 'Court 1', '2025-11-29 00:16:11', '2025-11-29 00:16:15', 'teamA', '2025-11-29 00:16:11.377000', '2025-11-29 00:16:14.000000', '2025-11-29 00:16:15', 'mixed-doubles', '[{\"id\": 191, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 194, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 192, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 195, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}]'),
+(41, 11, 262, 30, 'Court 1', '2025-11-29 00:23:00', '2025-11-29 10:02:23', 'teamB', '2025-11-29 00:23:00.438000', '2025-11-29 10:02:22.000000', '2025-11-29 10:02:23', 'mens-doubles', '[{\"id\": 191, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}, {\"id\": 190, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}]', '[{\"id\": 192, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 189, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}]'),
+(42, 11, 335, 31, 'Court 2', '2025-11-29 00:23:15', '2025-11-29 10:02:25', 'teamA', '2025-11-29 00:23:14.556000', '2025-11-29 10:02:24.000000', '2025-11-29 10:02:25', 'womens-doubles', '[{\"id\": 195, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}, {\"id\": 196, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 193, \"sex\": \"female\", \"name\": \"jersey\", \"skill\": \"Intermediate\"}, {\"id\": 197, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]'),
+(43, 11, 341, 30, 'Court 1', '2025-11-29 10:02:54', '2025-11-29 11:29:32', 'teamB', '2025-11-29 10:02:54.268000', '2025-11-29 11:29:31.000000', '2025-11-29 11:29:32', 'mixed-doubles', '[{\"id\": 192, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}, {\"id\": 196, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 189, \"sex\": \"male\", \"name\": \"ivan\", \"skill\": \"Advanced\"}, {\"id\": 197, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]'),
+(44, 11, 377, 30, 'Court 1', '2025-11-29 13:47:34', '2025-11-29 13:54:46', 'teamA', '2025-11-29 13:47:33.536000', '2025-11-29 13:54:45.000000', '2025-11-29 13:54:46', 'womens-doubles', '[{\"id\": 224, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 226, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 223, \"sex\": \"female\", \"name\": \"jerse\", \"skill\": \"Intermediate\"}, {\"id\": 225, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}]'),
+(45, 11, 378, 30, 'Court 1', '2025-11-29 13:54:46', '2025-11-29 13:54:48', 'teamA', '2025-11-29 13:47:33.555000', '2025-11-29 13:54:48.000000', '2025-11-29 13:54:48', 'womens-doubles', '[{\"id\": 224, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 225, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}]', '[{\"id\": 223, \"sex\": \"female\", \"name\": \"jerse\", \"skill\": \"Intermediate\"}, {\"id\": 226, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]'),
+(46, 11, 379, 30, 'Court 1', '2025-11-29 13:54:48', '2025-11-29 13:54:50', 'teamA', '2025-11-29 13:47:33.560000', '2025-11-29 13:54:49.000000', '2025-11-29 13:54:50', 'womens-doubles', '[{\"id\": 223, \"sex\": \"female\", \"name\": \"jerse\", \"skill\": \"Intermediate\"}, {\"id\": 224, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]', '[{\"id\": 225, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}, {\"id\": 226, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]'),
+(47, 11, 380, 30, 'Court 1', '2025-11-29 14:00:46', '2025-11-29 15:16:49', 'teamA', '2025-11-29 14:00:46.411000', '2025-11-29 15:16:49.000000', '2025-11-29 15:16:49', 'womens-doubles', '[{\"id\": 225, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}, {\"id\": 226, \"sex\": \"female\", \"name\": \"Raval\", \"skill\": \"Intermediate\"}]', '[{\"id\": 223, \"sex\": \"female\", \"name\": \"jersey\", \"skill\": \"Beginner\"}, {\"id\": 224, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}]'),
+(48, 11, 386, 32, 'Court 3', '2025-11-29 15:00:57', '2025-11-29 15:16:51', 'teamA', '2025-11-29 15:00:57.357000', '2025-11-29 15:16:51.000000', '2025-11-29 15:16:51', 'womens-doubles', '[{\"id\": 233, \"sex\": \"female\", \"name\": \"Anne\", \"skill\": \"Intermediate\"}, {\"id\": 234, \"sex\": \"female\", \"name\": \"Bello\", \"skill\": \"Intermediate\"}]', '[{\"id\": 232, \"sex\": \"female\", \"name\": \"Jersey\", \"skill\": \"Intermediate\"}, {\"id\": 235, \"sex\": \"female\", \"name\": \"raval\", \"skill\": \"Intermediate\"}]'),
+(49, 11, 383, 31, 'Court 2', '2025-11-29 14:00:52', '2025-11-29 15:16:53', 'teamA', '2025-11-29 14:00:52.049000', '2025-11-29 15:16:53.000000', '2025-11-29 15:16:53', 'mens-doubles', '[{\"id\": 220, \"sex\": \"male\", \"name\": \"Louis\", \"skill\": \"Advanced\"}, {\"id\": 221, \"sex\": \"male\", \"name\": \"Cielo\", \"skill\": \"Advanced\"}]', '[{\"id\": 219, \"sex\": \"male\", \"name\": \"Ivan\", \"skill\": \"Advanced\"}, {\"id\": 222, \"sex\": \"male\", \"name\": \"Degamo\", \"skill\": \"Advanced\"}]');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `queue_match_players`
+--
+
+CREATE TABLE `queue_match_players` (
+  `id` int NOT NULL,
+  `queue_match_id` int NOT NULL,
+  `queue_player_id` int NOT NULL,
+  `team` enum('A','B') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `position` int NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -473,20 +567,6 @@ CREATE TABLE `queue_players_history` (
   `archived_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `queue_players_history`
---
-
-INSERT INTO `queue_players_history` (`id`, `user_id`, `original_id`, `name`, `sex`, `skill`, `games_played`, `status`, `last_played`, `created_at`, `updated_at`, `archived_at`) VALUES
-(149, 11, 124, 'Cielo', 'male', 'Advanced', 0, 'In Queue', '2025-11-22', '2025-11-21 23:10:42.373000', '2025-11-21 23:10:42.373000', '2025-11-21 23:13:03'),
-(150, 11, 122, 'Degamo', 'male', 'Advanced', 1, 'In Queue', '2025-11-21', '2025-11-21 23:06:45.379000', '2025-11-21 23:10:30.000000', '2025-11-21 23:13:03'),
-(151, 11, 120, 'Ivan', 'male', 'Advanced', 1, 'In Queue', '2025-11-21', '2025-11-21 23:06:39.155000', '2025-11-21 23:10:30.000000', '2025-11-21 23:13:03'),
-(152, 11, 121, 'Louis', 'male', 'Advanced', 1, 'In Queue', '2025-11-21', '2025-11-21 23:06:42.194000', '2025-11-21 23:10:30.000000', '2025-11-21 23:13:03'),
-(153, 11, 131, 'adsadsad', 'male', 'Advanced', 1, 'In Queue', '2025-11-21', '2025-11-21 23:18:54.344000', '2025-11-21 23:32:51.000000', '2025-11-22 06:58:20'),
-(154, 11, 133, 'dasdvasdas', 'male', 'Advanced', 0, 'In Queue', '2025-11-22', '2025-11-21 23:33:01.715000', '2025-11-21 23:33:01.715000', '2025-11-22 06:58:20'),
-(155, 11, 130, 'dsadasd', 'male', 'Advanced', 1, 'In Queue', '2025-11-21', '2025-11-21 23:18:51.718000', '2025-11-21 23:32:51.000000', '2025-11-22 06:58:20'),
-(156, 11, 132, 'dsadxsad', 'male', 'Advanced', 1, 'In Queue', '2025-11-21', '2025-11-21 23:18:56.494000', '2025-11-21 23:32:51.000000', '2025-11-22 06:58:20');
-
 -- --------------------------------------------------------
 
 --
@@ -515,98 +595,56 @@ CREATE TABLE `reservations` (
 --
 
 INSERT INTO `reservations` (`Reservation_ID`, `User_ID`, `Court_ID`, `Reservation_Date`, `Start_Time`, `End_Time`, `Status`, `Total_Amount`, `Reference_Number`, `Paymongo_Reference_Number`, `Notes`, `Created_at`, `Updated_at`, `Is_Admin_Created`) VALUES
-(126, 1, 4, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 220.00, 'REF1761209997625', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 08:59:57.639695', '2025-10-23 08:59:57.639695', 0),
-(127, 1, 4, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 220.00, 'REF1761209997514', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 08:59:57.589384', '2025-10-23 08:59:57.589384', 0),
-(128, 1, 2, '2025-10-30', '21:00:00', '22:00:00', 'Confirmed', 250.00, 'REF1761210255683', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:04:15.708368', '2025-10-23 09:04:15.708368', 0),
-(129, 1, 2, '2025-10-30', '21:00:00', '22:00:00', 'Confirmed', 250.00, 'REF1761210255764', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:04:15.776600', '2025-10-23 09:04:15.776600', 0),
-(130, 1, 2, '2025-10-30', '21:00:00', '22:00:00', 'Confirmed', 250.00, 'REF1761210306465', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:05:06.527248', '2025-10-23 09:05:06.527248', 0),
-(131, 1, 2, '2025-10-30', '21:00:00', '22:00:00', 'Confirmed', 250.00, 'REF1761210306786', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:05:06.798997', '2025-10-23 09:05:06.798997', 0),
-(132, 1, 2, '2025-10-23', '12:00:00', '13:00:00', 'Confirmed', 250.00, 'REF1761210412107', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:06:52.138046', '2025-10-23 09:06:52.138046', 0),
-(133, 1, 2, '2025-10-23', '12:00:00', '13:00:00', 'Confirmed', 250.00, 'REF1761210412814', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:06:52.837403', '2025-10-23 09:06:52.837403', 0),
-(134, 1, 2, '2025-10-23', '12:00:00', '13:00:00', 'Confirmed', 250.00, 'REF1761210428945', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:07:08.982440', '2025-10-23 09:07:08.982440', 0),
-(135, 1, 2, '2025-10-23', '12:00:00', '13:00:00', 'Confirmed', 250.00, 'REF1761210429084', '{CHECKOUT_SESSION_ID}', 'Payment via Paymongo - {CHECKOUT_SESSION_ID}', '2025-10-23 09:07:09.098226', '2025-10-23 09:07:09.098226', 0),
-(136, 1, 1, '2025-10-31', '09:00:00', '10:00:00', 'Confirmed', 220.00, 'REF1761213772967', 'pay_818hur8BGQvst4DnLEyrYL9g', 'Payment via Paymongo - pay_818hur8BGQvst4DnLEyrYL9g', '2025-10-23 10:02:53.236320', '2025-10-23 10:02:53.236320', 0),
-(137, 1, 4, '2025-10-31', '12:00:00', '01:00:00', 'Confirmed', 220.00, 'REF1761213785709', 'test_payment_id', 'Test reservation via webhook', '2025-10-23 10:03:09.460394', '2025-10-23 10:03:09.460394', 0),
-(138, 1, 1, '2025-10-31', '09:00:00', '10:00:00', 'Confirmed', 250.00, 'REF1761214193082', 'pay_coF9JHRWYN4JagiWDsvMFtP1', 'Payment via Paymongo - pay_coF9JHRWYN4JagiWDsvMFtP1', '2025-10-23 10:09:53.100197', '2025-10-23 10:09:53.100197', 0),
-(139, 1, 2, '2025-10-30', '04:00:00', '05:00:00', 'Confirmed', 250.00, 'REF1761814727622', 'test_payment_id', 'Test reservation via webhook', '2025-10-30 08:58:51.541397', '2025-10-30 08:58:51.541397', 0),
-(140, 1, 1, '2025-11-01', '05:00:00', '06:00:00', 'Confirmed', 250.00, 'REF1761816775470', 'test_payment_id', 'Test reservation via webhook', '2025-10-30 09:32:56.653191', '2025-10-30 09:32:56.653191', 0),
-(141, 1, 1, '2025-11-02', '07:00:00', '08:00:00', 'Confirmed', 250.00, 'REF1761818072449', 'test_payment_id', 'Test reservation via webhook', '2025-10-30 09:54:52.466239', '2025-10-30 09:54:52.466239', 0),
-(142, 1, 2, '2025-10-30', '10:00:00', '11:00:00', 'Confirmed', 250.00, 'REF1761818215156', 'test_payment_id', 'Test reservation via webhook', '2025-10-30 09:57:45.012253', '2025-10-30 09:57:45.012253', 0),
-(143, 1, 1, '2025-11-01', '10:00:00', '11:00:00', 'Confirmed', 250.00, 'REF1761820858081', 'test_payment_id', 'Test reservation via webhook', '2025-10-30 10:41:37.359419', '2025-10-30 10:41:37.359419', 0),
-(144, 1, 1, '2025-11-03', '06:00:00', '07:00:00', 'Confirmed', 250.00, 'REF1761823157093', 'pay_wgyXjDbe6pSZiJzKn6Wwj2rB', 'Payment via Paymongo - pay_wgyXjDbe6pSZiJzKn6Wwj2rB', '2025-10-30 11:19:17.113939', '2025-10-30 11:19:17.113939', 0),
-(145, 1, 12, '2025-12-10', '10:00:00', '11:00:00', 'Confirmed', 350.00, 'REF1761823250954', 'pay_gn1XHrmK9XSaBNc3zBXMKuCi', 'Payment via Paymongo - pay_gn1XHrmK9XSaBNc3zBXMKuCi', '2025-10-30 11:20:50.963584', '2025-10-30 11:20:50.963584', 0),
-(146, 1, 7, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 220.00, 'REF1761825279438', 'pay_kupruQghp4qaLKLPTURbuFVd', 'Payment via Paymongo - pay_kupruQghp4qaLKLPTURbuFVd', '2025-10-30 11:54:39.444297', '2025-10-30 11:54:39.444297', 0),
-(147, 1, 12, '2026-02-24', '08:00:00', '09:00:00', 'Confirmed', 350.00, 'REF1761828198125', 'pay_vNLam3keKEEuLgYahNh5V4AF', 'Payment via Paymongo - pay_vNLam3keKEEuLgYahNh5V4AF', '2025-10-30 12:43:18.141390', '2025-10-30 12:43:18.141390', 0),
-(148, 1, 1, '2026-01-01', '08:00:00', '09:00:00', 'Confirmed', 250.00, 'REF1761830333111', 'pay_ioESVFmK2TQUdibbpVKuDZfw', 'Payment via Paymongo - pay_ioESVFmK2TQUdibbpVKuDZfw', '2025-10-30 13:18:53.163708', '2025-10-30 13:18:53.163708', 0),
-(149, 1, 2, '2025-12-25', '11:00:00', '12:00:00', 'Confirmed', 250.00, 'REF1761830893712', 'pay_YdSshtGyX2uyqJofw7pLMhTo', 'Payment via Paymongo - pay_YdSshtGyX2uyqJofw7pLMhTo', '2025-10-30 13:28:13.745469', '2025-10-30 13:28:13.745469', 0),
-(150, 1, 6, '2025-12-20', '08:00:00', '09:00:00', 'Confirmed', 250.00, 'REF1761831680847', 'pay_ipjteGNvKBJ4TDtJsnHxaN7P', 'Payment via Paymongo - pay_ipjteGNvKBJ4TDtJsnHxaN7P', '2025-10-30 13:41:20.871192', '2025-10-30 13:41:20.871192', 0),
-(151, 1, 11, '2025-11-25', '08:00:00', '09:00:00', 'Confirmed', 250.00, 'REF1761872946311', 'pay_nhDhTvbYdGCcqN4xHGukNVmk', 'Payment via Paymongo - pay_nhDhTvbYdGCcqN4xHGukNVmk', '2025-10-31 01:09:06.324260', '2025-10-31 01:09:06.324260', 0),
-(152, 1, 12, '2025-11-25', '08:00:00', '09:00:00', 'Confirmed', 350.00, 'REF1761872946349', 'pay_nhDhTvbYdGCcqN4xHGukNVmk', 'Payment via Paymongo - pay_nhDhTvbYdGCcqN4xHGukNVmk', '2025-10-31 01:09:06.352141', '2025-10-31 01:09:06.352141', 0),
-(153, 1, 1, '2026-01-01', '09:00:00', '10:00:00', 'Confirmed', 250.00, 'REF1761873070120', 'pay_ZeXSheEG7uGFXw5VFfdsZ2vq', 'Payment via Paymongo - pay_ZeXSheEG7uGFXw5VFfdsZ2vq', '2025-10-31 01:11:10.128613', '2025-10-31 01:11:10.128613', 0),
-(154, 1, 1, '2026-01-01', '10:00:00', '11:00:00', 'Confirmed', 250.00, 'REF1761873070149', 'pay_ZeXSheEG7uGFXw5VFfdsZ2vq', 'Payment via Paymongo - pay_ZeXSheEG7uGFXw5VFfdsZ2vq', '2025-10-31 01:11:10.155450', '2025-10-31 01:11:10.155450', 0),
-(155, 1, 1, '2026-01-01', '09:00:00', '10:00:00', 'Confirmed', 250.00, 'REF1761873130835', 'pay_ZeXSheEG7uGFXw5VFfdsZ2vq', 'Payment via Paymongo - pay_ZeXSheEG7uGFXw5VFfdsZ2vq', '2025-10-31 01:12:10.840915', '2025-10-31 01:12:10.840915', 0),
-(156, 1, 1, '2026-01-01', '10:00:00', '11:00:00', 'Confirmed', 250.00, 'REF1761873130888', 'pay_ZeXSheEG7uGFXw5VFfdsZ2vq', 'Payment via Paymongo - pay_ZeXSheEG7uGFXw5VFfdsZ2vq', '2025-10-31 01:12:10.895466', '2025-10-31 01:12:10.895466', 0),
-(157, 1, 2, '2026-02-02', '08:00:00', '09:00:00', 'Confirmed', 250.00, 'REF1761873233594', 'pay_EsGWksE8J8wprQSSMTkLVGpu', 'Payment via Paymongo - pay_EsGWksE8J8wprQSSMTkLVGpu', '2025-10-31 01:13:53.598846', '2025-10-31 01:13:53.598846', 0),
-(158, 1, 1, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 250.00, 'REF1761873307466', 'pay_hqk3PsSh5G235MiBb5L1GAZt', 'Payment via Paymongo - pay_hqk3PsSh5G235MiBb5L1GAZt', '2025-10-31 01:15:07.475536', '2025-10-31 01:15:07.475536', 0),
-(159, 1, 2, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 250.00, 'REF1761878580564', 'pay_ar2LUR4cdfPnSNVkNjz5YD1D', 'Payment via Paymongo - pay_ar2LUR4cdfPnSNVkNjz5YD1D', '2025-10-31 02:43:00.590646', '2025-10-31 02:43:00.590646', 0),
-(160, 1, 5, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 250.00, 'REF1761878580690', 'pay_ar2LUR4cdfPnSNVkNjz5YD1D', 'Payment via Paymongo - pay_ar2LUR4cdfPnSNVkNjz5YD1D', '2025-10-31 02:43:00.695643', '2025-10-31 02:43:00.695643', 0),
-(161, 1, 12, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 350.00, 'REF1761878685101', 'pay_aEAQhkY7acsRqEyiV1U9dQ17', 'Payment via Paymongo - pay_aEAQhkY7acsRqEyiV1U9dQ17', '2025-10-31 02:44:45.113334', '2025-10-31 02:44:45.113334', 0),
-(162, 1, 11, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 250.00, 'REF1761878685150', 'pay_aEAQhkY7acsRqEyiV1U9dQ17', 'Payment via Paymongo - pay_aEAQhkY7acsRqEyiV1U9dQ17', '2025-10-31 02:44:45.154408', '2025-10-31 02:44:45.154408', 0),
-(163, 1, 1, '2025-11-25', '02:00:00', '03:00:00', 'Confirmed', 250.00, 'REF1761880103946', 'pay_cHWzQisrsfeu8rPsXiWzPFic', 'Payment via Paymongo - pay_cHWzQisrsfeu8rPsXiWzPFic', '2025-10-31 03:08:23.971190', '2025-10-31 03:08:23.971190', 0),
-(164, 1, 1, '2026-01-01', '11:00:00', '12:00:00', 'Confirmed', 250.00, 'REF1761880689009', 'pay_jXPVqN7b5F8qKJvuRZVCqAE5', 'Payment via Paymongo - pay_jXPVqN7b5F8qKJvuRZVCqAE5', '2025-10-31 03:18:09.017559', '2025-10-31 03:18:09.017559', 0),
-(165, 1, 13, '2025-10-31', '08:00:00', '09:00:00', 'Confirmed', 500.00, '1761908647381S9QLE', 'pay_sxTigqvKzPHcr9krJsZWosPf', 'Payment via Paymongo - pay_sxTigqvKzPHcr9krJsZWosPf', '2025-10-31 11:04:43.772428', '2025-10-31 11:04:43.772428', 0),
-(166, 8, 13, '2025-11-13', '13:30:00', '14:00:00', 'Pending', 500.00, 'REF1762491613727833', NULL, 'kukurikabu', '2025-11-07 05:00:13.932251', '2025-11-07 05:00:13.932251', 0),
-(167, 8, 2, '2025-11-08', '10:30:00', '17:30:00', 'Pending', 250.00, 'REF1762494192977578', NULL, NULL, '2025-11-07 05:43:15.117456', '2025-11-07 05:43:15.117456', 0),
-(168, 1, 4, '2025-11-26', '13:00:00', '14:00:00', 'Confirmed', 220.00, '17624980931341YI1V', NULL, 'Payment via Cash', '2025-11-07 06:48:14.834652', '2025-11-07 06:48:14.834652', 0),
-(169, 3, 9, '2025-11-07', '16:00:00', '17:00:00', 'Confirmed', 220.00, '1762498306407FK9U8', NULL, 'Payment via Cash', '2025-11-07 06:51:50.914160', '2025-11-07 06:51:50.914160', 0),
-(170, 1, 1, '2025-11-09', '07:00:00', '08:00:00', 'Confirmed', 250.00, '1762684333180F16B2', 'pay_7uDtcRsYYVgPSwUz7CTXauPF', 'Payment via Paymongo - pay_7uDtcRsYYVgPSwUz7CTXauPF', '2025-11-09 10:32:35.798897', '2025-11-09 10:32:35.798897', 0),
-(171, 1, 2, '2025-11-09', '07:00:00', '08:00:00', 'Confirmed', 250.00, '1762684333180F16B2', 'pay_7uDtcRsYYVgPSwUz7CTXauPF', 'Payment via Paymongo - pay_7uDtcRsYYVgPSwUz7CTXauPF', '2025-11-09 10:32:35.868897', '2025-11-09 10:32:35.868897', 0),
-(172, 1, 6, '2025-11-10', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1762779365954ORWSS', 'pay_kiBPbghLYJCGxUzbapmoPpwx', 'Payment via Paymongo - pay_kiBPbghLYJCGxUzbapmoPpwx', '2025-11-10 12:56:23.339328', '2025-11-10 12:56:23.339328', 0),
-(173, 1, 6, '2025-11-11', '10:00:00', '11:00:00', 'Confirmed', 250.00, '17627837591418F7HV', 'pay_t4HTJBPkRwYsc5LhK4ow4NJ7', 'Payment via Paymongo - pay_t4HTJBPkRwYsc5LhK4ow4NJ7', '2025-11-10 14:09:37.203601', '2025-11-10 14:09:37.203601', 0),
-(174, 9, 2, '2025-11-11', '22:00:00', '23:00:00', 'Confirmed', 250.00, '17628015056865P7LE', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: kukurikabu', '2025-11-10 19:05:11.893865', '2025-11-10 19:05:11.893865', 0),
-(175, 9, 3, '2025-11-12', '08:00:00', '09:00:00', 'Confirmed', 250.00, '17628041592208W0S8', 'pay_ZDmoDQPhrGP7owJEQUrTnrTt', 'Payment via Paymongo - pay_ZDmoDQPhrGP7owJEQUrTnrTt', '2025-11-10 19:49:55.533116', '2025-11-10 19:49:55.533116', 0),
-(176, 1, 6, '2025-11-11', '22:00:00', '23:00:00', 'Confirmed', 250.00, '1762805594490ET20G', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: Filbert', '2025-11-10 20:13:18.686724', '2025-11-10 20:13:18.686724', 0),
-(177, 1, 1, '2025-11-11', '07:00:00', '08:00:00', 'Confirmed', 250.00, '17628064498335J9A5', 'pay_hRvUdYVRBLVbkG3Xnfjfpi9D', 'Payment via Paymongo - pay_hRvUdYVRBLVbkG3Xnfjfpi9D', '2025-11-10 20:27:49.290311', '2025-11-10 20:27:49.290311', 0),
-(178, 1, 1, '2025-11-11', '08:00:00', '09:00:00', 'Confirmed', 250.00, '17628066267083Q76N', 'pay_ymgt6DFc9rsdrWh52iBCnwG7', 'Payment via Paymongo - pay_ymgt6DFc9rsdrWh52iBCnwG7', '2025-11-10 20:30:52.418424', '2025-11-10 20:30:52.418424', 0),
-(179, 1, 2, '2025-11-11', '08:00:00', '09:00:00', 'Confirmed', 250.00, '17628066267083Q76N', 'pay_ymgt6DFc9rsdrWh52iBCnwG7', 'Payment via Paymongo - pay_ymgt6DFc9rsdrWh52iBCnwG7', '2025-11-10 20:30:52.481470', '2025-11-10 20:30:52.481470', 0),
-(180, 1, 1, '2025-11-11', '22:00:00', '23:00:00', 'Confirmed', 250.00, '1762811037910CU6GX', NULL, 'Payment via Cash - Walk-in customer: NATHAN | Contact: +639498680515 | Email: zhiky090924@gmail.com', '2025-11-10 21:44:02.576563', '2025-11-10 21:44:02.576563', 0),
-(181, 9, 2, '2025-11-12', '09:00:00', '10:00:00', 'Confirmed', 250.00, '1762811558761JEGP8', 'pay_6WWEtfLLZRMi2mgrTgj9BX7s', 'Payment via Paymongo - pay_6WWEtfLLZRMi2mgrTgj9BX7s', '2025-11-10 21:53:23.142153', '2025-11-10 21:53:23.142153', 0),
-(182, 10, 1, '2025-12-01', '12:00:00', '13:00:00', 'Confirmed', 250.00, '1762856697767WD3LZ', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: POGI | Contact: 09498680515 | Email: baktolbomb@gmail.com', '2025-11-11 10:25:00.347535', '2025-11-11 10:25:00.347535', 0),
-(183, 1, 2, '2025-12-05', '15:00:00', '16:00:00', 'Confirmed', 250.00, '1762856990342G4BDC', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: filbert | Contact: 09498680515 | Email: zhiky090924@gmail.com', '2025-11-11 10:29:51.898826', '2025-11-11 10:29:51.898826', 0),
-(184, 10, 1, '2025-11-11', '19:00:00', '20:00:00', 'Confirmed', 250.00, '1762857078784NQSLY', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: POGI NAMAN NETO | Contact: 09498680515 | Email: baktolbomb@gmail.com', '2025-11-11 10:31:20.243016', '2025-11-11 10:31:20.243016', 0),
-(185, 1, 1, '2025-12-01', '08:00:00', '09:00:00', 'Confirmed', 250.00, '17628602956507KXW8', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: NATHAN | Contact: +639498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:25:18.515427', '2025-11-11 11:25:18.515427', 1),
-(186, 1, 2, '2025-12-01', '08:00:00', '09:00:00', 'Confirmed', 250.00, '17628602956507KXW8', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: NATHAN | Contact: +639498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:25:18.541802', '2025-11-11 11:25:18.541802', 1),
-(187, 1, 2, '2025-11-12', '08:00:00', '09:00:00', 'Confirmed', 250.00, '1762861756706JQP83', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: kukurikabu | Contact: 09498680515 | Email: zhiky090924@gmail.com', '2025-11-11 11:49:23.155775', '2025-11-11 11:49:23.155775', 1),
-(188, 1, 1, '2025-11-17', '06:00:00', '07:00:00', 'Confirmed', 250.00, '1763370629871AO564', 'test_payment_id', 'Test reservation via webhook', '2025-11-17 09:11:02.764751', '2025-11-17 09:11:02.764751', 0),
-(189, 11, 2, '2025-11-18', '08:00:00', '09:00:00', 'Confirmed', 250.00, '1763370907250DO7DH', NULL, 'Payment via Cash - Walk-in customer: Ivan Louis Cielo | Contact: 09366274094 | Email: cieloivanlouis@gmail.com', '2025-11-17 09:15:09.206971', '2025-11-17 09:15:09.206971', 1),
-(190, 11, 1, '2025-11-21', '08:00:00', '09:00:00', 'Confirmed', 250.00, '1763640187618HRO60', NULL, 'Payment via PayMongo QR Ph - Walk-in customer: Ivan Louis Cielo | Contact: 09366274094 | Email: cieloivanlouis@gmail.com', '2025-11-20 12:03:41.453152', '2025-11-20 12:03:41.453152', 1),
-(191, 1, 1, '2025-11-22', '04:00:00', '05:00:00', 'Confirmed', 250.00, '1763795029086F7TV1', 'test_payment_id', 'Test reservation via webhook', '2025-11-22 07:04:04.917456', '2025-11-22 07:04:04.917456', 0),
-(192, 1, 2, '2025-11-22', '04:00:00', '05:00:00', 'Confirmed', 250.00, '1763795029086F7TV1', 'test_payment_id', 'Test reservation via webhook', '2025-11-22 07:04:04.937364', '2025-11-22 07:04:04.937364', 0),
-(193, 1, 4, '2025-11-22', '04:00:00', '05:00:00', 'Confirmed', 220.00, '1763795029086F7TV1', 'test_payment_id', 'Test reservation via webhook', '2025-11-22 07:04:04.952137', '2025-11-22 07:04:04.952137', 0),
-(194, 1, 1, '2025-11-22', '05:00:00', '06:00:00', 'Confirmed', 250.00, '1763798773156F12GM', 'test_payment_id', 'Test reservation via webhook', '2025-11-22 08:07:04.979634', '2025-11-22 08:07:04.979634', 0),
-(195, 1, 1, '2025-11-22', '06:00:00', '07:00:00', 'Confirmed', 250.00, '1763801690160HHEU5', 'test_payment_id', 'Test reservation via webhook', '2025-11-22 08:57:57.840984', '2025-11-22 08:57:57.840984', 0),
-(196, 1, 1, '2025-11-22', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1763803751871Y6B06', 'test_payment_id', 'Test reservation via webhook', '2025-11-22 09:30:04.296245', '2025-11-22 09:30:04.296245', 0),
-(197, 11, 1, '2025-11-22', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1763803948284VUKW5', 'test_payment_id', 'Test reservation via webhook', '2025-11-22 09:32:52.146927', '2025-11-22 09:32:52.146927', 0),
-(198, 11, 1, '2025-11-22', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1763803948284VUKW5', 'test_payment_id', 'Test reservation via webhook', '2025-11-22 09:39:34.065527', '2025-11-22 09:39:34.065527', 0),
-(199, 11, 1, '2025-11-22', '06:00:00', '07:00:00', 'Confirmed', 250.00, '1763804674624CTVXQ', 'test_payment_id', 'Test reservation via webhook', '2025-11-22 09:45:10.678012', '2025-11-22 09:45:10.678012', 0),
-(200, 11, 1, '2025-11-23', '01:00:00', '02:00:00', 'Confirmed', 250.00, '1763872859334R8JMB', 'pay_D3vmfkhUntxsJASzqg4jsypE', 'Payment via Paymongo - pay_D3vmfkhUntxsJASzqg4jsypE', '2025-11-23 04:41:42.140236', '2025-11-23 04:41:42.140236', 0),
-(201, 11, 1, '2025-11-23', '01:00:00', '02:00:00', 'Confirmed', 250.00, '1763872859334R8JMB', 'pay_D3vmfkhUntxsJASzqg4jsypE', 'Payment via Paymongo - pay_D3vmfkhUntxsJASzqg4jsypE', '2025-11-23 04:41:42.573566', '2025-11-23 04:41:42.573566', 0),
-(202, 11, 1, '2025-11-23', '02:00:00', '03:00:00', 'Confirmed', 250.00, '1763873356061FSQSR', 'pay_35ruNmnKqoUMmpURFBzoWADK', 'Payment via Paymongo - pay_35ruNmnKqoUMmpURFBzoWADK', '2025-11-23 04:50:04.916858', '2025-11-23 04:50:04.916858', 0),
-(203, 11, 1, '2025-11-23', '02:00:00', '03:00:00', 'Confirmed', 250.00, '1763873356061FSQSR', 'pay_35ruNmnKqoUMmpURFBzoWADK', 'Payment via Paymongo - pay_35ruNmnKqoUMmpURFBzoWADK', '2025-11-23 04:50:05.105445', '2025-11-23 04:50:05.105445', 0),
-(204, 11, 1, '2025-11-23', '10:00:00', '11:00:00', 'Confirmed', 250.00, '17638740171164AGMD', 'pay_Gs7k6eGeFX5DqEa95KuQJ2Q7', 'Payment via Paymongo - pay_Gs7k6eGeFX5DqEa95KuQJ2Q7', '2025-11-23 05:00:33.150314', '2025-11-23 05:00:33.150314', 0),
-(205, 11, 1, '2025-11-23', '10:00:00', '11:00:00', 'Confirmed', 250.00, '17638740171164AGMD', 'pay_Gs7k6eGeFX5DqEa95KuQJ2Q7', 'Payment via Paymongo - pay_Gs7k6eGeFX5DqEa95KuQJ2Q7', '2025-11-23 05:00:33.688614', '2025-11-23 05:00:33.688614', 0),
-(206, 11, 2, '2025-11-23', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1763874098998ND6AY', 'pay_q8KY4dSH6uFfvQuguavbGR3f', 'Payment via Paymongo - pay_q8KY4dSH6uFfvQuguavbGR3f', '2025-11-23 05:01:55.593338', '2025-11-23 05:01:55.593338', 0),
-(207, 11, 2, '2025-11-23', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1763874098998ND6AY', 'pay_q8KY4dSH6uFfvQuguavbGR3f', 'Payment via Paymongo - pay_q8KY4dSH6uFfvQuguavbGR3f', '2025-11-23 05:01:55.899180', '2025-11-23 05:01:55.899180', 0),
-(208, 11, 2, '2025-11-24', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1763874571389U3D80', 'pay_7Pd8bd7V9c94b3jEQGxNgmQq', 'Payment via Paymongo - pay_7Pd8bd7V9c94b3jEQGxNgmQq', '2025-11-23 05:09:40.192143', '2025-11-23 05:09:40.192143', 0),
-(209, 11, 2, '2025-11-24', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1763874571389U3D80', 'pay_7Pd8bd7V9c94b3jEQGxNgmQq', 'Payment via Paymongo - pay_7Pd8bd7V9c94b3jEQGxNgmQq', '2025-11-23 05:09:40.577327', '2025-11-23 05:09:40.577327', 0),
-(210, 11, 6, '2025-11-23', '22:00:00', '23:00:00', 'Confirmed', 250.00, '1763875247843CM6CC', 'pay_4gFBu41rJxicXw2JoezzTe85', 'Payment via Paymongo - pay_4gFBu41rJxicXw2JoezzTe85', '2025-11-23 05:21:00.559697', '2025-11-23 05:21:00.559697', 0),
-(211, 11, 5, '2025-11-23', '22:00:00', '23:00:00', 'Confirmed', 250.00, '1763875923246H6XCC', 'pay_uCkWxW9VWV5jtEFd6g8oeMiS', 'Payment via Paymongo - pay_uCkWxW9VWV5jtEFd6g8oeMiS', '2025-11-23 05:35:38.365710', '2025-11-23 05:35:38.365710', 0),
-(212, 11, 2, '2025-11-23', '22:00:00', '23:00:00', 'Confirmed', 250.00, '1763876562314NSV0I', 'pay_Gc2k83cWkX6Y3nvKMMgXeEQr', 'Payment via Paymongo - pay_Gc2k83cWkX6Y3nvKMMgXeEQr', '2025-11-23 05:42:55.277561', '2025-11-23 05:42:55.277561', 0),
-(213, 11, 1, '2025-11-23', '22:00:00', '23:00:00', 'Confirmed', 250.00, '1763876562314NSV0I', 'pay_Gc2k83cWkX6Y3nvKMMgXeEQr', 'Payment via Paymongo - pay_Gc2k83cWkX6Y3nvKMMgXeEQr', '2025-11-23 05:42:55.307175', '2025-11-23 05:42:55.307175', 0),
-(214, 11, 4, '2025-11-23', '22:00:00', '23:00:00', 'Confirmed', 220.00, '1763876562314NSV0I', 'pay_Gc2k83cWkX6Y3nvKMMgXeEQr', 'Payment via Paymongo - pay_Gc2k83cWkX6Y3nvKMMgXeEQr', '2025-11-23 05:42:55.332508', '2025-11-23 05:42:55.332508', 0),
-(215, 11, 1, '2025-11-23', '21:00:00', '22:00:00', 'Confirmed', 250.00, '1763876676737PAPAX', 'pay_B3JrS9SJXQ8KDLXKskeBTHTR', 'Payment via Paymongo - pay_B3JrS9SJXQ8KDLXKskeBTHTR', '2025-11-23 05:45:37.161303', '2025-11-23 05:45:37.161303', 0),
-(216, 11, 1, '2025-11-23', '20:00:00', '21:00:00', 'Confirmed', 250.00, '1763876676737PAPAX', 'pay_B3JrS9SJXQ8KDLXKskeBTHTR', 'Payment via Paymongo - pay_B3JrS9SJXQ8KDLXKskeBTHTR', '2025-11-23 05:45:37.185802', '2025-11-23 05:45:37.185802', 0),
-(217, 11, 1, '2025-11-23', '19:00:00', '20:00:00', 'Confirmed', 250.00, '1763876676737PAPAX', 'pay_B3JrS9SJXQ8KDLXKskeBTHTR', 'Payment via Paymongo - pay_B3JrS9SJXQ8KDLXKskeBTHTR', '2025-11-23 05:45:37.211728', '2025-11-23 05:45:37.211728', 0);
+(459, 11, 1, '2025-11-30', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1764434435381PQEXO', 'pay_5GZSaMgCxaVhJbjy7NVt6eQw', 'Payment via Paymongo - pay_5GZSaMgCxaVhJbjy7NVt6eQw', '2025-11-29 16:41:01.457830', '2025-11-29 16:41:01.457830', 0),
+(460, 11, 2, '2025-11-30', '09:00:00', '10:00:00', 'Confirmed', 250.00, '1764434435381PQEXO', 'pay_5GZSaMgCxaVhJbjy7NVt6eQw', 'Payment via Paymongo - pay_5GZSaMgCxaVhJbjy7NVt6eQw', '2025-11-29 16:41:01.507226', '2025-11-29 16:41:01.507226', 0),
+(461, 8, 4, '2025-11-30', '11:00:00', '12:00:00', 'Confirmed', 220.00, '17644418953919OY1I', 'admin_cash_1764441923923', 'Payment via Paymongo - admin_cash_1764441923923', '2025-11-29 18:45:24.424119', '2025-11-29 18:45:24.424119', 0),
+(462, 8, 4, '2025-11-30', '08:00:00', '09:00:00', 'Confirmed', 220.00, '17644419917181H27E', 'admin_qrph_1764442013252', 'Payment via Paymongo - admin_qrph_1764442013252', '2025-11-29 18:46:53.334637', '2025-11-29 18:46:53.334637', 0),
+(463, 8, 5, '2025-11-30', '08:00:00', '09:00:00', 'Confirmed', 250.00, '17644419917181H27E', 'admin_qrph_1764442013252', 'Payment via Paymongo - admin_qrph_1764442013252', '2025-11-29 18:46:53.450561', '2025-11-29 18:46:53.450561', 0),
+(464, 8, 5, '2025-11-30', '12:00:00', '13:00:00', 'Confirmed', 250.00, '17644433483149OBZ4', 'admin_cash_1764443352728', 'Payment via Paymongo - admin_cash_1764443352728', '2025-11-29 19:09:12.764680', '2025-11-29 19:09:12.764680', 0),
+(465, 8, 6, '2025-11-30', '13:00:00', '14:00:00', 'Confirmed', 250.00, '1764443462097U7UA0', 'admin_cash_1764443465783', 'Payment via Paymongo - admin_cash_1764443465783', '2025-11-29 19:11:05.854039', '2025-11-29 19:11:05.854039', 0),
+(466, 8, 5, '2025-11-30', '14:00:00', '15:00:00', 'Confirmed', 250.00, '17644437072904OLXT', 'admin_cash_1764443710045', 'Payment via Paymongo - admin_cash_1764443710045', '2025-11-29 19:15:10.116271', '2025-11-29 19:15:10.116271', 0),
+(467, 20, 2, '2025-11-30', '21:00:00', '22:00:00', 'Confirmed', 250.00, '1764444878986G5YGQ', 'admin_cash_1764444883573', 'Payment via Paymongo - admin_cash_1764444883573', '2025-11-29 19:34:44.251786', '2025-11-29 19:34:44.251786', 1),
+(468, 20, 1, '2025-11-30', '22:00:00', '23:00:00', 'Confirmed', 250.00, '1764444878986G5YGQ', 'admin_cash_1764444883573', 'Payment via Paymongo - admin_cash_1764444883573', '2025-11-29 19:34:44.368360', '2025-11-29 19:34:44.368360', 1),
+(469, 8, 1, '2025-12-01', '08:00:00', '09:00:00', 'Confirmed', 250.00, '1764445526666VE0B6', 'admin_cash_1764445534183', 'Payment via Paymongo - admin_cash_1764445534183', '2025-11-29 19:45:34.300442', '2025-11-29 19:45:34.300442', 1),
+(470, 8, 2, '2025-12-01', '09:00:00', '10:00:00', 'Confirmed', 250.00, '1764445526666VE0B6', 'admin_cash_1764445534183', 'Payment via Paymongo - admin_cash_1764445534183', '2025-11-29 19:45:34.401444', '2025-11-29 19:45:34.401444', 1),
+(471, 11, 4, '2025-12-01', '10:00:00', '11:00:00', 'Confirmed', 220.00, '1764445611478AH9E4', 'pay_CMHErPzTpj4FnqNTwfYpxoGX', 'Payment via Paymongo - pay_CMHErPzTpj4FnqNTwfYpxoGX', '2025-11-29 19:47:04.117281', '2025-11-29 19:47:04.117281', 0),
+(472, 11, 5, '2025-12-01', '11:00:00', '12:00:00', 'Confirmed', 250.00, '1764445611478AH9E4', 'pay_CMHErPzTpj4FnqNTwfYpxoGX', 'Payment via Paymongo - pay_CMHErPzTpj4FnqNTwfYpxoGX', '2025-11-29 19:47:04.152122', '2025-11-29 19:47:04.152122', 0),
+(473, 11, 4, '2025-12-01', '12:00:00', '13:00:00', 'Confirmed', 220.00, '1764445975181LNU05', 'pay_AERL9NB7vJkV8j7qbJbTS9er', 'Payment via Paymongo - pay_AERL9NB7vJkV8j7qbJbTS9er', '2025-11-29 19:53:04.160389', '2025-11-29 19:53:04.160389', 0),
+(474, 11, 5, '2025-12-01', '13:00:00', '14:00:00', 'Confirmed', 250.00, '1764445975181LNU05', 'pay_AERL9NB7vJkV8j7qbJbTS9er', 'Payment via Paymongo - pay_AERL9NB7vJkV8j7qbJbTS9er', '2025-11-29 19:53:04.186501', '2025-11-29 19:53:04.186501', 0),
+(475, 8, 2, '2025-12-01', '21:00:00', '22:00:00', 'Confirmed', 250.00, '17644469536256RJ9V', 'admin_cash_1764447044663', 'Payment via Paymongo - admin_cash_1764447044663', '2025-11-29 20:10:44.783566', '2025-11-29 20:10:44.783566', 1),
+(476, 8, 1, '2025-12-01', '22:00:00', '23:00:00', 'Confirmed', 250.00, '17644469536256RJ9V', 'admin_cash_1764447044663', 'Payment via Paymongo - admin_cash_1764447044663', '2025-11-29 20:10:44.932693', '2025-11-29 20:10:44.932693', 1),
+(477, 11, 2, '2025-12-02', '08:00:00', '09:00:00', 'Confirmed', 250.00, '1764447505163O4TS2', 'pay_phbqEu9P2r1QtVqPzEtW81o5', 'Payment via Paymongo - pay_phbqEu9P2r1QtVqPzEtW81o5', '2025-11-29 20:18:56.247045', '2025-11-29 20:18:56.247045', 0),
+(478, 11, 4, '2025-12-02', '09:00:00', '10:00:00', 'Confirmed', 220.00, '1764447505163O4TS2', 'pay_phbqEu9P2r1QtVqPzEtW81o5', 'Payment via Paymongo - pay_phbqEu9P2r1QtVqPzEtW81o5', '2025-11-29 20:18:56.274030', '2025-11-29 20:18:56.274030', 0),
+(479, 11, 4, '2025-12-03', '08:00:00', '09:00:00', 'Confirmed', 220.00, '1764447659383NVCLR', 'pay_xrWMbS4rxzzW8V1jMaBsrQya', 'Payment via Paymongo - pay_xrWMbS4rxzzW8V1jMaBsrQya', '2025-11-29 20:21:12.375841', '2025-11-29 20:21:12.375841', 0),
+(480, 11, 5, '2025-12-03', '09:00:00', '10:00:00', 'Confirmed', 250.00, '1764447659383NVCLR', 'pay_xrWMbS4rxzzW8V1jMaBsrQya', 'Payment via Paymongo - pay_xrWMbS4rxzzW8V1jMaBsrQya', '2025-11-29 20:21:12.400167', '2025-11-29 20:21:12.400167', 0),
+(481, 11, 6, '2025-12-03', '10:00:00', '11:00:00', 'Confirmed', 250.00, '1764447659383NVCLR', 'pay_xrWMbS4rxzzW8V1jMaBsrQya', 'Payment via Paymongo - pay_xrWMbS4rxzzW8V1jMaBsrQya', '2025-11-29 20:21:12.431130', '2025-11-29 20:21:12.431130', 0),
+(482, 8, 4, '2025-11-30', '15:00:00', '16:00:00', 'Confirmed', 220.00, '17644477878163Y36J', 'admin_cash_1764447810711', 'Payment via Paymongo - admin_cash_1764447810711', '2025-11-29 20:23:30.783695', '2025-11-29 20:23:30.783695', 1),
+(483, 8, 5, '2025-11-30', '16:00:00', '17:00:00', 'Confirmed', 250.00, '17644477878163Y36J', 'admin_cash_1764447810711', 'Payment via Paymongo - admin_cash_1764447810711', '2025-11-29 20:23:30.849977', '2025-11-29 20:23:30.849977', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `reservations_history`
+--
+
+CREATE TABLE `reservations_history` (
+  `History_ID` int NOT NULL,
+  `original_id` int NOT NULL,
+  `User_ID` int NOT NULL,
+  `Court_ID` int NOT NULL,
+  `Reservation_Date` date NOT NULL,
+  `Start_Time` time NOT NULL,
+  `End_Time` time NOT NULL,
+  `Status` enum('Pending','Confirmed','Cancelled','Completed') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Confirmed',
+  `Total_Amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `Reference_Number` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `Paymongo_Reference_Number` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `Notes` text COLLATE utf8mb4_unicode_ci,
+  `Is_Admin_Created` tinyint(1) NOT NULL DEFAULT '0',
+  `Created_at` datetime NOT NULL,
+  `Updated_at` datetime NOT NULL,
+  `Archived_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -630,7 +668,9 @@ CREATE TABLE `suggestions` (
 INSERT INTO `suggestions` (`id`, `name`, `message`, `user_id`, `created_at`, `updated_at`) VALUES
 (1, 'Filbert', 'Filbertaafdfadf', 1, '2025-10-31 09:44:33.539769', '2025-10-31 09:44:33.539769'),
 (2, 'zhiky', 'TEST', NULL, '2025-10-31 09:45:28.340323', '2025-10-31 09:45:28.340323'),
-(3, 'Ivan Louis Cielo', 'dasdsa', 11, '2025-11-13 19:50:48.177958', '2025-11-13 19:50:48.177958');
+(3, 'Ivan Louis Cielo', 'dasdsa', 11, '2025-11-13 19:50:48.177958', '2025-11-13 19:50:48.177958'),
+(5, 'fsadsad', 'adasdasdasd', NULL, '2025-11-24 01:17:54.968694', '2025-11-24 01:17:54.968694'),
+(6, 'Ivan Louis Cielo', 'dsadsafsadasdas', 11, '2025-11-24 01:18:42.389427', '2025-11-24 01:18:42.389427');
 
 -- --------------------------------------------------------
 
@@ -686,9 +726,14 @@ INSERT INTO `users` (`id`, `name`, `age`, `sex`, `username`, `email`, `password`
 (8, 'admin', 21, 'Male', 'admin', 'rockwell.barrientos1996@gmail.com', '$2a$12$yznI4LmuRWJfoTS6B2UA0e2w8CQYy/PlZhrh5fjiJRuka6jjbXLMm', '09498680515', NULL, 1, 0, NULL, NULL, NULL, '2025-10-31 01:22:24.615642', '2025-11-13 20:49:57.876332', 'admin'),
 (9, 'kukurikabu', NULL, NULL, 'guest_1762801511064_hyb2j', 'guest_1762801511064_hyb2j@walkin.local', '$2a$12$ws2m1tw2yrA/lS/xiU.58uMq./hZ5iw31QkOSbBcM0uoy2ybxVdki', NULL, NULL, 1, 0, NULL, NULL, NULL, '2025-11-10 19:05:11.779141', '2025-11-10 19:05:11.779141', 'user'),
 (10, 'POGI', NULL, NULL, 'guest_1762856699787_2dafn', 'baktolbomb@gmail.com', '$2a$12$TfvFWWt6ocE9N0ADY8E6Iu5dE1xcAT9bTvpeNge8b5LjiS7phsEdO', '09498680515', NULL, 1, 0, NULL, NULL, NULL, '2025-11-11 10:25:00.272395', '2025-11-11 10:25:00.272395', 'user'),
-(11, 'Ivan Louis Cielo', 22, 'Male', 'ivan', 'cieloivanlouis@gmail.com', '$2a$12$y3c6Xjzo4WG6w.95WmIo7uWdlKW.QQZqyaWM81dYw82fa9judyNba', '09366274094', '/uploads/avatars/1763665522840-755203769.jpg', 1, 0, NULL, NULL, NULL, '2025-11-13 19:50:17.012848', '2025-11-20 19:05:23.000000', 'user'),
+(11, 'Ivan Louis Cielo', 22, 'Male', 'ivan', 'cieloivanlouis@gmail.com', '$2a$12$yxrOwOyaMhWICPKs5hBzsO6Is.6CMrtpg58aA1OrpmWlMSUB76BhG', '+63 936 627 4094', '/uploads/avatars/1763665522840-755203769.jpg', 1, 0, NULL, NULL, NULL, '2025-11-13 19:50:17.012848', '2025-11-28 21:22:24.000000', 'user'),
 (14, 'jerjerjer', 22, 'Male', 'jerjer', 'koko@gmail.com', '$2a$12$/3ov1rB.TXUVaeMIiPHRzOkxiWDsTIx.ILHoKp3HTmIRq74OyIHfq', NULL, NULL, 1, 0, NULL, NULL, NULL, '2025-11-21 19:30:16.619265', '2025-11-21 19:30:16.619265', 'user'),
-(15, 'popopo', 22, 'Male', 'popo', 'dadw@gmail.com', '$2a$12$Zg/XA8hGRY4kXc529EHIJ.ZBIufiyrs5gY5Tc2ESj0vo52D8znWpy', NULL, NULL, 1, 0, NULL, NULL, NULL, '2025-11-21 19:43:28.020506', '2025-11-21 19:43:28.020506', 'user');
+(15, 'popopo', 22, 'Male', 'popo', 'dadw@gmail.com', '$2a$12$Zg/XA8hGRY4kXc529EHIJ.ZBIufiyrs5gY5Tc2ESj0vo52D8znWpy', '09366274094', NULL, 1, 0, NULL, NULL, NULL, '2025-11-21 19:43:28.020506', '2025-11-23 07:05:16.000000', 'user'),
+(16, 'Oscar kokak', 15, 'Male', 'kokak', 'kokak@gmail.com', '$2a$12$.TOONeE3OPe/1hbrkw86cOE5V0A7mcqwFXZ17g8KQyAR5O4TEGSdO', NULL, NULL, 1, 0, NULL, NULL, NULL, '2025-11-23 17:12:08.472796', '2025-11-23 17:12:08.472796', 'user'),
+(17, 'lolopo', 25, 'Female', 'lolo', 'ic.ivanlouis.cielo@cvsu.edu.ph', '$2a$12$e0XO3xznV.3biMKo5/RCcuLymmUur.0r3cIsHU6h7/xuxGncSU2T2', '+63 936 627 4094', '/uploads/avatars/1763938274876-277620260.jpg', 1, 0, NULL, NULL, NULL, '2025-11-23 22:49:15.052270', '2025-11-23 22:52:20.000000', 'user'),
+(18, 'Levy Cielo', 25, 'Male', 'levycielo27', 'levycielo27@gmai.com', '$2a$12$Q0u1gBJRYqF.WQu0ZPPzvOzWM61X.mIZGcZ9VeDDg5k.XTRhpQQ1i', '+639271800604', NULL, 1, 0, NULL, NULL, NULL, '2025-11-24 01:07:33.318298', '2025-11-24 01:07:33.318298', 'user'),
+(19, 'sfes', 22, 'Male', 'sfdsf', 'sdfds@gmail.com', '$2a$12$DBtJB1L1P3wHh0RyQLsgB.UajKgUVKo8EuH4/IV/mKu9T.uQtxjxe', NULL, NULL, 1, 0, NULL, NULL, NULL, '2025-11-28 15:22:08.142230', '2025-11-28 15:22:08.142230', 'user'),
+(20, 'Jersey Anne', NULL, NULL, 'guest_1764444883797_spmkf', 'jersecutie06@gmail.com', '$2a$12$a2w/m.IcYo3Djcmmg17pneF9x88j3REK9OEK.Xd.THwf9Ay1y9pw2', '09498680515', NULL, 1, 0, NULL, NULL, NULL, '2025-11-29 19:34:44.219711', '2025-11-29 19:34:44.219711', 'user');
 
 --
 -- Indexes for dumped tables
@@ -727,6 +772,26 @@ ALTER TABLE `equipment_rental_items`
   ADD KEY `FK_070274580234fd00c598779da3e` (`rental_id`);
 
 --
+-- Indexes for table `fee_management`
+--
+ALTER TABLE `fee_management`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_fee_management_player_id` (`player_id`),
+  ADD KEY `idx_fee_management_user_id` (`user_id`),
+  ADD KEY `idx_fee_management_fee_date` (`fee_date`),
+  ADD KEY `idx_fee_management_payment_status` (`payment_status`);
+
+--
+-- Indexes for table `fee_management_history`
+--
+ALTER TABLE `fee_management_history`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_fee_management_history_player_id` (`player_id`),
+  ADD KEY `idx_fee_management_history_user_id` (`user_id`),
+  ADD KEY `idx_fee_management_history_fee_date` (`fee_date`),
+  ADD KEY `idx_fee_management_history_payment_status` (`payment_status`);
+
+--
 -- Indexes for table `gallery`
 --
 ALTER TABLE `gallery`
@@ -737,6 +802,16 @@ ALTER TABLE `gallery`
 --
 ALTER TABLE `migrations`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_notifications_is_read` (`is_read`),
+  ADD KEY `IDX_notifications_user_id` (`user_id`),
+  ADD KEY `IDX_notifications_equipment_rental_item_id` (`equipment_rental_item_id`),
+  ADD KEY `IDX_notifications_created_at` (`created_at`);
 
 --
 -- Indexes for table `payments`
@@ -766,6 +841,14 @@ ALTER TABLE `queue_matches_history`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `queue_match_players`
+--
+ALTER TABLE `queue_match_players`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_queue_match_players_match` (`queue_match_id`),
+  ADD KEY `IDX_queue_match_players_player` (`queue_player_id`);
+
+--
 -- Indexes for table `queue_players`
 --
 ALTER TABLE `queue_players`
@@ -784,6 +867,17 @@ ALTER TABLE `reservations`
   ADD PRIMARY KEY (`Reservation_ID`),
   ADD KEY `FK_23593e61d0aa200e5e4a30fa7e7` (`User_ID`),
   ADD KEY `FK_5333eba2d4d90484e8bcfa99110` (`Court_ID`);
+
+--
+-- Indexes for table `reservations_history`
+--
+ALTER TABLE `reservations_history`
+  ADD PRIMARY KEY (`History_ID`),
+  ADD KEY `IDX_reservations_history_user_id` (`User_ID`),
+  ADD KEY `IDX_reservations_history_court_id` (`Court_ID`),
+  ADD KEY `IDX_reservations_history_archived_at` (`Archived_at`),
+  ADD KEY `IDX_reservations_history_original_id` (`original_id`),
+  ADD KEY `IDX_reservations_history_date` (`Reservation_Date`);
 
 --
 -- Indexes for table `suggestions`
@@ -814,13 +908,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `announcements`
 --
 ALTER TABLE `announcements`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `courts`
 --
 ALTER TABLE `courts`
-  MODIFY `Court_Id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `Court_Id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `equipments`
@@ -832,19 +926,31 @@ ALTER TABLE `equipments`
 -- AUTO_INCREMENT for table `equipment_rentals`
 --
 ALTER TABLE `equipment_rentals`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=170;
 
 --
 -- AUTO_INCREMENT for table `equipment_rental_items`
 --
 ALTER TABLE `equipment_rental_items`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=214;
+
+--
+-- AUTO_INCREMENT for table `fee_management`
+--
+ALTER TABLE `fee_management`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=98;
+
+--
+-- AUTO_INCREMENT for table `fee_management_history`
+--
+ALTER TABLE `fee_management_history`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `gallery`
 --
 ALTER TABLE `gallery`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `migrations`
@@ -853,52 +959,70 @@ ALTER TABLE `migrations`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=151;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=579;
 
 --
 -- AUTO_INCREMENT for table `queueing_courts`
 --
 ALTER TABLE `queueing_courts`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT for table `queue_matches`
 --
 ALTER TABLE `queue_matches`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=144;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=461;
 
 --
 -- AUTO_INCREMENT for table `queue_matches_history`
 --
 ALTER TABLE `queue_matches_history`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+
+--
+-- AUTO_INCREMENT for table `queue_match_players`
+--
+ALTER TABLE `queue_match_players`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `queue_players`
 --
 ALTER TABLE `queue_players`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=134;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=246;
 
 --
 -- AUTO_INCREMENT for table `queue_players_history`
 --
 ALTER TABLE `queue_players_history`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=157;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=171;
 
 --
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `Reservation_ID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=218;
+  MODIFY `Reservation_ID` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=484;
+
+--
+-- AUTO_INCREMENT for table `reservations_history`
+--
+ALTER TABLE `reservations_history`
+  MODIFY `History_ID` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `suggestions`
 --
 ALTER TABLE `suggestions`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `time_slots`
@@ -910,7 +1034,7 @@ ALTER TABLE `time_slots`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- Constraints for dumped tables
@@ -929,16 +1053,29 @@ ALTER TABLE `equipment_rental_items`
   ADD CONSTRAINT `FK_070274580234fd00c598779da3e` FOREIGN KEY (`rental_id`) REFERENCES `equipment_rentals` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `FK_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
 -- Constraints for table `payments`
 --
 ALTER TABLE `payments`
-  ADD CONSTRAINT `FK_9ed5ff4942e09edfd44ee0ccf01` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`Reservation_ID`);
+  ADD CONSTRAINT `FK_9ed5ff4942e09edfd44ee0ccf01` FOREIGN KEY (`reservation_id`) REFERENCES `reservations` (`Reservation_ID`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `queue_matches`
 --
 ALTER TABLE `queue_matches`
-  ADD CONSTRAINT `FK_d5a0337f1dac2b96c88cb22799e` FOREIGN KEY (`court_id`) REFERENCES `queueing_courts` (`id`);
+  ADD CONSTRAINT `FK_d5a0337f1dac2b96c88cb22799e` FOREIGN KEY (`court_id`) REFERENCES `queueing_courts` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `queue_match_players`
+--
+ALTER TABLE `queue_match_players`
+  ADD CONSTRAINT `FK_queue_match_players_match` FOREIGN KEY (`queue_match_id`) REFERENCES `queue_matches` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `FK_queue_match_players_player` FOREIGN KEY (`queue_player_id`) REFERENCES `queue_players` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `reservations`

@@ -21,6 +21,8 @@ import { AnnouncementsModule } from './modules/announcements/announcements.modul
 import { QueuePlayersModule } from './modules/queue-players/queue-players.module';
 import { QueueingCourtsModule } from './modules/queueing-courts/queueing-courts.module';
 import { QueueMatchesModule } from './modules/queue-matches/queue-matches.module';
+import { FeeManagementModule } from './modules/fee-management/fee-management.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -91,6 +93,8 @@ import { HealthController } from './health.controller';
     QueuePlayersModule,
     QueueingCourtsModule,
     QueueMatchesModule,
+    FeeManagementModule,
+    NotificationsModule,
   ],
   controllers: [HealthController],
   providers: [],

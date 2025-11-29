@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { QueuePlayer } from '../queue-players/entities/queue-player.entity';
 import {
@@ -59,34 +59,14 @@ export class QueueMatchesService {
 
   async generateMatches(dto: GenerateQueueMatchesDto, userId: number) {
     const todayISO = this.getTodayISODate();
-    const { startOfDay, endOfDay } = this.getTodayDateRange();
 
-    // Only check against COMPLETED matches today to allow players to play again after completing matches
-    // This allows players to generate new matches even if they've already played today,
-    // but still prevents duplicate teams in the same generation
-    const existingCompletedMatchesToday = await this.queueMatchesRepository.find({
-      where: {
-        userId,
-        gameType: dto.gameType,
-        status: QueueMatchStatus.COMPLETED,
-        completedAt: Between(startOfDay, endOfDay),
-      },
-    });
+    // Removed logic that prevents players from being paired in the same team twice
+    // Players can now be paired together multiple times
 
-    const existingTeamSignatures = new Set(
-      existingCompletedMatchesToday.flatMap((match) => [
-        this.getTeamMembersIdSignature(match.teamA),
-        this.getTeamMembersIdSignature(match.teamB),
-      ]),
-    );
-
-    console.log(
-      `[Match Generation] Completed matches today: ${existingCompletedMatchesToday.length}`,
-    );
-
+    // Order players by creation time (arrival order) - earlier players get priority
     const players = await this.queuePlayersRepository.find({
       where: { userId },
-      order: { updatedAt: 'ASC' },
+      order: { createdAt: 'ASC', id: 'ASC' }, // Order by creation time, then ID for consistency
     });
 
     // Debug: Log all players and their eligibility status
@@ -127,10 +107,11 @@ export class QueueMatchesService {
           );
           return true;
         }
-        // Second priority: include players who played today or haven't played yet
+        // Second priority: include players who played today, haven't played yet, or have future dates
+        // Allow players with dates >= today (handles future dates that may be set incorrectly)
         const lastPlayedISO = this.toISODate(player.lastPlayed);
         const isActiveToday =
-          !lastPlayedISO || lastPlayedISO === todayISO;
+          !lastPlayedISO || lastPlayedISO >= todayISO;
         console.log(
           `[Match Generation] Player ${player.name} (ID: ${player.id}) - status: ${player.status}, lastPlayedISO: ${lastPlayedISO}, todayISO: ${todayISO}, isActiveToday: ${isActiveToday}`,
         );
@@ -196,18 +177,15 @@ export class QueueMatchesService {
     });
 
     console.log(
-      `[Match Generation] Existing team signatures from completed matches today: ${existingTeamSignatures.size}`,
-      Array.from(existingTeamSignatures).slice(0, 10), // Only show first 10 to avoid log spam
-    );
-    console.log(
       `[Match Generation] Players in active matches: ${playersInActiveMatches.size}`,
       Array.from(playersInActiveMatches),
     );
 
+    // Pass empty Set to allow all team combinations (no restrictions on pairing same players)
     const teams = this.buildTeams(
       eligiblePlayers,
       dto.gameType,
-      existingTeamSignatures,
+      new Set<string>(), // Empty set - no team pairing restrictions
       playersInActiveMatches,
     );
 
@@ -218,7 +196,8 @@ export class QueueMatchesService {
       })),
     );
 
-    const matchPayloads = this.buildMatchesFromTeams(teams, playersInActiveMatches);
+    // Pass eligible players to prioritize by arrival order
+    const matchPayloads = this.buildMatchesFromTeams(teams, playersInActiveMatches, eligiblePlayers);
 
     console.log(
       `[Match Generation] Match payloads created: ${matchPayloads.length}`,
@@ -278,11 +257,16 @@ export class QueueMatchesService {
     ];
 
     let courtIndex = 0;
+    // Track players that become busy as we assign matches in this batch
+    const newlyBusyPlayerIds = new Set<number>(busyPlayerIds);
+    
     orderedPayloads.forEach((payload) => {
+      // Check if match has any players that are already busy (from existing matches or newly assigned matches)
       const hasBusyPlayer = this.matchHasBusyPlayer(
         payload,
-        busyPlayerIds,
+        newlyBusyPlayerIds,
       );
+      
       // Only assign courts to matches without busy players (who can start immediately)
       // Matches with busy players go to pending until those players finish their current matches
       // If there are available courts and no busy players, assign court and make it ACTIVE
@@ -310,6 +294,12 @@ export class QueueMatchesService {
 
       if (court) {
         activeMatches.push(match);
+        // Mark all players in this match as busy for subsequent matches in this batch
+        payload.teamA.forEach((player) => newlyBusyPlayerIds.add(player.id));
+        payload.teamB.forEach((player) => newlyBusyPlayerIds.add(player.id));
+        console.log(
+          `[Match Generation] Marked players as busy: ${[...payload.teamA, ...payload.teamB].map((p) => p.name).join(', ')}`,
+        );
       } else {
         pendingMatches.push(match);
       }
@@ -373,17 +363,22 @@ export class QueueMatchesService {
   }
 
   async findAll(status?: QueueMatchStatus, userId?: number) {
-    const where: any = {};
-    if (status) {
-      where.status = status;
+    try {
+      const where: any = {};
+      if (status) {
+        where.status = status;
+      }
+      if (userId) {
+        where.userId = userId;
+      }
+      return await this.queueMatchesRepository.find({
+        where,
+        order: { status: 'ASC', createdAt: 'ASC' },
+      });
+    } catch (error) {
+      console.error('[QueueMatchesService] Error in findAll:', error);
+      throw error;
     }
-    if (userId) {
-      where.userId = userId;
-    }
-    return this.queueMatchesRepository.find({
-      where,
-      order: { status: 'ASC', createdAt: 'ASC' },
-    });
   }
 
   async createMatch(dto: CreateQueueMatchDto, userId: number): Promise<QueueMatch> {
@@ -992,16 +987,10 @@ export class QueueMatchesService {
     const combinations = this.buildPlayerCombinations(players);
     const teams: QueueMatchTeamPlayer[][] = [];
 
-    // Generate all possible teams (don't restrict by "used" players here)
-    // The match building logic will ensure no duplicate players in matches
+    // Generate all possible teams - removed restriction on pairing same players twice
+    // Players can now be paired together multiple times
     combinations.forEach((combo) => {
-      // Only skip if this team combination was already used today (disallowedTeamSignatures)
-      if (disallowedTeamSignatures.has(combo.signature)) {
-        return;
-      }
-
       const team = combo.players.map((player) => this.toMatchPlayer(player));
-      disallowedTeamSignatures.add(combo.signature);
       teams.push(team);
     });
 
@@ -1038,16 +1027,10 @@ export class QueueMatchesService {
 
     const teams: QueueMatchTeamPlayer[][] = [];
 
-    // Generate all possible teams (don't restrict by "used" players here)
-    // The match building logic will ensure no duplicate players in matches
+    // Generate all possible teams - removed restriction on pairing same players twice
+    // Players can now be paired together multiple times
     combos.forEach((combo) => {
-      // Only skip if this team combination was already used today (disallowedTeamSignatures)
-      if (disallowedTeamSignatures.has(combo.signature)) {
-        return;
-      }
-
       const team = combo.players.map((player) => this.toMatchPlayer(player));
-      disallowedTeamSignatures.add(combo.signature);
       teams.push(team);
     });
 
@@ -1057,6 +1040,7 @@ export class QueueMatchesService {
   private buildMatchesFromTeams(
     teams: QueueMatchTeamPlayer[][],
     playersInActiveMatches: Set<number> = new Set(),
+    eligiblePlayers: QueuePlayer[] = [],
   ): { teamA: QueueMatchTeamPlayer[]; teamB: QueueMatchTeamPlayer[] }[] {
     // Helper function to check if two teams share any players
     const teamsSharePlayers = (team1: QueueMatchTeamPlayer[], team2: QueueMatchTeamPlayer[]): boolean => {
@@ -1106,31 +1090,46 @@ export class QueueMatchesService {
       }
     }
 
-    // Sort matches by skill similarity (best matches first)
-    validMatches.sort((a, b) => a.score - b.score);
+    // Helper function to get player priority (lower = earlier arrival)
+    const getPlayerPriority = (playerId: number): number => {
+      const index = eligiblePlayers.findIndex(p => p.id === playerId);
+      return index === -1 ? 9999 : index; // Players not found get lowest priority
+    };
 
-    // Use greedy algorithm to select matches, ensuring no player is used twice
-    // Exception: players in active matches can appear in multiple pending matches
+    // Sort matches to prioritize those with earlier-arriving players
+    // First priority: matches with players who arrived earlier (lower index)
+    // Second priority: skill similarity (lower score = better match)
+    if (validMatches.length > 0) {
+      validMatches.sort((a, b) => {
+        // Get the minimum player priority (earliest arrival) for each match
+        const aPriorities = Array.from(a.playerIds).map(id => getPlayerPriority(id));
+        const bPriorities = Array.from(b.playerIds).map(id => getPlayerPriority(id));
+        
+        // Only calculate min if arrays are not empty
+        const aMinPriority = aPriorities.length > 0 ? Math.min(...aPriorities) : 9999;
+        const bMinPriority = bPriorities.length > 0 ? Math.min(...bPriorities) : 9999;
+        
+        // Prioritize matches with earlier-arriving players
+        if (aMinPriority !== bMinPriority) {
+          return aMinPriority - bMinPriority; // Lower priority number = earlier arrival
+        }
+        
+        // If same arrival priority, use skill score (better skill match)
+        return a.score - b.score;
+      });
+    }
+
+    // Generate ALL possible matches - prioritize by arrival order
+    // Players can be in multiple matches (especially pending ones)
     const selectedMatches: { teamA: QueueMatchTeamPlayer[]; teamB: QueueMatchTeamPlayer[] }[] = [];
-    const usedPlayerIds = new Set<number>();
 
+    // Generate all possible matches
+    // Only restriction: players in active matches can't be in another active match at the same time
+    // But they can be in pending matches
     for (const match of validMatches) {
-      // Check if any player in this match is already used
-      // Exception: players in active matches can be reused in pending matches
-      const hasUsedPlayer = Array.from(match.playerIds).some(
-        id => usedPlayerIds.has(id) && !playersInActiveMatches.has(id)
-      );
-      
-      if (!hasUsedPlayer) {
-        // Add this match and mark all players as used (except those in active matches)
-        selectedMatches.push({ teamA: match.teamA, teamB: match.teamB });
-        match.playerIds.forEach(id => {
-          // Only mark as used if player is not in an active match
-          if (!playersInActiveMatches.has(id)) {
-            usedPlayerIds.add(id);
-          }
-        });
-      }
+      // Add all matches - they will be marked as active or pending based on player availability
+      // when assigning courts
+      selectedMatches.push({ teamA: match.teamA, teamB: match.teamB });
     }
 
     return selectedMatches;

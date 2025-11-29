@@ -7,7 +7,8 @@ import {
   type QueueMatch,
   type QueueMatchGameType,
   type QueueMatchPlayer,
-  type QueueingCourtStatus
+  type QueueingCourtStatus,
+  type QueuePlayer
 } from '@/lib/apiServices'
 import { getErrorMessage } from '@/lib/errorUtils'
 
@@ -24,7 +25,7 @@ const gameTypeLabels: Record<QueueMatchGameType, string> = {
 }
 
 function SexBadge({ sex }: { sex: 'male' | 'female' }) {
-  const baseClasses = 'flex h-6 w-6 items-center justify-center rounded-full shadow-inner'
+  const baseClasses = 'flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full shadow-inner flex-shrink-0'
   const variantClasses =
     sex === 'male'
       ? 'bg-sky-500/20 text-sky-300'
@@ -33,11 +34,11 @@ function SexBadge({ sex }: { sex: 'male' | 'female' }) {
   return (
     <span className={`${baseClasses} ${variantClasses}`} aria-label={`${sex} player`} title={`${sex} player`}>
       {sex === 'male' ? (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 sm:h-3.5 sm:w-3.5">
           <path d="M13.5 2a.75.75 0 000 1.5h1.69l-3.2 3.2a4.5 4.5 0 10.884.884l3.2-3.2V6.5a.75.75 0 001.5 0V2.75A.75.75 0 0016.75 2H13.5zm-4 5a3 3 0 110 6 3 3 0 010-6z" />
         </svg>
       ) : (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 sm:h-3.5 sm:w-3.5">
           <path d="M10 2a4.5 4.5 0 10.878 8.9l-.378.378H8.75a.75.75 0 000 1.5h1.25v1.25a.75.75 0 001.5 0V12.78l.378-.378A4.5 4.5 0 0010 2zm0 1.5a3 3 0 110 6 3 3 0 010-6z" />
         </svg>
       )}
@@ -47,12 +48,12 @@ function SexBadge({ sex }: { sex: 'male' | 'female' }) {
 
 function TeamPlayerCard({ player }: { player: QueueMatchPlayer }) {
   return (
-    <div className="flex flex-col items-center gap-2 text-center">
-      <div className="flex items-center justify-center gap-2">
+    <div className="flex flex-col items-center gap-1 sm:gap-1.5 md:gap-2 text-center w-full min-w-0">
+      <div className="flex items-center justify-center gap-1 sm:gap-1.5 md:gap-2 w-full min-w-0">
         <SexBadge sex={player.sex} />
-        <span className="text-base font-semibold text-white">{player.name}</span>
+        <span className="text-xs sm:text-sm md:text-base font-semibold text-white break-words max-w-[150px] sm:max-w-[180px] md:max-w-[200px] lg:max-w-none">{player.name}</span>
       </div>
-      <span className="rounded-full bg-white/12 px-3 py-0.5 text-xs font-medium uppercase tracking-wide text-white/60">
+      <span className="rounded-full bg-white/12 px-2 sm:px-2.5 md:px-3 py-0.5 text-[9px] sm:text-[10px] md:text-xs font-medium uppercase tracking-wide text-white/60">
         {player.skill}
       </span>
     </div>
@@ -113,6 +114,8 @@ export function QueueingPage() {
     courtId: null,
     courtName: null
   })
+  const [players, setPlayers] = useState<QueuePlayer[]>([])
+  const [loadingPlayers, setLoadingPlayers] = useState(false)
   const nextCourtNumber = useMemo(() => {
     if (courts.length === 0) return 1
     
@@ -171,17 +174,44 @@ export function QueueingPage() {
     }
   }, [])
 
-  useEffect(() => {
-    void loadCourts()
-  }, [loadCourts])
+  const loadPlayers = useCallback(async () => {
+    try {
+      setLoadingPlayers(true)
+      const playersFromApi = await apiServices.getQueuePlayers()
+      setPlayers(playersFromApi)
+    } catch (error) {
+      console.error('[QueueingPage] Failed to load players:', error)
+    } finally {
+      setLoadingPlayers(false)
+    }
+  }, [])
 
+  // Stagger data loading to prevent blocking the main thread
   useEffect(() => {
-    void loadMatches()
-  }, [loadMatches])
+    // Load courts immediately (critical for UI)
+    void loadCourts()
+    
+    // Defer matches and players loading slightly to prevent blocking
+    const matchesTimer = setTimeout(() => {
+      void loadMatches()
+    }, 50)
+    
+    const playersTimer = setTimeout(() => {
+      void loadPlayers()
+    }, 100)
+    
+    return () => {
+      clearTimeout(matchesTimer)
+      clearTimeout(playersTimer)
+    }
+  }, [loadCourts, loadMatches, loadPlayers])
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      setNowTimestamp(Date.now())
+      // Defer state update to prevent blocking the main thread
+      setTimeout(() => {
+        setNowTimestamp(Date.now())
+      }, 0)
     }, 1000)
     return () => window.clearInterval(interval)
   }, [])
@@ -415,7 +445,7 @@ export function QueueingPage() {
   const renderStatusBadge = (status: CourtCard['status']) => {
     if (status === 'maintenance') {
       return (
-        <span className="rounded-full border border-amber-400/60 bg-amber-500/5 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-300">
+        <span className="rounded-full border border-amber-400/60 bg-amber-500/5 px-2.5 sm:px-3 md:px-4 py-0.5 sm:py-1 text-[9px] sm:text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-amber-300 whitespace-nowrap">
           Maintenance
         </span>
       )
@@ -423,7 +453,7 @@ export function QueueingPage() {
 
     if (status === 'unavailable') {
       return (
-        <span className="rounded-full border border-rose-500/60 bg-rose-500/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-300">
+        <span className="rounded-full border border-rose-500/60 bg-rose-500/10 px-2.5 sm:px-3 md:px-4 py-0.5 sm:py-1 text-[9px] sm:text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-rose-300 whitespace-nowrap">
           Unavailable
         </span>
       )
@@ -431,14 +461,14 @@ export function QueueingPage() {
 
     if (status === 'occupied') {
       return (
-        <span className="rounded-full border border-orange-400/70 bg-orange-500/10 px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-orange-200">
+        <span className="rounded-full border border-orange-400/70 bg-orange-500/10 px-2.5 sm:px-3 md:px-4 py-0.5 sm:py-1 text-[9px] sm:text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-orange-200 whitespace-nowrap">
           Occupied
         </span>
       )
     }
 
     return (
-      <span className="rounded-full border border-emerald-500 bg-transparent px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
+      <span className="rounded-full border border-emerald-500 bg-transparent px-2.5 sm:px-3 md:px-4 py-0.5 sm:py-1 text-[9px] sm:text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-emerald-300 whitespace-nowrap">
         Available
       </span>
     )
@@ -447,12 +477,12 @@ export function QueueingPage() {
   return (
     <QueueingShell activeTab="queue">
       <section>
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-semibold text-white/90">Court Management</h1>
+        <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-xl sm:text-2xl font-semibold text-white/90">Court Management</h1>
           <button
             type="button"
             onClick={handleOpenAddCourtModal}
-            className="self-start rounded-full bg-[#2663ff] px-5 py-2 text-sm font-semibold shadow-lg shadow-blue-900/40 transition-colors hover:bg-[#2d6dff]"
+            className="self-start rounded-full bg-[#2663ff] px-4 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold shadow-lg shadow-blue-900/40 transition-colors hover:bg-[#2d6dff]"
           >
             + Add new court
           </button>
@@ -462,12 +492,12 @@ export function QueueingPage() {
             {courtsError}
           </div>
         )}
-        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-3">
           {loadingCourts
             ? Array.from({ length: 3 }).map((_, index) => (
                 <div
                   key={`queueing-court-skeleton-${index}`}
-                  className="h-56 animate-pulse rounded-[20px] border border-white/12 bg-white/5"
+                  className="h-56 animate-pulse rounded-xl sm:rounded-[20px] border border-white/12 bg-white/5"
                 />
               ))
             : courts.map((court) => {
@@ -477,21 +507,21 @@ export function QueueingPage() {
                 const isCancelling = courtMatch ? cancellingMatchIds.has(courtMatch.id) : false
 
                 return (
-                  <div key={court.id} className="relative rounded-[20px] border border-white/18 bg-[#14070e] shadow-[0_14px_34px_rgba(0,0,0,0.45)]">
+                  <div key={court.id} className="relative rounded-xl sm:rounded-[20px] border border-white/18 bg-[#14070e] shadow-[0_14px_34px_rgba(0,0,0,0.45)]">
                     <div className="pointer-events-none">
-                      <div className="absolute inset-0 rounded-[20px] border border-white/12" />
-                      <div className="absolute inset-x-5 top-[36%] h-px bg-white/16" />
-                      <div className="absolute inset-x-5 bottom-6 h-px bg-white/16" />
-                      <div className="absolute top-[36%] bottom-6 left-[33%] w-px bg-white/16" />
-                      <div className="absolute top-[36%] bottom-6 right-[33%] w-px bg-white/16" />
-                      <div className="absolute top-[52%] bottom-6 left-1/2 w-px -translate-x-1/2 bg-white/16" />
+                      <div className="absolute inset-0 rounded-xl sm:rounded-[20px] border border-white/12" />
+                      <div className="absolute inset-x-3 sm:inset-x-5 top-[36%] h-px bg-white/16" />
+                      <div className="absolute inset-x-3 sm:inset-x-5 bottom-4 sm:bottom-6 h-px bg-white/16" />
+                      <div className="absolute top-[36%] bottom-4 sm:bottom-6 left-[33%] w-px bg-white/16" />
+                      <div className="absolute top-[36%] bottom-4 sm:bottom-6 right-[33%] w-px bg-white/16" />
+                      <div className="absolute top-[52%] bottom-4 sm:bottom-6 left-1/2 w-px -translate-x-1/2 bg-white/16" />
                     </div>
-                    <div className="relative flex items-start justify-between px-6 pt-4">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                        <span className="text-base">{court.name}</span>
-                        <div className="flex items-center gap-2 text-white/80">
+                    <div className="relative flex items-start justify-between px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 text-sm font-semibold text-white min-w-0 flex-1">
+                        <span className="text-sm sm:text-base truncate">{court.name}</span>
+                        <div className="flex items-center gap-1 sm:gap-2 text-white/80 flex-shrink-0">
                           <button
-                            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
+                            className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20"
                             type="button"
                             aria-label="Edit court"
                             disabled
@@ -504,7 +534,7 @@ export function QueueingPage() {
                               strokeWidth="1.8"
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              className="h-4 w-4 opacity-40"
+                              className="h-3 w-3 sm:h-4 sm:w-4 opacity-40"
                             >
                               <path d="M16.862 3.487l3.651 3.651a1.5 1.5 0 010 2.122l-9.9 9.9-4.604 1.265 1.265-4.604 9.9-9.9a1.5 1.5 0 012.122 0z" />
                               <path d="M13.95 6.4l3.651 3.651" />
@@ -512,7 +542,7 @@ export function QueueingPage() {
                             </svg>
                           </button>
                           <button
-                            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
                             type="button"
                             onClick={() => handlePromptDeleteCourt(court)}
                             disabled={isDeletingCourt && courtToDelete?.id === court.id}
@@ -526,7 +556,7 @@ export function QueueingPage() {
                               strokeWidth="1.8"
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              className="h-4 w-4"
+                              className="h-3 w-3 sm:h-4 sm:w-4"
                             >
                               <path d="M4 7h16" />
                               <path d="M10 11v6" />
@@ -537,40 +567,40 @@ export function QueueingPage() {
                           </button>
                         </div>
                       </div>
-                      {renderStatusBadge(court.status)}
+                      <div className="flex-shrink-0">{renderStatusBadge(court.status)}</div>
                     </div>
                     {courtMatch ? (
-                      <div className="relative flex flex-col gap-5 px-6 pb-8 pt-6 text-white">
-                        <div className="flex flex-col gap-1 text-sm text-white/70">
-                          <span className="text-sm font-semibold text-white">
-                            Game Type: {gameTypeLabels[courtMatch.gameType]}
+                      <div className="relative flex flex-col gap-2.5 sm:gap-3 md:gap-4 lg:gap-5 px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6 lg:pb-8 pt-3 sm:pt-4 md:pt-6 text-white">
+                        <div className="flex flex-col gap-0.5 sm:gap-1 text-[10px] sm:text-xs md:text-sm text-white/70">
+                          <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-white">
+                            Game Type: <span className="font-normal">{gameTypeLabels[courtMatch.gameType]}</span>
                           </span>
-                          <span>Start Time: {formatMatchTime(courtMatch.startedAt)}</span>
-                          <span>Elapsed Time: {formatElapsedTime(courtMatch.startedAt, nowTimestamp)}</span>
+                          <span className="text-[10px] sm:text-xs md:text-sm">Start Time: {formatMatchTime(courtMatch.startedAt)}</span>
+                          <span className="text-[10px] sm:text-xs md:text-sm">Elapsed Time: {formatElapsedTime(courtMatch.startedAt, nowTimestamp)}</span>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-center">
-                          <div className="grid gap-4 text-white sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
-                            <div className="flex flex-col items-center gap-3">
+                        <div className="rounded-lg sm:rounded-xl md:rounded-2xl border border-white/10 bg-white/[0.03] px-2 sm:px-3 md:px-4 py-2.5 sm:py-3 md:py-4 text-center">
+                          <div className="grid gap-2 sm:gap-3 md:gap-4 text-white grid-cols-[1fr_auto_1fr] items-center">
+                            <div className="flex flex-col items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0">
                               {courtMatch.teamA.map((player) => (
                                 <TeamPlayerCard key={`court-${court.id}-teamA-${player.id}`} player={player} />
                               ))}
                             </div>
-                            <span className="mx-auto inline-flex items-center justify-center rounded-full bg-white/15 px-4 py-1 text-sm font-semibold text-white">
+                            <span className="mx-auto inline-flex items-center justify-center rounded-full bg-white/15 px-2 sm:px-3 md:px-4 py-0.5 sm:py-1 text-[10px] sm:text-xs md:text-sm font-semibold text-white flex-shrink-0">
                               vs
                             </span>
-                            <div className="flex flex-col items-center gap-3">
+                            <div className="flex flex-col items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0">
                               {courtMatch.teamB.map((player) => (
                                 <TeamPlayerCard key={`court-${court.id}-teamB-${player.id}`} player={player} />
                               ))}
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-col gap-3 text-sm font-semibold sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex flex-col gap-2 sm:gap-3 text-xs sm:text-sm font-semibold sm:flex-row sm:items-center sm:justify-between">
                           <button
                             type="button"
                             onClick={() => handleRequestCompleteMatch(courtMatch)}
                             disabled={isCompleting}
-                            className={`rounded-full px-5 py-2 text-sm text-white transition ${
+                            className={`rounded-full px-4 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm text-white transition w-full sm:w-auto ${
                               isCompleting
                                 ? 'cursor-not-allowed bg-emerald-500/40'
                                 : 'bg-emerald-500 shadow-lg shadow-emerald-900/30 hover:bg-emerald-500/90'
@@ -582,7 +612,7 @@ export function QueueingPage() {
                             type="button"
                             onClick={() => void handleCancelMatch(courtMatch.id)}
                             disabled={isCancelling}
-                            className={`rounded-full px-5 py-2 text-sm text-white transition ${
+                            className={`rounded-full px-4 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm text-white transition w-full sm:w-auto ${
                               isCancelling
                                 ? 'cursor-not-allowed bg-white/10 text-white/50'
                                 : 'bg-white/10 text-white/80 hover:bg-white/20'
@@ -593,32 +623,50 @@ export function QueueingPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="relative flex flex-col items-center justify-center px-6 pb-12 pt-12 text-center">
-                        <p className="mb-6 text-sm text-white/75">
+                      <div className="relative flex flex-col items-center justify-center px-3 sm:px-4 md:px-6 pb-8 sm:pb-10 md:pb-12 pt-8 sm:pt-10 md:pt-12 text-center">
+                        <p className="mb-4 sm:mb-6 text-xs sm:text-sm text-white/75 px-2">
                           {court.status === 'occupied'
                             ? 'Court marked as occupied but waiting for a match assignment.'
                             : 'Generate matches from the Players tab to occupy this court.'}
                         </p>
                         <button
                           type="button"
-                          className="inline-flex items-center gap-2 rounded-md bg-[#1F49FF] px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(31,73,255,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-[#2b57ff]"
-                          onClick={() => {
-                            if (court.status === 'available') {
-                              setCreateMatchModal({
-                                open: true,
-                                courtId: court.id,
-                                courtName: court.name
-                              })
-                            } else {
+                          className="inline-flex items-center justify-center gap-2 rounded-md bg-[#1F49FF] px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-white shadow-[0_14px_24px_rgba(31,73,255,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-[#2b57ff] w-full sm:w-auto max-w-xs sm:max-w-none"
+                          onClick={async () => {
+                            if (court.status !== 'available') {
                               toast.error('Court is not available')
+                              return
                             }
+
+                            // Check if players are loaded, if not load them first
+                            if (players.length === 0 && !loadingPlayers) {
+                              await loadPlayers()
+                            }
+
+                            // Check player count
+                            if (players.length === 0) {
+                              toast.error('There are no available players')
+                              return
+                            }
+
+                            if (players.length < 4) {
+                              toast.error('There are not enough players. At least 4 players are required to create a match.')
+                              return
+                            }
+
+                            // Open the create match modal
+                            setCreateMatchModal({
+                              open: true,
+                              courtId: court.id,
+                              courtName: court.name
+                            })
                           }}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 20 20"
                             fill="currentColor"
-                            className="h-4 w-4"
+                            className="h-3.5 w-3.5 sm:h-4 sm:w-4"
                             aria-hidden="true"
                           >
                             <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -632,15 +680,15 @@ export function QueueingPage() {
               })}
         </div>
         {!loadingCourts && courts.length === 0 && !courtsError && (
-          <p className="mt-6 text-center text-sm text-white/60">No courts added yet.</p>
+          <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-white/60 px-4">No courts added yet.</p>
         )}
         {courts.length > 0 && !loadingCourts && (
-          <div className="mt-6 flex justify-center">
+          <div className="mt-4 sm:mt-6 flex justify-center">
             <button
               type="button"
               onClick={() => setConfirmClearModal(true)}
               disabled={isClearingCourts}
-              className="rounded-full bg-white/10 px-6 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full bg-white/10 px-4 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Clear courts
             </button>
@@ -648,78 +696,73 @@ export function QueueingPage() {
         )}
       </section>
 
-      <section className="rounded-3xl border border-white/10 bg-white/[0.05] shadow-2xl shadow-black/30 backdrop-blur-lg">
-        <div className="border-b border-white/5 px-4 pb-4 pt-6 sm:px-6">
+      <section className="rounded-2xl sm:rounded-3xl border border-white/10 bg-white/[0.05] shadow-2xl shadow-black/30 backdrop-blur-lg">
+        <div className="border-b border-white/5 px-3 sm:px-4 pb-3 sm:pb-4 pt-4 sm:pt-6 md:px-6">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <h2 className="text-xl font-semibold text-white/90">
+            <h2 className="text-lg sm:text-xl font-semibold text-white/90">
               Pending Matches <span className="text-white/50">({pendingMatches.length})</span>
             </h2>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+            <div className="flex flex-col gap-2 sm:gap-3 md:flex-row md:items-center md:gap-4">
               <div className="relative w-full md:w-64">
                 <input
                   type="text"
                   placeholder="Search by name..."
-                  className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/30 focus:bg-white/10"
+                  className="w-full rounded-full border border-white/10 bg-white/5 px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm text-white placeholder:text-white/40 outline-none transition focus:border-white/30 focus:bg-white/10"
                 />
-                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-white/40">
+                <span className="pointer-events-none absolute inset-y-0 right-3 sm:right-4 flex items-center text-white/40">
                   🔍
                 </span>
               </div>
-              <select className="w-full rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-white/30 focus:bg-white/10 md:w-44">
-                <option value="all">All Players</option>
-                <option value="waiting">Waiting</option>
-                <option value="playing">Playing</option>
-              </select>
               <button
                 type="button"
                 onClick={handleClearPendingMatches}
                 disabled={pendingMatches.length === 0 || isClearingPendingMatches}
-                className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full border border-white/15 bg-white/5 px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isClearingPendingMatches ? 'Clearing…' : 'Clear pending'}
               </button>
             </div>
           </div>
           {matchesError && !loadingMatches && (
-            <p className="mt-3 text-sm font-medium text-rose-300">{matchesError}</p>
+            <p className="mt-2 sm:mt-3 text-xs sm:text-sm font-medium text-rose-300">{matchesError}</p>
           )}
         </div>
 
-        <div className="grid gap-4 px-4 pb-6 sm:px-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 px-3 sm:px-4 pb-4 sm:pb-6 md:px-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {loadingMatches ? (
             Array.from({ length: 3 }).map((_, index) => (
-              <div key={`pending-skeleton-${index}`} className="h-64 animate-pulse rounded-3xl border border-white/10 bg-white/5" />
+              <div key={`pending-skeleton-${index}`} className="h-64 animate-pulse rounded-xl sm:rounded-[20px] border border-white/18 bg-[#14070e]" />
             ))
           ) : pendingMatches.length === 0 ? (
-            <div className="col-span-full rounded-3xl border border-white/10 bg-white/[0.04] px-6 py-10 text-center text-sm text-white/70">
+            <div className="col-span-full rounded-xl sm:rounded-[20px] border border-white/18 bg-[#14070e] px-4 sm:px-6 py-8 sm:py-10 text-center text-xs sm:text-sm text-white/70">
               {matchesError ?? 'No pending matches. Generate new ones to keep players engaged.'}
             </div>
           ) : (
             pendingMatches.map((match) => (
               <div
                 key={match.id}
-                className="rounded-3xl border border-white/12 bg-white/[0.08] p-6 text-white shadow-lg shadow-black/25 backdrop-blur-md transition-transform hover:-translate-y-1 hover:shadow-[0_24px_45px_rgba(0,0,0,0.35)]"
+                className="rounded-xl sm:rounded-[20px] border border-white/18 bg-[#14070e] p-4 sm:p-5 md:p-6 text-white shadow-[0_14px_34px_rgba(0,0,0,0.45)] transition-transform hover:-translate-y-1 hover:shadow-[0_24px_45px_rgba(0,0,0,0.35)]"
               >
-                <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-between sm:text-left">
-                  <div>
-                    <span className="block text-sm uppercase tracking-wide text-white/60">#{getMatchNumber(match.id)}</span>
-                    <span className="text-lg font-semibold">{gameTypeLabels[match.gameType]}</span>
+                <div className="flex flex-col items-center gap-1.5 sm:gap-2 text-center sm:flex-row sm:justify-between sm:text-left">
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-[10px] sm:text-xs md:text-sm uppercase tracking-wide text-white/60">#{getMatchNumber(match.id)}</span>
+                    <span className="text-sm sm:text-base md:text-lg font-semibold truncate">{gameTypeLabels[match.gameType]}</span>
                   </div>
-                  <span className="text-sm text-white/60">
+                  <span className="text-[10px] sm:text-xs md:text-sm text-white/60 whitespace-nowrap flex-shrink-0">
                     Requested {formatMatchTime(match.createdAt)}
                   </span>
                 </div>
-                <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-5 text-center text-white/90">
-                  <div className="grid gap-4 text-white/90 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
-                    <div className="flex w-full flex-col items-center gap-4">
+                <div className="mt-3 sm:mt-4 md:mt-5 flex flex-col gap-2 sm:gap-3 md:gap-4 rounded-lg sm:rounded-xl md:rounded-2xl border border-white/10 bg-white/[0.03] px-3 sm:px-4 md:px-5 lg:px-6 py-3 sm:py-4 md:py-5 text-center text-white/90">
+                  <div className="grid gap-2 sm:gap-3 md:gap-4 text-white/90 grid-cols-[1fr_auto_1fr] items-center">
+                    <div className="flex w-full flex-col items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0 px-1">
                       {match.teamA.map((player) => (
                         <TeamPlayerCard key={`pending-${match.id}-teamA-${player.id}`} player={player} />
                       ))}
                     </div>
-                    <span className="mx-auto inline-flex items-center justify-center rounded-full bg-white/20 px-5 py-1.5 text-sm font-semibold text-white">
+                    <span className="mx-auto inline-flex items-center justify-center rounded-full bg-white/20 px-2 sm:px-3 md:px-4 lg:px-5 py-0.5 sm:py-1 md:py-1.5 text-[10px] sm:text-xs md:text-sm font-semibold text-white flex-shrink-0">
                       vs
                     </span>
-                    <div className="flex w-full flex-col items-center gap-4">
+                    <div className="flex w-full flex-col items-center gap-1.5 sm:gap-2 md:gap-3 min-w-0 px-1">
                       {match.teamB.map((player) => (
                         <TeamPlayerCard key={`pending-${match.id}-teamB-${player.id}`} player={player} />
                       ))}
@@ -733,66 +776,52 @@ export function QueueingPage() {
       </section>
 
       {matchToComplete && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#12060f] p-6 text-white shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Declare Match Winner</h3>
-                <p className="text-sm text-white/70">Select the winning team</p>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-3 sm:px-4">
+          <div className="w-full max-w-md rounded-xl sm:rounded-2xl border border-white/15 bg-[#12060f] p-4 sm:p-5 md:p-6 text-white shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base sm:text-lg font-semibold">Declare Match Winner</h3>
+                <p className="text-xs sm:text-sm text-white/70">Select the winning team</p>
               </div>
               <button
                 type="button"
                 onClick={handleCloseWinnerModal}
                 disabled={isDeclaringWinner}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/70 transition hover:bg-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/70 transition hover:bg-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 flex-shrink-0"
               >
                 ✕
               </button>
             </div>
-            <div className="mt-6 space-y-3">
+            <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3">
               <button
                 type="button"
                 onClick={() => void handleDeclareMatchWinner('teamA')}
                 disabled={isDeclaringWinner}
-                className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                className={`flex w-full items-center justify-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl border px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold transition ${
                   isDeclaringWinner
                     ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/60'
                     : 'border-white/15 bg-white/5 text-white hover:border-emerald-300 hover:bg-emerald-500/15'
                 }`}
               >
-                <span>🏆 {formatTeamLabel(matchToComplete.teamA)}</span>
-                <span className="text-white/60">vs</span>
+                <span className="truncate">🏆 {formatTeamLabel(matchToComplete.teamA)}</span>
               </button>
               <button
                 type="button"
                 onClick={() => void handleDeclareMatchWinner('teamB')}
                 disabled={isDeclaringWinner}
-                className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                className={`flex w-full items-center justify-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl border px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold transition ${
                   isDeclaringWinner
                     ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/60'
                     : 'border-white/15 bg-white/5 text-white hover:border-emerald-300 hover:bg-emerald-500/15'
                 }`}
               >
-                <span>🏆 {formatTeamLabel(matchToComplete.teamB)}</span>
-                <span className="text-white/60">vs</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleDeclareMatchWinner('draw')}
-                disabled={isDeclaringWinner}
-                className={`flex w-full items-center justify-center rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
-                  isDeclaringWinner
-                    ? 'cursor-not-allowed border-white/10 bg-white/5 text-white/60'
-                    : 'border-white/15 bg-white/5 text-white hover:border-white/30 hover:bg-white/10'
-                }`}
-              >
-                🤝 Match Tied (Draw)
+                <span className="truncate">🏆 {formatTeamLabel(matchToComplete.teamB)}</span>
               </button>
               <button
                 type="button"
                 onClick={handleCloseWinnerModal}
                 disabled={isDeclaringWinner}
-                className="w-full rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -802,14 +831,14 @@ export function QueueingPage() {
       )}
 
       {addCourtModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-[#11050b] p-6 shadow-[0_30px_50px_rgba(0,0,0,0.45)]">
-            <h2 className="text-lg font-semibold text-white">Add new court</h2>
-            <p className="mt-1 text-sm text-white/70">Provide a name for the court you want to create.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-3 sm:px-4">
+          <div className="w-full max-w-md rounded-xl sm:rounded-2xl border border-white/20 bg-[#11050b] p-4 sm:p-5 md:p-6 shadow-[0_30px_50px_rgba(0,0,0,0.45)]">
+            <h2 className="text-base sm:text-lg font-semibold text-white">Add new court</h2>
+            <p className="mt-1 text-xs sm:text-sm text-white/70">Provide a name for the court you want to create.</p>
 
-            <form onSubmit={handleSubmitAddCourt} className="mt-5 space-y-5">
+            <form onSubmit={handleSubmitAddCourt} className="mt-4 sm:mt-5 space-y-4 sm:space-y-5">
               <div>
-                <label htmlFor="new-court-name" className="mb-2 block text-sm font-medium text-white/80">
+                <label htmlFor="new-court-name" className="mb-2 block text-xs sm:text-sm font-medium text-white/80">
                   Court name
                 </label>
                 <input
@@ -823,27 +852,27 @@ export function QueueingPage() {
                       error: ''
                     }))
                   }
-                  className={`w-full rounded-xl border bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition focus:border-white/40 focus:bg-white/10 ${
+                  className={`w-full rounded-lg sm:rounded-xl border bg-white/5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-white outline-none transition focus:border-white/40 focus:bg-white/10 ${
                     addCourtModal.error ? 'border-rose-400/70 focus:border-rose-300' : 'border-white/15'
                   }`}
                   placeholder={`Court ${nextCourtNumber}`}
                   autoFocus
                 />
-                {addCourtModal.error && <p className="mt-2 text-sm text-rose-300">{addCourtModal.error}</p>}
+                {addCourtModal.error && <p className="mt-2 text-xs sm:text-sm text-rose-300">{addCourtModal.error}</p>}
               </div>
-              <div className="flex items-center justify-end gap-3">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={handleCloseAddCourtModal}
                   disabled={isSavingCourt}
-                  className="rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-white/10 px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingCourt}
-                  className="rounded-full bg-[#2663ff] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-900/40 transition-colors hover:bg-[#2d6dff] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-[#2663ff] px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold text-white shadow-lg shadow-blue-900/40 transition-colors hover:bg-[#2d6dff] disabled:cursor-not-allowed disabled:opacity-60 w-full sm:w-auto"
                 >
                   {isSavingCourt ? 'Adding…' : 'Add court'}
                 </button>

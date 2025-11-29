@@ -218,6 +218,14 @@ export const apiServices = {
     return response.data
   },
 
+  async getEquipmentAvailability(date: string, startTime?: string, hours?: number) {
+    const params = new URLSearchParams({ date })
+    if (startTime) params.append('startTime', startTime)
+    if (hours) params.append('hours', hours.toString())
+    const response = await api.get(`/reservations/equipment-availability?${params.toString()}`)
+    return response.data
+  },
+
   async createReservation(data: any) {
     const response = await api.post('/reservations', data)
     return response.data
@@ -314,6 +322,63 @@ export const apiServices = {
 
   async clearPendingQueueMatches(): Promise<{ cleared: number }> {
     const response = await api.delete('/queue-matches/pending')
+    return response.data
+  },
+
+  // Fee Management
+  async createFeeManagement(payload: {
+    playerId: number
+    userId?: number | null
+    playerName: string
+    playerSex: 'male' | 'female'
+    gamesPlayed: number
+    shuttleFee: number
+    courtFee: number
+    totalAmount: number
+    paymentStatus: 'paid' | 'unpaid'
+    feeDate: string | Date
+    notes?: string | null
+  }) {
+    const response = await api.post('/fee-management', payload)
+    return response.data
+  },
+
+  async updateFeeManagement(id: number, payload: {
+    paymentStatus?: 'paid' | 'unpaid'
+    notes?: string | null
+  }) {
+    const response = await api.patch(`/fee-management/${id}`, payload)
+    return response.data
+  },
+
+  async markFeeAsPaid(id: number) {
+    const response = await api.post(`/fee-management/${id}/mark-paid`)
+    return response.data
+  },
+
+  async getFeeManagement() {
+    const response = await api.get('/fee-management')
+    return response.data
+  },
+
+  async getFeeManagementSummary() {
+    const response = await api.get('/fee-management/summary')
+    return response.data
+  },
+
+  async getFeeManagementHistory() {
+    const response = await api.get('/fee-management/history')
+    return response.data
+  },
+
+  async clearTodayFeeManagement() {
+    const response = await api.delete('/fee-management/today/clear')
+    return response.data
+  },
+
+  async saveAllFeeManagementToHistory(date?: string) {
+    const url = date ? `/fee-management/save-all-to-history?date=${date}` : '/fee-management/save-all-to-history'
+    const response = await api.post(url)
     return response.data
   }
 }

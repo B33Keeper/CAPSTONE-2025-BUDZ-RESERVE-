@@ -1,15 +1,14 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/store/authStore'
+import { useState, useEffect } from 'react'
 import { apiServices, Court, type Reservation } from '@/lib/apiServices'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
+import { AdminHeader } from '@/components/AdminHeader'
+import toast from 'react-hot-toast'
 
 const AdminManageCourts = () => {
   console.log('[AdminManageCourts] Component rendering...')
   
-  const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Manage Courts')
   const [courts, setCourts] = useState<Court[]>([])
   const [loading, setLoading] = useState(true)
@@ -28,22 +27,18 @@ const AdminManageCourts = () => {
   const [editPrice, setEditPrice] = useState(0)
   const [isUpdatingPrice, setIsUpdatingPrice] = useState(false)
   const [upcomingReservationsMap, setUpcomingReservationsMap] = useState<Map<number, number>>(new Map())
-  const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // Helper function to format role
-  const formatRole = (role?: string) => {
-    if (!role) return 'User'
-    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
-  }
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
+    open: boolean
+    courtId: number | null
+    courtName: string
+  }>({
+    open: false,
+    courtId: null,
+    courtName: ''
+  })
+  const [isDeleting, setIsDeleting] = useState(false)
   
   console.log('[AdminManageCourts] State initialized:', { loading, error, courtsCount: courts.length })
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
 
   // Fetch courts from API
   useEffect(() => {
@@ -113,19 +108,6 @@ const AdminManageCourts = () => {
     fetchCourts()
   }, [])
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowUserDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
 
 
   const hasUpcomingReservation = (courtId: number) =>
@@ -136,7 +118,7 @@ const AdminManageCourts = () => {
       newStatus === 'Maintenance' &&
       hasUpcomingReservation(courtId)
     ) {
-      alert('This court has upcoming reservations and cannot be placed under maintenance.')
+      toast.error('This court has upcoming reservations and cannot be placed under maintenance.')
       return
     }
 
@@ -145,29 +127,43 @@ const AdminManageCourts = () => {
       setCourts(courts.map(court => 
         court.Court_Id === courtId ? { ...court, Status: newStatus as any } : court
       ))
+      toast.success(`Court status updated to ${newStatus}`)
     } catch (error: any) {
       console.error('Error updating court status:', error)
-      alert('Failed to update court status. Please try again.')
+      toast.error('Failed to update court status. Please try again.')
     }
   }
 
-  const handleDeleteCourt = async (courtId: number) => {
+  const handleDeleteCourt = (courtId: number) => {
     const court = courts.find(c => c.Court_Id === courtId)
     const courtName = court?.Court_Name || 'this court'
-    
-    if (!confirm(`Are you sure you want to delete ${courtName}?`)) {
-      return
-    }
+    setDeleteConfirmModal({
+      open: true,
+      courtId,
+      courtName
+    })
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmModal.courtId) return
 
     try {
-      await api.delete(`/courts/${courtId}`)
-      setCourts(courts.filter(court => court.Court_Id !== courtId))
-      alert(`${courtName} deleted successfully!`)
+      setIsDeleting(true)
+      await api.delete(`/courts/${deleteConfirmModal.courtId}`)
+      setCourts(courts.filter(court => court.Court_Id !== deleteConfirmModal.courtId))
+      toast.success(`${deleteConfirmModal.courtName} deleted successfully!`)
+      setDeleteConfirmModal({ open: false, courtId: null, courtName: '' })
     } catch (error: any) {
       console.error('Error deleting court:', error)
       const errorMessage = error.response?.data?.message || error.message || 'Failed to delete court. Please try again.'
-      alert(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsDeleting(false)
     }
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmModal({ open: false, courtId: null, courtName: '' })
   }
 
   const handleEditCourt = (courtId: number) => {
@@ -189,7 +185,7 @@ const AdminManageCourts = () => {
     if (!editingCourt) return
 
     if (editPrice <= 0) {
-      alert('Please enter a valid price greater than 0')
+      toast.error('Please enter a valid price greater than 0')
       return
     }
 
@@ -206,10 +202,10 @@ const AdminManageCourts = () => {
       setCourts(sortedCourts)
       
       handleCloseEditPriceModal()
-      alert('Price updated successfully!')
+      toast.success('Price updated successfully!')
     } catch (error: any) {
       console.error('Error updating price:', error)
-      alert(error.response?.data?.message || 'Failed to update price. Please try again.')
+      toast.error(error.response?.data?.message || 'Failed to update price. Please try again.')
     } finally {
       setIsUpdatingPrice(false)
     }
@@ -258,7 +254,7 @@ const AdminManageCourts = () => {
 
   const handleSubmitNewCourt = async () => {
     if (!newCourt.Court_Name.trim()) {
-      alert('Please enter a court name')
+      toast.error('Please enter a court name')
       return
     }
 
@@ -281,10 +277,10 @@ const AdminManageCourts = () => {
       setCourts(sortedCourts)
       
       handleCloseAddModal()
-      alert('Court added successfully!')
+      toast.success('Court added successfully!')
     } catch (error: any) {
       console.error('[AdminManageCourts] Error creating court:', error)
-      alert(error.response?.data?.message || 'Failed to add court. Please try again.')
+      toast.error(error.response?.data?.message || 'Failed to add court. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -330,96 +326,51 @@ const AdminManageCourts = () => {
       ` }} />
       
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 overflow-visible backdrop-blur-sm bg-white/95">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 overflow-visible">
-          <div className="flex justify-between items-center h-14 sm:h-16 relative">
-            {/* Logo */}
-            <div className="flex items-center">
-              <img 
-                src="/assets/icons/BBC ICON.png" 
-                alt="BBC Logo" 
-                className="h-12 w-12 sm:h-16 sm:w-16 lg:h-24 lg:w-24 object-contain hover:scale-105 transition-transform duration-200" 
-              />
-            </div>
-
-            {/* Right Side - Admin Profile */}
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  <img
-                    src={user?.profile_picture || '/assets/img/home-page/Ellipse 1.png'}
-                    alt="Profile"
-                    className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-gray-200"
-                  />
-                  <div className="text-left hidden sm:block">
-                    <div className="text-xs sm:text-sm font-medium text-gray-900">{user?.name || user?.username || 'User'}</div>
-                    <div className="text-xs text-gray-500">{formatRole(user?.role)}</div>
-                  </div>
-                  <svg 
-                    className={`w-3 h-3 sm:w-4 sm:h-4 text-gray-400 ${showUserDropdown ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
-                       style={{
-                         position: 'absolute',
-                         top: '100%',
-                         right: '0',
-                         marginTop: '0.5rem'
-                       }}>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center space-x-2 px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader />
 
       {/* Main Content with Sidebar */}
-      <div className="flex">
-        <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
+      <div className="pt-14 sm:pt-16">
+        <AdminSidebar 
+          activeItem={activeSidebarItem} 
+          onItemChange={setActiveSidebarItem}
+        />
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
-          {/* Header Section */}
+        <main className="p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn transition-all duration-300 md:ml-64">
+          {/* Enhanced Header Section */}
           <div className="mb-8">
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8 animate-slideDown">
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-6 lg:space-y-0">
+            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-3xl shadow-2xl border border-gray-200/60 p-8 sm:p-10 animate-slideDown backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                 <div className="flex-1">
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
-                    Manage Courts
-                  </h1>
-                  <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
-                    Manage court availability, pricing, and maintenance schedules with advanced controls
-                  </p>
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-2">
+                        Manage Courts
+                      </h1>
+                      <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+                        Manage court availability, pricing, and maintenance schedules with advanced controls
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <button 
-                  onClick={handleAddCourt}
-                  className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 text-white px-8 py-4 rounded-2xl hover:from-blue-700 hover:via-blue-800 hover:to-indigo-700 transition-all duration-300 flex items-center space-x-3 shadow-xl hover:shadow-2xl transform hover:scale-105 w-full lg:w-auto font-semibold text-lg"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  <span>Add New Court</span>
-                </button>
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={handleAddCourt}
+                    className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-2 border-blue-500/60 hover:border-blue-400 transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95 font-semibold"
+                    title="Add New Court"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span className="hidden sm:inline">Add Court</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -434,12 +385,40 @@ const AdminManageCourts = () => {
                   <col className="w-[25%]" />
                   <col className="w-[25%]" />
                 </colgroup>
-                <thead className="bg-gray-600 text-white">
+                <thead className="bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 text-white">
                   <tr>
-                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Court No.</th>
-                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Court Status</th>
-                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Price</th>
-                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        Court No.
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Court Status
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Price
+                      </div>
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                        Actions
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -462,43 +441,49 @@ const AdminManageCourts = () => {
                     </tr>
                   ) : (
                     currentCourts.map((court, index) => (
-                      <tr key={court.Court_Id} className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="px-6 py-4 text-sm font-bold text-gray-900 align-middle text-center">{court.Court_Name}</td>
+                      <tr key={court.Court_Id} className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 group ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        <td className="px-6 py-4 text-sm font-bold text-gray-900 align-middle text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                              <span className="text-blue-700 font-bold text-xs">{court.Court_Id}</span>
+                            </div>
+                            <span>{court.Court_Name}</span>
+                          </div>
+                        </td>
                         <td className="px-6 py-4 align-middle text-center">
                           <div className="flex justify-center">
-                            <select 
-                              value={court.Status}
-                              onChange={(e) => handleStatusChange(court.Court_Id, e.target.value)}
-                              className={`w-full max-w-[200px] px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center ${
-                                court.Status === 'Available' ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' :
-                                'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200'
-                              }`}
-                          title={hasUpcomingReservation(court.Court_Id) ? 'This court has upcoming reservations.' : undefined}
-                            >
-                              <option value="Available">Available</option>
-                          <option
-                            value="Maintenance"
-                            disabled={hasUpcomingReservation(court.Court_Id) && court.Status !== 'Maintenance'}
-                          >
-                            Maintenance {hasUpcomingReservation(court.Court_Id) ? '(locked)' : ''}
-                          </option>
-                            </select>
+                            {hasUpcomingReservation(court.Court_Id) ? (
+                              <div className="w-full max-w-[200px] px-4 py-2 rounded-xl text-sm font-semibold border-2 bg-gray-200 text-gray-700 border-gray-300 text-center cursor-not-allowed">
+                                Reserved
+                              </div>
+                            ) : (
+                              <select 
+                                value={court.Status}
+                                onChange={(e) => handleStatusChange(court.Court_Id, e.target.value)}
+                                className={`w-full max-w-[200px] px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center ${
+                                  court.Status === 'Available' ? 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200' :
+                                  'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200'
+                                }`}
+                              >
+                                <option value="Available">Available</option>
+                                <option value="Maintenance">Maintenance</option>
+                              </select>
+                            )}
                           </div>
-                      {hasUpcomingReservation(court.Court_Id) && (
-                        <p className="mt-2 text-xs font-medium text-red-600">
-                          Upcoming reservations prevent maintenance mode.
-                        </p>
-                      )}
                         </td>
                         <td className="px-6 py-4 text-center align-middle">
                           <div className="flex items-center justify-center gap-3">
-                            <span className="font-bold text-lg text-gray-800 bg-gray-100 px-4 py-2 rounded-xl whitespace-nowrap">₱{Number(court.Price || 0).toFixed(2)}</span>
+                            <div className="relative group/price">
+                              <span className="font-bold text-lg text-gray-800 bg-gradient-to-br from-gray-100 to-gray-200 px-4 py-2 rounded-xl whitespace-nowrap border-2 border-gray-300 shadow-sm">
+                                ₱{Number(court.Price || 0).toFixed(2)}
+                              </span>
+                            </div>
                             <button
                               onClick={() => handleEditCourt(court.Court_Id)}
-                              className="w-8 h-8 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl flex items-center justify-center hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-110 group flex-shrink-0"
+                              className="w-10 h-10 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl flex items-center justify-center hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-110 active:scale-95 group/edit flex-shrink-0"
                               title="Edit Court Price"
                             >
-                              <svg className="w-5 h-5 text-blue-600 group-hover:text-blue-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5 text-blue-600 group-hover/edit:text-blue-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
@@ -507,7 +492,7 @@ const AdminManageCourts = () => {
                         <td className="px-6 py-4 text-center align-middle">
                           <button
                             onClick={() => handleDeleteCourt(court.Court_Id)}
-                            className="bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:from-red-600 hover:via-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                            className="bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:from-red-600 hover:via-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
                           >
                             <span className="flex items-center justify-center gap-2">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -548,28 +533,46 @@ const AdminManageCourts = () => {
                 currentCourts.map((court) => (
                   <div
                     key={court.Court_Id}
-                    className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-lg"
+                    className="rounded-2xl border-2 border-gray-200 bg-white p-6 shadow-lg transition-all duration-300 hover:shadow-2xl hover:border-blue-300 hover:-translate-y-1"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-                      <div>
-                        <span className="text-xs font-semibold uppercase tracking-widest text-blue-500">
-                          Court
-                        </span>
-                        <h3 className="text-xl font-bold text-gray-900">{court.Court_Name}</h3>
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center border-2 border-blue-200">
+                          <span className="text-blue-700 font-bold text-lg">{court.Court_Id}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold uppercase tracking-widest text-blue-500 block mb-1">
+                            Court
+                          </span>
+                          <h3 className="text-xl font-bold text-gray-900">{court.Court_Name}</h3>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                            court.Status === 'Available'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                          }`}
-                        >
-                          {court.Status}
-                        </span>
-                        {hasUpcomingReservation(court.Court_Id) && (
-                          <span className="inline-flex items-center text-xs font-medium text-red-500">
-                            Upcoming reservations
+                        {hasUpcomingReservation(court.Court_Id) ? (
+                          <span className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold bg-gray-200 text-gray-700 border-2 border-gray-300">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Reserved
+                          </span>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold border-2 ${
+                              court.Status === 'Available'
+                                ? 'bg-green-100 text-green-700 border-green-200'
+                                : 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                            }`}
+                          >
+                            {court.Status === 'Available' ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                            {court.Status}
                           </span>
                         )}
                       </div>
@@ -578,35 +581,40 @@ const AdminManageCourts = () => {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <label className="text-sm font-semibold text-gray-700">Court Status</label>
-                        <select
-                          value={court.Status}
-                          onChange={(e) => handleStatusChange(court.Court_Id, e.target.value)}
-                          className={`w-full px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            court.Status === 'Available'
-                              ? 'bg-green-100 text-green-800 border-green-300'
-                              : 'bg-yellow-100 text-yellow-800 border-yellow-300'
-                          }`}
-                          title={hasUpcomingReservation(court.Court_Id) ? 'This court has upcoming reservations.' : undefined}
-                        >
-                          <option value="Available">Available</option>
-                          <option
-                            value="Maintenance"
-                            disabled={hasUpcomingReservation(court.Court_Id) && court.Status !== 'Maintenance'}
+                        {hasUpcomingReservation(court.Court_Id) ? (
+                          <div className="w-full px-4 py-2 rounded-xl text-sm font-semibold border-2 bg-gray-200 text-gray-700 border-gray-300 cursor-not-allowed">
+                            Reserved
+                          </div>
+                        ) : (
+                          <select
+                            value={court.Status}
+                            onChange={(e) => handleStatusChange(court.Court_Id, e.target.value)}
+                            className={`w-full px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                              court.Status === 'Available'
+                                ? 'bg-green-100 text-green-800 border-green-300'
+                                : 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                            }`}
                           >
-                            Maintenance {hasUpcomingReservation(court.Court_Id) ? '(locked)' : ''}
-                          </option>
-                        </select>
+                            <option value="Available">Available</option>
+                            <option value="Maintenance">Maintenance</option>
+                          </select>
+                        )}
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-sm font-semibold text-gray-700">Price</label>
+                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Price
+                        </label>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          <span className="font-bold text-lg text-gray-800 bg-gray-100 px-4 py-2 rounded-xl whitespace-nowrap text-center">
+                          <span className="font-bold text-lg text-gray-800 bg-gradient-to-br from-gray-100 to-gray-200 px-4 py-2 rounded-xl whitespace-nowrap text-center border-2 border-gray-300 shadow-sm">
                             ₱{Number(court.Price || 0).toFixed(2)}
                           </span>
                           <button
                             onClick={() => handleEditCourt(court.Court_Id)}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-100"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 px-4 py-2 text-sm font-semibold text-blue-600 transition-all hover:border-blue-300 hover:from-blue-100 hover:to-blue-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -618,7 +626,7 @@ const AdminManageCourts = () => {
 
                       <button
                         onClick={() => handleDeleteCourt(court.Court_Id)}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-500 via-red-600 to-red-700 px-4 py-2 text-sm font-bold text-white shadow-lg transition hover:from-red-600 hover:via-red-700 hover:to-red-800"
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-500 via-red-600 to-red-700 px-4 py-3 text-sm font-bold text-white shadow-lg transition-all hover:from-red-600 hover:via-red-700 hover:to-red-800 transform hover:scale-105 active:scale-95"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -669,26 +677,48 @@ const AdminManageCourts = () => {
         </main>
       </div>
 
-      {/* Edit Price Modal */}
+      {/* Enhanced Edit Price Modal */}
       {showEditPriceModal && editingCourt && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Edit Court Price</h2>
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
+          onClick={handleCloseEditPriceModal}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Enhanced Modal Header */}
+            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 p-6 text-white relative">
               <button
                 onClick={handleCloseEditPriceModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
                 disabled={isUpdatingPrice}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all duration-200 hover:scale-110 disabled:opacity-50"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Edit Court Price</h2>
+                  <p className="text-green-100 text-sm mt-1">Update the pricing for {editingCourt.Court_Name}</p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4">
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Court Name Display */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
                   Court Name
                 </label>
                 <input
@@ -699,53 +729,87 @@ const AdminManageCourts = () => {
                 />
               </div>
 
+              {/* Current Price Display */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                   Current Price
                 </label>
-                <div className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-gray-100 text-gray-600 font-bold text-lg">
-                  ₱{Number(editingCourt.Price || 0).toFixed(2)}
+                <div className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 font-bold text-lg flex items-center gap-2">
+                  <span className="text-gray-500">₱</span>
+                  {Number(editingCourt.Price || 0).toFixed(2)}
                 </div>
               </div>
 
+              {/* New Price Input */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  New Price (₱) <span className="text-red-500">*</span>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  New Price (₱)
+                  <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(Number(e.target.value) || 0)}
-                  placeholder="Enter new price"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                  disabled={isUpdatingPrice}
-                  autoFocus
-                />
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₱</div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(Number(e.target.value) || 0)}
+                    placeholder="Enter new price"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isUpdatingPrice}
+                    autoFocus
+                  />
+                </div>
+                {editPrice > 0 && (
+                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-green-700">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                      <span className="font-medium">Price difference: ₱{(editPrice - Number(editingCourt.Price || 0)).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex justify-end space-x-4 mt-6">
+            {/* Enhanced Modal Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-4">
               <button
                 onClick={handleCloseEditPriceModal}
                 disabled={isUpdatingPrice}
-                className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-all font-semibold shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
                 Cancel
               </button>
               <button
                 onClick={handleUpdatePrice}
                 disabled={isUpdatingPrice || editPrice <= 0}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className={`px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 ${
+                  !isUpdatingPrice && editPrice > 0 && 'hover:from-green-700 hover:to-emerald-700 transform hover:scale-105 active:scale-95'
+                }`}
               >
                 {isUpdatingPrice ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     <span>Updating...</span>
                   </>
                 ) : (
-                  <span>Update Price</span>
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Update Price</span>
+                  </>
                 )}
               </button>
             </div>
@@ -753,96 +817,235 @@ const AdminManageCourts = () => {
         </div>
       )}
 
-      {/* Add Court Modal */}
+      {/* Enhanced Add Court Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Add New Court</h2>
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
+          onClick={handleCloseAddModal}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Enhanced Modal Header */}
+            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 text-white relative">
               <button
                 onClick={handleCloseAddModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
                 disabled={isSubmitting}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all duration-200 hover:scale-110 disabled:opacity-50"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Add New Court</h2>
+                  <p className="text-blue-100 text-sm mt-1">Create a new court for your facility</p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4">
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Court Number Field */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Court Number <span className="text-red-500">*</span>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  Court Number
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={newCourt.Court_Name}
                   onChange={(e) => setNewCourt({ ...newCourt, Court_Name: e.target.value })}
                   placeholder="e.g., Court 13"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                  maxLength={100}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isSubmitting}
                 />
               </div>
 
+              {/* Status Field */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   Status
                 </label>
-                <select
-                  value={newCourt.Status}
-                  onChange={(e) => setNewCourt({ ...newCourt, Status: e.target.value as any })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                  disabled={isSubmitting}
-                >
-                  <option value="Available">Available</option>
-                  <option value="Maintenance">Maintenance</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={newCourt.Status}
+                    onChange={(e) => setNewCourt({ ...newCourt, Status: e.target.value as any })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none bg-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
+                  >
+                    <option value="Available">Available</option>
+                    <option value="Maintenance">Maintenance</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
 
+              {/* Price Field */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   Price (₱)
+                  <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={newCourt.Price}
-                  onChange={(e) => setNewCourt({ ...newCourt, Price: Number(e.target.value) || 0 })}
-                  placeholder="250"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                  disabled={isSubmitting}
-                />
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₱</div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newCourt.Price}
+                    onChange={(e) => setNewCourt({ ...newCourt, Price: Number(e.target.value) || 0 })}
+                    placeholder="250.00"
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-4 mt-6">
+            {/* Enhanced Modal Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-4">
               <button
                 onClick={handleCloseAddModal}
                 disabled={isSubmitting}
-                className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-all font-semibold shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
                 Cancel
               </button>
               <button
                 onClick={handleSubmitNewCourt}
                 disabled={isSubmitting || !newCourt.Court_Name.trim()}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className={`px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 ${
+                  !isSubmitting && !(!newCourt.Court_Name.trim()) && 'hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 active:scale-95'
+                }`}
               >
                 {isSubmitting ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     <span>Adding...</span>
                   </>
                 ) : (
-                  <span>Add Court</span>
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Add Court</span>
+                  </>
                 )}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal.open && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fadeIn"
+          onClick={handleCancelDelete}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 p-6 text-white relative">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Confirm Deletion</h2>
+                  <p className="text-red-100 text-sm mt-1">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-gray-800 text-lg font-medium mb-2">
+                    Are you sure you want to delete <span className="font-bold text-red-600">{deleteConfirmModal.courtName}</span>?
+                  </p>
+                  <p className="text-gray-600 text-sm">
+                    This will permanently remove the court from the system. All associated data will be lost.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-4">
+              <button
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+                className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-all font-semibold shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className={`px-8 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 ${
+                  !isDeleting && 'hover:from-red-700 hover:to-red-800 transform hover:scale-105 active:scale-95'
+                }`}
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Delete Court</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AdminFooter />
     </div>
   )

@@ -6,22 +6,20 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   imports: [
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
+      useFactory: (configService: ConfigService): any => {
         const nodeEnv = configService.get('NODE_ENV');
         const isProduction = nodeEnv === 'production';
+        const dbType = configService.get<'postgres' | 'mysql'>('DB_TYPE', 'mysql') ?? 'mysql';
 
         return {
-          type: (
-            configService.get<'postgres' | 'mysql'>('DB_TYPE', 'postgres') ??
-            'postgres'
-          ) as 'postgres' | 'mysql',
+          type: dbType,
           host: configService.get('DB_HOST', 'localhost'),
-          port: Number(configService.get('DB_PORT', 5432)),
-          username: configService.get('DB_USERNAME', 'postgres'),
+          port: Number(configService.get('DB_PORT', 3306)),
+          username: configService.get('DB_USERNAME', 'root'),
           password: configService.get('DB_PASSWORD', ''),
-          database: configService.get('DB_DATABASE', 'postgres'),
-          synchronize: nodeEnv === 'development',
-          logging: nodeEnv === 'development',
+          database: configService.get('DB_DATABASE', 'budz_reserve'),
+          synchronize: false, // Always use migrations for safety
+          logging: nodeEnv === 'development' ? ['error', 'warn'] : false, // Reduce logging overhead
           migrations: ['dist/database/migrations/*.js'],
           migrationsRun: true,
           retryAttempts: 5,

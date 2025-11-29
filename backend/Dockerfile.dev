@@ -16,8 +16,8 @@ RUN apk add --no-cache \
 COPY backend/package*.json ./
 
 # Install dependencies (including devDependencies for development)
-# Use npm ci for faster, reliable, reproducible builds
-RUN npm ci && npm cache clean --force
+# Use npm install for development (more forgiving with lock file sync issues)
+RUN npm install && npm cache clean --force
 
 # Copy source code
 COPY backend/ ./

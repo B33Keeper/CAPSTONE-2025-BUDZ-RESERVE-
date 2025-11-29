@@ -132,36 +132,12 @@ export function HeroSection() {
       >
         <motion.h1 
           initial={{ opacity: 0, y: 30 }}
-          animate={{
-            ...controls,
-            scale: [1, 1.05, 1],
-          }}
-          transition={{ 
-            scale: { 
-              duration: 2, 
-              repeat: Infinity, 
-              ease: "easeInOut" 
-            }
-          }}
+          animate={controls}
+          transition={{ duration: 0.8, delay: 0.2 }}
           className="hero-title text-4xl md:text-5xl lg:text-6xl font-bold mb-8 text-white" 
-          style={{ textShadow: '2px 2px 4px rgba(255,255,255,0.3), 0 0 20px rgba(255,255,255,0.1)' }}
+          style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.6), 0 0 20px rgba(0,0,0,0.3)' }}
         >
-          <motion.span
-            animate={{
-              textShadow: [
-                '2px 2px 4px rgba(255,255,255,0.3), 0 0 20px rgba(255,255,255,0.1)',
-                '2px 2px 6px rgba(255,255,255,0.4), 0 0 30px rgba(255,255,255,0.2)',
-                '2px 2px 4px rgba(255,255,255,0.3), 0 0 20px rgba(255,255,255,0.1)'
-              ]
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            Budz Badminton Court
-          </motion.span>
+          Budz Badminton Court
         </motion.h1>
         
         <motion.p 
@@ -171,39 +147,17 @@ export function HeroSection() {
           className="hero-subtitle text-base md:text-lg lg:text-xl mb-10 text-white font-light" 
           style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.6)' }}
         >
-          <motion.span
-            animate={{
-              y: [0, -2, 0],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            Where dedication takes flight and champions are made
-          </motion.span>
+          Where dedication takes flight and champions are made
         </motion.p>
         
         <motion.p 
           initial={{ opacity: 0, y: 30 }}
           animate={controls}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="hero-description text-sm md:text-base lg:text-lg mb-16 leading-relaxed text-white/90 max-w-4xl mx-auto" 
+          className="hero-description text-sm md:text-base lg:text-lg mb-16 leading-relaxed text-white/90 max-w-4xl mx-auto px-4" 
           style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.6)' }}
         >
-          <motion.span
-            animate={{
-              opacity: [0.9, 1, 0.9],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            Budz Badminton Court is open daily, with court hours from 8:00 AM to 12 Midnight. For reservations, kindly click the "Book Now" and accomplish our online booking facility. Thank you, and we look forward to see you in the court!
-          </motion.span>
+          Budz Badminton Court is open daily, with court hours from 8:00 AM to 12 Midnight. For reservations, kindly click the "Book Now" and accomplish our online booking facility. Thank you, and we look forward to see you in the court!
         </motion.p>
           
         <motion.div 

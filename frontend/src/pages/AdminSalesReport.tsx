@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
+import { AdminHeader } from '@/components/AdminHeader'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
@@ -26,7 +27,7 @@ interface SalesReportItem {
 }
 
 const AdminSalesReport = () => {
-  const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Sales Report')
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>('daily')
   const [salesData, setSalesData] = useState<SalesReportItem[]>([])
@@ -42,14 +43,8 @@ const AdminSalesReport = () => {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  // Helper function to format role
-  const formatRole = (role?: string) => {
-    if (!role) return 'User'
-    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
-  }
+  const { user } = useAuthStore()
+  const downloadDropdownRef = useRef<HTMLDivElement>(null)
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-PH', {
@@ -65,32 +60,45 @@ const AdminSalesReport = () => {
     today.setHours(23, 59, 59, 999) // End of today
     
     let startDate = new Date()
+    let endDate = new Date()
     
     switch (selectedPeriod) {
       case 'daily':
         // For daily, only show today's data
         startDate.setHours(0, 0, 0, 0)
-        return { start: startDate, end: today }
+        endDate = today
+        return { start: startDate, end: endDate }
       
       case 'weekly':
-        startDate.setDate(today.getDate() - 6) // Past 6 days + today = 7 days
+        // Weekly: Show last 7 days including today (full week period)
+        startDate.setDate(today.getDate() - 6) // 7 days total (today + 6 days before)
         startDate.setHours(0, 0, 0, 0)
-        return { start: startDate, end: today }
+        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+        return { start: startDate, end: endDate }
       
       case 'monthly':
-        startDate.setMonth(today.getMonth() - 1) // Past month
-        startDate.setHours(0, 0, 0, 0)
-        return { start: startDate, end: today }
+        // Monthly: Show complete current month (1st to last day of month)
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0)
+        // Get last day of current month
+        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999)
+        endDate = lastDayOfMonth
+        return { start: startDate, end: endDate }
       
       case 'quarterly':
-        startDate.setMonth(today.getMonth() - 3) // Past 3 months
-        startDate.setHours(0, 0, 0, 0)
-        return { start: startDate, end: today }
+        // Quarterly: Show complete current quarter
+        const quarterStartMonth = Math.floor(today.getMonth() / 3) * 3
+        startDate = new Date(today.getFullYear(), quarterStartMonth, 1, 0, 0, 0, 0)
+        // Get last day of current quarter (end of 3rd month of quarter)
+        const quarterEndMonth = quarterStartMonth + 2
+        const lastDayOfQuarter = new Date(today.getFullYear(), quarterEndMonth + 1, 0, 23, 59, 59, 999)
+        endDate = lastDayOfQuarter
+        return { start: startDate, end: endDate }
       
       case 'yearly':
-        startDate.setFullYear(today.getFullYear() - 1) // Past year
-        startDate.setHours(0, 0, 0, 0)
-        return { start: startDate, end: today }
+        // Yearly: Show complete current year (Jan 1 to Dec 31)
+        startDate = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0)
+        endDate = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999)
+        return { start: startDate, end: endDate }
       
       default:
         startDate.setHours(0, 0, 0, 0)
@@ -107,7 +115,107 @@ const AdminSalesReport = () => {
     { value: 'yearly', label: 'Yearly' },
   ]
 
-  const handleDownload = () => {
+  const handleDownloadCSV = () => {
+    try {
+      // Use the same filtered data that's displayed in the table
+      const dataToExport = filteredData
+      
+      if (dataToExport.length === 0) {
+        alert('No data available to download')
+        return
+      }
+
+      // Generate filename with period and date
+      const date = new Date().toISOString().split('T')[0]
+      const periodLabel = periods.find(p => p.value === selectedPeriod)?.label || 'Daily'
+      
+      // Prepare CSV headers
+      const headers = ['Reservation ID', 'Customer Name', 'Court Name', 'Time', 'Date', 'Payment Method', 'Racket Rent / Duration', 'Price', 'Status']
+      
+      // Prepare CSV rows
+      const csvRows = dataToExport.map(item => {
+        // Format equipment rentals
+        const equipmentInfo = item.equipmentRentals && item.equipmentRentals.length > 0
+          ? item.equipmentRentals.map(rental => 
+              `${rental.equipmentName} (Qty: ${rental.quantity}, ${rental.hours}h)`
+            ).join('; ')
+          : 'None'
+
+        return [
+          item.reservationId.toString(),
+          `"${item.customerName.replace(/"/g, '""')}"`,
+          `"${item.courtName.replace(/"/g, '""')}"`,
+          `"${item.time.replace(/"/g, '""')}"`,
+          `"${item.date.replace(/"/g, '""')}"`,
+          `"${item.paymentMethod.replace(/"/g, '""')}"`,
+          `"${equipmentInfo.replace(/"/g, '""')}"`,
+          formatPrice(item.price),
+          item.status.toUpperCase()
+        ]
+      })
+
+      // Calculate summary
+      const filteredSummary = dataToExport.reduce(
+        (acc, item) => {
+          const courtCount = item.courtName ? item.courtName.split(',').length : 1
+          acc.totalReservations += courtCount
+          acc.totalIncome += item.price
+          if (item.status === 'cancelled') {
+            acc.totalCancellations += courtCount
+          }
+          return acc
+        },
+        { totalReservations: 0, totalIncome: 0, totalCancellations: 0 }
+      )
+
+      // Build CSV content
+      let csvContent = 'Sales Report\n'
+      csvContent += `Period: ${periodLabel}\n`
+      csvContent += `Generated: ${new Date().toLocaleDateString()}\n`
+      
+      if (dateFrom || dateTo) {
+        const dateRange = dateFrom && dateTo 
+          ? `${new Date(dateFrom).toLocaleDateString()} - ${new Date(dateTo).toLocaleDateString()}`
+          : dateFrom 
+          ? `From: ${new Date(dateFrom).toLocaleDateString()}`
+          : `To: ${new Date(dateTo).toLocaleDateString()}`
+        csvContent += `Date Range: ${dateRange}\n`
+      }
+      
+      if (searchQuery) {
+        csvContent += `Filtered by: "${searchQuery}"\n`
+      }
+      
+      csvContent += '\n'
+      csvContent += headers.join(',') + '\n'
+      csvRows.forEach(row => {
+        csvContent += row.join(',') + '\n'
+      })
+      
+      csvContent += '\n'
+      csvContent += 'Summary\n'
+      csvContent += `Total Court Reservations,${filteredSummary.totalReservations}\n`
+      csvContent += `Total Income,${formatPrice(filteredSummary.totalIncome)}\n`
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `Sales_Report_${periodLabel}_${date}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      setShowDownloadDropdown(false)
+    } catch (error) {
+      console.error('Error downloading CSV report:', error)
+      alert('Failed to download CSV report. Please try again.')
+    }
+  }
+
+  const handleDownloadPDF = () => {
     try {
       // Use the same filtered data that's displayed in the table
       const dataToExport = filteredData
@@ -239,9 +347,11 @@ const AdminSalesReport = () => {
       // Save the PDF
       const filename = `Sales_Report_${periodLabel}_${date}.pdf`
       doc.save(filename)
+      
+      setShowDownloadDropdown(false)
     } catch (error) {
-      console.error('Error downloading report:', error)
-      alert('Failed to download report. Please try again.')
+      console.error('Error downloading PDF report:', error)
+      alert('Failed to download PDF report. Please try again.')
     }
   }
 
@@ -249,16 +359,11 @@ const AdminSalesReport = () => {
     setSelectedPeriod(period)
   }
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowUserDropdown(false)
+      if (downloadDropdownRef.current && !downloadDropdownRef.current.contains(event.target as Node)) {
+        setShowDownloadDropdown(false)
       }
     }
 
@@ -273,6 +378,11 @@ const AdminSalesReport = () => {
     try {
       setLoading(true)
       console.log(`[SalesReport] Fetching sales report for period: ${period}`, { forceRefresh })
+      
+      // Note: dateFrom/dateTo are NOT sent to backend because:
+      // - Backend filters by Created_at (when reservation was created)
+      // - Manual date filters filter by Reservation_Date (when court is booked) - client-side only
+      // This is intentional to allow filtering by booking date vs creation date
       const response = await api.get(`/payments/sales-report?period=${period}`)
       console.log(`[SalesReport] Response:`, response.data)
       if (response.data) {
@@ -457,77 +567,40 @@ const AdminSalesReport = () => {
       ` }} />
       
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 overflow-visible backdrop-blur-sm bg-white/95">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 overflow-visible">
-          <div className="flex justify-between items-center h-14 sm:h-16 relative">
-            <div className="flex items-center">
-              <img 
-                src="/assets/icons/BBC ICON.png" 
-                alt="BBC Logo" 
-                className="h-12 w-12 sm:h-16 sm:w-16 lg:h-24 lg:w-24 object-contain hover:scale-105 transition-transform duration-200" 
-              />
-            </div>
-
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  <img
-                    src={user?.profile_picture || '/assets/img/home-page/Ellipse 1.png'}
-                    alt="Profile"
-                    className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-gray-200"
-                  />
-                  <div className="text-left hidden sm:block">
-                    <div className="text-xs sm:text-sm font-medium text-gray-900">{user?.name || user?.username || 'User'}</div>
-                    <div className="text-xs text-gray-500">{formatRole(user?.role)}</div>
-                  </div>
-                  <svg 
-                    className={`w-3 h-3 sm:w-4 sm:h-4 text-gray-400 ${showUserDropdown ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
-                       style={{
-                         position: 'absolute',
-                         top: '100%',
-                         right: '0',
-                         marginTop: '0.5rem'
-                       }}>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center space-x-2 px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader />
 
       {/* Main Content with Sidebar */}
-      <div className="flex">
-        <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
+      <div className="pt-14 sm:pt-16">
+        <AdminSidebar 
+          activeItem={activeSidebarItem} 
+          onItemChange={setActiveSidebarItem}
+        />
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gray-50 min-h-screen animate-fadeIn">
-          {/* Sales Report Header Card */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6 animate-slideDown">
-            <h1 className="text-5xl font-bold text-gray-900 mb-2">Sales Report</h1>
-            <p className="text-lg text-gray-600">Track revenue, reservations, and performance metrics.</p>
+        <main className="p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gray-50 min-h-screen animate-fadeIn transition-all duration-300 md:ml-64">
+          {/* Enhanced Header Section */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-3xl shadow-2xl border border-gray-200/60 p-8 sm:p-10 animate-slideDown backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-2">
+                        Sales Report
+                      </h1>
+                      <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+                        Track revenue, reservations, and performance metrics with detailed analytics and insights
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Controls Section - Outside the header card */}
@@ -621,16 +694,49 @@ const AdminSalesReport = () => {
                   Refresh
                 </button>
                 
-                {/* Download Report Button */}
-                <button
-                  onClick={handleDownload}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download Report
-                </button>
+                {/* Download Report Button with Dropdown */}
+                <div className="relative" ref={downloadDropdownRef}>
+                  <button
+                    onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download Report
+                    <svg 
+                      className={`w-4 h-4 transition-transform duration-200 ${showDownloadDropdown ? 'rotate-180' : ''}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {showDownloadDropdown && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                      <button
+                        onClick={handleDownloadPDF}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <span>Download as PDF</span>
+                      </button>
+                      <button
+                        onClick={handleDownloadCSV}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Download as CSV</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* Search Bar */}
                 <div className="relative w-full sm:w-auto sm:max-w-md">
@@ -784,18 +890,16 @@ const AdminSalesReport = () => {
                             <td className="px-6 py-4 text-sm font-medium text-green-600">{item.paymentMethod}</td>
                             <td className="px-6 py-4 text-sm text-gray-700">
                               {item.equipmentRentals && item.equipmentRentals.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
-                                  {item.equipmentRentals.slice(0, 2).map((rental, idx) => (
-                                    <div key={idx} className="flex items-center gap-2">
-                                      <span>{rental.equipmentName}</span>
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium animate-pulse-slow">
+                                <div className="flex flex-col gap-1.5">
+                                  {item.equipmentRentals.map((rental, idx) => (
+                                    <div key={idx} className="flex items-center gap-1.5">
+                                      <span className="font-medium">{rental.equipmentName}</span>
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium">
                                         {rental.hours}h
+                                        {rental.quantity && rental.quantity > 1 ? ` x${rental.quantity}` : ''}
                                       </span>
                                     </div>
                                   ))}
-                                  {item.equipmentRentals.length > 2 && (
-                                    <span className="text-xs text-gray-500">+{item.equipmentRentals.length - 2} more</span>
-                                  )}
                                 </div>
                               ) : (
                                 <span className="text-gray-400">None</span>

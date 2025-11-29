@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { QueuePlayer } from './entities/queue-player.entity';
 import { QueuePlayerHistory } from './entities/queue-player-history.entity';
 import { CreateQueuePlayerDto } from './dto/create-queue-player.dto';
 import { UpdateQueuePlayerDto } from './dto/update-queue-player.dto';
+import { QueueMatch, QueueMatchStatus } from '../queue-matches/entities/queue-match.entity';
 
 @Injectable()
 export class QueuePlayersService {
@@ -13,6 +14,8 @@ export class QueuePlayersService {
     private readonly queuePlayersRepository: Repository<QueuePlayer>,
     @InjectRepository(QueuePlayerHistory)
     private readonly queuePlayersHistoryRepository: Repository<QueuePlayerHistory>,
+    @InjectRepository(QueueMatch)
+    private readonly queueMatchesRepository: Repository<QueueMatch>,
   ) {}
 
   findAll(userId: number): Promise<QueuePlayer[]> {
@@ -49,6 +52,31 @@ export class QueuePlayersService {
 
     if (!player) {
       throw new NotFoundException(`Queue player with id ${id} not found`);
+    }
+
+    // Check if player is in an active match
+    const activeMatches = await this.queueMatchesRepository.find({
+      where: { status: QueueMatchStatus.ACTIVE, userId },
+    });
+    
+    const playersInActiveMatches = new Set<number>();
+    activeMatches.forEach((match) => {
+      [...match.teamA, ...match.teamB].forEach((p) =>
+        playersInActiveMatches.add(p.id),
+      );
+    });
+
+    const isPlayerInActiveMatch = playersInActiveMatches.has(player.id);
+
+    // Prevent any updates (name, skill, sex) when player is in an active match
+    if (isPlayerInActiveMatch) {
+      const hasNameChange = updateDto.name !== undefined && updateDto.name.trim() !== player.name.trim();
+      const hasSkillChange = updateDto.skill !== undefined && updateDto.skill !== player.skill;
+      const hasSexChange = updateDto.sex !== undefined && updateDto.sex !== player.sex;
+
+      if (hasNameChange || hasSkillChange || hasSexChange) {
+        throw new BadRequestException('Player details cannot be edited while the player is playing.');
+      }
     }
 
     if (updateDto.name !== undefined) {

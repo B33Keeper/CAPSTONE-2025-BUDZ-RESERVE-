@@ -85,10 +85,12 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isReservationsModalOpen, setIsReservationsModalOpen] = useState(false)
+  const [isNavOpen, setIsNavOpen] = useState(false)
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const profileRef = useRef<HTMLDivElement>(null)
+  const navRef = useRef<HTMLDivElement>(null)
   const hasShownModalRef = useRef(false)
 
   // Listen for custom events when loading screen completes
@@ -136,11 +138,15 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
     }
 
     const handleLoadingComplete = () => {
-      console.log('[QueueingShell] Loading complete event received')
-      // Wait a bit longer after loading screen completes to ensure page is fully rendered
+      // Defer all work to prevent blocking the main thread
+      // Use setTimeout to ensure handler returns immediately
       setTimeout(() => {
-        checkAndShowInstructions()
-      }, 500)
+        console.log('[QueueingShell] Loading complete event received')
+        // Further defer the actual work to prevent any blocking
+        setTimeout(() => {
+          checkAndShowInstructions()
+        }, 500)
+      }, 0)
     }
 
     // Listen for loading complete event (dispatched from Header after loading screen)
@@ -159,11 +165,14 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
     }
   }, [location.pathname, user])
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false)
+      }
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
+        setIsNavOpen(false)
       }
     }
 
@@ -197,50 +206,113 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
         <div className="pointer-events-none absolute inset-0 bg-[#0a0308]/78 backdrop-blur-[2px]" />
 
       <header className="fixed top-0 left-0 right-0 z-30 bg-gradient-to-b from-[#0a0308]/95 via-[#0a0308]/50 to-transparent backdrop-blur-sm overflow-visible">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:py-6 overflow-visible">
-          <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:flex-nowrap">
-            <Link to="/" className="flex items-center gap-2">
-              <span className="text-2xl font-semibold tracking-wide text-white drop-shadow">BudzSmash</span>
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 sm:px-4 py-2 sm:py-3 md:px-6 md:py-4 overflow-visible">
+          {/* Left Side - Back Button + Logo */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 min-w-0">
+            <Link
+              to="/"
+              className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white transition-all duration-300 hover:scale-105 shadow-lg group flex-shrink-0"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-[-2px] transition-transform duration-300">
+                <path d="M9.707 3.293a1 1 0 010 1.414L6.414 8H16a1 1 0 110 2H6.414l3.293 3.293a1 1 0 01-1.414 1.414l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 0z" />
+              </svg>
+              <span className="hidden sm:inline">Back</span>
+            </Link>
+            <Link to="/" className="flex items-center gap-2 flex-shrink-0 min-w-0">
+              <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold tracking-wide text-white drop-shadow truncate">BudzSmash</span>
             </Link>
           </div>
-          <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end overflow-visible">
-            <nav className="-mx-1 flex w-full flex-wrap items-center justify-center gap-2 overflow-x-auto pb-1 sm:mx-0 sm:w-auto sm:overflow-visible sm:pb-0">
-              {navItems.map((item) => {
-                const isActive = item.key === activeTab
-                return (
-                  <Link
-                    key={item.key}
-                    to={item.to}
-                    className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                      isActive
-                        ? 'bg-white/20 text-white shadow-lg shadow-black/30 backdrop-blur'
-                        : 'text-white/75 hover:bg-white/12'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      {item.icon}
-                      <span>{item.label}</span>
-                    </span>
-                  </Link>
-                )
-              })}
-            </nav>
+
+          {/* Desktop Navigation - Always visible */}
+          <nav className="hidden md:flex items-center gap-2 overflow-visible">
+            {navItems.map((item) => {
+              const isActive = item.key === activeTab
+              return (
+                <Link
+                  key={item.key}
+                  to={item.to}
+                  className={`flex items-center gap-2 rounded-full px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-semibold transition-colors ${
+                    isActive
+                      ? 'bg-white/20 text-white shadow-lg shadow-black/30 backdrop-blur'
+                      : 'text-white/75 hover:bg-white/12'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 md:gap-2">
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </span>
+                </Link>
+              )
+            })}
+          </nav>
+
+          {/* Right Side - Mobile Nav Button + Profile */}
+          <div className="flex items-center gap-2 sm:gap-3 overflow-visible">
+            {/* Mobile Navigation Dropdown Button */}
+            <div className="relative md:hidden" ref={navRef}>
+              <button
+                onClick={() => setIsNavOpen(!isNavOpen)}
+                className="flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition-all duration-300"
+                aria-label="Navigation menu"
+              >
+                <svg
+                  className={`w-5 h-5 transition-transform duration-300 ${isNavOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <span className="hidden sm:inline">{navItems.find(item => item.key === activeTab)?.label || 'Menu'}</span>
+              </button>
+
+              {/* Mobile Navigation Dropdown */}
+              {isNavOpen && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-[#0a0308]/95 backdrop-blur-lg rounded-2xl shadow-2xl py-2 z-[100] border border-white/20">
+                  {navItems.map((item) => {
+                    const isActive = item.key === activeTab
+                    return (
+                      <Link
+                        key={item.key}
+                        to={item.to}
+                        onClick={() => setIsNavOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'text-white/80 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          {item.icon}
+                          <span>{item.label}</span>
+                        </span>
+                        {isActive && (
+                          <svg className="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Profile Section */}
             <div className="relative flex justify-end overflow-visible" ref={profileRef}>
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center space-x-3 px-3 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 group"
+                className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 group"
               >
                 <div className="relative">
                   <img
                     src={user?.profile_picture || '/assets/img/home-page/Ellipse 1.png'}
                     alt="Profile"
-                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-white/20 group-hover:border-white/40 transition-all duration-300 shadow-sm"
+                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full object-cover border-2 border-white/20 group-hover:border-white/40 transition-all duration-300 shadow-sm"
                   />
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0a0308]"></div>
+                  <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full border-2 border-[#0a0308]"></div>
                 </div>
-                <div className="hidden sm:block text-left">
+                <div className="hidden lg:block text-left">
                   <div className="text-sm font-semibold text-white group-hover:text-white transition-colors duration-300">
                     {user?.name || user?.username}
                   </div>
@@ -249,7 +321,7 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
                   </div>
                 </div>
                 <svg 
-                  className={`w-4 h-4 text-white/70 group-hover:text-white transition-all duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} 
+                  className={`w-3 h-3 sm:w-4 sm:h-4 text-white/70 group-hover:text-white transition-all duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} 
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -361,20 +433,10 @@ export function QueueingShell({ activeTab, children }: QueueingShellProps) {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto mt-28 flex max-w-6xl flex-col gap-10 px-4 pb-10 sm:px-6">
+      <main className="relative z-10 mx-auto pt-16 sm:pt-20 md:pt-24 flex max-w-6xl flex-col gap-6 sm:gap-8 md:gap-10 px-4 pb-10 sm:px-6">
         {children}
       </main>
 
-      {/* Floating Back to Home Button - Upper Left */}
-      <Link
-        to="/"
-        className="fixed top-6 left-6 z-40 flex items-center gap-2 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:scale-105 shadow-lg group"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 group-hover:translate-x-[-2px] transition-transform duration-300">
-          <path d="M9.707 3.293a1 1 0 010 1.414L6.414 8H16a1 1 0 110 2H6.414l3.293 3.293a1 1 0 01-1.414 1.414l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 0z" />
-        </svg>
-        <span>Back</span>
-      </Link>
 
       {/* Floating Instruction Button - Lower Left */}
       <button

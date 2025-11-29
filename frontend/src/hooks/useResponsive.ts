@@ -25,30 +25,47 @@ export function useResponsive(breakpoints: ResponsiveConfig = defaultBreakpoints
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 })
 
   useEffect(() => {
+    // Use requestAnimationFrame to batch layout reads and prevent forced reflow
     const updateSize = () => {
-      const width = window.innerWidth
-      const height = window.innerHeight
-      setWindowSize({ width, height })
+      requestAnimationFrame(() => {
+        const width = window.innerWidth
+        const height = window.innerHeight
+        setWindowSize({ width, height })
 
-      // Determine current breakpoint
-      if (width >= breakpoints['2xl']) {
-        setCurrentBreakpoint('2xl')
-      } else if (width >= breakpoints.xl) {
-        setCurrentBreakpoint('xl')
-      } else if (width >= breakpoints.lg) {
-        setCurrentBreakpoint('lg')
-      } else if (width >= breakpoints.md) {
-        setCurrentBreakpoint('md')
-      } else if (width >= breakpoints.sm) {
-        setCurrentBreakpoint('sm')
-      } else {
-        setCurrentBreakpoint('xs')
-      }
+        // Determine current breakpoint
+        if (width >= breakpoints['2xl']) {
+          setCurrentBreakpoint('2xl')
+        } else if (width >= breakpoints.xl) {
+          setCurrentBreakpoint('xl')
+        } else if (width >= breakpoints.lg) {
+          setCurrentBreakpoint('lg')
+        } else if (width >= breakpoints.md) {
+          setCurrentBreakpoint('md')
+        } else if (width >= breakpoints.sm) {
+          setCurrentBreakpoint('sm')
+        } else {
+          setCurrentBreakpoint('xs')
+        }
+      })
     }
 
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
+    // Debounce resize handler to prevent excessive layout reads
+    let resizeTimeout: ReturnType<typeof setTimeout>
+    const debouncedUpdateSize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(updateSize, 150) // 150ms debounce
+    }
+
+    // Initial size update - defer to prevent blocking initial render
+    requestAnimationFrame(() => {
+      updateSize()
+    })
+
+    window.addEventListener('resize', debouncedUpdateSize, { passive: true })
+    return () => {
+      window.removeEventListener('resize', debouncedUpdateSize)
+      clearTimeout(resizeTimeout)
+    }
   }, [breakpoints])
 
   const isMobile = currentBreakpoint === 'xs' || currentBreakpoint === 'sm'

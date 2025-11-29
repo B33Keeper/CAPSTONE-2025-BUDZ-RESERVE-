@@ -418,21 +418,21 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
     const additionalCount = rentalItems.length - visibleItems.length
 
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
         {rentalItems.length === 0 ? (
-          <span className="text-gray-400 text-sm">None</span>
+          <span className="text-gray-400 text-xs sm:text-sm">None</span>
         ) : (
           <>
             {visibleItems.map((item, idx) => (
-              <span key={`${item.equipmentName}-${idx}`} className="text-sm">
-                {item.equipmentName}{' '}
-                <span className="ml-1 inline-block px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs">
+              <div key={`${item.equipmentName}-${idx}`} className="flex items-center justify-center gap-2 text-xs sm:text-sm">
+                <span className="truncate">{item.equipmentName}</span>
+                <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] sm:text-xs font-medium flex-shrink-0">
                   {item.hours}h{item.quantity > 1 ? ` x${item.quantity}` : ''}
                 </span>
-              </span>
+              </div>
             ))}
             {additionalCount > 0 && (
-              <span className="text-xs text-gray-400">+{additionalCount} more</span>
+              <span className="text-[10px] sm:text-xs text-gray-400">+{additionalCount} more</span>
             )}
           </>
         )}
@@ -452,21 +452,21 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
       }}
     >
       <div 
-        className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-500"
+        className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 w-full max-w-7xl h-[95vh] sm:h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-500"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200/50">
-          <div className="relative">
-            <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 p-4 sm:p-6 border-b border-gray-200/50">
+          <div className="relative flex-1 min-w-0">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
               My Reservations
             </h2>
-            <p className="text-sm text-gray-600 mt-2 font-medium">
+            <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 font-medium">
               Manage your court bookings and view reservation history
             </p>
-            <div className="absolute -bottom-2 left-0 w-20 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"></div>
+            <div className="absolute -bottom-1 sm:-bottom-2 left-0 w-16 sm:w-20 h-0.5 sm:h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"></div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-shrink-0">
             <button
               onClick={fetchReservations}
               disabled={loading}
@@ -566,33 +566,33 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
           <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-gray-50/50 to-white/80">
           {/* Mobile Header with Sidebar Toggle */}
           {isMobile && (
-              <div className="flex items-center justify-between p-6 border-b border-gray-200/50 bg-white/80 backdrop-blur-sm">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-between p-3 sm:p-4 md:p-6 border-b border-gray-200/50 bg-white/80 backdrop-blur-sm gap-2">
+              <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-300"
+                    className="p-2 sm:p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg sm:rounded-xl transition-all duration-300 flex-shrink-0"
                   aria-label="Toggle sidebar menu"
                   title="Toggle sidebar menu"
                 >
-                  <Menu className="w-5 h-5" />
+                  <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
-                <div className="flex space-x-2">
+                <div className="flex space-x-1.5 sm:space-x-2 flex-1 min-w-0">
                   <button
                     onClick={() => setActiveTab('current')}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 flex-1 ${
                       activeTab === 'current'
                           ? 'bg-blue-500 text-white shadow-lg'
-                          : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                          : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600 bg-white border border-gray-200'
                     }`}
                   >
                     Current
                   </button>
                   <button
                     onClick={() => setActiveTab('history')}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 flex-1 ${
                       activeTab === 'history'
                           ? 'bg-blue-500 text-white shadow-lg'
-                          : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+                          : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600 bg-white border border-gray-200'
                     }`}
                   >
                     History
@@ -601,11 +601,11 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
               </div>
               <button
                 onClick={() => setShowDateFilter(!showDateFilter)}
-                  className="p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-300"
+                  className="p-2 sm:p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg sm:rounded-xl transition-all duration-300 flex-shrink-0"
                 aria-label="Toggle date filter"
                 title="Toggle date filter"
               >
-                <Filter className="w-5 h-5" />
+                <Filter className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           )}
@@ -651,23 +651,23 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
 
           {/* Date Filter */}
           {showDateFilter && (
-              <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200/50 backdrop-blur-sm">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Filter className="w-5 h-5 text-blue-600" />
+              <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200/50 backdrop-blur-sm">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 sm:space-x-0">
+                  <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+                    <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
+                      <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                     </div>
-                    <label className="text-sm font-bold text-gray-800">Filter by Date:</label>
+                    <label className="text-xs sm:text-sm font-bold text-gray-800 whitespace-nowrap">Filter by Date:</label>
                   </div>
                 <input
                   type="date"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                    className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white shadow-sm hover:shadow-md"
+                    className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 sm:focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white shadow-sm hover:shadow-md text-sm sm:text-base"
                 />
                 <button
                   onClick={() => setDateFilter('')}
-                    className="px-6 py-3 text-sm font-medium text-gray-700 hover:text-gray-900 border-2 border-gray-200 rounded-xl hover:bg-white hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md"
+                    className="px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-700 hover:text-gray-900 border-2 border-gray-200 rounded-lg sm:rounded-xl hover:bg-white hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md whitespace-nowrap"
                 >
                   Clear Filter
                 </button>
@@ -676,7 +676,7 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
           )}
 
           {/* Content */}
-            <div className="flex-1 overflow-hidden p-6">
+            <div className="flex-1 overflow-hidden p-3 sm:p-4 md:p-6">
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
@@ -687,16 +687,16 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
             ) : (
               <div className="h-full flex flex-col">
                 {/* Table */}
-                  <div className="flex-1 overflow-auto bg-white rounded-2xl shadow-lg border border-gray-200/50">
+                  <div className="flex-1 overflow-auto bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200/50">
                   <ResponsiveTable>
                       <ResponsiveTableHeader className="bg-gradient-to-r from-gray-50 to-gray-100">
-                        <ResponsiveTableHeaderCell className="font-bold text-gray-800">ID</ResponsiveTableHeaderCell>
-                        <ResponsiveTableHeaderCell className="font-bold text-gray-800">Date</ResponsiveTableHeaderCell>
-                        <ResponsiveTableHeaderCell className="font-bold text-gray-800">Time</ResponsiveTableHeaderCell>
-                        <ResponsiveTableHeaderCell hideOnMobile className="font-bold text-gray-800">Court no.</ResponsiveTableHeaderCell>
-                        <ResponsiveTableHeaderCell hideOnMobile className="font-bold text-gray-800">Mode of Payment</ResponsiveTableHeaderCell>
-                        <ResponsiveTableHeaderCell className="font-bold text-gray-800">Racket Rent / Duration</ResponsiveTableHeaderCell>
-                        <ResponsiveTableHeaderCell className="font-bold text-gray-800">Price</ResponsiveTableHeaderCell>
+                        <ResponsiveTableHeaderCell className="font-bold text-gray-800 text-xs sm:text-sm text-center">ID</ResponsiveTableHeaderCell>
+                        <ResponsiveTableHeaderCell className="font-bold text-gray-800 text-xs sm:text-sm text-center">Date</ResponsiveTableHeaderCell>
+                        <ResponsiveTableHeaderCell className="font-bold text-gray-800 text-xs sm:text-sm text-center">Time</ResponsiveTableHeaderCell>
+                        <ResponsiveTableHeaderCell hideOnMobile className="font-bold text-gray-800 text-xs sm:text-sm text-center">Court no.</ResponsiveTableHeaderCell>
+                        <ResponsiveTableHeaderCell hideOnMobile className="font-bold text-gray-800 text-xs sm:text-sm text-center">Mode of Payment</ResponsiveTableHeaderCell>
+                        <ResponsiveTableHeaderCell className="font-bold text-gray-800 text-xs sm:text-sm text-center">Racket Rent / Duration</ResponsiveTableHeaderCell>
+                        <ResponsiveTableHeaderCell className="font-bold text-gray-800 text-xs sm:text-sm text-center">Price</ResponsiveTableHeaderCell>
                     </ResponsiveTableHeader>
                     <ResponsiveTableBody>
                   {currentGroups.map((group, index) => {
@@ -732,50 +732,52 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                         key={`${group.key}-${startIndex + index}`} 
                         className="hover:bg-blue-50/50 transition-colors duration-200 border-b border-gray-100"
                       >
-                        <ResponsiveTableCell className="font-medium text-gray-700">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold text-blue-600">{startIndex + index + 1}</span>
+                        <ResponsiveTableCell className="font-medium text-gray-700 text-center">
+                          <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-[10px] sm:text-xs font-bold text-blue-600">{startIndex + index + 1}</span>
                             </div>
                           </div>
                         </ResponsiveTableCell>
-                        <ResponsiveTableCell className="font-medium text-gray-800">
+                        <ResponsiveTableCell className="font-medium text-gray-800 text-xs sm:text-sm text-center">
                           {formatDate(group.reservationDate)}
                         </ResponsiveTableCell>
-                        <ResponsiveTableCell className="text-gray-700">
-                          <div className="flex flex-col gap-1">
+                        <ResponsiveTableCell className="text-gray-700 text-center">
+                          <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
                             {group.reservations.map((reservation, idx) => (
-                              <div key={idx} className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-sm">{`${formatTime(reservation.Start_Time)} - ${formatTime(reservation.End_Time)}`}</span>
+                              <div key={idx} className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                                <span className="text-xs sm:text-sm">{`${formatTime(reservation.Start_Time)} - ${formatTime(reservation.End_Time)}`}</span>
                               </div>
                             ))}
                           </div>
                         </ResponsiveTableCell>
-                        <ResponsiveTableCell hideOnMobile className="text-gray-700">
-                          <div className="flex flex-col gap-1">
+                        <ResponsiveTableCell hideOnMobile className="text-gray-700 text-center">
+                          <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
                             {group.reservations.map((reservation, idx) => {
                               const courtName = reservation.court?.Court_Name || 'Unknown Court'
                               return (
-                                <div key={idx} className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                  <span className="text-sm">{courtName}</span>
+                                <div key={idx} className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-500 rounded-full flex-shrink-0"></div>
+                                  <span className="text-xs sm:text-sm">{courtName}</span>
                                 </div>
                               )
                             })}
                           </div>
                         </ResponsiveTableCell>
-                        <ResponsiveTableCell hideOnMobile className="text-gray-700">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <ResponsiveTableCell hideOnMobile className="text-gray-700 text-xs sm:text-sm text-center">
+                          <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
                             <span>{getPaymentMethod(payments)}</span>
                           </div>
                         </ResponsiveTableCell>
-                        <ResponsiveTableCell className="text-gray-700">
-                          {formatRentalItems(allRentalItems)}
+                        <ResponsiveTableCell className="text-gray-700 text-center">
+                          <div className="min-w-0 flex justify-center">
+                            {formatRentalItems(allRentalItems)}
+                          </div>
                         </ResponsiveTableCell>
-                        <ResponsiveTableCell className="text-green-600">
-                          <span className="font-bold">₱{formatPrice(groupTotalAmount)}</span>
+                        <ResponsiveTableCell className="text-green-600 text-center">
+                          <span className="font-bold text-xs sm:text-sm">₱{formatPrice(groupTotalAmount)}</span>
                         </ResponsiveTableCell>
                       </ResponsiveTableRow>
                     )
@@ -817,49 +819,49 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200/50">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 mt-4 sm:mt-6 md:mt-8 pt-4 sm:pt-6 border-t border-gray-200/50">
                       <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-700">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-xs sm:text-sm font-medium text-gray-700">
                           Page {currentPage} of {totalPages}
                         </span>
                     </div>
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
                       <button
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
-                          className="p-3 rounded-xl border-2 border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 group disabled:hover:bg-transparent disabled:hover:border-gray-200"
+                          className="p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 group disabled:hover:bg-transparent disabled:hover:border-gray-200 active:scale-95 touch-manipulation"
                         aria-label="Previous page"
                         title="Previous page"
                       >
-                          <ChevronLeft className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" />
+                          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" />
                       </button>
                       <button
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                         disabled={currentPage === totalPages}
-                          className="p-3 rounded-xl border-2 border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 group disabled:hover:bg-transparent disabled:hover:border-gray-200"
+                          className="p-2 sm:p-3 rounded-lg sm:rounded-xl border-2 border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 group disabled:hover:bg-transparent disabled:hover:border-gray-200 active:scale-95 touch-manipulation"
                         aria-label="Next page"
                         title="Next page"
                       >
-                          <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" />
+                          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" />
                       </button>
                     </div>
                   </div>
                 )}
 
                 {/* Notes Section */}
-                  <div className="mt-6 p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 rounded-xl">
-                    <div className="flex items-start space-x-3">
-                      <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
-                        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 rounded-lg sm:rounded-xl">
+                    <div className="flex items-start space-x-2 sm:space-x-3">
+                      <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg flex-shrink-0">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                         </svg>
                       </div>
-                      <div className="flex-1">
-                        <h4 className="text-base font-bold text-red-800 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm sm:text-base font-bold text-red-800 mb-1 sm:mb-2">
                           Payment & Cancellation Policy
                         </h4>
-                        <p className="text-sm text-red-700">
+                        <p className="text-xs sm:text-sm text-red-700 leading-relaxed">
                           Full payment required at booking. <strong>No cancellations or refunds</strong> once reservation is made.
                         </p>
                       </div>

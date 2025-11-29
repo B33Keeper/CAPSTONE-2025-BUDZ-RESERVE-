@@ -5,11 +5,11 @@ import { api } from '@/lib/api'
 import { AnnouncementHistoryModal } from '@/components/modals/AnnouncementHistoryModal'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
+import { AdminHeader } from '@/components/AdminHeader'
 import toast from 'react-hot-toast'
 
 export default function AdminCreateAnnouncement() {
   const [showAnnouncementHistory, setShowAnnouncementHistory] = useState(false)
-  const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [activeSidebarItem, setActiveSidebarItem] = useState('Add Announcement')
   const [announcementType, setAnnouncementType] = useState<'text' | 'image'>('text')
   const [title, setTitle] = useState('')
@@ -18,34 +18,7 @@ export default function AdminCreateAnnouncement() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
-
-  // Helper function to format role
-  const formatRole = (role?: string) => {
-    if (!role) return 'User'
-    return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
-  }
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowUserDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -145,7 +118,7 @@ export default function AdminCreateAnnouncement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 scroll-smooth">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 scroll-smooth">
       {/* Custom Scrollbar Styles */}
       <style dangerouslySetInnerHTML={{ __html: `
         ::-webkit-scrollbar {
@@ -157,17 +130,16 @@ export default function AdminCreateAnnouncement() {
           border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
+          background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
           border-radius: 4px;
           transition: background 0.3s ease;
         }
         ::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
+          background: linear-gradient(to bottom, #94a3b8, #64748b);
         }
         ::-webkit-scrollbar-corner {
           background: #f1f5f9;
         }
-        /* Firefox scrollbar */
         * {
           scrollbar-width: thin;
           scrollbar-color: #cbd5e1 #f1f5f9;
@@ -180,260 +152,251 @@ export default function AdminCreateAnnouncement() {
       />
 
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 overflow-visible backdrop-blur-sm bg-white/95">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 overflow-visible">
-          <div className="flex justify-between items-center h-14 sm:h-16 relative">
-            {/* Logo */}
-            <div className="flex items-center">
-              <img 
-                src="/assets/icons/BBC ICON.png" 
-                alt="BBC Logo" 
-                className="h-12 w-12 sm:h-16 sm:w-16 lg:h-24 lg:w-24 object-contain hover:scale-105 transition-transform duration-200" 
-              />
-            </div>
-
-            {/* Right Side - Admin Profile */}
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  <img
-                    src={user?.profile_picture || '/assets/img/home-page/Ellipse 1.png'}
-                    alt="Profile"
-                    className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-gray-200"
-                  />
-                  <div className="text-left hidden sm:block">
-                    <div className="text-xs sm:text-sm font-medium text-gray-900">{user?.name || user?.username || 'User'}</div>
-                    <div className="text-xs text-gray-500">{formatRole(user?.role)}</div>
-                  </div>
-                  <svg 
-                    className={`w-3 h-3 sm:w-4 sm:h-4 text-gray-400 ${showUserDropdown ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
-                       style={{
-                         position: 'absolute',
-                         top: '100%',
-                         right: '0',
-                         marginTop: '0.5rem'
-                       }}>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center space-x-2 px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader />
 
       {/* Main Content with Sidebar */}
-      <div className="flex">
-        <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
-        
+      <div className="pt-16">
+        <AdminSidebar 
+          activeItem={activeSidebarItem} 
+          onItemChange={setActiveSidebarItem}
+        />
+
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen animate-fadeIn">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Announcement</h1>
-                  <p className="text-gray-600">Share important updates with users</p>
+        <main className="p-4 sm:p-6 lg:p-8 overflow-x-hidden animate-fadeIn transition-all duration-300 md:ml-64">
+          {/* Page Header - Title Container */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-3xl shadow-2xl border border-gray-200/60 p-8 sm:p-10 animate-slideDown backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-2">
+                        Create Announcement
+                      </h1>
+                      <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+                        Share important updates with users
+                      </p>
+                    </div>
+                  </div>
                 </div>
                 {/* Announcement History Button */}
                 <button
                   onClick={() => setShowAnnouncementHistory(true)}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors border border-gray-300"
+                  className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-gray-200/60 hover:border-blue-400/60 text-gray-700 hover:text-blue-700 transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95 font-semibold"
                   title="View Announcement History"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="hidden sm:inline text-sm font-medium">Announcements</span>
+                  <span className="hidden sm:inline">Announcements</span>
                 </button>
               </div>
-                
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Announcement Type Selection */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      Announcement Type
-                    </label>
-                    <div className="flex gap-4">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAnnouncementType('text')
-                          setSelectedImage(null)
-                          setImagePreview(null)
-                          if (fileInputRef.current) {
-                            fileInputRef.current.value = ''
-                          }
-                        }}
-                        className={`flex-1 px-6 py-4 rounded-xl border-2 transition-all font-semibold ${
-                          announcementType === 'text'
-                            ? 'border-blue-600 bg-blue-50 text-blue-700'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center space-x-2">
+            </div>
+          </div>
+
+          {/* Form Container */}
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-3xl shadow-2xl border border-gray-200/60 p-6 sm:p-8 lg:p-10">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Announcement Type Selection */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-4">
+                    Announcement Type
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAnnouncementType('text')
+                        setSelectedImage(null)
+                        setImagePreview(null)
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = ''
+                        }
+                      }}
+                      className={`relative px-6 py-5 rounded-2xl border-2 transition-all duration-300 font-semibold group overflow-hidden ${
+                        announcementType === 'text'
+                          ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 shadow-lg scale-105'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50/50 hover:scale-105'
+                      }`}
+                    >
+                      {announcementType === 'text' && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10"></div>
+                      )}
+                      <div className="relative flex items-center justify-center space-x-3">
+                        <div className={`p-2.5 rounded-xl ${
+                          announcementType === 'text' 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
+                        } transition-colors`}>
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
-                          <span>Text Announcement</span>
                         </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAnnouncementType('image')}
-                        className={`flex-1 px-6 py-4 rounded-xl border-2 transition-all font-semibold ${
-                          announcementType === 'image'
-                            ? 'border-blue-600 bg-blue-50 text-blue-700'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center space-x-2">
+                        <span>Text Announcement</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnnouncementType('image')}
+                      className={`relative px-6 py-5 rounded-2xl border-2 transition-all duration-300 font-semibold group overflow-hidden ${
+                        announcementType === 'image'
+                          ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 shadow-lg scale-105'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50/50 hover:scale-105'
+                      }`}
+                    >
+                      {announcementType === 'image' && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10"></div>
+                      )}
+                      <div className="relative flex items-center justify-center space-x-3">
+                        <div className={`p-2.5 rounded-xl ${
+                          announcementType === 'image' 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
+                        } transition-colors`}>
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          <span>Image Announcement</span>
                         </div>
-                      </button>
-                    </div>
+                        <span>Image Announcement</span>
+                      </div>
+                    </button>
                   </div>
+                </div>
 
-                  {/* Title */}
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter announcement title"
+                    className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all bg-white text-gray-900 font-medium"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {/* Content (for text type) */}
+                {announcementType === 'text' && (
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Title <span className="text-red-500">*</span>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">
+                      Content <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Enter announcement title"
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    <textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Enter announcement content"
+                      rows={10}
+                      className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none bg-white text-gray-900"
                       required
                       disabled={isSubmitting}
                     />
                   </div>
+                )}
 
-                  {/* Content (for text type) */}
-                  {announcementType === 'text' && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Content <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Enter announcement content"
-                        rows={8}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none"
-                        required
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                  )}
-
-                  {/* Image Upload (for image type) */}
-                  {announcementType === 'image' && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Image <span className="text-red-500">*</span>
-                      </label>
-                      <div className="space-y-4">
-                        {!imagePreview ? (
-                          <div
-                            onClick={() => fileInputRef.current?.click()}
-                            className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
-                          >
-                            <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            <p className="text-gray-600 font-medium mb-2">Click to upload an image</p>
+                {/* Image Upload (for image type) */}
+                {announcementType === 'image' && (
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-3">
+                      Image <span className="text-red-500">*</span>
+                    </label>
+                    <div className="space-y-4">
+                      {!imagePreview ? (
+                        <div
+                          onClick={() => fileInputRef.current?.click()}
+                          className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center cursor-pointer hover:border-blue-500 hover:bg-gradient-to-br hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300 group"
+                        >
+                          <div className="flex flex-col items-center">
+                            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 mb-4 group-hover:scale-110 transition-transform">
+                              <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                            </div>
+                            <p className="text-lg font-semibold text-gray-700 mb-2 group-hover:text-blue-600 transition-colors">
+                              Click to upload an image
+                            </p>
                             <p className="text-sm text-gray-500">PNG, JPG, GIF, WEBP up to 10MB</p>
                           </div>
-                        ) : (
-                          <div className="relative">
-                            <img
-                              src={imagePreview}
-                              alt="Preview"
-                              className="w-full h-auto rounded-xl shadow-md"
-                            />
-                            <button
-                              type="button"
-                              onClick={handleRemoveImage}
-                              className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-colors"
-                              disabled={isSubmitting}
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        )}
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageSelect}
-                          className="hidden"
-                          disabled={isSubmitting}
-                        />
-                        {imagePreview && (
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                              Optional Content (Caption)
-                            </label>
-                            <textarea
-                              value={content}
-                              onChange={(e) => setContent(e.target.value)}
-                              placeholder="Enter optional caption or description"
-                              rows={4}
-                              className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none"
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Submit Button */}
-                  <div className="flex justify-center pt-4">
-                    <button
-                      type="submit"
-                      className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                          <span>Creating...</span>
-                        </>
+                        </div>
                       ) : (
-                        <span>Create Announcement</span>
+                        <div className="relative rounded-2xl overflow-hidden border-2 border-gray-200 shadow-lg">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="w-full h-auto"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                          <button
+                            type="button"
+                            onClick={handleRemoveImage}
+                            className="absolute top-4 right-4 bg-red-600/90 backdrop-blur-sm text-white p-3 rounded-xl hover:bg-red-700 transition-all duration-200 shadow-lg hover:scale-110"
+                            disabled={isSubmitting}
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
                       )}
-                    </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="hidden"
+                        disabled={isSubmitting}
+                      />
+                      {imagePreview && (
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-3">
+                            Optional Content (Caption)
+                          </label>
+                          <textarea
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            placeholder="Enter optional caption or description"
+                            rows={5}
+                            className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none bg-white text-gray-900"
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </form>
+                )}
+
+                {/* Submit Button */}
+                <div className="flex justify-center pt-6">
+                  <button
+                    type="submit"
+                    className="px-10 py-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 text-white rounded-xl font-bold text-lg hover:from-blue-700 hover:via-blue-800 hover:to-indigo-700 transition-all duration-200 disabled:from-gray-400 disabled:via-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed flex items-center space-x-3 shadow-xl hover:shadow-2xl transform hover:scale-105 active:scale-95"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>Creating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>Create Announcement</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </main>

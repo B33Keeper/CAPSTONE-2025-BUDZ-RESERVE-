@@ -8,6 +8,8 @@ import { EquipmentRentalItem } from './entities/equipment-rental-item.entity';
 import { EquipmentRental } from './entities/equipment-rental.entity';
 import { Equipment } from '../equipment/entities/equipment.entity';
 import { User } from '../users/entities/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class EquipmentRentalSchedulerService {
@@ -24,6 +26,7 @@ export class EquipmentRentalSchedulerService {
     private readonly userRepository: Repository<User>,
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -71,9 +74,9 @@ export class EquipmentRentalSchedulerService {
             );
           }
 
-          // Send email notification if not already sent
+          // Create admin notification if not already sent
           if (!rentalItem.notification_sent) {
-            await this.sendReturnReminderEmail(rentalItem);
+            await this.createEquipmentReturnNotification(rentalItem);
             await this.rentalItemRepository.update(rentalItem.id, {
               notification_sent: true,
             });
@@ -90,9 +93,9 @@ export class EquipmentRentalSchedulerService {
   }
 
   /**
-   * Send email notification to user reminding them to return the equipment
+   * Create admin notification for equipment return reminder
    */
-  private async sendReturnReminderEmail(rentalItem: EquipmentRentalItem) {
+  private async createEquipmentReturnNotification(rentalItem: EquipmentRentalItem) {
     try {
       // Get rental with user information
       const rental = await this.rentalRepository.findOne({
@@ -101,7 +104,7 @@ export class EquipmentRentalSchedulerService {
       });
 
       if (!rental) {
-        this.logger.warn(`Rental ${rentalItem.rental_id} not found for email notification`);
+        this.logger.warn(`Rental ${rentalItem.rental_id} not found for notification`);
         return;
       }
 
@@ -110,8 +113,8 @@ export class EquipmentRentalSchedulerService {
         where: { id: rental.user_id },
       });
 
-      if (!user || !user.email) {
-        this.logger.warn(`User ${rental.user_id} not found or has no email for notification`);
+      if (!user) {
+        this.logger.warn(`User ${rental.user_id} not found for notification`);
         return;
       }
 
@@ -121,7 +124,7 @@ export class EquipmentRentalSchedulerService {
       });
 
       if (!equipment) {
-        this.logger.warn(`Equipment ${rentalItem.equipment_id} not found for email notification`);
+        this.logger.warn(`Equipment ${rentalItem.equipment_id} not found for notification`);
         return;
       }
 
@@ -137,30 +140,24 @@ export class EquipmentRentalSchedulerService {
           })
         : 'N/A';
 
-      // Prepare email data
-      const emailData = {
-        userName: user.name || user.username,
-        equipmentName: equipment.equipment_name,
-        quantity: rentalItem.quantity,
-        rentalEndTime: endTime,
-        appName: this.configService.get('APP_NAME', 'Budz Reserve'),
-        appUrl: this.configService.get('FRONTEND_URL', 'http://localhost:3000'),
-        supportEmail: this.configService.get('SUPPORT_EMAIL', 'support@budzreserve.com'),
-      };
+      // Create notification for admin
+      const userName = user.name || user.username;
+      const title = `Equipment Return Reminder - ${equipment.equipment_name}`;
+      const message = `${userName} needs to return ${rentalItem.quantity} ${equipment.equipment_name}(s). Rental period ended on ${endTime}.`;
 
-      // Send email
-      await this.mailerService.sendMail({
-        to: user.email,
-        subject: `Equipment Return Reminder - ${equipment.equipment_name}`,
-        template: 'equipment-return-reminder',
-        context: emailData,
+      await this.notificationsService.create({
+        type: NotificationType.EQUIPMENT_RENTAL_EXPIRED,
+        title,
+        message,
+        equipment_rental_item_id: rentalItem.id,
+        user_id: rental.user_id,
       });
 
       this.logger.log(
-        `Return reminder email sent successfully to ${user.email} for rental item ${rentalItem.id}`,
+        `Equipment return notification created successfully for rental item ${rentalItem.id}`,
       );
     } catch (error) {
-      this.logger.error(`Failed to send return reminder email for rental item ${rentalItem.id}:`, error);
+      this.logger.error(`Failed to create equipment return notification for rental item ${rentalItem.id}:`, error);
     }
   }
 
@@ -195,18 +192,18 @@ export class EquipmentRentalSchedulerService {
             where: { id: rentalItem.equipment_id },
           });
 
-          // Send email notification if not already sent
-          let emailSent = false;
+          // Create admin notification if not already sent
+          let notificationCreated = false;
           if (!rentalItem.notification_sent) {
             try {
-              await this.sendReturnReminderEmail(rentalItem);
+              await this.createEquipmentReturnNotification(rentalItem);
               await this.rentalItemRepository.update(rentalItem.id, {
                 notification_sent: true,
               });
-              emailSent = true;
+              notificationCreated = true;
               emailSentCount++;
-            } catch (emailError) {
-              this.logger.error(`Failed to send email for rental item ${rentalItem.id}:`, emailError);
+            } catch (notificationError) {
+              this.logger.error(`Failed to create notification for rental item ${rentalItem.id}:`, notificationError);
             }
           }
 
@@ -216,7 +213,7 @@ export class EquipmentRentalSchedulerService {
             equipmentName: equipment?.equipment_name || 'Unknown',
             quantity: rentalItem.quantity,
             rentalEndTime: rentalItem.rental_end_time,
-            emailSent,
+            notificationCreated,
           });
           processedCount++;
         } catch (error) {
@@ -227,11 +224,11 @@ export class EquipmentRentalSchedulerService {
 
     return {
       message: expiredRentals.length > 0
-        ? `Found and processed ${expiredRentals.length} expired rental(s). ${emailSentCount} email(s) sent.`
+        ? `Found and processed ${expiredRentals.length} expired rental(s). ${emailSentCount} notification(s) created.`
         : 'No expired rentals found.',
       expiredRentalsFound: expiredRentals.length,
       processedCount,
-      emailSentCount,
+      notificationCount: emailSentCount,
       processedItems,
     };
   }

@@ -53,45 +53,112 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Sales report retrieved successfully' })
   async getSalesReport(
     @Query('period') period?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ) {
     try {
       console.log('========================================');
       console.log('[SalesReport Controller] Endpoint called!');
       console.log(`[SalesReport Controller] Period received: ${period}`);
+      console.log(`[SalesReport Controller] DateFrom received: ${dateFrom}`);
+      console.log(`[SalesReport Controller] DateTo received: ${dateTo}`);
       console.log('========================================');
-      
-      // Set default period if not provided
-      const periodValue: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' = 
-        (period as any) || 'daily';
       
       const now = new Date();
       let startDate: Date;
-      let endDate: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      let endDate: Date;
 
-      switch (periodValue) {
-        case 'daily':
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-          break;
-        case 'weekly':
-          const dayOfWeek = now.getDay();
-          const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysToMonday, 0, 0, 0);
-          break;
-        case 'monthly':
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-          break;
-        case 'quarterly':
-          const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
-          startDate = new Date(now.getFullYear(), quarterStartMonth, 1, 0, 0, 0);
-          break;
-        case 'yearly':
-          startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
-          break;
-        default:
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      // If custom date range is provided, use it instead of period-based dates
+      if (dateFrom || dateTo) {
+        if (dateFrom) {
+          startDate = new Date(dateFrom);
+          startDate.setHours(0, 0, 0, 0);
+        } else {
+          // If only dateTo is provided, start from a reasonable past date (e.g., 1 year ago)
+          startDate = new Date(now.getFullYear() - 1, 0, 1, 0, 0, 0);
+        }
+
+        if (dateTo) {
+          endDate = new Date(dateTo);
+          endDate.setHours(23, 59, 59, 999);
+        } else {
+          // If only dateFrom is provided, end at current time
+          endDate = now;
+        }
+
+        console.log(`[SalesReport Controller] Using custom date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      } else {
+        // Use period-based date calculation
+        // Set default period if not provided
+        const periodValue: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' = 
+          (period as any) || 'daily';
+
+        switch (periodValue) {
+          case 'daily':
+            // For daily, get today's date range from start of day to current time
+            // Get current date components in local timezone
+            const todayYear = now.getFullYear();
+            const todayMonth = now.getMonth();
+            const todayDay = now.getDate();
+            
+            // Create start of day in local timezone
+            const localStart = new Date(todayYear, todayMonth, todayDay, 0, 0, 0, 0);
+            // Use current time as end date to include all records created today up to now
+            const localEnd = now;
+            
+            // Get timezone offset in minutes
+            const timezoneOffset = localStart.getTimezoneOffset();
+            
+            // Adjust for timezone: if server is ahead of UTC (negative offset), we need to subtract hours
+            // Convert to UTC for database query
+            // The database stores timestamps, so we need to ensure we cover the full day in UTC
+            startDate = new Date(localStart.getTime() - (timezoneOffset * 60 * 1000));
+            endDate = new Date(localEnd.getTime() - (timezoneOffset * 60 * 1000));
+            
+            // Actually, let's use a simpler approach - use the local dates directly
+            // TypeORM should handle the timezone conversion
+            startDate = localStart;
+            endDate = localEnd; // Use current time instead of end of day
+            
+            console.log(`[SalesReport Controller] Daily period - Start: ${startDate.toISOString()}, End: ${endDate.toISOString()}`);
+            console.log(`[SalesReport Controller] Daily period - Local Start: ${startDate.toLocaleString()}, Local End: ${endDate.toLocaleString()}`);
+            console.log(`[SalesReport Controller] Daily period - Timezone Offset: ${timezoneOffset} minutes`);
+            console.log(`[SalesReport Controller] Daily period - Now: ${now.toISOString()}, Now Local: ${now.toLocaleString()}`);
+            break;
+          case 'weekly':
+            // Weekly: Show last 7 days including today (today and 6 days before)
+            // Full week period from start of first day to end of last day
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            break;
+          case 'monthly':
+            // Monthly: Show complete current month (1st to last day of month)
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+            // Get last day of current month
+            const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            endDate = lastDayOfMonth;
+            break;
+          case 'quarterly':
+            // Quarterly: Show complete current quarter
+            const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+            startDate = new Date(now.getFullYear(), quarterStartMonth, 1, 0, 0, 0, 0);
+            // Get last day of current quarter (end of 3rd month of quarter)
+            const quarterEndMonth = quarterStartMonth + 2;
+            const lastDayOfQuarter = new Date(now.getFullYear(), quarterEndMonth + 1, 0, 23, 59, 59, 999);
+            endDate = lastDayOfQuarter;
+            break;
+          case 'yearly':
+            // Yearly: Show complete current year (Jan 1 to Dec 31)
+            startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+            break;
+          default:
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        }
       }
 
-      console.log(`[SalesReport Controller] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      console.log(`[SalesReport Controller] Final date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
       const result = await this.paymentsService.getSalesReport(startDate, endDate);
       console.log(`[SalesReport Controller] Found ${result.data.length} records, summary:`, result.summary);
       return result;
@@ -189,7 +256,7 @@ export class PaymentsController {
           message: schedulerResult.message || 'Scheduler check completed',
           expiredRentalsFound: schedulerResult.expiredRentalsFound || 0,
           processedCount: schedulerResult.processedCount || 0,
-          emailSentCount: schedulerResult.emailSentCount || 0,
+          notificationCount: schedulerResult.notificationCount || 0,
           processedItems: schedulerResult.processedItems || [],
         },
       };

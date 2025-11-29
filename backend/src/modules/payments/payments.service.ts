@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ReservationsService } from '../reservations/reservations.service';
@@ -77,40 +77,75 @@ export class PaymentsService {
 
   async getSalesReport(startDate: Date, endDate: Date) {
     console.log(`[SalesReport Service] Fetching sales report between ${startDate.toISOString()} and ${endDate.toISOString()}`);
-    console.log(`[SalesReport Service] Using SAME logic as Admin Dashboard - fetch ALL reservations, filter by Created_at`);
     
-    // Fetch all reservations exactly like Admin Dashboard does (same as /reservations endpoint)
+    // Create new date objects to avoid mutating the original dates
+    const queryStartDate = new Date(startDate);
+    const queryEndDate = new Date(endDate);
+    
+    // Log the dates for debugging
+    console.log(`[SalesReport Service] Query dates - Start: ${queryStartDate.toISOString()} (Local: ${queryStartDate.toLocaleString()}), End: ${queryEndDate.toISOString()} (Local: ${queryEndDate.toLocaleString()})`);
+    
+    // Use database WHERE clause instead of fetching all and filtering in JavaScript
+    // This is MUCH faster, especially with large datasets
+    // Use query builder with date comparison to handle timezone issues
     let reservations;
     try {
-      console.log(`[SalesReport Service] Querying all reservations with relations (same as Admin Dashboard)...`);
+      console.log(`[SalesReport Service] Querying reservations with date filter at database level...`);
+      
+      // The dates from controller are already in local timezone with correct hours
+      // Use them directly - TypeORM will handle the timezone conversion for database queries
       reservations = await this.reservationsRepository.find({
+        where: {
+          Created_at: Between(queryStartDate, queryEndDate),
+        },
         relations: ['user', 'court', 'payments'],
         order: { Created_at: 'DESC' },
       });
-      console.log(`[SalesReport Service] Found ${reservations.length} total reservations`);
+      console.log(`[SalesReport Service] Found ${reservations.length} reservations created in date range`);
       
-      // Filter by Created_at (when reservation was created) - EXACTLY like Admin Dashboard
-      // This matches AdminDashboard.tsx line 225-245
-      const normalizedStartDate = new Date(startDate);
-      normalizedStartDate.setHours(0, 0, 0, 0);
-      const normalizedEndDate = new Date(endDate);
-      normalizedEndDate.setHours(23, 59, 59, 999);
-      
-      const filteredReservations = reservations.filter(reservation => {
-        // Use Created_at as the primary source (when reservation was created) - SAME as Admin Dashboard
-        const createdDateValue = reservation.Created_at;
-        if (!createdDateValue) return false;
+      // Debug: Log first few reservation Created_at dates to verify they're in range
+      if (reservations.length > 0) {
+        console.log(`[SalesReport Service] Sample reservation dates:`);
+        reservations.slice(0, 3).forEach((res, idx) => {
+          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: Created_at = ${res.Created_at?.toISOString()} (Local: ${res.Created_at?.toLocaleString()})`);
+        });
+      } else {
+        console.log(`[SalesReport Service] No reservations found. Running debug queries...`);
         
-        const createdDate = new Date(createdDateValue);
-        if (isNaN(createdDate.getTime())) return false;
-        createdDate.setHours(0, 0, 0, 0);
+        // Debug 1: Check current date and time
+        const now = new Date();
+        console.log(`[SalesReport Service] Debug - Current server time: ${now.toISOString()} (Local: ${now.toLocaleString()})`);
         
-        // Only include reservations created in the date range - SAME as Admin Dashboard
-        return createdDate >= normalizedStartDate && createdDate <= normalizedEndDate;
-      });
-      
-      reservations = filteredReservations;
-      console.log(`[SalesReport Service] Found ${reservations.length} reservations created in date range (same logic as Admin Dashboard)`);
+        // Debug 2: Check what date range we're querying
+        console.log(`[SalesReport Service] Debug - Query range: ${queryStartDate.toISOString()} to ${queryEndDate.toISOString()}`);
+        console.log(`[SalesReport Service] Debug - Query range local: ${queryStartDate.toLocaleString()} to ${queryEndDate.toLocaleString()}`);
+        
+        // Debug 3: Get ALL recent reservations (last 7 days) to see what dates exist
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const recentReservations = await this.reservationsRepository.find({
+          where: {
+            Created_at: MoreThanOrEqual(sevenDaysAgo),
+          },
+          select: ['Reservation_ID', 'Created_at'],
+          order: { Created_at: 'DESC' },
+          take: 10,
+        });
+        console.log(`[SalesReport Service] Debug: Found ${recentReservations.length} reservations in last 7 days:`);
+        recentReservations.forEach((res, idx) => {
+          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: Created_at = ${res.Created_at?.toISOString()} (Local: ${res.Created_at?.toLocaleString()})`);
+        });
+        
+        // Debug 4: Check if query dates match any reservation dates
+        if (recentReservations.length > 0) {
+          const queryDateStr = queryStartDate.toISOString().split('T')[0];
+          const matchingReservations = recentReservations.filter(res => {
+            const resDateStr = res.Created_at?.toISOString().split('T')[0];
+            return resDateStr === queryDateStr;
+          });
+          console.log(`[SalesReport Service] Debug: ${matchingReservations.length} reservations match query date (${queryDateStr})`);
+        }
+      }
     } catch (error) {
       console.error(`[SalesReport Service] ERROR fetching reservations:`, error);
       console.error(`[SalesReport Service] Error stack:`, error.stack);
@@ -123,6 +158,7 @@ export class PaymentsService {
       payment: Payment | null;
       customerName: string;
       date: Date;
+      created_at: Date | null;
       paymentMethod: string;
       totalAmount: number;
       equipmentRentals: any[];
@@ -183,8 +219,9 @@ export class PaymentsService {
         transactionMap.set(transactionKey, {
           reservations: [],
           payment: anyPayment || null, // Use any payment, not just completed
-          customerName: reservation.user?.name || 'Unknown',
+          customerName: reservation.user?.name || 'admin', // Default to 'admin' for admin-created reservations
           date: reservation.Reservation_Date,
+          created_at: reservation.Created_at || new Date(), // Store creation date for sorting
           paymentMethod: anyPayment?.payment_method || 'Pending',
           totalAmount: 0,
           equipmentRentals: [],
@@ -202,6 +239,16 @@ export class PaymentsService {
         transaction.date = reservation.Reservation_Date;
         transaction.paymentMethod = anyPayment.payment_method || 'Pending';
         console.log(`[SalesReport] Updated transaction ${transactionKey} with payment info from reservation ${reservation.Reservation_ID}`);
+      }
+      
+      // Update created_at to the most recent Created_at among all reservations in the transaction
+      // This ensures "newest first" sorting works correctly
+      if (reservation.Created_at) {
+        const reservationCreatedAt = new Date(reservation.Created_at);
+        const currentCreatedAt = transaction.created_at ? new Date(transaction.created_at) : new Date(0);
+        if (reservationCreatedAt > currentCreatedAt) {
+          transaction.created_at = reservation.Created_at;
+        }
       }
       
       // Only add if not already in the array (prevent duplicates)
@@ -296,11 +343,12 @@ export class PaymentsService {
 
     console.log(`[SalesReport] Grouped ${reservations.length} reservations into ${transactionMap.size} transactions`);
 
-    // Convert map to array and sort by date (most recent first)
+    // Convert map to array and sort by created_at (most recent first)
+    // This ensures newest reservations appear at the top
     const sortedTransactions = Array.from(transactionMap.entries()).sort((a, b) => {
-      const dateA = new Date(a[1].date).getTime();
-      const dateB = new Date(b[1].date).getTime();
-      return dateB - dateA; // Most recent first
+      const createdA = a[1].created_at ? new Date(a[1].created_at).getTime() : 0;
+      const createdB = b[1].created_at ? new Date(b[1].created_at).getTime() : 0;
+      return createdB - createdA; // Most recent first (newest at top)
     });
 
     for (const [transactionKey, transaction] of sortedTransactions) {
