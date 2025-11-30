@@ -392,6 +392,9 @@ export class ReservationsService {
   }
 
   async createFromPayment(paymentData: any): Promise<Reservation[]> {
+    // Declare reservations outside try block so it's accessible in catch block for cleanup
+    const reservations: Reservation[] = [];
+    
     try {
       const { bookingData, paymentId, amount, paymentMethod } = paymentData;
       console.log('=== CREATE FROM PAYMENT DEBUG ===');
@@ -402,8 +405,6 @@ export class ReservationsService {
       // CRITICAL: Idempotency check - prevent duplicate processing if called multiple times
       // Note: paymentId might be a checkout session ID (cs_xxx) or payment ID
       // We'll check after we get the actual payment ID from the checkout session
-      
-      const reservations: Reservation[] = [];
 
       // Get actual payment method from Paymongo or use provided payment method
       // For admin-created reservations, use the paymentMethod from paymentData
