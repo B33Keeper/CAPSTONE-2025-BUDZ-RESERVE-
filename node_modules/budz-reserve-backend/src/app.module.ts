@@ -37,30 +37,63 @@ import { HealthController } from './health.controller';
       ],
     }),
 
-    // Email configuration
+    // Email configuration with timeout and connection settings
     MailerModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        transport: {
-          host: configService.get('SMTP_HOST', 'smtp.gmail.com'),
-          port: configService.get('SMTP_PORT', 587),
-          secure: false, // true for 465, false for other ports
+      useFactory: async (configService: ConfigService) => {
+        const smtpHost = configService.get('SMTP_HOST', 'smtp.gmail.com');
+        const smtpPort = Number(configService.get('SMTP_PORT', 587));
+        const smtpUser = configService.get('SMTP_USER');
+        const smtpPass = configService.get('SMTP_PASS');
+        
+        // Build transport configuration with timeout settings
+        const transportConfig: any = {
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpPort === 465, // true for 465, false for other ports
           auth: {
-            user: configService.get('SMTP_USER'),
-            pass: configService.get('SMTP_PASS'),
+            user: smtpUser,
+            pass: smtpPass,
           },
-        },
-        defaults: {
-          from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
-        },
-        template: {
-          dir: process.cwd() + '/src/templates',
-          adapter: new HandlebarsAdapter(),
-          options: {
-            strict: true,
+          // Connection timeout settings (in milliseconds)
+          connectionTimeout: 15000, // 15 seconds - increased for Railway network latency
+          greetingTimeout: 15000, // 15 seconds
+          socketTimeout: 30000, // 30 seconds for socket operations
+          // Enable debug for troubleshooting
+          debug: configService.get('NODE_ENV') === 'development',
+          // Connection pool settings for better performance
+          pool: true,
+          maxConnections: 5,
+          maxMessages: 100,
+          // Retry settings
+          retry: {
+            attempts: 3,
+            delay: 2000, // 2 seconds between retries
           },
-        },
-      }),
+        };
+        
+        // TLS options (only for non-secure connections)
+        if (smtpPort !== 465) {
+          transportConfig.tls = {
+            rejectUnauthorized: false, // Allow self-signed certificates
+            ciphers: 'SSLv3',
+          };
+        }
+        
+        return {
+          transport: transportConfig,
+          defaults: {
+            from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
+          },
+          template: {
+            dir: process.cwd() + '/src/templates',
+            adapter: new HandlebarsAdapter(),
+            options: {
+              strict: true,
+            },
+          },
+        };
+      },
       inject: [ConfigService],
     }),
 

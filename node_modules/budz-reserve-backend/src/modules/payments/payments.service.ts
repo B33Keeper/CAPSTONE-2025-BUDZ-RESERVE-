@@ -266,92 +266,100 @@ export class PaymentsService {
       const timeStr = `${formatTime(reservation.Start_Time)}-${formatTime(reservation.End_Time)}`;
       transaction.times.push(timeStr); // Allow duplicates to show all time slots
 
-      // Calculate amount EXACTLY like Admin Dashboard does (extractReservationAmount logic)
-      // First try payments (sum of all payment amounts, not just completed)
-      // CRITICAL: Deduplicate payments by transaction_id to prevent counting duplicate payment records
-      let reservationAmount = 0;
-      if (reservation.payments && Array.isArray(reservation.payments)) {
-        // Deduplicate payments by transaction_id - only count each unique transaction_id once
-        const uniquePaymentsByTransactionId = new Map<string, any>();
-        reservation.payments.forEach((payment: any) => {
-          const transactionId = payment?.transaction_id || `unique_${payment?.id || Date.now()}`;
-          // Only keep the first payment for each transaction_id (or the one with highest amount if needed)
-          if (!uniquePaymentsByTransactionId.has(transactionId)) {
-            uniquePaymentsByTransactionId.set(transactionId, payment);
-          }
-        });
-        
-        // Sum only unique payments (one per transaction_id)
-        reservationAmount = Array.from(uniquePaymentsByTransactionId.values()).reduce((sum: number, payment: any) => {
-          const amount = Number(payment?.amount ?? 0);
-          return sum + (isNaN(amount) ? 0 : amount);
-        }, 0);
-        
-        // Log if duplicates were found
-        if (reservation.payments.length > uniquePaymentsByTransactionId.size) {
-          console.log(
-            `[SalesReport] ⚠️ Found ${reservation.payments.length - uniquePaymentsByTransactionId.size} duplicate payment(s) ` +
-            `for reservation ${reservation.Reservation_ID}. Deduplicated to ${uniquePaymentsByTransactionId.size} unique payment(s).`
-          );
-        }
-      }
-      
-      // If no payments, fall back to Total_Amount (SAME as Admin Dashboard)
-      if (reservationAmount === 0) {
-        reservationAmount = Number(reservation.Total_Amount) || 0;
-      }
-      
-      transaction.totalAmount += reservationAmount;
-      
-      console.log(`[SalesReport] Transaction ${transactionKey}: Added reservation ${reservation.Reservation_ID} - Court: ${courtName}, Time: ${timeStr}, Amount: ${reservationAmount}, Total so far: ${transaction.totalAmount}`);
+      // Note: We'll calculate the transaction total AFTER all reservations are added
+      // This is done in a second pass to avoid double-counting
 
       // Note: Cancelled reservations are already filtered out at the start of the loop,
       // so we don't need to check for cancelled status here
+      
+      // Equipment rentals will be fetched and added to total AFTER all reservations are grouped
+    }
 
-      // Fetch equipment rentals for this reservation
-      try {
-        const rental = await this.equipmentRentalRepository.findOne({
-          where: { reservation_id: reservation.Reservation_ID },
-          relations: ['items'],
-        });
-
-        if (rental) {
-          // Add equipment rental total amount to transaction total
-          const rentalTotalAmount = Number(rental.total_amount) || 0;
-          transaction.totalAmount += rentalTotalAmount;
-          console.log(`[SalesReport] Transaction ${transactionKey}: Added equipment rental total ${rentalTotalAmount} for reservation ${reservation.Reservation_ID}, New total: ${transaction.totalAmount}`);
-
-          if (rental.items && rental.items.length > 0) {
-            const items = await this.equipmentRentalItemRepository.find({
-              where: { rental_id: rental.id },
-            });
-
-            for (const item of items) {
-              const equipment = await this.equipmentRepository.findOne({
-                where: { id: item.equipment_id },
+    // CRITICAL FIX: Calculate transaction totals AFTER all reservations are grouped
+    // This prevents double-counting when payment is linked to only one reservation but transaction has multiple
+    for (const [transactionKey, transaction] of transactionMap.entries()) {
+      // Calculate total amount for this transaction
+      // Priority: 1. Use payment amount if found, 2. Sum Total_Amount from all reservations
+      
+      // Check if any reservation in the transaction has a payment
+      let transactionPaymentAmount = 0;
+      const allPaymentsInTransaction = new Set<string>(); // Track unique transaction_ids
+      
+      for (const res of transaction.reservations) {
+        if (res.payments && Array.isArray(res.payments)) {
+          res.payments.forEach((payment: any) => {
+            const transactionId = payment?.transaction_id || `unique_${payment?.id || Date.now()}`;
+            if (!allPaymentsInTransaction.has(transactionId)) {
+              allPaymentsInTransaction.add(transactionId);
+              transactionPaymentAmount += Number(payment?.amount ?? 0);
+            }
+          });
+        }
+      }
+      
+      if (transactionPaymentAmount > 0) {
+        // Use payment amount for the entire transaction (ONE payment covers all reservations)
+        transaction.totalAmount = transactionPaymentAmount;
+        console.log(`[SalesReport] Transaction ${transactionKey}: Using payment amount ${transactionPaymentAmount} for entire transaction (${transaction.reservations.length} reservations)`);
+      } else {
+        // No payments found - sum Total_Amount from all reservations
+        transaction.totalAmount = transaction.reservations.reduce((sum: number, res: any) => {
+          return sum + (Number(res.Total_Amount) || 0);
+        }, 0);
+        console.log(`[SalesReport] Transaction ${transactionKey}: No payments found, using sum of Total_Amount from ${transaction.reservations.length} reservations: ${transaction.totalAmount}`);
+      }
+      
+      // Add equipment rental amounts (sum from all reservations in transaction)
+      let totalEquipmentRentalAmount = 0;
+      for (const res of transaction.reservations) {
+        try {
+          const rental = await this.equipmentRentalRepository.findOne({
+            where: { reservation_id: res.Reservation_ID },
+            relations: ['items'],
+          });
+          
+          if (rental) {
+            const rentalTotalAmount = Number(rental.total_amount) || 0;
+            totalEquipmentRentalAmount += rentalTotalAmount;
+            
+            // Also collect equipment items for display
+            if (rental.items && rental.items.length > 0) {
+              const items = await this.equipmentRentalItemRepository.find({
+                where: { rental_id: rental.id },
               });
 
-              // Check if this equipment is already in the transaction's equipment list
-              const existingEquipment = transaction.equipmentRentals.find(
-                (eq: any) => eq.equipmentName === (equipment?.equipment_name || 'Equipment') && eq.hours === item.hours
-              );
-
-              if (existingEquipment) {
-                // Add to quantity if same equipment and hours
-                existingEquipment.quantity += item.quantity;
-              } else {
-                // Add new equipment
-                transaction.equipmentRentals.push({
-                  equipmentName: equipment?.equipment_name || 'Equipment',
-                  quantity: item.quantity,
-                  hours: item.hours,
+              for (const item of items) {
+                const equipment = await this.equipmentRepository.findOne({
+                  where: { id: item.equipment_id },
                 });
+
+                // Check if this equipment is already in the transaction's equipment list
+                const existingEquipment = transaction.equipmentRentals.find(
+                  (eq: any) => eq.equipmentName === (equipment?.equipment_name || 'Equipment') && eq.hours === item.hours
+                );
+
+                if (existingEquipment) {
+                  // Add to quantity if same equipment and hours
+                  existingEquipment.quantity += item.quantity;
+                } else {
+                  // Add new equipment
+                  transaction.equipmentRentals.push({
+                    equipmentName: equipment?.equipment_name || 'Equipment',
+                    quantity: item.quantity,
+                    hours: item.hours,
+                  });
+                }
               }
             }
           }
+        } catch (error) {
+          console.error(`[SalesReport Service] Error fetching equipment rental for reservation ${res.Reservation_ID}:`, error);
         }
-      } catch (error) {
-        console.error(`[SalesReport Service] Error fetching equipment rentals for reservation ${reservation.Reservation_ID}:`, error);
+      }
+      
+      if (totalEquipmentRentalAmount > 0) {
+        transaction.totalAmount += totalEquipmentRentalAmount;
+        console.log(`[SalesReport] Transaction ${transactionKey}: Added equipment rental total ${totalEquipmentRentalAmount}, Final total: ${transaction.totalAmount}`);
       }
     }
 
@@ -501,3 +509,4 @@ export class PaymentsService {
     }
   }
 }
+
