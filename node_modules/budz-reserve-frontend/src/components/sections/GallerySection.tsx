@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
@@ -12,8 +12,9 @@ export function GallerySection() {
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null)
   const [galleryImages, setGalleryImages] = useState<GalleryItem[]>([])
   const [loading, setLoading] = useState(true)
-  // Track failed images to prevent infinite retries
-  const [failedImages, setFailedImages] = useState<Set<number>>(new Set())
+  // Use ref for immediate synchronous tracking of failed images (prevents retries)
+  const failedImagesRef = useRef<Set<number>>(new Set())
+  const [, forceUpdate] = useState(0) // Force re-render when images fail
 
   // Fetch gallery images from API
   useEffect(() => {
@@ -43,8 +44,8 @@ export function GallerySection() {
 
   // Responsive images per view
   const imagesPerView = isMobile ? 1 : 2
-  // Filter out failed images for accurate pagination
-  const validImages = galleryImages.filter(img => !failedImages.has(img.id))
+  // Filter out failed images for accurate pagination (use ref for immediate check)
+  const validImages = galleryImages.filter(img => !failedImagesRef.current.has(img.id))
   const totalSets = Math.ceil(validImages.length / imagesPerView)
 
   const nextSet = () => {
@@ -59,6 +60,10 @@ export function GallerySection() {
   const displayedImages = validImages.slice(startIndex, startIndex + imagesPerView)
 
   const handleImageClick = (image: GalleryItem) => {
+    // Don't open modal for failed images
+    if (failedImagesRef.current.has(image.id)) {
+      return;
+    }
     setSelectedImage({ src: getImageUrl(image.image_path), alt: image.title })
   }
 
@@ -174,7 +179,7 @@ export function GallerySection() {
                   onClick={() => handleImageClick(image)}
                 >
                   <div className="aspect-[4/3] overflow-hidden rounded-2xl">
-                    {failedImages.has(image.id) ? (
+                    {failedImagesRef.current.has(image.id) ? (
                       <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                         <p className="text-gray-400 text-sm">Image not available</p>
                       </div>
@@ -184,11 +189,21 @@ export function GallerySection() {
                         alt={image.title} 
                         className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                         onError={(e) => {
-                          // Mark this image as failed to prevent infinite retries
-                          setFailedImages(prev => new Set(prev).add(image.id));
-                          // Stop the error from propagating
+                          // Immediately mark as failed using ref (synchronous, prevents retries)
+                          if (!failedImagesRef.current.has(image.id)) {
+                            failedImagesRef.current.add(image.id);
+                            // CRITICAL: Set src to empty or transparent pixel to stop browser from retrying
+                            e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
+                            // Hide the image immediately
+                            e.currentTarget.style.display = 'none';
+                            // Force re-render to show placeholder
+                            forceUpdate(prev => prev + 1);
+                          }
+                          // Prevent default error handling and stop propagation
+                          e.preventDefault();
                           e.stopPropagation();
                         }}
+                        loading="lazy"
                       />
                     )}
                   </div>
@@ -269,7 +284,7 @@ export function GallerySection() {
                   onClick={() => handleImageClick(image)}
                 >
                   <div className="aspect-[4/3] overflow-hidden rounded-2xl">
-                    {failedImages.has(image.id) ? (
+                    {failedImagesRef.current.has(image.id) ? (
                       <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                         <p className="text-gray-400 text-sm">Image not available</p>
                       </div>
@@ -279,11 +294,21 @@ export function GallerySection() {
                         alt={image.title} 
                         className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                         onError={(e) => {
-                          // Mark this image as failed to prevent infinite retries
-                          setFailedImages(prev => new Set(prev).add(image.id));
-                          // Stop the error from propagating
+                          // Immediately mark as failed using ref (synchronous, prevents retries)
+                          if (!failedImagesRef.current.has(image.id)) {
+                            failedImagesRef.current.add(image.id);
+                            // CRITICAL: Set src to empty or transparent pixel to stop browser from retrying
+                            e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
+                            // Hide the image immediately
+                            e.currentTarget.style.display = 'none';
+                            // Force re-render to show placeholder
+                            forceUpdate(prev => prev + 1);
+                          }
+                          // Prevent default error handling and stop propagation
+                          e.preventDefault();
                           e.stopPropagation();
                         }}
+                        loading="lazy"
                       />
                     )}
                   </div>
@@ -450,6 +475,12 @@ export function GallerySection() {
                 src={selectedImage.src}
                 alt={selectedImage.alt}
                 className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+                onError={(e) => {
+                  // If modal image fails, close the modal and mark as failed
+                  e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
+                  e.currentTarget.style.display = 'none';
+                  closeModal();
+                }}
               />
               <div className="mt-4 text-center">
                 <h3 className="text-xl font-semibold text-white mb-2">{selectedImage.alt}</h3>
