@@ -15,6 +15,9 @@ export default defineConfig({
     include: ['jspdf', 'jspdf-autotable'],
     force: true,
   },
+  // Dev server configuration - ONLY used during 'npm run dev' (local development)
+  // This proxy is NOT used during production builds or in Railway deployment
+  // Railway uses environment variables (VITE_API_URL) set at build time
   server: {
     port: 3000,
     host: true,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { resolveImageUrl } from '@/lib/imageUtils'
 
 interface Announcement {
   id: number
@@ -157,9 +158,9 @@ export function AnnouncementHistoryModal({ isOpen, onClose }: AnnouncementHistor
           ) : (
             <div className="space-y-5">
               {announcements.map((announcement) => {
-                const imageUrl = announcement.image_url?.startsWith('http')
-                  ? announcement.image_url
-                  : `http://localhost:3001${announcement.image_url}`
+                const imageUrl = announcement.image_url
+                  ? resolveImageUrl(announcement.image_url)
+                  : null
 
                 return (
                   <div

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
+import { resolveImageUrl } from '@/lib/imageUtils'
 
 interface Announcement {
   id: number
@@ -131,11 +132,9 @@ export function AnnouncementModal() {
   const hasPrevious = currentIndex > 0
   const hasNext = currentIndex < announcements.length - 1
 
-  const imageUrl = announcement.image_url?.startsWith('http')
-    ? announcement.image_url
-    : announcement.image_url
-      ? `http://localhost:3001${announcement.image_url}`
-      : null
+  const imageUrl = announcement.image_url
+    ? resolveImageUrl(announcement.image_url)
+    : null
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 sm:p-6">
