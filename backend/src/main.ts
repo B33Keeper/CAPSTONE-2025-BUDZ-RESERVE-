@@ -40,6 +40,47 @@ async function bootstrap() {
     });
     console.log('✅ Upload directories initialized');
 
+    // CORS configuration - MUST be before static files and other middleware
+    // Support multiple origins from environment variable (comma-separated)
+    // Remove quotes if present (Railway sometimes adds them)
+    let corsOriginValue = configService.get('CORS_ORIGIN', 'http://localhost:3000');
+    // Remove surrounding quotes if present
+    corsOriginValue = corsOriginValue.replace(/^["']|["']$/g, '');
+    
+    const corsOrigins = corsOriginValue
+      .split(',')
+      .map((origin: string) => origin.trim())
+      .filter((origin: string) => origin.length > 0);
+    
+    // Add default localhost origins for development
+    const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+    const allOrigins = [...new Set([...defaultOrigins, ...corsOrigins])];
+    
+    // Allow all origins if CORS_ORIGIN is set to '*'
+    const allowedOrigins = corsOrigins.includes('*') ? true : allOrigins;
+    
+    console.log('🌐 CORS Origins:', allowedOrigins === true ? '*' : allOrigins);
+    
+    // Apply CORS middleware early - before static files
+    app.use(cors({
+      origin: allowedOrigins,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    }));
+
+    // Middleware to add CORS headers to static files (uploads)
+    app.use('/uploads', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      const origin = req.headers.origin;
+      if (allowedOrigins === true) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+      } else if (origin && allOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+      }
+      next();
+    });
+
     // Serve static files
     app.useStaticAssets(join(__dirname, '..', 'uploads'), {
       prefix: '/uploads/',
@@ -52,9 +93,9 @@ async function bootstrap() {
           defaultSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com"],
-          imgSrc: ["'self'", "data:", "https:"],
+          imgSrc: ["'self'", "data:", "https:", "blob:"],
           scriptSrc: ["'self'"],
-          connectSrc: ["'self'"],
+          connectSrc: ["'self'", ...(allowedOrigins === true ? ["*"] : allOrigins)],
           frameSrc: ["'none'"],
           objectSrc: ["'none'"],
           baseUri: ["'self'"],
@@ -63,6 +104,7 @@ async function bootstrap() {
         },
       },
       crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
       hsts: {
         maxAge: 31536000,
         includeSubDomains: true,
@@ -102,25 +144,6 @@ async function bootstrap() {
       
       next();
     });
-
-    // CORS configuration
-    // Support multiple origins from environment variable (comma-separated)
-    const corsOrigins = configService.get('CORS_ORIGIN', 'http://localhost:3000')
-      .split(',')
-      .map((origin: string) => origin.trim())
-      .filter((origin: string) => origin.length > 0);
-    
-    // Add default localhost origins for development
-    const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
-    const allOrigins = [...new Set([...defaultOrigins, ...corsOrigins])];
-    
-    // Allow all origins if CORS_ORIGIN is set to '*'
-    const allowedOrigins = corsOrigins.includes('*') ? true : allOrigins;
-    
-    app.use(cors({
-      origin: allowedOrigins,
-      credentials: true,
-    }));
 
     // Body size limits for file uploads
     // Global validation pipe
