@@ -189,23 +189,27 @@ export class WebhookController {
         case 'checkout_session.payment.paid':
           this.logger.log('✅ Processing checkout_session.payment.paid event...');
           this.logger.log(`📋 Checkout Session ID from webhook: ${data.id}`);
+          this.logger.log(`📦 Full paymentData structure: ${JSON.stringify(paymentData, null, 2)}`);
           
           // Prefer using the checkout session payload embedded in the webhook to avoid API fetch/mode issues
           if (paymentData && paymentData.type === 'checkout_session' && paymentData.attributes) {
             const csAttr: any = paymentData.attributes;
             this.logger.log(`📋 Checkout session attributes found in webhook payload`);
+            this.logger.log(`📋 Checkout session metadata: ${JSON.stringify(csAttr.metadata || {})}`);
             
             let bookingDataFromSession: any | undefined;
             try {
               if (csAttr.metadata?.bookingData) {
                 bookingDataFromSession = JSON.parse(csAttr.metadata.bookingData);
-                this.logger.log(`✅ Booking data found in checkout session metadata`);
+                this.logger.log(`✅ Booking data found in checkout session metadata from webhook payload`);
                 this.logger.log(`   👤 User ID: ${bookingDataFromSession?.userId}`);
                 this.logger.log(`   📅 Date: ${bookingDataFromSession?.selectedDate}`);
                 this.logger.log(`   🏸 Courts: ${bookingDataFromSession?.courtBookings?.length || 0}`);
                 this.logger.log(`   🎾 Equipment: ${bookingDataFromSession?.equipmentBookings?.length || 0}`);
               } else {
                 this.logger.warn('⚠️ No bookingData found in checkout session metadata from webhook payload');
+                this.logger.warn(`   Metadata keys: ${csAttr.metadata ? Object.keys(csAttr.metadata).join(', ') : 'no metadata'}`);
+                this.logger.warn(`   Will fetch from API as fallback...`);
               }
             } catch (e) {
               this.logger.error(`❌ Error parsing booking data from checkout session: ${e.message}`);
