@@ -356,7 +356,7 @@ export function QueueMatchHistoryPage() {
                                 <DrawBadge />
                               )}
                             </div>
-                            <span className="text-[10px] sm:text-xs md:text-sm text-white/60">{formatMatchDate(match.completedAt ?? match.createdAt)}</span>
+                            <span className="text-[10px] sm:text-xs md:text-sm text-white/60">{formatMatchDate(match.completedAt ? String(match.completedAt) : match.createdAt ? String(match.createdAt) : null)}</span>
                           </div>
 
                           <div className="mt-3 sm:mt-4 space-y-2.5 sm:space-y-3 rounded-xl sm:rounded-2xl border border-white/10 bg-[#14070e] px-2.5 sm:px-4 md:px-5 py-3 sm:py-4">

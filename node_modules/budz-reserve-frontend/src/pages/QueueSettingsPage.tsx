@@ -240,7 +240,8 @@ export function QueueSettingsPage() {
       sex: player.sex,
       games: player.gamesPlayed,
       shuttleFee: player.gamesPlayed * numericDoublesFee,
-      courtFee: numericCourtFee
+      courtFee: numericCourtFee,
+      playerStatus: 'Playing' as const
     }))
   }, [selectedHistoryDate, historyByDate, numericCourtFee, numericDoublesFee])
 
@@ -673,7 +674,7 @@ export function QueueSettingsPage() {
               // Try to find skill from queue players history
               try {
                 const historyPlayers = await apiServices.getQueuePlayersHistory()
-                const historyPlayer = historyPlayers.find(hp => hp.originalId === playerId || hp.name === playerRecord.name)
+                const historyPlayer = historyPlayers.find((hp: any) => hp.originalId === playerId || hp.name === playerRecord?.name)
                 if (historyPlayer) {
                   playerSkill = historyPlayer.skill
                 }

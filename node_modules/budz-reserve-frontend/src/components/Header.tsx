@@ -56,7 +56,7 @@ export function Header() {
   const location = useLocation()
   const activeSection = useActiveSection()
   const profileRef = useRef<HTMLDivElement>(null)
-  const queueingAnimationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const queueingAnimationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleLogout = () => {
     logout()
