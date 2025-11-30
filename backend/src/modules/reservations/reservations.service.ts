@@ -604,6 +604,29 @@ export class ReservationsService {
         userIdForReservation = customerUser.id;
       }
 
+      // CRITICAL: Final stock availability check RIGHT BEFORE creating any reservations
+      // This ensures we have the most up-to-date stock information and prevents saving reservations if stock is insufficient
+      if (bookingData.equipmentBookings?.length) {
+        this.logger.log('[Stock Check] Performing final stock availability check before creating reservations...');
+        try {
+          await this.ensureEquipmentAvailabilityForDate(
+            bookingData.selectedDate,
+            bookingData.equipmentBookings,
+            fallbackEquipmentStart,
+            undefined,
+            sortedCourtBookings, // Pass court bookings to check availability for each selected schedule
+          );
+          this.logger.log('[Stock Check] ✅ Final stock check passed - all equipment is available');
+        } catch (stockError) {
+          // If stock check fails, throw error IMMEDIATELY before any database writes
+          this.logger.error(`[Stock Check] ❌ Final stock check FAILED: ${stockError.message}`);
+          throw new BadRequestException(
+            `Cannot complete reservation: ${stockError.message}. ` +
+            `Please check equipment availability and try again.`
+          );
+        }
+      }
+
       // CRITICAL: Create only ONE payment record for the entire transaction
       // This prevents duplicate payment records when there are multiple court bookings
       // We'll create it after all reservations are created, linked to the first reservation
@@ -781,12 +804,88 @@ export class ReservationsService {
             }
             
             if (relevantEquipmentBookings.length > 0) {
-              await this.createEquipmentRentalsFromBooking(
-                userIdForReservation,
-                savedReservation,
-                relevantEquipmentBookings,
-                startTime, // Use this reservation's start time
-              );
+              // CRITICAL: Check stock availability AGAIN right before creating equipment rentals
+              // This is a final safeguard in case stock changed between the initial check and now
+              // If this fails, we need to rollback the reservation that was just created
+              try {
+                // Re-check stock for the equipment we're about to create rentals for
+                const reservationDate = this.formatDateOnly(bookingData.selectedDate);
+                for (const eqBooking of relevantEquipmentBookings) {
+                  const equipmentRow = await this.equipmentRepository.findOne({ 
+                    where: { equipment_name: Like(`%${eqBooking.equipment}%`) } 
+                  });
+                  
+                  if (equipmentRow) {
+                    const quantity = eqBooking.quantity && eqBooking.quantity > 0 ? eqBooking.quantity : 1;
+                    const hours = this.parseHours(eqBooking.time);
+                    const bookingStartTime = this.ensureTimeFormat(startTime);
+                    
+                    if (bookingStartTime) {
+                      const reservedQuantity = await this.getReservedQuantityForRange(
+                        equipmentRow.id,
+                        reservationDate,
+                        bookingStartTime,
+                        hours,
+                        savedReservation.Reservation_ID, // Exclude this reservation from the check
+                      );
+                      const remaining = equipmentRow.stocks - reservedQuantity;
+                      
+                      if (remaining < quantity) {
+                        // Stock is insufficient - we need to delete the reservation we just created
+                        this.logger.error(
+                          `[Stock Check] ❌ CRITICAL: Stock check failed AFTER reservation was created! ` +
+                          `Reservation ${savedReservation.Reservation_ID} will be deleted. ` +
+                          `Equipment: ${equipmentRow.equipment_name}, Remaining: ${remaining}, Required: ${quantity}`
+                        );
+                        
+                        // Delete the reservation that was just created
+                        await this.reservationsRepository.remove(savedReservation);
+                        // Remove from reservations array
+                        const index = reservations.indexOf(savedReservation);
+                        if (index > -1) {
+                          reservations.splice(index, 1);
+                        }
+                        
+                        throw new BadRequestException(
+                          `Not enough stock for ${equipmentRow.equipment_name} on ${reservationDate} at ${bookingStartTime}. ` +
+                          `Remaining: ${Math.max(remaining, 0)}, Required: ${quantity}. ` +
+                          `Reservation has been cancelled.`
+                        );
+                      }
+                    }
+                  }
+                }
+                
+                // Stock check passed - proceed with creating equipment rentals
+                await this.createEquipmentRentalsFromBooking(
+                  userIdForReservation,
+                  savedReservation,
+                  relevantEquipmentBookings,
+                  startTime, // Use this reservation's start time
+                );
+              } catch (rentalError) {
+                // If equipment rental creation fails (including stock check), delete the reservation
+                this.logger.error(
+                  `[Equipment Rental] ❌ Failed to create equipment rentals for reservation ${savedReservation.Reservation_ID}: ${rentalError.message}. ` +
+                  `Deleting reservation to maintain data consistency.`
+                );
+                
+                // Delete the reservation that was just created
+                try {
+                  await this.reservationsRepository.remove(savedReservation);
+                  // Remove from reservations array
+                  const index = reservations.indexOf(savedReservation);
+                  if (index > -1) {
+                    reservations.splice(index, 1);
+                  }
+                  this.logger.log(`[Equipment Rental] ✅ Deleted reservation ${savedReservation.Reservation_ID} due to equipment rental failure`);
+                } catch (deleteError) {
+                  this.logger.error(`[Equipment Rental] ❌ Failed to delete reservation ${savedReservation.Reservation_ID}: ${deleteError.message}`);
+                }
+                
+                // Re-throw the error to fail the entire operation
+                throw rentalError;
+              }
             } else {
               this.logger.log(
                 `[Equipment Rental] All equipment bookings filtered out for reservation ${savedReservation.Reservation_ID} ` +
@@ -926,6 +1025,29 @@ export class ReservationsService {
         throw new BadRequestException('No reservations were created');
       }
     } catch (error) {
+      // CRITICAL: If any error occurs, clean up ALL reservations that were created
+      // This prevents partial data from being saved when there's an error
+      if (reservations.length > 0) {
+        this.logger.error(
+          `❌ Error occurred after creating ${reservations.length} reservation(s). ` +
+          `Cleaning up all created reservations to maintain data consistency...`
+        );
+        
+        // Delete all reservations that were created
+        for (const reservation of reservations) {
+          try {
+            await this.reservationsRepository.remove(reservation);
+            this.logger.log(`✅ Cleaned up reservation ${reservation.Reservation_ID}`);
+          } catch (cleanupError) {
+            this.logger.error(
+              `❌ Failed to clean up reservation ${reservation.Reservation_ID}: ${cleanupError.message}`
+            );
+          }
+        }
+        
+        this.logger.log(`✅ Cleaned up ${reservations.length} reservation(s) due to error`);
+      }
+      
       this.logger.error(`❌ Error in createFromPayment: ${error.message}`, error.stack);
       throw new BadRequestException(`Failed to create reservations from payment: ${error.message}`);
     }
