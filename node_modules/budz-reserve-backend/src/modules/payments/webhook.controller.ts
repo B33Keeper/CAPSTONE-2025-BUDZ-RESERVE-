@@ -53,12 +53,33 @@ export class WebhookController {
 
   @Get('paymongo')
   @HttpCode(HttpStatus.OK)
-  async getWebhookStatus() {
+  async getWebhookStatus(@Req() req: Request) {
     const hasSecret = !!process.env.PAYMONGO_WEBHOOK_SECRET;
     const isDevelopment = process.env.NODE_ENV === 'development';
     const apiPrefix = process.env.API_PREFIX || 'api';
-    const port = process.env.PORT || 3001;
-    const baseUrl = process.env.FRONTEND_URL || `http://localhost:${port}`;
+    
+    // Try to get backend URL from various sources (priority order):
+    // 1. RAILWAY_PUBLIC_DOMAIN (Railway provides this)
+    // 2. BACKEND_URL (custom env var)
+    // 3. Construct from request host (if available)
+    // 4. Fallback to localhost
+    let baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : process.env.BACKEND_URL;
+    
+    if (!baseUrl) {
+      // Try to construct from request
+      const protocol = req.protocol || 'https';
+      const host = req.get('host') || req.headers.host;
+      if (host) {
+        baseUrl = `${protocol}://${host}`;
+      } else {
+        const port = process.env.PORT || 3001;
+        baseUrl = `http://localhost:${port}`;
+      }
+    }
+    
+    const fullWebhookUrl = `${baseUrl}/${apiPrefix}/webhook/paymongo`;
     
     return {
       status: 'active',
@@ -70,16 +91,18 @@ export class WebhookController {
         environment: process.env.NODE_ENV || 'development',
         signatureVerification: hasSecret ? 'enabled' : (isDevelopment ? 'disabled (dev mode)' : 'required'),
         baseUrl: baseUrl,
-        fullWebhookUrl: `${baseUrl}/${apiPrefix}/webhook/paymongo`,
+        fullWebhookUrl: fullWebhookUrl,
       },
       instructions: {
         setup: 'Configure this URL in your PayMongo dashboard under Webhooks',
+        webhookUrl: fullWebhookUrl,
         testMode: 'For test mode, use: https://api.paymongo.com/v1/webhooks',
         liveMode: 'For live mode, use: https://api.paymongo.com/v1/webhooks',
         events: ['payment.paid', 'checkout_session.payment.paid', 'payment.failed'],
         secret: hasSecret 
           ? 'Webhook secret is configured ✅' 
           : '⚠️ Set PAYMONGO_WEBHOOK_SECRET in your environment variables',
+        important: '⚠️ IMPORTANT: Copy the webhookUrl above and configure it in your PayMongo dashboard. Without this, transactions will not be recorded in the database.',
       },
     };
   }
@@ -97,12 +120,14 @@ export class WebhookController {
       this.logger.log('═══════════════════════════════════════════════════════════');
       this.logger.log(`📋 Request URL: ${req.originalUrl}`);
       this.logger.log(`📋 Request Method: ${req.method}`);
+      this.logger.log(`📋 Request Host: ${req.get('host') || req.headers.host || 'unknown'}`);
       this.logger.log(`📋 Has rawBody: ${!!req.rawBody}`);
       this.logger.log(`📋 rawBody length: ${req.rawBody?.length || 0}`);
       this.logger.log(`📋 Has signature header: ${!!signature}`);
       this.logger.log(`📋 Signature: ${signature ? (Array.isArray(signature) ? signature[0] : signature).substring(0, 50) + '...' : 'NONE'}`);
       this.logger.log(`📋 Has PAYMONGO_WEBHOOK_SECRET: ${!!process.env.PAYMONGO_WEBHOOK_SECRET}`);
       this.logger.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
+      this.logger.log(`📋 Railway Public Domain: ${process.env.RAILWAY_PUBLIC_DOMAIN || 'not set'}`);
       
       // Log webhook configuration status
       if (!process.env.PAYMONGO_WEBHOOK_SECRET) {
