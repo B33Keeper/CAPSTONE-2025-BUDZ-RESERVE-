@@ -12,6 +12,8 @@ export function GallerySection() {
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null)
   const [galleryImages, setGalleryImages] = useState<GalleryItem[]>([])
   const [loading, setLoading] = useState(true)
+  // Track failed images to prevent infinite retries
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set())
 
   // Fetch gallery images from API
   useEffect(() => {
@@ -41,7 +43,9 @@ export function GallerySection() {
 
   // Responsive images per view
   const imagesPerView = isMobile ? 1 : 2
-  const totalSets = Math.ceil(galleryImages.length / imagesPerView)
+  // Filter out failed images for accurate pagination
+  const validImages = galleryImages.filter(img => !failedImages.has(img.id))
+  const totalSets = Math.ceil(validImages.length / imagesPerView)
 
   const nextSet = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % totalSets)
@@ -52,7 +56,7 @@ export function GallerySection() {
   }
 
   const startIndex = currentIndex * imagesPerView
-  const displayedImages = galleryImages.slice(startIndex, startIndex + imagesPerView)
+  const displayedImages = validImages.slice(startIndex, startIndex + imagesPerView)
 
   const handleImageClick = (image: GalleryItem) => {
     setSelectedImage({ src: getImageUrl(image.image_path), alt: image.title })
@@ -170,17 +174,23 @@ export function GallerySection() {
                   onClick={() => handleImageClick(image)}
                 >
                   <div className="aspect-[4/3] overflow-hidden rounded-2xl">
-                    <img 
-                      src={getImageUrl(image.image_path)} 
-                      alt={image.title} 
-                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
-                      onError={(e) => {
-                        // Fallback to original path if constructed URL fails
-                        if (e.currentTarget.src !== image.image_path) {
-                          e.currentTarget.src = image.image_path;
-                        }
-                      }}
-                    />
+                    {failedImages.has(image.id) ? (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <p className="text-gray-400 text-sm">Image not available</p>
+                      </div>
+                    ) : (
+                      <img 
+                        src={getImageUrl(image.image_path)} 
+                        alt={image.title} 
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                        onError={(e) => {
+                          // Mark this image as failed to prevent infinite retries
+                          setFailedImages(prev => new Set(prev).add(image.id));
+                          // Stop the error from propagating
+                          e.stopPropagation();
+                        }}
+                      />
+                    )}
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-500">
@@ -259,17 +269,23 @@ export function GallerySection() {
                   onClick={() => handleImageClick(image)}
                 >
                   <div className="aspect-[4/3] overflow-hidden rounded-2xl">
-                    <img 
-                      src={getImageUrl(image.image_path)} 
-                      alt={image.title} 
-                      className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
-                      onError={(e) => {
-                        // Fallback to original path if constructed URL fails
-                        if (e.currentTarget.src !== image.image_path) {
-                          e.currentTarget.src = image.image_path;
-                        }
-                      }}
-                    />
+                    {failedImages.has(image.id) ? (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <p className="text-gray-400 text-sm">Image not available</p>
+                      </div>
+                    ) : (
+                      <img 
+                        src={getImageUrl(image.image_path)} 
+                        alt={image.title} 
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                        onError={(e) => {
+                          // Mark this image as failed to prevent infinite retries
+                          setFailedImages(prev => new Set(prev).add(image.id));
+                          // Stop the error from propagating
+                          e.stopPropagation();
+                        }}
+                      />
+                    )}
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-500">
