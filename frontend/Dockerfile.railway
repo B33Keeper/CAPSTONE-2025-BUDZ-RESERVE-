@@ -23,17 +23,9 @@ COPY . .
 
 # Railway automatically makes environment variables available during build
 # Vite will automatically pick up VITE_* prefixed environment variables
-# Railway environment variables are available as ENV during build
-# We also accept them as ARG for explicit control
-ARG VITE_API_URL
-ARG VITE_APP_NAME
-ARG NODE_ENV
-
-# Set environment variables for Vite to read during build
-# Railway's environment variables are already available, but we ensure they're set
-ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_APP_NAME=${VITE_APP_NAME:-Budz_Reserve}
-ENV NODE_ENV=${NODE_ENV:-production}
+# Since Railway env vars are available at build time, Vite will pick them up automatically
+# We just need to ensure they're available as ENV (Railway provides them automatically)
+# No need for ARG since Railway env vars are already in the build environment
 
 # Build the application with production optimizations
 RUN npm run build
@@ -46,6 +38,11 @@ RUN apk add --no-cache curl
 
 # Copy built application
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy startup script from build context (needs to be available in production stage)
+# The script will dynamically configure nginx to listen on Railway's PORT
+COPY start-nginx.sh /start-nginx.sh
+RUN chmod +x /start-nginx.sh
 
 # Create nginx configuration directly to avoid encoding issues
 RUN rm -f /etc/nginx/conf.d/default.conf && \
@@ -81,14 +78,20 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chmod -R 755 /usr/share/nginx/html && \
     chmod -R 755 /var/cache/nginx
 
-# Railway uses PORT environment variable, but nginx listens on 80
-# Railway will automatically route traffic to port 80
+# Railway dynamically assigns PORT via environment variable
+# The startup script will configure nginx to listen on Railway's PORT
+# We expose 80 as default, but Railway's PORT will be used at runtime
 EXPOSE 80
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost/ || exit 1
+# Health check script that reads PORT at runtime (escape $ to prevent build-time expansion)
+RUN echo '#!/bin/sh' > /healthcheck.sh && \
+    echo 'PORT="$${PORT:-80}"' >> /healthcheck.sh && \
+    echo 'curl -f "http://localhost:$${PORT}/" || exit 1' >> /healthcheck.sh && \
+    chmod +x /healthcheck.sh
 
-# Start nginx in foreground
-CMD ["nginx", "-g", "daemon off;"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD /healthcheck.sh
+
+# Start nginx using startup script that handles Railway's PORT
+CMD ["/start-nginx.sh"]
 
