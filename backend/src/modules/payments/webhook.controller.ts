@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Body, Headers, Logger, HttpCode, HttpStatus, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, Headers, Logger, HttpCode, HttpStatus, Req, UsePipes } from '@nestjs/common';
+import { WebhookValidationPipe } from '../../pipes/webhook-validation.pipe';
 import { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -126,8 +127,9 @@ export class WebhookController {
 
   @Post('paymongo')
   @HttpCode(HttpStatus.OK)
+  @UsePipes(new WebhookValidationPipe()) // Skip validation for webhook - Paymongo sends its own structure
   async handlePaymongoWebhook(
-    @Body() body: PaymongoWebhookEvent,
+    @Body() body: any, // Use 'any' to bypass ValidationPipe - Paymongo sends its own structure
     @Headers('paymongo-signature') signature: string | string[],
     @Req() req: Request & { rawBody?: Buffer },
   ) {
