@@ -55,7 +55,6 @@ export function BookingPage() {
   const [availabilityData, setAvailabilityData] = useState<Map<number, any[]>>(new Map())
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [equipmentAvailability, setEquipmentAvailability] = useState<Map<number, number>>(new Map()) // equipmentId -> available stock
-  const [loadingEquipmentAvailability, setLoadingEquipmentAvailability] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false)
   const [showEquipmentGuard, setShowEquipmentGuard] = useState(false)
@@ -426,11 +425,10 @@ export function BookingPage() {
   }
 
   // Load equipment availability for a specific schedule
-  const loadEquipmentAvailabilityForSchedule = async (courtName: string, schedule: string) => {
+  const loadEquipmentAvailabilityForSchedule = async (schedule: string) => {
     if (!selectedDate) return
 
     try {
-      setLoadingEquipmentAvailability(true)
       const timeInfo = parseScheduleToStartTimeAndHours(schedule)
       
       if (!timeInfo) {
@@ -460,8 +458,6 @@ export function BookingPage() {
       setEquipmentAvailability(newAvailability)
     } catch (error) {
       console.error('Error loading equipment availability:', error)
-    } finally {
-      setLoadingEquipmentAvailability(false)
     }
   }
 
@@ -475,13 +471,11 @@ export function BookingPage() {
     }
 
     try {
-      setLoadingEquipmentAvailability(true)
-      
       // IMPORTANT: When multiple schedules are selected, we need to check availability for EACH schedule
       // because rentals spanning multiple schedules should reduce stock in ALL schedule cells
       if (courtBookings.length === 1) {
         // Single schedule - just load for that schedule
-        await loadEquipmentAvailabilityForSchedule(courtBookings[0].court, courtBookings[0].schedule)
+        await loadEquipmentAvailabilityForSchedule(courtBookings[0].schedule)
       } else {
         // Multiple schedules - load availability for each schedule separately
         // This ensures rentals spanning multiple schedules are counted in each schedule's availability
@@ -518,8 +512,6 @@ export function BookingPage() {
       }
     } catch (error) {
       console.error('Error loading equipment availability for schedules:', error)
-    } finally {
-      setLoadingEquipmentAvailability(false)
     }
   }
 
@@ -618,8 +610,17 @@ export function BookingPage() {
         ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`]
         : []
     
-    handleRacketQuantityChange(racketName, quantity, selectedSchedules)
-    handleRacketTimeChange(racketName, time, selectedSchedules)
+    // When multiple schedules are selected, quantity per schedule is 1 (one racket per schedule)
+    // The total number of rackets will equal the number of selected schedules
+    if (selectedSchedules.length > 1) {
+      // Multiple schedules: create separate bookings, each with quantity 1
+      handleRacketQuantityChange(racketName, 1, selectedSchedules)
+      handleRacketTimeChange(racketName, time, selectedSchedules)
+    } else {
+      // Single schedule: use the quantity from modal
+      handleRacketQuantityChange(racketName, quantity, selectedSchedules)
+      handleRacketTimeChange(racketName, time, selectedSchedules)
+    }
   }
 
   const handleCourtScheduleSelectionConfirm = () => {
@@ -649,7 +650,7 @@ export function BookingPage() {
     
     // Find the equipment to get its price
     const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
-    const price = Number(equipmentItem?.price) || 100 // Default to 100 if not found
+    const price = Number(equipmentItem?.price) || 0 // Use 0 if not found to avoid incorrect calculations
     
     // Get the time for this specific racket (default to 1 if not set)
     const racketTime = racketTimes.get(racketName) || 1
@@ -660,21 +661,42 @@ export function BookingPage() {
       (courtBookings.length === 1 ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`] : [])
     
     if (newQuantity === 0) {
-      // Remove from bookings if quantity is 0
+      // Remove all bookings for this racket
       setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
     } else {
-      // Add or update booking
-      const newBooking: EquipmentBooking = {
-        equipment: racketName,
-        time: `${racketTime} hr`,
-        subtotal: price * racketTime * newQuantity,
-        quantity: newQuantity,
-        selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
+      // CRITICAL: If multiple schedules are selected, create separate bookings - one per schedule
+      // Each schedule represents a separate racket rental
+      if (schedulesToUse.length > 1) {
+        // Remove all existing bookings for this racket first
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          
+          // Create separate booking for each selected schedule
+          // Each booking has quantity 1, representing one racket per schedule
+          const newBookings: EquipmentBooking[] = schedulesToUse.map(scheduleKey => ({
+            equipment: racketName,
+            time: `${racketTime} hr`,
+            subtotal: price * racketTime * 1, // Each schedule gets full price (1 racket per schedule)
+            quantity: 1, // One racket per schedule
+            selectedCourtSchedules: [scheduleKey] // Single schedule per booking
+          }))
+          
+          return [...filtered, ...newBookings]
+        })
+      } else {
+        // Single schedule - create one booking
+        const newBooking: EquipmentBooking = {
+          equipment: racketName,
+          time: `${racketTime} hr`,
+          subtotal: price * racketTime * newQuantity,
+          quantity: newQuantity,
+          selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
+        }
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          return [...filtered, newBooking]
+        })
       }
-      setEquipmentBookings(prev => {
-        const filtered = prev.filter(booking => booking.equipment !== racketName)
-        return [...filtered, newBooking]
-      })
     }
   }
 
@@ -688,7 +710,7 @@ export function BookingPage() {
     
     // Find the equipment to get its price
     const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
-    const price = Number(equipmentItem?.price) || 100 // Default to 100 if not found
+    const price = Number(equipmentItem?.price) || 0 // Use 0 if not found to avoid incorrect calculations
     
     // Get the quantity for this specific racket
     const racketQuantity = racketQuantities.get(racketName) || 0
@@ -700,17 +722,36 @@ export function BookingPage() {
     
     // Update existing booking with new time
     if (racketQuantity > 0) {
-      const newBooking: EquipmentBooking = {
-        equipment: racketName,
-        time: `${newTime} hr`,
-        subtotal: price * newTime * racketQuantity,
-        quantity: racketQuantity,
-        selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
+      // CRITICAL: If multiple schedules are selected, create separate bookings - one per schedule
+      if (schedulesToUse.length > 1) {
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          
+          // Create separate booking for each selected schedule
+          const newBookings: EquipmentBooking[] = schedulesToUse.map(scheduleKey => ({
+            equipment: racketName,
+            time: `${newTime} hr`,
+            subtotal: price * newTime * 1, // Each schedule gets full price (1 racket per schedule)
+            quantity: 1, // One racket per schedule
+            selectedCourtSchedules: [scheduleKey] // Single schedule per booking
+          }))
+          
+          return [...filtered, ...newBookings]
+        })
+      } else {
+        // Single schedule - update one booking
+        const newBooking: EquipmentBooking = {
+          equipment: racketName,
+          time: `${newTime} hr`,
+          subtotal: price * newTime * racketQuantity,
+          quantity: racketQuantity,
+          selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
+        }
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          return [...filtered, newBooking]
+        })
       }
-      setEquipmentBookings(prev => {
-        const filtered = prev.filter(booking => booking.equipment !== racketName)
-        return [...filtered, newBooking]
-      })
     }
   }
 
@@ -1069,79 +1110,44 @@ export function BookingPage() {
       }
 
       // Prepare booking data for metadata
-      // Split equipment bookings with multiple schedules into separate bookings (one per schedule)
-      // Each schedule should be a separate rental with its own price and stock reduction
+      // Equipment bookings are already separated per schedule (one booking per schedule)
+      // Each booking represents one racket rental for one court schedule
       const expandedEquipmentBookings: any[] = []
       equipmentBookings.forEach(booking => {
-        if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 1) {
-          // Split into separate bookings for each schedule
-          // Each schedule is a separate rental, so each should have the full price
-          booking.selectedCourtSchedules.forEach(scheduleKey => {
-            const [courtName, schedule] = scheduleKey.split('-')
-            const courtBooking = courtBookings.find(cb => cb.court === courtName && cb.schedule === schedule)
-            
-            let startTime: string | undefined
-            if (courtBooking) {
-              try {
-                const { startTime: st } = parseScheduleToTimes(courtBooking.schedule)
-                startTime = st
-              } catch (e) {
-                console.error('Error parsing schedule:', e)
-              }
-            }
-            
-            // Calculate the price per schedule based on equipment price and time
-            // Each schedule is a separate rental, so each should have the full price
-            const equipmentItem = equipment.find(eq => eq.equipment_name === booking.equipment)
-            const price = Number(equipmentItem?.price) || 100
-            const timeMatch = booking.time.match(/(\d+(?:\.\d+)?)\s*hr/i)
-            const hours = timeMatch ? parseFloat(timeMatch[1]) : 1
-            const quantity = booking.quantity || 1
-            // Each schedule gets the full price (price * hours * quantity) since it's a separate rental
-            const subtotalPerSchedule = price * hours * quantity
-            
-            expandedEquipmentBookings.push({
-              equipment: booking.equipment,
-              time: booking.time,
-              subtotal: subtotalPerSchedule,
-              quantity: quantity,
-              startTime: startTime,
-              selectedCourtSchedules: [scheduleKey] // Single schedule per booking
-            })
-          })
-        } else {
-          // Single schedule or no schedules - keep as is
-          let startTime: string | undefined
-          if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
-            const selectedBookings = courtBookings.filter(cb => 
-              booking.selectedCourtSchedules?.includes(`${cb.court}-${cb.schedule}`)
-            )
-            if (selectedBookings.length > 0) {
-              try {
-                const { startTime: st } = parseScheduleToTimes(selectedBookings[0].schedule)
-                startTime = st
-              } catch (e) {
-                console.error('Error parsing schedule:', e)
-              }
-            }
-          } else if (courtBookings.length === 1) {
+        // Each booking now has a single schedule in selectedCourtSchedules
+        // or no schedules (which defaults to the single court booking)
+        let startTime: string | undefined
+        if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+          // Get the schedule (should be single schedule per booking now)
+          const scheduleKey = booking.selectedCourtSchedules[0]
+          const [courtName, schedule] = scheduleKey.split('-')
+          const courtBooking = courtBookings.find(cb => cb.court === courtName && cb.schedule === schedule)
+          
+          if (courtBooking) {
             try {
-              const { startTime: st } = parseScheduleToTimes(courtBookings[0].schedule)
+              const { startTime: st } = parseScheduleToTimes(courtBooking.schedule)
               startTime = st
             } catch (e) {
               console.error('Error parsing schedule:', e)
             }
           }
-          
-          expandedEquipmentBookings.push({
-            equipment: booking.equipment,
-            time: booking.time,
-            subtotal: booking.subtotal,
-            quantity: booking.quantity || 1,
-            startTime: startTime,
-            selectedCourtSchedules: booking.selectedCourtSchedules
-          })
+        } else if (courtBookings.length === 1) {
+          try {
+            const { startTime: st } = parseScheduleToTimes(courtBookings[0].schedule)
+            startTime = st
+          } catch (e) {
+            console.error('Error parsing schedule:', e)
+          }
         }
+        
+        expandedEquipmentBookings.push({
+          equipment: booking.equipment,
+          time: booking.time,
+          subtotal: booking.subtotal,
+          quantity: booking.quantity || 1,
+          startTime: startTime,
+          selectedCourtSchedules: booking.selectedCourtSchedules // Already contains single schedule per booking
+        })
       })
 
       // Calculate total amount from expanded equipment bookings
@@ -1865,33 +1871,29 @@ export function BookingPage() {
                     </thead>
                     <tbody>
                       {equipmentBookings.map((booking, index) => {
-                        // Get the court schedules this equipment is associated with
-                        const associatedSchedules = booking.selectedCourtSchedules 
-                          ? courtBookings.filter(cb => 
-                              booking.selectedCourtSchedules?.includes(`${cb.court}-${cb.schedule}`)
-                            )
-                          : courtBookings.length === 1 
-                            ? [courtBookings[0]]
-                            : []
+                        // Get the court schedule this equipment is associated with
+                        // Since we now create separate bookings per schedule, each booking has only one schedule
+                        let associatedSchedule: CourtBooking | null = null
+                        if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+                          // Each booking now has a single schedule in selectedCourtSchedules
+                          const scheduleKey = booking.selectedCourtSchedules[0]
+                          const [courtName, schedule] = scheduleKey.split('-')
+                          associatedSchedule = courtBookings.find(cb => cb.court === courtName && cb.schedule === schedule) || null
+                        } else if (courtBookings.length === 1) {
+                          associatedSchedule = courtBookings[0]
+                        }
                         
                         return (
-                        <tr key={index}>
+                        <tr key={`${booking.equipment}-${index}-${booking.selectedCourtSchedules?.[0] || ''}`}>
                           <td className="border border-gray-300 px-4 py-2">{booking.equipment}</td>
                           <td className="border border-gray-300 px-4 py-2">{booking.quantity || 1}</td>
                           <td className="border border-gray-300 px-4 py-2">{booking.time}</td>
                             {courtBookings.length > 1 && (
                               <td className="border border-gray-300 px-4 py-2">
-                                {associatedSchedules.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {associatedSchedules.map((schedule, idx) => (
-                                      <span 
-                                        key={idx}
-                                        className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium"
-                                      >
-                                        {schedule.court} - {schedule.schedule}
-                                      </span>
-                                    ))}
-                                  </div>
+                                {associatedSchedule ? (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium">
+                                    {associatedSchedule.court} - {associatedSchedule.schedule}
+                                  </span>
                                 ) : (
                                   <span className="text-gray-400 text-sm">Not specified</span>
                                 )}

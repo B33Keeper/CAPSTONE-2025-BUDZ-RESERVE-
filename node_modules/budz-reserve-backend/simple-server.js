@@ -189,6 +189,306 @@ app.get('/api/time-slots', (req, res) => {
   res.json(mockTimeSlots);
 });
 
+// Announcements endpoints (read-only for modal)
+const mapAnnouncementRow = (row) => ({
+  id: row.id,
+  title: row.title,
+  content: row.content,
+  image_url: row.image_url,
+  announcement_type: row.announcement_type || (row.image_url ? 'image' : 'text'),
+  created_at: row.created_at,
+  updated_at: row.updated_at,
+  is_active: !!row.is_active,
+  creator: row.creator_name || row.creator_username
+    ? {
+        name: row.creator_name,
+        username: row.creator_username,
+      }
+    : null,
+});
+
+app.get('/api/announcements/active', (req, res) => {
+  const q = `
+    SELECT a.*, u.name AS creator_name, u.username AS creator_username
+    FROM announcements a
+    LEFT JOIN users u ON a.created_by = u.id
+    WHERE a.is_active = 1
+    ORDER BY a.created_at DESC
+  `;
+
+  db.query(q, (err, rows) => {
+    if (err) {
+      console.error('Error fetching announcements:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+
+    return res.json(rows.map(mapAnnouncementRow));
+  });
+});
+
+// Queue Players endpoints
+app.get('/api/queue-players', (req, res) => {
+  const q = 'SELECT * FROM queue_players ORDER BY created_at DESC';
+  db.query(q, (err, rows) => {
+    if (err) {
+      console.error('Error fetching queue players:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    const players = rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      sex: row.sex,
+      skill: row.skill,
+      gamesPlayed: row.games_played || 0,
+      status: row.status || 'In Queue',
+      createdAt: row.created_at?.toISOString() || new Date().toISOString(),
+      updatedAt: row.updated_at?.toISOString() || new Date().toISOString(),
+      lastPlayed: row.last_played ? row.last_played.toISOString() : null
+    }));
+    return res.json(players);
+  });
+});
+
+// Queue Matches endpoints
+app.post('/api/queue-matches', (req, res) => {
+  const { gameType, courtId, teamA, teamB } = req.body;
+  
+  if (!gameType || !teamA || !teamB) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+  
+  if (teamA.length !== 2 || teamB.length !== 2) {
+    return res.status(400).json({ message: 'Each team must have exactly 2 players' });
+  }
+  
+  // Validate all player IDs are unique
+  const allPlayerIds = [...teamA.map(p => p.id), ...teamB.map(p => p.id)];
+  const uniquePlayerIds = [...new Set(allPlayerIds)];
+  if (uniquePlayerIds.length !== 4) {
+    return res.status(400).json({ message: 'All players must be unique' });
+  }
+  
+  // Get court name if courtId provided
+  let courtName = null;
+  if (courtId) {
+    const courtQuery = 'SELECT name FROM queueing_courts WHERE id = ?';
+    db.query(courtQuery, [courtId], (err, rows) => {
+      if (!err && rows.length > 0) {
+        courtName = rows[0].name;
+      }
+      insertMatch();
+    });
+  } else {
+    insertMatch();
+  }
+  
+  function insertMatch() {
+    const insertQuery = `
+      INSERT INTO queue_matches (game_type, status, team_a, team_b, court_id, court_name, created_at, updated_at)
+      VALUES (?, 'pending', ?, ?, ?, ?, NOW(), NOW())
+    `;
+    
+    db.query(insertQuery, [
+      gameType,
+      JSON.stringify(teamA),
+      JSON.stringify(teamB),
+      courtId || null,
+      courtName
+    ], (err, result) => {
+      if (err) {
+        console.error('Error creating queue match:', err);
+        return res.status(500).json({ message: 'Database error' });
+      }
+      
+      // Update games_played for all players
+      const placeholders = allPlayerIds.map(() => '?').join(',');
+      const updateGamesQuery = `UPDATE queue_players SET games_played = COALESCE(games_played, 0) + 1, last_played = CURDATE() WHERE id IN (${placeholders})`;
+      db.query(updateGamesQuery, allPlayerIds, (updateErr) => {
+        if (updateErr) {
+          console.error('Error updating games played:', updateErr);
+        }
+      });
+      
+      const match = {
+        id: result.insertId,
+        gameType,
+        status: 'pending',
+        teamA,
+        teamB,
+        courtId: courtId || null,
+        courtName,
+        startedAt: null,
+        completedAt: null,
+        winner: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      return res.status(201).json(match);
+    });
+  }
+});
+
+app.get('/api/queue-matches', (req, res) => {
+  const { status } = req.query;
+  let q = 'SELECT * FROM queue_matches';
+  const params = [];
+  
+  if (status) {
+    q += ' WHERE status = ?';
+    params.push(status);
+  }
+  
+  q += ' ORDER BY created_at DESC';
+  
+  db.query(q, params, (err, rows) => {
+    if (err) {
+      console.error('Error fetching queue matches:', err);
+      // If table doesn't exist, return empty array instead of error
+      if (err.code === 'ER_NO_SUCH_TABLE') {
+        console.warn('queue_matches table does not exist, returning empty array');
+        return res.json([]);
+      }
+      return res.status(500).json({ message: 'Database error', error: err.message });
+    }
+    
+    try {
+      const matches = rows.map(row => {
+        let teamA, teamB;
+        try {
+          teamA = typeof row.team_a === 'string' ? JSON.parse(row.team_a) : row.team_a;
+        } catch (e) {
+          console.error('Error parsing teamA:', e);
+          teamA = [];
+        }
+        try {
+          teamB = typeof row.team_b === 'string' ? JSON.parse(row.team_b) : row.team_b;
+        } catch (e) {
+          console.error('Error parsing teamB:', e);
+          teamB = [];
+        }
+        
+        return {
+          id: row.id,
+          gameType: row.game_type,
+          status: row.status,
+          teamA,
+          teamB,
+          courtId: row.court_id,
+          courtName: row.court_name,
+          startedAt: row.started_at ? row.started_at.toISOString() : null,
+          completedAt: row.completed_at ? row.completed_at.toISOString() : null,
+          winner: row.winner || null,
+          createdAt: row.created_at ? row.created_at.toISOString() : new Date().toISOString(),
+          updatedAt: row.updated_at ? row.updated_at.toISOString() : new Date().toISOString()
+        };
+      });
+      
+      return res.json(matches);
+    } catch (parseErr) {
+      console.error('Error processing queue matches:', parseErr);
+      return res.status(500).json({ message: 'Error processing matches', error: parseErr.message });
+    }
+  });
+});
+
+app.patch('/api/queue-matches/:id/complete', (req, res) => {
+  const { id } = req.params;
+  const { winner } = req.body;
+  
+  if (!winner || !['teamA', 'teamB', 'draw'].includes(winner)) {
+    return res.status(400).json({ message: 'Invalid winner. Must be teamA, teamB, or draw' });
+  }
+  
+  const q = `
+    UPDATE queue_matches 
+    SET status = 'completed', completed_at = NOW(), winner = ?, updated_at = NOW()
+    WHERE id = ?
+  `;
+  
+  db.query(q, [winner, id], (err, result) => {
+    if (err) {
+      console.error('Error completing queue match:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Match not found' });
+    }
+    
+    // Fetch updated match
+    db.query('SELECT * FROM queue_matches WHERE id = ?', [id], (fetchErr, rows) => {
+      if (fetchErr || rows.length === 0) {
+        return res.status(500).json({ message: 'Error fetching updated match' });
+      }
+      
+      const row = rows[0];
+      const match = {
+        id: row.id,
+        gameType: row.game_type,
+        status: row.status,
+        teamA: typeof row.team_a === 'string' ? JSON.parse(row.team_a) : row.team_a,
+        teamB: typeof row.team_b === 'string' ? JSON.parse(row.team_b) : row.team_b,
+        courtId: row.court_id,
+        courtName: row.court_name,
+        startedAt: row.started_at ? row.started_at.toISOString() : null,
+        completedAt: row.completed_at ? row.completed_at.toISOString() : null,
+        winner: row.winner,
+        createdAt: row.created_at.toISOString(),
+        updatedAt: row.updated_at.toISOString()
+      };
+      
+      return res.json(match);
+    });
+  });
+});
+
+app.patch('/api/queue-matches/:id/cancel', (req, res) => {
+  const { id } = req.params;
+  
+  const q = `
+    UPDATE queue_matches 
+    SET status = 'cancelled', updated_at = NOW()
+    WHERE id = ?
+  `;
+  
+  db.query(q, [id], (err, result) => {
+    if (err) {
+      console.error('Error cancelling queue match:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Match not found' });
+    }
+    
+    // Fetch updated match
+    db.query('SELECT * FROM queue_matches WHERE id = ?', [id], (fetchErr, rows) => {
+      if (fetchErr || rows.length === 0) {
+        return res.status(500).json({ message: 'Error fetching updated match' });
+      }
+      
+      const row = rows[0];
+      const match = {
+        id: row.id,
+        gameType: row.game_type,
+        status: row.status,
+        teamA: typeof row.team_a === 'string' ? JSON.parse(row.team_a) : row.team_a,
+        teamB: typeof row.team_b === 'string' ? JSON.parse(row.team_b) : row.team_b,
+        courtId: row.court_id,
+        courtName: row.court_name,
+        startedAt: row.started_at ? row.started_at.toISOString() : null,
+        completedAt: row.completed_at ? row.completed_at.toISOString() : null,
+        winner: row.winner,
+        createdAt: row.created_at.toISOString(),
+        updatedAt: row.updated_at.toISOString()
+      };
+      
+      return res.json(match);
+    });
+  });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Backend server running on http://localhost:${PORT}`);

@@ -31,6 +31,18 @@ export class EquipmentRentalItem {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   subtotal: number;
 
+  @Column({ type: 'datetime', nullable: true })
+  rental_start_time: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  rental_end_time: Date;
+
+  @Column({ type: 'boolean', default: false })
+  stock_restored: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  notification_sent: boolean;
+
   @CreateDateColumn()
   created_at: Date;
 

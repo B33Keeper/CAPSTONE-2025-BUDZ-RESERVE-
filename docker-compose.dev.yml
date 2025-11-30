@@ -1,70 +1,70 @@
 version: '3.8'
 
 services:
-  # MySQL Database
-  mysql:
-    image: mysql:8.4
-    platform: linux/amd64
-    container_name: budz-reserve-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: budz_reserve
-      MYSQL_USER: budz_user
-      MYSQL_PASSWORD: budz_password
-      MYSQL_CHARSET: utf8mb4
-      MYSQL_COLLATION: utf8mb4_unicode_ci
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database_export.sql:/docker-entrypoint-initdb.d/01-database-export.sql:ro
-      - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql:ro
-    networks:
-      - budz-reserve-network
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-      - --max_connections=200
-      - --innodb-buffer-pool-size=256M
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    security_opt:
-      - no-new-privileges:true
+  # MySQL Database - Commented out since using external Railway database
+  # mysql:
+  #   image: mysql:8.4
+  #   platform: linux/amd64
+  #   container_name: budz-reserve-mysql
+  #   restart: unless-stopped
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: password
+  #     MYSQL_DATABASE: budz_reserve
+  #     MYSQL_USER: budz_user
+  #     MYSQL_PASSWORD: budz_password
+  #     MYSQL_CHARSET: utf8mb4
+  #     MYSQL_COLLATION: utf8mb4_unicode_ci
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #     - ./database_export.sql:/docker-entrypoint-initdb.d/01-database-export.sql:ro
+  #     - ./init-database.sql:/docker-entrypoint-initdb.d/02-init-database.sql:ro
+  #   networks:
+  #     - budz-reserve-network
+  #   command:
+  #     - --character-set-server=utf8mb4
+  #     - --collation-server=utf8mb4_unicode_ci
+  #     - --max_connections=200
+  #     - --innodb-buffer-pool-size=256M
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
+  #   security_opt:
+  #     - no-new-privileges:true
 
-  # phpMyAdmin Database UI
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    platform: linux/amd64
-    container_name: budz-reserve-phpmyadmin
-    restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: password
-      UPLOAD_LIMIT: 256M
-      PMA_ARBITRARY: 1
-      MAX_EXECUTION_TIME: 600
-    ports:
-      - "8080:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    networks:
-      - budz-reserve-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    security_opt:
-      - no-new-privileges:true
+  # phpMyAdmin Database UI - Commented out since using external Railway database
+  # phpmyadmin:
+  #   image: phpmyadmin/phpmyadmin:latest
+  #   platform: linux/amd64
+  #   container_name: budz-reserve-phpmyadmin
+  #   restart: unless-stopped
+  #   environment:
+  #     PMA_HOST: mysql
+  #     PMA_PORT: 3306
+  #     PMA_USER: root
+  #     PMA_PASSWORD: password
+  #     UPLOAD_LIMIT: 256M
+  #     PMA_ARBITRARY: 1
+  #     MAX_EXECUTION_TIME: 600
+  #   ports:
+  #     - "8080:80"
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #   networks:
+  #     - budz-reserve-network
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost/"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 10s
+  #   security_opt:
+  #     - no-new-privileges:true
 
   # Backend API
   backend:
@@ -76,33 +76,46 @@ services:
     security_opt:
       - no-new-privileges:true
     command: sh -c "npm install && npm run start:container"
+    env_file:
+      - ./backend/.env
     environment:
-      NODE_ENV: development
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USERNAME: budz_user
-      DB_PASSWORD: budz_password
-      DB_DATABASE: budz_reserve
-      JWT_SECRET: dev-jwt-secret-key-change-in-production
-      JWT_EXPIRES_IN: 24h
-      PORT: 3001
-      CORS_ORIGIN: http://localhost:3000
+      NODE_ENV: ${NODE_ENV:-development}
+      DB_TYPE: ${DB_TYPE:-mysql}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-key-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      PORT: ${PORT:-3001}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      API_PREFIX: ${API_PREFIX:-api}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+      UPLOAD_DEST: ${UPLOAD_DEST:-./uploads}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-5242880}
+      THROTTLE_TTL: ${THROTTLE_TTL:-60}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-10}
+      PAYMONGO_SECRET_KEY: ${PAYMONGO_SECRET_KEY}
+      PAYMONGO_PUBLIC_KEY: ${PAYMONGO_PUBLIC_KEY}
+      PAYMONGO_WEBHOOK_SECRET: ${PAYMONGO_WEBHOOK_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       DISABLE_MAILER: "1"
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "1000"
       NODE_OPTIONS: "--max-old-space-size=4096"
-      PAYMONGO_SECRET_KEY: sk_test_placeholder_key_for_development
-      PAYMONGO_PUBLIC_KEY: pk_test_placeholder_key_for_development
-      PAYMONGO_WEBHOOK_SECRET: whsk_test_placeholder_webhook_secret
     ports:
       - "3001:3001"
     volumes:
       - ./backend:/app
       - /app/node_modules
       - ./uploads:/app/uploads
-    depends_on:
-      mysql:
-        condition: service_healthy
     networks:
       - budz-reserve-network
     healthcheck:
@@ -121,9 +134,11 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+    env_file:
+      - ./backend/.env
     environment:
-      VITE_API_URL: http://localhost:3001/api
-      VITE_APP_NAME: Budz Reserve
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
+      VITE_APP_NAME: ${VITE_APP_NAME:-Budz Reserve}
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "1000"
       NODE_OPTIONS: "--max-old-space-size=4096"
@@ -167,10 +182,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-
-volumes:
-  mysql_data:
-    driver: local
 
 networks:
   budz-reserve-network:

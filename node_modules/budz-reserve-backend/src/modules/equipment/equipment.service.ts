@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
 import { Equipment } from './entities/equipment.entity';
+import { EquipmentRentalItem } from '../payments/entities/equipment-rental-item.entity';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 
@@ -10,6 +11,8 @@ export class EquipmentService {
   constructor(
     @InjectRepository(Equipment)
     private equipmentRepository: Repository<Equipment>,
+    @InjectRepository(EquipmentRentalItem)
+    private equipmentRentalItemRepository: Repository<EquipmentRentalItem>,
   ) {}
 
   private normalizePayload<T extends Partial<Equipment>>(payload: T): T {
@@ -35,9 +38,49 @@ export class EquipmentService {
   }
 
   async findAll(): Promise<Equipment[]> {
-    return this.equipmentRepository.find({
+    const equipmentList = await this.equipmentRepository.find({
       order: { equipment_name: 'ASC' },
     });
+
+    // Calculate available stock for each equipment (total - active rentals)
+    const now = new Date();
+    const equipmentWithAvailability = await Promise.all(
+      equipmentList.map(async (equipment) => {
+        // Count active rentals (not expired and stock not restored)
+        const activeRentals = await this.equipmentRentalItemRepository.count({
+          where: {
+            equipment_id: equipment.id,
+            rental_end_time: MoreThan(now),
+            stock_restored: false,
+          },
+        });
+
+        // Get total quantity of active rentals
+        const activeRentalItems = await this.equipmentRentalItemRepository.find({
+          where: {
+            equipment_id: equipment.id,
+            rental_end_time: MoreThan(now),
+            stock_restored: false,
+          },
+        });
+
+        const activeRentalQuantity = activeRentalItems.reduce(
+          (sum, item) => sum + item.quantity,
+          0,
+        );
+
+        // Calculate available stock
+        const availableStock = Math.max(equipment.stocks - activeRentalQuantity, 0);
+
+        return {
+          ...equipment,
+          available_stock: availableStock,
+          active_rentals: activeRentalQuantity,
+        };
+      }),
+    );
+
+    return equipmentWithAvailability;
   }
 
   async findOne(id: number): Promise<Equipment> {

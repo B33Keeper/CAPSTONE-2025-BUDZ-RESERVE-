@@ -96,6 +96,13 @@ export class AnnouncementsController {
     return await this.announcementsService.findLatest();
   }
 
+  @Get('active')
+  @ApiOperation({ summary: 'Get all active announcements' })
+  @ApiResponse({ status: 200, description: 'Active announcements retrieved successfully' })
+  async findActive() {
+    return await this.announcementsService.findActive();
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

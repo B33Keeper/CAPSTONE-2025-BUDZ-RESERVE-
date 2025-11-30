@@ -64,7 +64,7 @@ export class Payment {
   @UpdateDateColumn()
   updated_at: Date;
 
-  @ManyToOne(() => Reservation, (reservation) => reservation.payments)
+  @ManyToOne(() => Reservation, (reservation) => reservation.payments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'reservation_id' })
   reservation: Reservation;
 }

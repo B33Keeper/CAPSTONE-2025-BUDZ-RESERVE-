@@ -22,14 +22,21 @@ export function ResponsiveModal({
   const { isMobile } = useResponsive()
 
   useEffect(() => {
+    // Use requestAnimationFrame to batch DOM writes and prevent forced reflow
     if (isOpen) {
-      document.body.style.overflow = 'hidden'
+      requestAnimationFrame(() => {
+        document.body.style.overflow = 'hidden'
+      })
     } else {
-      document.body.style.overflow = 'unset'
+      requestAnimationFrame(() => {
+        document.body.style.overflow = 'unset'
+      })
     }
 
     return () => {
-      document.body.style.overflow = 'unset'
+      requestAnimationFrame(() => {
+        document.body.style.overflow = 'unset'
+      })
     }
   }, [isOpen])
 

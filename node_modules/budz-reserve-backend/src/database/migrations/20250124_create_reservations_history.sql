@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS `reservations_history` (
+  `History_ID` INT NOT NULL AUTO_INCREMENT,
+  `original_id` INT NOT NULL,
+  `User_ID` INT NOT NULL,
+  `Court_ID` INT NOT NULL,
+  `Reservation_Date` DATE NOT NULL,
+  `Start_Time` TIME NOT NULL,
+  `End_Time` TIME NOT NULL,
+  `Status` ENUM('Pending', 'Confirmed', 'Cancelled', 'Completed') NOT NULL DEFAULT 'Confirmed',
+  `Total_Amount` DECIMAL(10,2) NOT NULL DEFAULT 0,
+  `Reference_Number` VARCHAR(255) DEFAULT NULL,
+  `Paymongo_Reference_Number` VARCHAR(255) DEFAULT NULL,
+  `Notes` TEXT DEFAULT NULL,
+  `Is_Admin_Created` BOOLEAN NOT NULL DEFAULT FALSE,
+  `Created_at` DATETIME NOT NULL,
+  `Updated_at` DATETIME NOT NULL,
+  `Archived_at` DATETIME NOT NULL,
+  PRIMARY KEY (`History_ID`),
+  KEY `IDX_reservations_history_user_id` (`User_ID`),
+  KEY `IDX_reservations_history_court_id` (`Court_ID`),
+  KEY `IDX_reservations_history_archived_at` (`Archived_at`),
+  KEY `IDX_reservations_history_original_id` (`original_id`),
+  KEY `IDX_reservations_history_date` (`Reservation_Date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

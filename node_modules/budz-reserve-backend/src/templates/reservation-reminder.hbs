@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation Reminder - {{appName}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background-color: #f5f7fa;
+            padding: 40px 20px;
+        }
+        .email-wrapper {
+            max-width: 650px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        .container {
+            background: #ffffff;
+            padding: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        }
+        .header {
+            text-align: center;
+            padding: 40px 30px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        .reminder-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #ffffff;
+            margin: 0;
+            opacity: 0.95;
+        }
+        .section {
+            background: #ffffff;
+            padding: 30px;
+            margin: 0;
+            border-bottom: 1px solid #e8ecef;
+        }
+        .section:last-of-type {
+            border-bottom: none;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 14px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 14px;
+            flex: 0 0 40%;
+        }
+        .info-value {
+            color: #2c3e50;
+            font-size: 14px;
+            text-align: right;
+            flex: 1;
+            word-break: break-word;
+        }
+        .reminder-box {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .reminder-box-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        .reminder-box-text {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .next-steps {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .next-steps-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        .next-steps ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #495057;
+        }
+        .next-steps li {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 12px;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="container">
+            <div class="header">
+                <div class="logo">{{appName}}</div>
+                <h1 class="reminder-title">Reservation Reminder</h1>
+            </div>
+
+            <div class="section">
+                <p style="font-size: 16px; margin-bottom: 20px;">
+                    Hello <strong>{{customerName}}</strong>,
+                </p>
+                
+                <p style="font-size: 14px; color: #495057; margin-bottom: 20px;">
+                    This is a friendly reminder that your reservation is coming up in <strong>30 minutes</strong>!
+                </p>
+
+                <div class="reminder-box">
+                    <div class="reminder-box-title">⏰ Your Reservation Details</div>
+                    <div class="reminder-box-text">
+                        <strong>Court:</strong> {{courtName}}<br>
+                        <strong>Date:</strong> {{reservationDate}}<br>
+                        <strong>Time:</strong> {{startTime}} - {{endTime}}<br>
+                        <strong>Reference:</strong> {{referenceNumber}}
+                    </div>
+                </div>
+
+                <div class="next-steps">
+                    <div class="next-steps-title">What to Remember:</div>
+                    <ul>
+                        <li>Please arrive 15 minutes before your scheduled time</li>
+                        <li>Bring a valid ID for verification</li>
+                        <li>Contact us if you need to make any changes</li>
+                        <li>Enjoy your game!</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>Thank you for choosing {{appName}}!</p>
+                <p>If you have any questions, please contact us at <a href="mailto:{{supportEmail}}">{{supportEmail}}</a></p>
+                <p>Visit us at <a href="{{appUrl}}">{{appUrl}}</a></p>
+                <p style="margin-top: 20px; font-size: 12px; color: #999;">
+                    This is an automated reminder. Please keep this for your records.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

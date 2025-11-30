@@ -611,8 +611,17 @@ export default function AdminCreateReservations() {
         ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`]
         : []
     
-    handleRacketQuantityChange(racketName, quantity, selectedSchedules)
-    handleRacketTimeChange(racketName, time, selectedSchedules)
+    // When multiple schedules are selected, quantity per schedule is 1 (one racket per schedule)
+    // The total number of rackets will equal the number of selected schedules
+    if (selectedSchedules.length > 1) {
+      // Multiple schedules: create separate bookings, each with quantity 1
+      handleRacketQuantityChange(racketName, 1, selectedSchedules)
+      handleRacketTimeChange(racketName, time, selectedSchedules)
+    } else {
+      // Single schedule: use the quantity from modal
+      handleRacketQuantityChange(racketName, quantity, selectedSchedules)
+      handleRacketTimeChange(racketName, time, selectedSchedules)
+    }
   }
 
   const handleCourtScheduleSelectionConfirm = () => {
@@ -655,7 +664,7 @@ export default function AdminCreateReservations() {
     
     // Find the equipment to get its price
     const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
-    const price = Number(equipmentItem?.price) || 100 // Default to 100 if not found
+    const price = Number(equipmentItem?.price) || 0 // Use 0 if not found to avoid incorrect calculations
     
     // Get the time for this specific racket (default to 1 if not set)
     const racketTime = racketTimes.get(racketName) || 1
@@ -666,21 +675,42 @@ export default function AdminCreateReservations() {
       (courtBookings.length === 1 ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`] : [])
     
     if (newQuantity === 0) {
-      // Remove from bookings if quantity is 0
+      // Remove all bookings for this racket
       setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
     } else {
-      // Add or update booking
-      const newBooking: EquipmentBooking = {
-        equipment: racketName,
-        time: `${racketTime} hr`,
-        subtotal: price * racketTime * newQuantity,
-        quantity: newQuantity,
-        selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
+      // CRITICAL: If multiple schedules are selected, create separate bookings - one per schedule
+      // Each schedule represents a separate racket rental
+      if (schedulesToUse.length > 1) {
+        // Remove all existing bookings for this racket first
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          
+          // Create separate booking for each selected schedule
+          // Each booking has quantity 1, representing one racket per schedule
+          const newBookings: EquipmentBooking[] = schedulesToUse.map(scheduleKey => ({
+            equipment: racketName,
+            time: `${racketTime} hr`,
+            subtotal: price * racketTime * 1, // Each schedule gets full price (1 racket per schedule)
+            quantity: 1, // One racket per schedule
+            selectedCourtSchedules: [scheduleKey] // Single schedule per booking
+          }))
+          
+          return [...filtered, ...newBookings]
+        })
+      } else {
+        // Single schedule - create one booking
+        const newBooking: EquipmentBooking = {
+          equipment: racketName,
+          time: `${racketTime} hr`,
+          subtotal: price * racketTime * newQuantity,
+          quantity: newQuantity,
+          selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
+        }
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          return [...filtered, newBooking]
+        })
       }
-      setEquipmentBookings(prev => {
-        const filtered = prev.filter(booking => booking.equipment !== racketName)
-        return [...filtered, newBooking]
-      })
     }
   }
 
@@ -713,24 +743,43 @@ export default function AdminCreateReservations() {
     
     // Find the equipment to get its price
     const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
-    const price = Number(equipmentItem?.price) || 100 // Default to 100 if not found
+    const price = Number(equipmentItem?.price) || 0 // Use 0 if not found to avoid incorrect calculations
     
     // Get the quantity for this specific racket
     const racketQuantity = racketQuantities.get(racketName) || 0
     
     // Update existing booking with clamped time
     if (racketQuantity > 0) {
-      const newBooking: EquipmentBooking = {
-        equipment: racketName,
-        time: `${clampedTime} hr`,
-        subtotal: price * clampedTime * racketQuantity,
-        quantity: racketQuantity,
-        selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
+      // CRITICAL: If multiple schedules are selected, create separate bookings - one per schedule
+      if (schedulesToUse.length > 1) {
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          
+          // Create separate booking for each selected schedule
+          const newBookings: EquipmentBooking[] = schedulesToUse.map(scheduleKey => ({
+            equipment: racketName,
+            time: `${clampedTime} hr`,
+            subtotal: price * clampedTime * 1, // Each schedule gets full price (1 racket per schedule)
+            quantity: 1, // One racket per schedule
+            selectedCourtSchedules: [scheduleKey] // Single schedule per booking
+          }))
+          
+          return [...filtered, ...newBookings]
+        })
+      } else {
+        // Single schedule - update one booking
+        const newBooking: EquipmentBooking = {
+          equipment: racketName,
+          time: `${clampedTime} hr`,
+          subtotal: price * clampedTime * racketQuantity,
+          quantity: racketQuantity,
+          selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
+        }
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          return [...filtered, newBooking]
+        })
       }
-      setEquipmentBookings(prev => {
-        const filtered = prev.filter(booking => booking.equipment !== racketName)
-        return [...filtered, newBooking]
-      })
     }
   }
 
@@ -1169,6 +1218,9 @@ export default function AdminCreateReservations() {
   }
 
   // Generate QR code for selected provider (sample QR code - not actual PayMongo QR)
+  // TODO: Implement QR code generation in UI when needed
+  // Commented out to avoid unused variable warning - uncomment when implementing QR code feature
+  /*
   const handleGenerateQrCode = async (provider: 'gcash' | 'paymaya' | 'grab_pay') => {
     if (!selectedDate || courtBookings.length === 0) {
       toast.error('Please select a date and court schedule first')
@@ -1203,6 +1255,7 @@ export default function AdminCreateReservations() {
       toast.error('Failed to generate QR code. Please try again.')
     }
   }
+  */
 
   // Handle QR Ph payment directly with provider (from sample QR modal)
   const handleProcessQrPhPaymentWithProvider = async (provider: 'gcash' | 'paymaya' | 'grab_pay') => {
