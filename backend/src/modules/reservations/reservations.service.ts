@@ -491,6 +491,15 @@ export class ReservationsService {
       
       console.log('Final payment method to use:', actualPaymentMethod);
 
+      // Determine the actual payment ID to use (for both checkout sessions and admin-created payments)
+      // This needs to be defined before the loop so it's accessible after reservations are created
+      let actualPaymentId = paymentId;
+      if (paymentId.startsWith('cs_')) {
+        // For checkout sessions, we'll use the checkout session ID as reference
+        // since we don't have the actual payment ID yet
+        actualPaymentId = paymentId;
+      }
+
       // CRITICAL: Idempotency check for admin-created payments BEFORE creating any reservations
       // This prevents duplicate payment records if the endpoint is called multiple times
       if (!paymentId.startsWith('cs_')) {
@@ -613,14 +622,6 @@ export class ReservationsService {
 
         // Parse schedule to get start and end times
         const [startTime, endTime] = this.parseScheduleToTimes(courtBooking.schedule);
-
-        // Get the actual payment ID for reference
-        let actualPaymentId = paymentId;
-        if (paymentId.startsWith('cs_')) {
-          // For checkout sessions, we'll use the checkout session ID as reference
-          // since we don't have the actual payment ID yet
-          actualPaymentId = paymentId;
-        }
 
         const reservation = this.reservationsRepository.create({
           User_ID: userIdForReservation,
