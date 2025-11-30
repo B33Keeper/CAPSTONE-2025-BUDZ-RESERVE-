@@ -405,11 +405,14 @@ export class ReservationsService {
       
       const reservations: Reservation[] = [];
 
-      // Get actual payment method from Paymongo
-      let actualPaymentMethod = 'gcash'; // Default fallback
+      // Get actual payment method from Paymongo or use provided payment method
+      // For admin-created reservations, use the paymentMethod from paymentData
+      // For Paymongo checkout sessions, fetch from Paymongo API
+      let actualPaymentMethod = paymentMethod?.toLowerCase() || 'gcash'; // Use provided payment method or default
       
       try {
-        console.log('Processing checkout session ID:', paymentId);
+        console.log('Processing payment ID:', paymentId);
+        console.log('Payment method from request:', paymentMethod);
         
         // Check if this is a checkout session ID (starts with 'cs_')
         if (paymentId.startsWith('cs_')) {
@@ -465,11 +468,55 @@ export class ReservationsService {
             console.log('No payments found in checkout session');
           }
         } else {
-          console.log('Not a checkout session ID, using default payment method');
+          // For admin-created payments (admin_cash_xxx, admin_qrph_xxx), use the provided paymentMethod
+          console.log('Not a checkout session ID, using provided payment method:', paymentMethod);
+          if (paymentMethod) {
+            actualPaymentMethod = paymentMethod.toLowerCase();
+            console.log('Using payment method from request:', actualPaymentMethod);
+          } else {
+            console.log('No payment method provided, using default: gcash');
+            actualPaymentMethod = 'gcash';
+          }
         }
       } catch (error) {
         console.error('Error fetching payment method from Paymongo:', error);
-        actualPaymentMethod = 'gcash'; // Default fallback
+        // If error occurs and we have a provided paymentMethod, use it; otherwise default to gcash
+        if (paymentMethod) {
+          actualPaymentMethod = paymentMethod.toLowerCase();
+          console.log('Error occurred, using provided payment method:', actualPaymentMethod);
+        } else {
+          actualPaymentMethod = 'gcash'; // Default fallback
+        }
+      }
+      
+      console.log('Final payment method to use:', actualPaymentMethod);
+
+      // CRITICAL: Idempotency check for admin-created payments BEFORE creating any reservations
+      // This prevents duplicate payment records if the endpoint is called multiple times
+      if (!paymentId.startsWith('cs_')) {
+        // For admin-created payments, check if this transaction_id already exists
+        const existingPayment = await this.paymentRepository.findOne({
+          where: { transaction_id: paymentId },
+        });
+        
+        if (existingPayment) {
+          this.logger.warn(
+            `⚠️⚠️⚠️ DUPLICATE createFromPayment CALL: Payment with transaction_id ${paymentId} has already been processed! ` +
+            `Existing payment ID: ${existingPayment.id}, Reservation ID: ${existingPayment.reservation_id}. ` +
+            `Returning existing reservations to prevent duplicates.`
+          );
+          
+          // Find all reservations with the same reference number
+          const existingReservations = await this.reservationsRepository.find({
+            where: { Reference_Number: bookingData.referenceNumber },
+            order: { Reservation_ID: 'ASC' },
+          });
+          
+          if (existingReservations.length > 0) {
+            this.logger.log(`Returning ${existingReservations.length} existing reservations for transaction ${paymentId}`);
+            return existingReservations;
+          }
+        }
       }
 
       const sortedCourtBookings = Array.isArray(bookingData.courtBookings)
@@ -548,6 +595,12 @@ export class ReservationsService {
         userIdForReservation = customerUser.id;
       }
 
+      // CRITICAL: Create only ONE payment record for the entire transaction
+      // This prevents duplicate payment records when there are multiple court bookings
+      // We'll create it after all reservations are created, linked to the first reservation
+      let paymentRecordCreated = false;
+      let firstReservationId: number | null = null;
+
       // Create reservations for each court booking
       for (const courtBooking of sortedCourtBookings) {
         // Find court by name (you might need to adjust this based on your court data)
@@ -586,8 +639,10 @@ export class ReservationsService {
         const savedReservation = await this.reservationsRepository.save(reservation);
         reservations.push(savedReservation);
 
-        // Create payment record for this reservation
-        await this.createPaymentRecord(savedReservation, actualPaymentId, amount, bookingData, actualPaymentMethod);
+        // Store the first reservation ID for payment record linking
+        if (!firstReservationId) {
+          firstReservationId = savedReservation.Reservation_ID;
+        }
 
         // Create equipment rentals only for equipment bookings associated with this reservation's schedule
         // BUT: If equipment is for multiple schedules, only create it once (for the first/earliest schedule)
@@ -746,7 +801,23 @@ export class ReservationsService {
         }
       }
 
+      // CRITICAL: Create only ONE payment record for the entire transaction
+      // Link it to the first reservation to avoid duplicate payment records
+      if (reservations.length > 0 && firstReservationId && !paymentRecordCreated) {
+        try {
+          const firstReservation = reservations[0];
+          await this.createPaymentRecord(firstReservation, actualPaymentId, amount, bookingData, actualPaymentMethod);
+          paymentRecordCreated = true;
+          this.logger.log(`Created single payment record for transaction ${actualPaymentId}, linked to reservation ${firstReservationId}`);
+        } catch (paymentError) {
+          // Log error but don't fail the entire operation
+          this.logger.error(`Failed to create payment record: ${paymentError.message}`, paymentError.stack);
+          // Still continue - reservations are already created
+        }
+      }
+
       // Send email receipt if customer email is provided (admin-created reservations)
+      // Wrap in try-catch to ensure email errors don't fail the entire operation
       if (bookingData.customerEmail && bookingData.customerEmail.trim() && reservations.length > 0) {
         try {
           const firstReservation = reservations[0];
@@ -841,11 +912,20 @@ export class ReservationsService {
         } catch (emailError) {
           // Log error but don't fail the reservation creation
           this.logger.error(`Failed to send email receipt: ${emailError.message}`, emailError.stack);
+          // Continue - reservations are already created successfully
         }
       }
 
-      return reservations;
+      // Always return reservations even if email failed
+      // This ensures the frontend gets a successful response
+      if (reservations.length > 0) {
+        this.logger.log(`✅ Successfully created ${reservations.length} reservation(s) for transaction ${actualPaymentId}`);
+        return reservations;
+      } else {
+        throw new BadRequestException('No reservations were created');
+      }
     } catch (error) {
+      this.logger.error(`❌ Error in createFromPayment: ${error.message}`, error.stack);
       throw new BadRequestException(`Failed to create reservations from payment: ${error.message}`);
     }
   }

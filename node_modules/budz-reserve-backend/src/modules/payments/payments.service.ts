@@ -268,12 +268,32 @@ export class PaymentsService {
 
       // Calculate amount EXACTLY like Admin Dashboard does (extractReservationAmount logic)
       // First try payments (sum of all payment amounts, not just completed)
+      // CRITICAL: Deduplicate payments by transaction_id to prevent counting duplicate payment records
       let reservationAmount = 0;
       if (reservation.payments && Array.isArray(reservation.payments)) {
-        reservationAmount = reservation.payments.reduce((sum: number, payment: any) => {
+        // Deduplicate payments by transaction_id - only count each unique transaction_id once
+        const uniquePaymentsByTransactionId = new Map<string, any>();
+        reservation.payments.forEach((payment: any) => {
+          const transactionId = payment?.transaction_id || `unique_${payment?.id || Date.now()}`;
+          // Only keep the first payment for each transaction_id (or the one with highest amount if needed)
+          if (!uniquePaymentsByTransactionId.has(transactionId)) {
+            uniquePaymentsByTransactionId.set(transactionId, payment);
+          }
+        });
+        
+        // Sum only unique payments (one per transaction_id)
+        reservationAmount = Array.from(uniquePaymentsByTransactionId.values()).reduce((sum: number, payment: any) => {
           const amount = Number(payment?.amount ?? 0);
           return sum + (isNaN(amount) ? 0 : amount);
         }, 0);
+        
+        // Log if duplicates were found
+        if (reservation.payments.length > uniquePaymentsByTransactionId.size) {
+          console.log(
+            `[SalesReport] ⚠️ Found ${reservation.payments.length - uniquePaymentsByTransactionId.size} duplicate payment(s) ` +
+            `for reservation ${reservation.Reservation_ID}. Deduplicated to ${uniquePaymentsByTransactionId.size} unique payment(s).`
+          );
+        }
       }
       
       // If no payments, fall back to Total_Amount (SAME as Admin Dashboard)
