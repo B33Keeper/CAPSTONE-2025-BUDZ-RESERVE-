@@ -7,20 +7,29 @@ config();
 const configService = new ConfigService();
 
 // Railway provides all database connection details via environment variables
-// Defaults are fallbacks only - Railway env vars will override these
+// Supports both DB_CONNECTION and DB_TYPE for compatibility
 const nodeEnv = configService.get('NODE_ENV');
 const isProduction = nodeEnv === 'production';
-const dbType = (configService.get<'postgres' | 'mysql'>('DB_TYPE', 'mysql') ?? 'mysql') as 'mysql' | 'postgres';
+// Check DB_CONNECTION first (Railway/Laravel style), then DB_TYPE
+const dbConnection = configService.get('DB_CONNECTION') || configService.get('DB_TYPE') || 'mysql';
+const dbType = (dbConnection === 'mysql' || dbConnection === 'postgres' ? dbConnection : 'mysql') as 'mysql' | 'postgres';
 
 // Railway MySQL requires SSL in production
 // Use the same configuration pattern as database.module.ts
+// Defaults match Railway MySQL setup
+const dbHost = String(configService.get('DB_HOST') || 'maglev.proxy.rlwy.net');
+const dbPort = Number(configService.get('DB_PORT') || 21184);
+const dbUsername = String(configService.get('DB_USERNAME') || 'root');
+const dbPassword = String(configService.get('DB_PASSWORD') || '');
+const dbDatabase = String(configService.get('DB_DATABASE') || 'railway');
+
 const dataSourceOptions: DataSourceOptions = {
   type: dbType,
-  host: configService.get('DB_HOST', 'localhost') as string,
-  port: Number(configService.get('DB_PORT', 3306)),
-  username: configService.get('DB_USERNAME', 'root') as string,
-  password: configService.get('DB_PASSWORD', '') as string,
-  database: configService.get('DB_DATABASE', 'budz_reserve') as string,
+  host: dbHost,
+  port: dbPort,
+  username: dbUsername,
+  password: dbPassword,
+  database: dbDatabase,
   entities: ['src/**/*.entity.ts'],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false, // Always use migrations for safety

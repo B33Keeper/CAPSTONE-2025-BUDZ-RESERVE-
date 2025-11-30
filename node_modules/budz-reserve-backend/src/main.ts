@@ -167,8 +167,13 @@ async function bootstrap() {
 
     // Railway provides PORT environment variable directly
     // Priority: process.env.PORT (Railway) > configService PORT > default 3001
-    const port = Number(process.env.PORT || configService.get('PORT', '3001'));
+    const portEnv = process.env.PORT || configService.get<string>('PORT') || '3001';
+    const port = Number(portEnv);
     const host = '0.0.0.0';
+    
+    if (!port || isNaN(port)) {
+      throw new Error(`Invalid PORT: ${portEnv}`);
+    }
     
     console.log(`🌐 Attempting to start server on ${host}:${port}...`);
     console.log(`📝 Using PORT from: ${process.env.PORT ? 'process.env.PORT (Railway)' : 'configService or default'}`);
