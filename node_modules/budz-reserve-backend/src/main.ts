@@ -104,8 +104,21 @@ async function bootstrap() {
     });
 
     // CORS configuration
+    // Support multiple origins from environment variable (comma-separated)
+    const corsOrigins = configService.get('CORS_ORIGIN', 'http://localhost:3000')
+      .split(',')
+      .map((origin: string) => origin.trim())
+      .filter((origin: string) => origin.length > 0);
+    
+    // Add default localhost origins for development
+    const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+    const allOrigins = [...new Set([...defaultOrigins, ...corsOrigins])];
+    
+    // Allow all origins if CORS_ORIGIN is set to '*'
+    const allowedOrigins = corsOrigins.includes('*') ? true : allOrigins;
+    
     app.use(cors({
-      origin: ['http://localhost:3000', 'http://localhost:5173'],
+      origin: allowedOrigins,
       credentials: true,
     }));
 
@@ -152,10 +165,13 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
 
-    const port = configService.get('PORT', 3001);
+    // Railway provides PORT environment variable directly
+    // Priority: process.env.PORT (Railway) > configService PORT > default 3001
+    const port = process.env.PORT || configService.get('PORT', 3001);
     const host = '0.0.0.0';
     
     console.log(`🌐 Attempting to start server on ${host}:${port}...`);
+    console.log(`📝 Using PORT from: ${process.env.PORT ? 'process.env.PORT (Railway)' : 'configService or default'}`);
     await app.listen(port, host);
 
     // Use localhost for console output since 0.0.0.0 is not accessible in browsers
