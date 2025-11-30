@@ -21,13 +21,19 @@ RUN npm ci && npm cache clean --force
 # Copy source code
 COPY . .
 
-# Railway automatically makes environment variables available during build
-# Vite will automatically pick up VITE_* prefixed environment variables
-# Since Railway env vars are available at build time, Vite will pick them up automatically
-# We just need to ensure they're available as ENV (Railway provides them automatically)
-# No need for ARG since Railway env vars are already in the build environment
+# Explicitly pass VITE_API_URL as build argument
+# Railway provides environment variables, but we need to explicitly pass them to the build stage
+ARG VITE_API_URL
+ARG VITE_APP_NAME
+ARG NODE_ENV=production
+
+# Set as environment variables for Vite to pick up during build
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+ENV NODE_ENV=${NODE_ENV}
 
 # Build the application with production optimizations
+# Vite will embed VITE_API_URL into the built JavaScript files
 RUN npm run build
 
 # Production stage
