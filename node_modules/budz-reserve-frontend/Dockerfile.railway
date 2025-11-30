@@ -45,41 +45,11 @@ RUN apk add --no-cache curl
 # Copy built application
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Create nginx configuration inline to avoid encoding issues
-RUN cat > /etc/nginx/conf.d/default.conf << 'EOF'
-server {
-    listen 80;
-    server_name localhost;
-    root /usr/share/nginx/html;
-    index index.html;
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_proxied expired no-cache no-store private auth;
-    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/javascript;
-
-    # Handle client-side routing
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-}
-EOF
-    && nginx -t
+# Copy nginx configuration (if file encoding issues occur, we'll create it inline)
+COPY nginx.conf /tmp/nginx.conf
+RUN sed -i -e 's/\r$//' -e 's/\xEF\xBB\xBF//' /tmp/nginx.conf && \
+    cp /tmp/nginx.conf /etc/nginx/conf.d/default.conf && \
+    nginx -t
 
 # Set proper permissions (nginx user already exists in base image)
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
