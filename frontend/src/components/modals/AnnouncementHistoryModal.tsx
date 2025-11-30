@@ -160,7 +160,7 @@ export function AnnouncementHistoryModal({ isOpen, onClose }: AnnouncementHistor
               {announcements.map((announcement) => {
                 const imageUrl = announcement.image_url
                   ? resolveImageUrl(announcement.image_url)
-                  : null
+                  : undefined
 
                 return (
                   <div
