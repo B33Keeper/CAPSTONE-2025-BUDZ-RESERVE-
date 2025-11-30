@@ -202,9 +202,17 @@ async function bootstrap() {
     console.log(`📝 Using PORT from: ${process.env.PORT ? 'process.env.PORT (Railway)' : 'configService or default'}`);
     await app.listen(port, host);
 
-    // Use localhost for console output since 0.0.0.0 is not accessible in browsers
-    console.log(`✅ Application is running on: http://localhost:${port}`);
-    console.log(`📚 API Documentation: http://localhost:${port}/${apiPrefix}/docs`);
+    // Log actual binding and accessible URLs
+    const railwayPublicDomain = process.env.RAILWAY_PUBLIC_DOMAIN;
+    const publicUrl = railwayPublicDomain 
+      ? `https://${railwayPublicDomain}` 
+      : `http://localhost:${port}`;
+    
+    console.log(`✅ Application is running!`);
+    console.log(`   📍 Listening on: ${host}:${port} (accepts connections from any interface)`);
+    console.log(`   🌐 Public URL: ${publicUrl}`);
+    console.log(`   📚 API Documentation: ${publicUrl}/${apiPrefix}/docs`);
+    console.log(`   🔔 Webhook Endpoint: ${publicUrl}/${apiPrefix}/webhook/paymongo`);
     
     // Graceful shutdown handling
     process.on('SIGTERM', async () => {
