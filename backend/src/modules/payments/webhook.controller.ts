@@ -51,6 +51,23 @@ export class WebhookController {
     private readonly equipmentRepository: Repository<Equipment>,
   ) {}
 
+  @Get('paymongo/test')
+  @HttpCode(HttpStatus.OK)
+  async testWebhookEndpoint(@Req() req: Request) {
+    this.logger.log('🧪 Test webhook endpoint called');
+    return {
+      success: true,
+      message: 'Webhook endpoint is reachable!',
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      url: req.originalUrl,
+      headers: {
+        host: req.get('host'),
+        'user-agent': req.get('user-agent'),
+      },
+    };
+  }
+
   @Get('paymongo')
   @HttpCode(HttpStatus.OK)
   async getWebhookStatus(@Req() req: Request) {
@@ -115,6 +132,7 @@ export class WebhookController {
     @Req() req: Request & { rawBody?: Buffer },
   ) {
     try {
+      // Log the full request body for debugging
       this.logger.log('═══════════════════════════════════════════════════════════');
       this.logger.log('🔔 PayMongo Webhook Received');
       this.logger.log('═══════════════════════════════════════════════════════════');
@@ -128,6 +146,7 @@ export class WebhookController {
       this.logger.log(`📋 Has PAYMONGO_WEBHOOK_SECRET: ${!!process.env.PAYMONGO_WEBHOOK_SECRET}`);
       this.logger.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
       this.logger.log(`📋 Railway Public Domain: ${process.env.RAILWAY_PUBLIC_DOMAIN || 'not set'}`);
+      this.logger.log(`📦 Full webhook body: ${JSON.stringify(body, null, 2)}`);
       
       // Log webhook configuration status
       if (!process.env.PAYMONGO_WEBHOOK_SECRET) {
