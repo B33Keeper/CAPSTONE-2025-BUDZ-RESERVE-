@@ -23,15 +23,17 @@ COPY . .
 
 # Railway automatically makes environment variables available during build
 # Vite will automatically pick up VITE_* prefixed environment variables
-# We accept them as build args for explicit control during build
+# Railway environment variables are available as ENV during build
+# We also accept them as ARG for explicit control
 ARG VITE_API_URL
-ARG VITE_APP_NAME=Budz Reserve
-ARG NODE_ENV=production
+ARG VITE_APP_NAME
+ARG NODE_ENV
 
-# Set as environment variables for Vite to read during build
+# Set environment variables for Vite to read during build
+# Railway's environment variables are already available, but we ensure they're set
 ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_APP_NAME=$VITE_APP_NAME
-ENV NODE_ENV=$NODE_ENV
+ENV VITE_APP_NAME=${VITE_APP_NAME:-Budz_Reserve}
+ENV NODE_ENV=${NODE_ENV:-production}
 
 # Build the application with production optimizations
 RUN npm run build
