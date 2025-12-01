@@ -3,7 +3,7 @@ import { WebhookValidationPipe } from '../../pipes/webhook-validation.pipe';
 import { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, DataSource } from 'typeorm';
 import { PayMongoService } from './paymongo.service';
 import { EmailReceiptService } from './email-receipt.service';
 import { PaymentsService } from './payments.service';
@@ -50,6 +50,7 @@ export class WebhookController {
     private readonly rentalItemRepository: Repository<EquipmentRentalItem>,
     @InjectRepository(Equipment)
     private readonly equipmentRepository: Repository<Equipment>,
+    private readonly dataSource: DataSource,
   ) {}
 
   @Get('paymongo/test')
@@ -600,6 +601,11 @@ export class WebhookController {
   }
 
   private async handlePaymentPaid(paymentData: any, bookingDataOverride?: any) {
+    // Use a database transaction with locking to prevent concurrent duplicate processing
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    
     try {
       console.log('───────────────────────────────────────────────────────────');
       console.log(`💳 Processing Payment: ${paymentData.id}`);
@@ -624,6 +630,7 @@ export class WebhookController {
       this.logger.log(`📊 Status: ${status}`);
       
       // CRITICAL: Idempotency check - prevent duplicate processing if webhook is called multiple times
+      // Use transaction's repository to ensure we're checking within the same transaction
       const transactionId = payment.id; // PayMongo payment ID is the transaction ID
       
       // Get booking data early for duplicate checking
@@ -639,102 +646,49 @@ export class WebhookController {
         }
       }
       
-      // First check if payment already exists
-      const existingPayment = await this.paymentRepository.findOne({
+      // CRITICAL: Use transaction repository with locking to prevent race conditions
+      // First check if payment already exists (with lock)
+      const existingPayment = await queryRunner.manager.findOne(Payment, {
         where: { transaction_id: transactionId },
+        lock: { mode: 'pessimistic_write' }, // Lock the row to prevent concurrent access
       });
       
       if (existingPayment) {
-        // This is expected behavior - PayMongo may send the same webhook multiple times
-        // The system correctly prevents duplicate processing
+        await queryRunner.rollbackTransaction();
         const dupMsg = `✅ Duplicate webhook detected and safely ignored: Payment ${transactionId} was already processed. Existing payment ID: ${existingPayment.id}, Reservation ID: ${existingPayment.reservation_id}. This is normal - PayMongo may send webhooks multiple times. System prevented duplicate processing.`;
         console.log(dupMsg);
         this.logger.log(dupMsg);
         return; // Exit early - payment already processed
       }
       
-      // Also check if reservations with this PayMongo reference already exist
-      // This prevents duplicates even if payment record doesn't exist yet (race condition)
-      const existingReservationsByPaymongo = await this.reservationRepository.find({
+      // Also check if reservations with this PayMongo reference already exist (with lock)
+      const existingReservationsByPaymongo = await queryRunner.manager.find(Reservation, {
         where: { Paymongo_Reference_Number: transactionId },
+        lock: { mode: 'pessimistic_write' },
       });
       
       if (existingReservationsByPaymongo && existingReservationsByPaymongo.length > 0) {
+        await queryRunner.rollbackTransaction();
         const dupMsg = `✅ Duplicate webhook detected: Reservations with PayMongo reference ${transactionId} already exist (${existingReservationsByPaymongo.length} reservation(s)). Skipping duplicate processing. Reservation IDs: ${existingReservationsByPaymongo.map(r => r.Reservation_ID).join(', ')}`;
         console.log(dupMsg);
         this.logger.log(dupMsg);
         return; // Exit early - reservations already exist for this payment
       }
       
-      // CRITICAL: Check for reservations with the same booking reference number
+      // CRITICAL: Check for reservations with the same booking reference number (with lock)
       // This is the most reliable check since reference number is set before payment
       if (bookingReferenceNumber) {
-        const existingReservationsByRef = await this.reservationRepository.find({
+        const existingReservationsByRef = await queryRunner.manager.find(Reservation, {
           where: { Reference_Number: bookingReferenceNumber },
+          lock: { mode: 'pessimistic_write' },
         });
         
         if (existingReservationsByRef && existingReservationsByRef.length > 0) {
+          await queryRunner.rollbackTransaction();
           const dupMsg = `✅ Duplicate webhook detected: Reservations with booking reference number ${bookingReferenceNumber} already exist (${existingReservationsByRef.length} reservation(s)). This booking was already processed. Skipping duplicate processing. Reservation IDs: ${existingReservationsByRef.map(r => r.Reservation_ID).join(', ')}`;
           console.log(dupMsg);
           this.logger.log(dupMsg);
           return; // Exit early - reservations already exist for this booking reference
-        }
-      }
-      
-      // Additional check: If booking data is available, check for exact duplicate reservations
-      // This catches duplicates even if Paymongo_Reference_Number isn't set yet
-      const bookingDataRawForDupCheck = payment.attributes?.metadata?.bookingData || (bookingDataOverride ? JSON.stringify(bookingDataOverride) : undefined);
-      if (bookingDataRawForDupCheck) {
-        try {
-          const bookingData = typeof bookingDataRawForDupCheck === 'string' ? JSON.parse(bookingDataRawForDupCheck) : bookingDataRawForDupCheck;
-          
-          // Check each court booking to see if it already exists
-          let duplicateFound = false;
-          for (const courtBooking of bookingData.courtBookings || []) {
-            const courts = await this.courtsService.findAll();
-            const court = courts.find(c => c.Court_Name === courtBooking.court);
-            if (!court) continue;
-            
-            const [startTime, endTime] = this.parseScheduleToTimes(courtBooking.schedule);
-            const reservationDate = new Date(bookingData.selectedDate);
-            reservationDate.setHours(0, 0, 0, 0);
-            
-            // Check for existing reservation with exact same details
-            const exactDuplicate = await this.reservationRepository.findOne({
-              where: {
-                User_ID: bookingData.userId,
-                Court_ID: court.Court_Id,
-                Reservation_Date: reservationDate,
-                Start_Time: startTime,
-                End_Time: endTime,
-                Status: ReservationStatus.CONFIRMED,
-                // Also check if it has the same PayMongo reference OR was created very recently (within last 5 seconds)
-                // This catches race conditions where webhook is called twice
-              },
-            });
-            
-            if (exactDuplicate) {
-              // Check if this reservation was created very recently (within last 10 seconds)
-              // This indicates it might be from a duplicate webhook call
-              const createdDate = exactDuplicate.Created_at || exactDuplicate.Updated_at || new Date();
-              const reservationAge = Date.now() - new Date(createdDate).getTime();
-              if (reservationAge < 10000) { // 10 seconds
-                const dupMsg = `✅ Duplicate webhook detected: Reservation ${exactDuplicate.Reservation_ID} with exact same details was created ${(reservationAge / 1000).toFixed(1)}s ago. This is likely a duplicate webhook call. Skipping.`;
-                console.log(dupMsg);
-                this.logger.log(dupMsg);
-                duplicateFound = true;
-                break;
-              }
-            }
-          }
-          
-          if (duplicateFound) {
-            return; // Exit early - duplicate found
-          }
-        } catch (e) {
-          // If we can't parse booking data, continue with normal flow
-          console.warn('⚠️ Could not check for duplicate reservations by booking details:', e.message);
-          this.logger.warn('⚠️ Could not check for duplicate reservations by booking details:', e.message);
         }
       }
       
@@ -754,7 +708,8 @@ export class WebhookController {
           this.logger.log(`   📅 Date: ${bookingData.selectedDate}`);
           this.logger.log(`   🏸 Court Bookings: ${bookingData.courtBookings?.length || 0}`);
           
-          createdReservations = await this.createReservationFromPayment(payment, bookingData);
+          // Use transaction manager to create reservations within the transaction
+          createdReservations = await this.createReservationFromPaymentWithTransaction(queryRunner, payment, bookingData);
           
           // Get the first created reservation ID
           if (createdReservations.length > 0) {
@@ -767,16 +722,20 @@ export class WebhookController {
             this.logger.log(`   🆔 Reservation ID(s): ${resIds}`);
             this.logger.log(`   📝 Reference Number: ${createdReservations[0].Reference_Number}`);
           } else {
+            await queryRunner.rollbackTransaction();
             console.warn('⚠️ No reservations were created');
             this.logger.warn('⚠️ No reservations were created');
+            return;
           }
         } catch (error) {
+          await queryRunner.rollbackTransaction();
           console.error('❌ Error creating reservation from payment metadata:', error);
           console.error('Error details:', error.message, error.stack);
           this.logger.error('❌ Error creating reservation from payment metadata:', error);
           throw error;
         }
       } else {
+        await queryRunner.rollbackTransaction();
         const noBookingMsg = '⚠️ No booking data found in payment metadata or override';
         const metadataStr = JSON.stringify(payment.attributes?.metadata || {});
         console.warn(noBookingMsg);
@@ -787,7 +746,6 @@ export class WebhookController {
         this.logger.warn(`   Payment metadata: ${metadataStr}`);
         this.logger.warn(`   Booking data override: ${bookingDataOverride ? 'provided' : 'not provided'}`);
         this.logger.error('❌ Cannot create reservations without booking data. Transaction will not be recorded.');
-        // Don't create payment record if no reservations were created
         return;
       }
       
@@ -801,7 +759,7 @@ export class WebhookController {
         : `REF${Date.now()}`;
       
       if (createdReservations.length > 0) {
-        // Create a payment record for each reservation
+        // Create a payment record for each reservation using transaction manager
         try {
           console.log(`💾 Attempting to create ${createdReservations.length} payment record(s) in database...`);
           this.logger.log(`💾 Attempting to create ${createdReservations.length} payment record(s) in database...`);
@@ -814,7 +772,7 @@ export class WebhookController {
             console.log(`   💰 Creating payment for Reservation ID: ${reservation.Reservation_ID}, Amount: ₱${reservationAmount}, Transaction ID: ${transactionId}`);
             this.logger.log(`   💰 Creating payment for Reservation ID: ${reservation.Reservation_ID}, Amount: ₱${reservationAmount}, Transaction ID: ${transactionId}`);
             
-            const newPayment = this.paymentRepository.create({
+            const newPayment = queryRunner.manager.create(Payment, {
               reservation_id: reservation.Reservation_ID,
               amount: reservationAmount,
               payment_method: paymentMethod,
@@ -824,7 +782,7 @@ export class WebhookController {
               status: payment.attributes.status === 'paid' ? PaymentStatus.COMPLETED : PaymentStatus.PENDING,
             });
             
-            const savedPayment = await this.paymentRepository.save(newPayment);
+            const savedPayment = await queryRunner.manager.save(Payment, newPayment);
             console.log(`   ✅ Payment record created successfully: ID=${savedPayment.id}, Reservation ID=${reservation.Reservation_ID}`);
             this.logger.log(`   ✅ Payment record created successfully: ID=${savedPayment.id}, Reservation ID=${reservation.Reservation_ID}`);
             return savedPayment;
@@ -839,6 +797,7 @@ export class WebhookController {
             this.logger.log(paymentRecordMsg);
           });
         } catch (dbError) {
+          await queryRunner.rollbackTransaction();
           console.error('❌ CRITICAL: Failed to create payment records in database!');
           console.error('   Error message:', dbError.message);
           console.error('   Error stack:', dbError.stack);
@@ -847,7 +806,6 @@ export class WebhookController {
           this.logger.error('❌ CRITICAL: Failed to create payment records in database!', dbError);
           this.logger.error(`   Transaction ID: ${transactionId}`);
           this.logger.error(`   Reservation IDs: ${createdReservations.map(r => r.Reservation_ID).join(', ')}`);
-          // Re-throw to be caught by outer try-catch
           throw dbError;
         }
       } else if (reservationId > 0) {
@@ -856,7 +814,7 @@ export class WebhookController {
           console.log(`💾 Attempting to create payment record for Reservation ID: ${reservationId}...`);
           this.logger.log(`💾 Attempting to create payment record for Reservation ID: ${reservationId}...`);
           
-          const newPayment = this.paymentRepository.create({
+          const newPayment = queryRunner.manager.create(Payment, {
             reservation_id: reservationId,
             amount: totalAmount,
             payment_method: paymentMethod,
@@ -866,7 +824,7 @@ export class WebhookController {
             status: payment.attributes.status === 'paid' ? PaymentStatus.COMPLETED : PaymentStatus.PENDING,
           });
           
-          await this.paymentRepository.save(newPayment);
+          await queryRunner.manager.save(Payment, newPayment);
           console.log(`✅ Created payment record in database`);
           console.log(`   🆔 Payment Record ID: ${newPayment.id}`);
           console.log(`   🔗 Linked to Reservation ID: ${reservationId}`);
@@ -874,6 +832,7 @@ export class WebhookController {
           this.logger.log(`   🆔 Payment Record ID: ${newPayment.id}`);
           this.logger.log(`   🔗 Linked to Reservation ID: ${reservationId}`);
         } catch (dbError) {
+          await queryRunner.rollbackTransaction();
           console.error('❌ CRITICAL: Failed to create payment record in database!');
           console.error('   Error message:', dbError.message);
           console.error('   Error stack:', dbError.stack);
@@ -882,7 +841,6 @@ export class WebhookController {
           this.logger.error('❌ CRITICAL: Failed to create payment record in database!', dbError);
           this.logger.error(`   Transaction ID: ${transactionId}`);
           this.logger.error(`   Reservation ID: ${reservationId}`);
-          // Re-throw to be caught by outer try-catch
           throw dbError;
         }
       }
@@ -908,6 +866,9 @@ export class WebhookController {
       
       // Custom email receipt removed - PayMongo receipt will be sent automatically
 
+      // Commit the transaction - all operations succeeded
+      await queryRunner.commitTransaction();
+      
       console.log('───────────────────────────────────────────────────────────');
       console.log('✅ Payment processing completed successfully!');
       console.log('───────────────────────────────────────────────────────────');
@@ -915,10 +876,16 @@ export class WebhookController {
       this.logger.log('✅ Payment processing completed successfully!');
       this.logger.log('───────────────────────────────────────────────────────────');
     } catch (error) {
+      // Rollback transaction on any error
+      await queryRunner.rollbackTransaction();
       console.error('❌ Error handling payment.paid event:', error);
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
       this.logger.error('Error handling payment.paid event:', error);
+      throw error; // Re-throw to be caught by caller
+    } finally {
+      // Release the query runner
+      await queryRunner.release();
     }
   }
 
@@ -1015,6 +982,96 @@ export class WebhookController {
 
     await this.rentalRepository.update(savedRental.id, { total_amount: Number(total.toFixed(2)) });
     this.logger.log(`Saved equipment rental ${savedRental.id} with total ₱${total}`);
+  }
+
+  private async createReservationFromPaymentWithTransaction(
+    queryRunner: any,
+    payment: any,
+    bookingData: any
+  ): Promise<Reservation[]> {
+    const createdReservations: Reservation[] = [];
+    try {
+      // Create reservations from booking data in payment metadata
+      for (const courtBooking of bookingData.courtBookings || []) {
+        // Map court name to Court_ID
+        const courts = await this.courtsService.findAll();
+        const court = courts.find(c => c.Court_Name === courtBooking.court);
+        if (!court) {
+          this.logger.error(`Court "${courtBooking.court}" not found for reservation.`);
+          continue;
+        }
+
+        const [startTime, endTime] = this.parseScheduleToTimes(courtBooking.schedule);
+
+        // Parse and normalize the date to ensure consistent format
+        const reservationDate = new Date(bookingData.selectedDate);
+        reservationDate.setHours(0, 0, 0, 0);
+        
+        this.logger.log(`   📅 Creating reservation for date: ${reservationDate.toISOString().split('T')[0]}`);
+        this.logger.log(`   ⏰ Time: ${startTime} - ${endTime}`);
+        this.logger.log(`   🏸 Court: ${court.Court_Name} (ID: ${court.Court_Id})`);
+        this.logger.log(`   👤 User ID: ${bookingData.userId}`);
+        
+        // Check for duplicate reservation using transaction manager with lock
+        const existingReservation = await queryRunner.manager.findOne(Reservation, {
+          where: {
+            User_ID: bookingData.userId,
+            Court_ID: court.Court_Id,
+            Reservation_Date: reservationDate,
+            Start_Time: startTime,
+            End_Time: endTime,
+            Paymongo_Reference_Number: payment.id,
+            Status: ReservationStatus.CONFIRMED,
+          },
+          lock: { mode: 'pessimistic_write' },
+        });
+        
+        if (existingReservation) {
+          this.logger.warn(`⚠️ Duplicate reservation detected - skipping creation. Existing Reservation ID: ${existingReservation.Reservation_ID}`);
+          createdReservations.push(existingReservation);
+          continue;
+        }
+        
+        // Calculate the individual court price for this reservation
+        // Priority: 1. courtBooking.subtotal (from frontend), 2. court.Price (from database), 3. fallback to payment amount divided by number of courts
+        let individualPrice = 0;
+        if (courtBooking.subtotal && Number(courtBooking.subtotal) > 0) {
+          individualPrice = Number(courtBooking.subtotal);
+          this.logger.log(`   💰 Using courtBooking.subtotal: ${individualPrice}`);
+        } else if (court.Price && Number(court.Price) > 0) {
+          individualPrice = Number(court.Price);
+          this.logger.log(`   💰 Using court.Price: ${individualPrice}`);
+        } else {
+          // Last resort: divide total payment by number of court bookings (not ideal but better than total)
+          const totalCourtBookings = bookingData.courtBookings?.length || 1;
+          individualPrice = (payment.attributes.amount / 100) / totalCourtBookings;
+          this.logger.warn(`   ⚠️ No subtotal or court price found, dividing payment amount ${payment.attributes.amount / 100} by ${totalCourtBookings} courts: ${individualPrice}`);
+        }
+        
+        const reservation = queryRunner.manager.create(Reservation, {
+          User_ID: bookingData.userId,
+          Court_ID: court.Court_Id,
+          Reservation_Date: reservationDate,
+          Start_Time: startTime,
+          End_Time: endTime,
+          Total_Amount: individualPrice, // Use the calculated individual price per court
+          Reference_Number: bookingData.referenceNumber || `REF${Date.now()}`,
+          Paymongo_Reference_Number: payment.id,
+          Notes: `Payment via Paymongo - ${payment.id}`,
+          Status: ReservationStatus.CONFIRMED,
+          Is_Admin_Created: false, // Important: Set to false so it appears in "My Reservations"
+        });
+
+        const savedReservation = await queryRunner.manager.save(Reservation, reservation);
+        createdReservations.push(savedReservation);
+        this.logger.log(`✅ Created reservation ${savedReservation.Reservation_ID}`);
+        this.logger.log(`   📋 Details: Date=${savedReservation.Reservation_Date}, Status=${savedReservation.Status}, Is_Admin_Created=${savedReservation.Is_Admin_Created}`);
+      }
+    } catch (error) {
+      this.logger.error('Error creating reservation from payment:', error);
+      throw error;
+    }
+    return createdReservations;
   }
 
   private async createReservationFromPayment(payment: any, bookingData: any): Promise<Reservation[]> {
