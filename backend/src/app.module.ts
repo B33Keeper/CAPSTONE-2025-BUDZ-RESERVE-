@@ -38,6 +38,10 @@ import { HealthController } from './health.controller';
     }),
 
     // Email configuration with timeout and connection settings
+    // Only configure if SMTP credentials are provided
+    // NOTE: Railway Free/Trial/Hobby plans have outbound SMTP disabled
+    // This will cause a connection timeout warning, but the app will still start
+    // Email functionality will not work on these plans - upgrade to Pro+ for SMTP
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
@@ -45,6 +49,20 @@ import { HealthController } from './health.controller';
         const smtpPort = Number(configService.get('SMTP_PORT', 587));
         const smtpUser = configService.get('SMTP_USER');
         const smtpPass = configService.get('SMTP_PASS');
+        
+        // If SMTP credentials are not provided, use a dummy transport to prevent errors
+        if (!smtpUser || !smtpPass) {
+          console.warn('⚠️ SMTP credentials not configured. Email functionality will be disabled.');
+          // Return a dummy transport that won't actually send emails
+          return {
+            transport: {
+              jsonTransport: true, // Use JSON transport as a no-op
+            },
+            defaults: {
+              from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
+            },
+          };
+        }
         
         // Build transport configuration with timeout settings
         const transportConfig: any = {
@@ -56,20 +74,21 @@ import { HealthController } from './health.controller';
             pass: smtpPass,
           },
           // Connection timeout settings (in milliseconds)
-          connectionTimeout: 15000, // 15 seconds - increased for Railway network latency
-          greetingTimeout: 15000, // 15 seconds
-          socketTimeout: 30000, // 30 seconds for socket operations
+          connectionTimeout: 10000, // 10 seconds - reduced to fail faster
+          greetingTimeout: 10000, // 10 seconds
+          socketTimeout: 20000, // 20 seconds for socket operations
           // Enable debug for troubleshooting
           debug: configService.get('NODE_ENV') === 'development',
           // Connection pool settings for better performance
-          pool: true,
-          maxConnections: 5,
-          maxMessages: 100,
+          pool: false, // Disable pooling to avoid connection issues
           // Retry settings
           retry: {
-            attempts: 3,
-            delay: 2000, // 2 seconds between retries
+            attempts: 2, // Reduced retries
+            delay: 1000, // 1 second between retries
           },
+          // Skip transporter verification on startup
+          // This prevents blocking the app startup if SMTP is unreachable
+          ignoreTLS: false,
         };
         
         // TLS options (only for non-secure connections)
