@@ -439,13 +439,13 @@ export class WebhookController {
         : await this.payMongoService.getPayment(paymentData.id);
       
       const amount = (payment.attributes.amount / 100).toFixed(2);
-      const paymentMethod = payment.attributes.source?.type || 'Unknown';
+      const paymentMethodType = payment.attributes.source?.type || 'Unknown';
       const status = payment.attributes.status;
       console.log(`💰 Amount: ₱${amount}`);
-      console.log(`💳 Payment Method: ${paymentMethod}`);
+      console.log(`💳 Payment Method: ${paymentMethodType}`);
       console.log(`📊 Status: ${status}`);
       this.logger.log(`💰 Amount: ₱${amount}`);
-      this.logger.log(`💳 Payment Method: ${paymentMethod}`);
+      this.logger.log(`💳 Payment Method: ${paymentMethodType}`);
       this.logger.log(`📊 Status: ${status}`);
       
       // CRITICAL: Idempotency check - prevent duplicate processing if webhook is called multiple times
