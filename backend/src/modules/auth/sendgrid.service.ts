@@ -3,7 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { compile } from 'handlebars';
-import * as sgMail from '@sendgrid/mail';
+
+// Use require for SendGrid to ensure proper module resolution
+let sgMail: any;
+try {
+  sgMail = require('@sendgrid/mail');
+} catch (error) {
+  // Will be handled in constructor
+}
 
 @Injectable()
 export class SendGridService {
@@ -12,12 +19,27 @@ export class SendGridService {
 
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get('SENDGRID_API_KEY');
-    if (apiKey) {
-      sgMail.setApiKey(apiKey);
-      this.isInitialized = true;
-      this.logger.log('✅ SendGrid API initialized');
+    if (apiKey && sgMail) {
+      try {
+        // Handle different module export styles
+        const mailModule = sgMail.default || sgMail;
+        if (mailModule && typeof mailModule.setApiKey === 'function') {
+          mailModule.setApiKey(apiKey);
+          this.isInitialized = true;
+          this.logger.log('✅ SendGrid API initialized');
+        } else {
+          this.logger.error('❌ SendGrid setApiKey method not found');
+        }
+      } catch (error) {
+        this.logger.error('❌ Failed to initialize SendGrid:', error);
+      }
     } else {
-      this.logger.warn('⚠️ SENDGRID_API_KEY not configured');
+      if (!apiKey) {
+        this.logger.warn('⚠️ SENDGRID_API_KEY not configured');
+      }
+      if (!sgMail) {
+        this.logger.warn('⚠️ @sendgrid/mail package not found');
+      }
     }
   }
 
@@ -53,7 +75,14 @@ export class SendGridService {
         html,
       };
 
-      await sgMail.send(msg);
+      // Get the mail module (handle different export styles)
+      const mailModule = sgMail.default || sgMail;
+      
+      if (!mailModule || typeof mailModule.send !== 'function') {
+        throw new Error('SendGrid send method not available');
+      }
+      
+      await mailModule.send(msg);
       this.logger.log(`✅ OTP email sent successfully to: ${to}`);
       return true;
     } catch (error: any) {
