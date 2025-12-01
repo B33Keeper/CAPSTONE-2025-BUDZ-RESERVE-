@@ -653,6 +653,63 @@ export class WebhookController {
         return; // Exit early - reservations already exist for this payment
       }
       
+      // Additional check: If booking data is available, check for exact duplicate reservations
+      // This catches duplicates even if Paymongo_Reference_Number isn't set yet
+      const bookingDataRawForDupCheck = payment.attributes?.metadata?.bookingData || (bookingDataOverride ? JSON.stringify(bookingDataOverride) : undefined);
+      if (bookingDataRawForDupCheck) {
+        try {
+          const bookingData = typeof bookingDataRawForDupCheck === 'string' ? JSON.parse(bookingDataRawForDupCheck) : bookingDataRawForDupCheck;
+          
+          // Check each court booking to see if it already exists
+          let duplicateFound = false;
+          for (const courtBooking of bookingData.courtBookings || []) {
+            const courts = await this.courtsService.findAll();
+            const court = courts.find(c => c.Court_Name === courtBooking.court);
+            if (!court) continue;
+            
+            const [startTime, endTime] = this.parseScheduleToTimes(courtBooking.schedule);
+            const reservationDate = new Date(bookingData.selectedDate);
+            reservationDate.setHours(0, 0, 0, 0);
+            
+            // Check for existing reservation with exact same details
+            const exactDuplicate = await this.reservationRepository.findOne({
+              where: {
+                User_ID: bookingData.userId,
+                Court_ID: court.Court_Id,
+                Reservation_Date: reservationDate,
+                Start_Time: startTime,
+                End_Time: endTime,
+                Status: ReservationStatus.CONFIRMED,
+                // Also check if it has the same PayMongo reference OR was created very recently (within last 5 seconds)
+                // This catches race conditions where webhook is called twice
+              },
+            });
+            
+            if (exactDuplicate) {
+              // Check if this reservation was created very recently (within last 10 seconds)
+              // This indicates it might be from a duplicate webhook call
+              const createdDate = exactDuplicate.Created_at || exactDuplicate.Updated_at || new Date();
+              const reservationAge = Date.now() - new Date(createdDate).getTime();
+              if (reservationAge < 10000) { // 10 seconds
+                const dupMsg = `✅ Duplicate webhook detected: Reservation ${exactDuplicate.Reservation_ID} with exact same details was created ${(reservationAge / 1000).toFixed(1)}s ago. This is likely a duplicate webhook call. Skipping.`;
+                console.log(dupMsg);
+                this.logger.log(dupMsg);
+                duplicateFound = true;
+                break;
+              }
+            }
+          }
+          
+          if (duplicateFound) {
+            return; // Exit early - duplicate found
+          }
+        } catch (e) {
+          // If we can't parse booking data, continue with normal flow
+          console.warn('⚠️ Could not check for duplicate reservations by booking details:', e.message);
+          this.logger.warn('⚠️ Could not check for duplicate reservations by booking details:', e.message);
+        }
+      }
+      
       // Create reservation FIRST if booking data is in metadata or provided by caller (checkout session)
       let reservationId = 0;
       let createdReservations: Reservation[] = [];
