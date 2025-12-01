@@ -625,6 +625,8 @@ export class WebhookController {
       
       // CRITICAL: Idempotency check - prevent duplicate processing if webhook is called multiple times
       const transactionId = payment.id; // PayMongo payment ID is the transaction ID
+      
+      // First check if payment already exists
       const existingPayment = await this.paymentRepository.findOne({
         where: { transaction_id: transactionId },
       });
@@ -636,6 +638,19 @@ export class WebhookController {
         console.log(dupMsg);
         this.logger.log(dupMsg);
         return; // Exit early - payment already processed
+      }
+      
+      // Also check if reservations with this PayMongo reference already exist
+      // This prevents duplicates even if payment record doesn't exist yet (race condition)
+      const existingReservations = await this.reservationRepository.find({
+        where: { Paymongo_Reference_Number: transactionId },
+      });
+      
+      if (existingReservations && existingReservations.length > 0) {
+        const dupMsg = `✅ Duplicate webhook detected: Reservations with PayMongo reference ${transactionId} already exist (${existingReservations.length} reservation(s)). Skipping duplicate processing. Reservation IDs: ${existingReservations.map(r => r.Reservation_ID).join(', ')}`;
+        console.log(dupMsg);
+        this.logger.log(dupMsg);
+        return; // Exit early - reservations already exist for this payment
       }
       
       // Create reservation FIRST if booking data is in metadata or provided by caller (checkout session)
