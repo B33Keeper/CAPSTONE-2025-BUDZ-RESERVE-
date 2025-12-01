@@ -67,6 +67,9 @@ export class SendGridService {
       });
 
       const fromEmail = this.configService.get('SMTP_FROM', 'noreply@sendgrid.net');
+      
+      // Log the from email being used (important for debugging sender verification)
+      this.logger.log(`📧 Sending email from: ${fromEmail} to: ${to}`);
 
       const msg = {
         to,
@@ -88,11 +91,23 @@ export class SendGridService {
         
         // Handle response (result is [response, body] array)
         const response = Array.isArray(result) ? result[0] : result;
+        const body = Array.isArray(result) ? result[1] : undefined;
         
-        // Log success
+        // Log success with detailed information
         this.logger.log(`✅ OTP email sent successfully to: ${to}`);
         if (response?.statusCode) {
           this.logger.log(`SendGrid response status: ${response.statusCode}`);
+        }
+        if (body) {
+          this.logger.log(`SendGrid response body: ${JSON.stringify(body)}`);
+        }
+        
+        // Check if status is 202 (Accepted) - this means SendGrid accepted it
+        // But if sender isn't verified, SendGrid may accept but not deliver
+        if (response?.statusCode === 202) {
+          this.logger.log(`✅ Email accepted by SendGrid (status 202)`);
+          this.logger.warn(`⚠️  IMPORTANT: Make sure "${fromEmail}" is verified in SendGrid Sender Authentication!`);
+          this.logger.warn(`   If emails aren't arriving, check: 1) Spam folder, 2) Sender verification in SendGrid`);
         }
         
         return true;
