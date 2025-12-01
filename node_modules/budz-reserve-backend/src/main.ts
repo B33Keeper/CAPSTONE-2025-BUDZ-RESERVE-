@@ -160,35 +160,12 @@ async function bootstrap() {
           // Capture raw body for webhook signature verification
           if (req.originalUrl.startsWith(webhookPath) || req.path.includes('/webhook/')) {
             req.rawBody = Buffer.from(buf);
-            console.log(`📦 [WEBHOOK] Raw body captured: ${buf.length} bytes`);
           }
         },
       }),
     );
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-    // CRITICAL: Add comprehensive logging middleware AFTER body parsing but BEFORE ValidationPipe
-    // This catches ALL requests to webhook endpoints, even if they fail validation
-    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      const isWebhookPath = req.originalUrl.includes('/webhook/') || req.path.includes('/webhook/');
-      if (isWebhookPath) {
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('🔍 [WEBHOOK REQUEST DETECTED IN MIDDLEWARE]');
-        console.log(`   ⏰ Timestamp: ${new Date().toISOString()}`);
-        console.log(`   📋 Method: ${req.method}`);
-        console.log(`   📍 Path: ${req.path}`);
-        console.log(`   🔗 Original URL: ${req.originalUrl}`);
-        console.log(`   🌐 Host: ${req.get('host') || req.headers.host || 'unknown'}`);
-        console.log(`   📦 Has Body: ${!!req.body}`);
-        console.log(`   📦 Body Keys: ${req.body ? Object.keys(req.body).join(', ') : 'none'}`);
-        console.log(`   📄 Content-Type: ${req.get('content-type') || 'not set'}`);
-        console.log(`   🔑 Paymongo-Signature: ${req.get('paymongo-signature') ? 'present' : 'missing'}`);
-        console.log(`   📊 Content-Length: ${req.get('content-length') || 'not set'}`);
-        console.log(`   👤 User-Agent: ${req.get('user-agent') || 'not set'}`);
-        console.log('═══════════════════════════════════════════════════════════');
-      }
-      next();
-    });
 
     // Global validation pipe - webhook controller uses custom pipe to bypass this
     app.useGlobalPipes(new ValidationPipe({

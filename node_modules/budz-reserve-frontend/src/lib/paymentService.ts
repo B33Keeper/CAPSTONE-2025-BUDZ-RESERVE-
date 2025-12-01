@@ -284,35 +284,4 @@ export class PaymentService {
       };
     }
   }
-
-  // Test Webhook - Simulates a webhook call to test the connection
-  static async testWebhook(testData: {
-    userId?: number;
-    selectedDate?: string;
-    courtBookings?: Array<{ court: string; schedule: string; subtotal: number }>;
-    equipmentBookings?: Array<any>;
-    referenceNumber?: string;
-    amount?: number;
-  }): Promise<{ success: boolean; message?: string; data?: any }> {
-    try {
-      console.log('🧪 Testing webhook connection with data:', testData);
-      const response = await fetch(`${API_BASE_URL}/webhook/paymongo/test`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testData),
-      });
-
-      const data = await response.json();
-      console.log('🧪 Test webhook response:', data);
-      return data;
-    } catch (error) {
-      console.error('Test webhook error:', error);
-      return {
-        success: false,
-        message: `Failed to test webhook: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
-    }
-  }
 }
