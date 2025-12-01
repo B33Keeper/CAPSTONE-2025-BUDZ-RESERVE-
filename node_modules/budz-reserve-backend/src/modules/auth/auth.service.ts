@@ -100,6 +100,35 @@ export class AuthService {
       throw new NotFoundException('User with this email does not exist');
     }
 
+    // Check if SMTP is configured
+    const smtpUser = this.configService.get('SMTP_USER');
+    const smtpPass = this.configService.get('SMTP_PASS');
+    const isDevelopment = this.configService.get('NODE_ENV') === 'development';
+    
+    if (!smtpUser || !smtpPass) {
+      console.error('❌ SMTP credentials not configured. Cannot send email.');
+      if (isDevelopment) {
+        // In development, generate OTP and return it in response
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        this.otpStore.set(email, { otp, expiresAt });
+        
+        console.log('=== DEVELOPMENT MODE - SMTP NOT CONFIGURED ===');
+        console.log('Email:', email);
+        console.log('OTP Code:', otp);
+        console.log('Expires at:', expiresAt);
+        console.log('==============================================');
+        
+        return { 
+          message: 'SMTP not configured. OTP generated for development: ' + otp,
+          otp: otp, // Include OTP in response for development
+          development: true
+        };
+      } else {
+        throw new BadRequestException('Email service is not configured. Please contact support.');
+      }
+    }
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
@@ -122,17 +151,31 @@ export class AuthService {
       console.log('✅ Email sent successfully to:', email);
       return { message: 'OTP sent to your email address' };
     } catch (error) {
-      // Log error for debugging
+      // Log detailed error for debugging
       console.error('❌ Email sending failed:', error);
-      console.log('=== DEVELOPMENT FALLBACK ===');
-      console.log('Email:', email);
-      console.log('User:', user.name || user.username);
-      console.log('OTP Code:', otp);
-      console.log('Expires at:', expiresAt);
-      console.log('=============================');
+      console.error('Error details:', JSON.stringify(error, null, 2));
       
-      // Return success even if email fails (for development)
-      return { message: 'OTP generated successfully. Check console for OTP: ' + otp };
+      // In development, return OTP in response if email fails
+      if (isDevelopment) {
+        console.log('=== DEVELOPMENT FALLBACK - EMAIL FAILED ===');
+        console.log('Email:', email);
+        console.log('User:', user.name || user.username);
+        console.log('OTP Code:', otp);
+        console.log('Expires at:', expiresAt);
+        console.log('===========================================');
+        
+        return { 
+          message: 'Email sending failed. OTP generated for development: ' + otp,
+          otp: otp, // Include OTP in response for development
+          development: true,
+          error: error.message || 'Email service error'
+        };
+      } else {
+        // In production, throw error
+        throw new BadRequestException(
+          'Failed to send OTP email. Please try again later or contact support.'
+        );
+      }
     }
   }
 
