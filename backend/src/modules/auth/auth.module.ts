@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { SendGridService } from './sendgrid.service';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { LocalStrategy } from './strategies/local.strategy';
     AuthService, 
     JwtStrategy, 
     LocalStrategy,
+    SendGridService,
   ],
   exports: [AuthService],
 })

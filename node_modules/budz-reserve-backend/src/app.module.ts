@@ -146,6 +146,8 @@ import { HealthController } from './health.controller';
           host: smtpHost,
           port: smtpPort,
           secure: smtpPort === 465, // true for 465, false for other ports
+          // For SendGrid, use TLS even on port 587
+          requireTLS: smtpPort === 587,
           auth: {
             user: smtpUser,
             pass: smtpPass,
@@ -160,8 +162,6 @@ import { HealthController } from './health.controller';
           pool: false, // Disable pooling to avoid connection issues
           // Disable retries to fail fast
           retry: false,
-          // Don't require TLS initially
-          requireTLS: false,
           // Skip TLS verification if needed
           ignoreTLS: false,
         };

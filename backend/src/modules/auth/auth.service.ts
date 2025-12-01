@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MailerService } from '@nestjs-modules/mailer';
 import { UsersService } from '../users/users.service';
+import { SendGridService } from './sendgrid.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -16,6 +17,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private mailerService: MailerService,
+    private sendGridService: SendGridService,
   ) {}
 
   async validateUser(username: string, password: string): Promise<any> {
@@ -107,8 +109,22 @@ export class AuthService {
     // Store OTP
     this.otpStore.set(email, { otp, expiresAt });
 
-    // Send OTP via email
+    // Send OTP via email using SendGrid API (works on Railway Hobby plan)
     try {
+      const sendGridApiKey = this.configService.get('SENDGRID_API_KEY');
+      
+      // Use SendGrid API if configured (works on Railway Hobby)
+      if (sendGridApiKey) {
+        await this.sendGridService.sendOtpEmail(
+          email,
+          otp,
+          user.name || user.username,
+        );
+        console.log('✅ Email sent successfully via SendGrid API to:', email);
+        return { message: 'OTP sent to your email address' };
+      }
+      
+      // Fallback to SMTP (won't work on Railway Hobby, but kept for other hosts)
       await this.mailerService.sendMail({
         to: email,
         subject: 'Password Reset OTP - Budz Badminton',
@@ -119,7 +135,7 @@ export class AuthService {
         },
       });
 
-      console.log('✅ Email sent successfully to:', email);
+      console.log('✅ Email sent successfully via SMTP to:', email);
       return { message: 'OTP sent to your email address' };
     } catch (error: any) {
       // Log detailed error for debugging
