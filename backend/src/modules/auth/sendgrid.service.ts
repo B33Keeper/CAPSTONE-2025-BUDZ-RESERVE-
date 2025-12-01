@@ -67,20 +67,44 @@ export class SendGridService {
       });
 
       const fromEmail = this.configService.get('SMTP_FROM', 'noreply@sendgrid.net');
+      const fromName = this.configService.get('SMTP_FROM_NAME', 'Budz Badminton');
+      const appUrl = this.configService.get('FRONTEND_URL', 'https://client-production-3363.up.railway.app/');
       
       // Log the from email being used (important for debugging sender verification)
-      this.logger.log(`📧 Sending email from: ${fromEmail} to: ${to}`);
+      this.logger.log(`📧 Sending email from: ${fromName} <${fromEmail}> to: ${to}`);
       this.logger.log(`📧 Email configuration check: FROM="${fromEmail}" must match verified sender in SendGrid`);
 
-      // Create email message with reply-to matching from (best practice)
+      // Create email message with best practices for deliverability
       const msg = {
         to,
-        from: fromEmail,
-        replyTo: fromEmail, // Set reply-to to match from address
+        from: {
+          email: fromEmail,
+          name: fromName, // Proper from name improves deliverability
+        },
+        replyTo: {
+          email: fromEmail,
+          name: fromName,
+        },
         subject: 'Password Reset OTP - Budz Badminton',
         html,
         // Add text version for better deliverability
         text: `Hello ${name || 'User'},\n\nYou have requested to reset your password for your Budz Badminton account.\n\nYour OTP Code is: ${otp}\n\nThis OTP will expire in 15 minutes.\n\nIf you didn't request this password reset, please ignore this email.\n\n© 2024 Budz Badminton. All rights reserved.`,
+        // Add headers to improve deliverability
+        headers: {
+          'List-Unsubscribe': `<${appUrl}/unsubscribe>`, // Helps with spam filtering
+          'X-Entity-Ref-ID': `otp-${Date.now()}`, // Unique identifier for tracking
+        },
+        // Add categories for SendGrid tracking (helps with reputation)
+        categories: ['password-reset', 'otp'],
+        // Mail settings for better deliverability
+        mailSettings: {
+          clickTracking: {
+            enable: false, // Disable click tracking for OTP emails (security)
+          },
+          openTracking: {
+            enable: false, // Disable open tracking for OTP emails (privacy)
+          },
+        },
       };
 
       // Get the mail module (handle different export styles)
@@ -169,19 +193,48 @@ export class SendGridService {
       const html = template(context);
 
       const fromEmail = this.configService.get('SMTP_FROM', 'noreply@sendgrid.net');
+      const fromName = this.configService.get('SMTP_FROM_NAME', 'Budz Badminton');
+      const appUrl = this.configService.get('FRONTEND_URL', 'https://client-production-3363.up.railway.app/');
       
       // Log the from email being used
-      this.logger.log(`📧 Sending email from: ${fromEmail} to: ${to}`);
+      this.logger.log(`📧 Sending email from: ${fromName} <${fromEmail}> to: ${to}`);
       this.logger.log(`📧 Template: ${templateName}, Subject: ${subject}`);
 
-      // Create email message with reply-to matching from (best practice)
-      const msg = {
+      // Create email message with best practices for deliverability
+      const msg: any = {
         to,
-        from: fromEmail,
-        replyTo: fromEmail,
+        from: {
+          email: fromEmail,
+          name: fromName, // Proper from name improves deliverability
+        },
+        replyTo: {
+          email: fromEmail,
+          name: fromName,
+        },
         subject,
         html,
+        // Add headers to improve deliverability
+        headers: {
+          'List-Unsubscribe': `<${appUrl}/unsubscribe>`, // Helps with spam filtering
+          'X-Entity-Ref-ID': `${templateName}-${Date.now()}`, // Unique identifier for tracking
+        },
+        // Add categories for SendGrid tracking (helps with reputation)
+        categories: [templateName.replace('-', '_')],
+        // Mail settings for better deliverability
+        mailSettings: {
+          clickTracking: {
+            enable: true, // Enable for receipts (helps track engagement)
+          },
+          openTracking: {
+            enable: true, // Enable for receipts (helps track engagement)
+          },
+        },
       };
+
+      // Add text version if available in context (for better deliverability)
+      if (context.textVersion) {
+        msg.text = context.textVersion;
+      }
 
       // Get the mail module (handle different export styles)
       const mailModule = sgMail.default || sgMail;
