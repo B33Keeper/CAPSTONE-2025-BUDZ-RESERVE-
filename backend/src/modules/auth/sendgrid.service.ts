@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sgMail from '@sendgrid/mail';
 import * as fs from 'fs';
 import * as path from 'path';
 import { compile } from 'handlebars';
+import * as sgMail from '@sendgrid/mail';
 
 @Injectable()
 export class SendGridService {
