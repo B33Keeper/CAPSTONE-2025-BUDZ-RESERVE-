@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MailerService } from '@nestjs-modules/mailer';
+import { SendGridService } from '../auth/sendgrid.service';
 
 interface PaymentReceiptData {
   paymentId: string;
@@ -50,6 +51,7 @@ export class EmailReceiptService {
   constructor(
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
+    private readonly sendGridService: SendGridService,
   ) {}
 
   async sendPaymentReceipt(paymentData: PaymentReceiptData): Promise<boolean> {
@@ -121,16 +123,36 @@ export class EmailReceiptService {
         supportEmail: this.configService.get('SUPPORT_EMAIL', 'support@budzreserve.com')
       };
 
-      // Send email
-      await this.mailerService.sendMail({
-        to: customerEmail,
-        subject: `Payment Receipt - ${emailData.referenceNumber}`,
-        template: 'payment-receipt',
-        context: emailData,
-      });
+      // Send email via SendGrid API (works on Railway Hobby plan)
+      try {
+        const sendGridApiKey = this.configService.get('SENDGRID_API_KEY');
+        
+        // Use SendGrid API if configured (works on Railway Hobby)
+        if (sendGridApiKey) {
+          await this.sendGridService.sendEmail(
+            customerEmail,
+            `Payment Receipt - ${emailData.referenceNumber}`,
+            'payment-receipt',
+            emailData,
+          );
+          this.logger.log(`Payment receipt sent successfully via SendGrid to ${customerEmail} for payment ${paymentId}`);
+          return true;
+        }
+        
+        // Fallback to SMTP (won't work on Railway Hobby, but kept for other hosts)
+        await this.mailerService.sendMail({
+          to: customerEmail,
+          subject: `Payment Receipt - ${emailData.referenceNumber}`,
+          template: 'payment-receipt',
+          context: emailData,
+        });
 
-      this.logger.log(`Payment receipt sent successfully to ${customerEmail} for payment ${paymentId}`);
-      return true;
+        this.logger.log(`Payment receipt sent successfully via SMTP to ${customerEmail} for payment ${paymentId}`);
+        return true;
+      } catch (emailError: any) {
+        this.logger.error(`Failed to send payment receipt: ${emailError.message}`, emailError.stack);
+        throw emailError;
+      }
 
     } catch (error) {
       this.logger.error(`Failed to send payment receipt for payment ${paymentData.paymentId}:`, error);
@@ -189,15 +211,36 @@ export class EmailReceiptService {
         supportEmail: this.configService.get('SUPPORT_EMAIL', 'support@budzreserve.com')
       };
 
-      await this.mailerService.sendMail({
-        to: customerEmail,
-        subject: `Payment Confirmation - ${emailData.referenceNumber}`,
-        template: 'payment-confirmation',
-        context: emailData,
-      });
+      // Send email via SendGrid API (works on Railway Hobby plan)
+      try {
+        const sendGridApiKey = this.configService.get('SENDGRID_API_KEY');
+        
+        // Use SendGrid API if configured (works on Railway Hobby)
+        if (sendGridApiKey) {
+          await this.sendGridService.sendEmail(
+            customerEmail,
+            `Payment Confirmation - ${emailData.referenceNumber}`,
+            'payment-confirmation',
+            emailData,
+          );
+          this.logger.log(`Payment confirmation sent successfully via SendGrid to ${customerEmail} for payment ${paymentId}`);
+          return true;
+        }
+        
+        // Fallback to SMTP (won't work on Railway Hobby, but kept for other hosts)
+        await this.mailerService.sendMail({
+          to: customerEmail,
+          subject: `Payment Confirmation - ${emailData.referenceNumber}`,
+          template: 'payment-confirmation',
+          context: emailData,
+        });
 
-      this.logger.log(`Payment confirmation sent successfully to ${customerEmail} for payment ${paymentId}`);
-      return true;
+        this.logger.log(`Payment confirmation sent successfully via SMTP to ${customerEmail} for payment ${paymentId}`);
+        return true;
+      } catch (emailError: any) {
+        this.logger.error(`Failed to send payment confirmation: ${emailError.message}`, emailError.stack);
+        throw emailError;
+      }
 
     } catch (error) {
       this.logger.error(`Failed to send payment confirmation for payment ${paymentData.paymentId}:`, error);
@@ -224,15 +267,36 @@ export class EmailReceiptService {
         supportEmail: this.configService.get('SUPPORT_EMAIL', 'support@budzreserve.com'),
       };
 
-      await this.mailerService.sendMail({
-        to: data.customerEmail,
-        subject: `Equipment Return Reminder - ${data.equipmentName}`,
-        template: 'equipment-return-reminder',
-        context: emailData,
-      });
+      // Send email via SendGrid API (works on Railway Hobby plan)
+      try {
+        const sendGridApiKey = this.configService.get('SENDGRID_API_KEY');
+        
+        // Use SendGrid API if configured (works on Railway Hobby)
+        if (sendGridApiKey) {
+          await this.sendGridService.sendEmail(
+            data.customerEmail,
+            `Equipment Return Reminder - ${data.equipmentName}`,
+            'equipment-return-reminder',
+            emailData,
+          );
+          this.logger.log(`Equipment return reminder sent successfully via SendGrid to ${data.customerEmail}`);
+          return true;
+        }
+        
+        // Fallback to SMTP (won't work on Railway Hobby, but kept for other hosts)
+        await this.mailerService.sendMail({
+          to: data.customerEmail,
+          subject: `Equipment Return Reminder - ${data.equipmentName}`,
+          template: 'equipment-return-reminder',
+          context: emailData,
+        });
 
-      this.logger.log(`Equipment return reminder sent successfully to ${data.customerEmail}`);
-      return true;
+        this.logger.log(`Equipment return reminder sent successfully via SMTP to ${data.customerEmail}`);
+        return true;
+      } catch (emailError: any) {
+        this.logger.error(`Failed to send equipment return reminder: ${emailError.message}`, emailError.stack);
+        throw emailError;
+      }
     } catch (error) {
       this.logger.error(`Failed to send equipment return reminder:`, error);
       return false;

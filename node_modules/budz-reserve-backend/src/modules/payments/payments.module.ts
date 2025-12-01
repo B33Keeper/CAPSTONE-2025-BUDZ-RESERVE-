@@ -19,6 +19,7 @@ import { ReservationsModule } from '../reservations/reservations.module';
 import { CourtsModule } from '../courts/courts.module';
 import { EquipmentModule } from '../equipment/equipment.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     EquipmentModule,
     NotificationsModule,
     MailerModule,
+    AuthModule, // Import AuthModule to access SendGridService
   ],
   controllers: [PaymentsController, PaymentController, WebhookController],
   providers: [PaymentsService, PayMongoService, EmailReceiptService, EquipmentRentalSchedulerService],

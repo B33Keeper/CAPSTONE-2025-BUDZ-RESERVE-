@@ -134,5 +134,94 @@ export class SendGridService {
       throw new Error(`SendGrid error: ${errorMessage}`);
     }
   }
+
+  /**
+   * Generic method to send emails using any Handlebars template
+   * @param to - Recipient email address
+   * @param subject - Email subject
+   * @param templateName - Name of the template file (without .hbs extension)
+   * @param context - Template context data
+   * @returns Promise<boolean>
+   */
+  async sendEmail(
+    to: string,
+    subject: string,
+    templateName: string,
+    context: any,
+  ): Promise<boolean> {
+    if (!this.isInitialized) {
+      throw new Error('SendGrid API key not configured');
+    }
+
+    try {
+      // Read and compile the template
+      const templatePath = path.join(
+        process.cwd(),
+        'src',
+        'templates',
+        `${templateName}.hbs`,
+      );
+      
+      const templateContent = fs.readFileSync(templatePath, 'utf-8');
+      const template = compile(templateContent);
+      
+      // Render the template
+      const html = template(context);
+
+      const fromEmail = this.configService.get('SMTP_FROM', 'noreply@sendgrid.net');
+      
+      // Log the from email being used
+      this.logger.log(`📧 Sending email from: ${fromEmail} to: ${to}`);
+      this.logger.log(`📧 Template: ${templateName}, Subject: ${subject}`);
+
+      // Create email message with reply-to matching from (best practice)
+      const msg = {
+        to,
+        from: fromEmail,
+        replyTo: fromEmail,
+        subject,
+        html,
+      };
+
+      // Get the mail module (handle different export styles)
+      const mailModule = sgMail.default || sgMail;
+      
+      if (!mailModule || typeof mailModule.send !== 'function') {
+        throw new Error('SendGrid send method not available');
+      }
+      
+      // Send email - SendGrid send() returns [response, body] or throws error
+      try {
+        const result = await mailModule.send(msg);
+        
+        // Handle response (result is [response, body] array)
+        const response = Array.isArray(result) ? result[0] : result;
+        const body = Array.isArray(result) ? result[1] : undefined;
+        
+        // Log success
+        this.logger.log(`✅ Email sent successfully to: ${to}`);
+        if (response?.statusCode) {
+          this.logger.log(`SendGrid response status: ${response.statusCode}`);
+        }
+        
+        return true;
+      } catch (sendError: any) {
+        // If send() throws, log and re-throw
+        this.logger.error('SendGrid send() threw error:', sendError);
+        throw sendError;
+      }
+    } catch (error: any) {
+      this.logger.error(`❌ Failed to send email to ${to}:`, error);
+      this.logger.error('Error message:', error?.message);
+      this.logger.error('Error code:', error?.code);
+      if (error.response) {
+        this.logger.error('SendGrid error details:', JSON.stringify(error.response.body, null, 2));
+        this.logger.error('SendGrid status code:', error.response.statusCode);
+      }
+      // Re-throw with more context
+      const errorMessage = error.response?.body?.errors?.[0]?.message || error.message || 'Failed to send email';
+      throw new Error(`SendGrid error: ${errorMessage}`);
+    }
+  }
 }
 

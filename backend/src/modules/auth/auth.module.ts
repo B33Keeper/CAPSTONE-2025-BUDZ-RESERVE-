@@ -33,6 +33,6 @@ import { SendGridService } from './sendgrid.service';
     LocalStrategy,
     SendGridService,
   ],
-  exports: [AuthService],
+  exports: [AuthService, SendGridService],
 })
 export class AuthModule {}
