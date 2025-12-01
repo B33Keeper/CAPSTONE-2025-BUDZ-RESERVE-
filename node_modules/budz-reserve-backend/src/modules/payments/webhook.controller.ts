@@ -626,6 +626,19 @@ export class WebhookController {
       // CRITICAL: Idempotency check - prevent duplicate processing if webhook is called multiple times
       const transactionId = payment.id; // PayMongo payment ID is the transaction ID
       
+      // Get booking data early for duplicate checking
+      const bookingDataRaw = payment.attributes?.metadata?.bookingData || (bookingDataOverride ? JSON.stringify(bookingDataOverride) : undefined);
+      let bookingReferenceNumber: string | null = null;
+      
+      if (bookingDataRaw) {
+        try {
+          const bookingData = typeof bookingDataRaw === 'string' ? JSON.parse(bookingDataRaw) : bookingDataRaw;
+          bookingReferenceNumber = bookingData.referenceNumber || null;
+        } catch (e) {
+          // Ignore parsing errors, will check later
+        }
+      }
+      
       // First check if payment already exists
       const existingPayment = await this.paymentRepository.findOne({
         where: { transaction_id: transactionId },
@@ -642,15 +655,30 @@ export class WebhookController {
       
       // Also check if reservations with this PayMongo reference already exist
       // This prevents duplicates even if payment record doesn't exist yet (race condition)
-      const existingReservations = await this.reservationRepository.find({
+      const existingReservationsByPaymongo = await this.reservationRepository.find({
         where: { Paymongo_Reference_Number: transactionId },
       });
       
-      if (existingReservations && existingReservations.length > 0) {
-        const dupMsg = `✅ Duplicate webhook detected: Reservations with PayMongo reference ${transactionId} already exist (${existingReservations.length} reservation(s)). Skipping duplicate processing. Reservation IDs: ${existingReservations.map(r => r.Reservation_ID).join(', ')}`;
+      if (existingReservationsByPaymongo && existingReservationsByPaymongo.length > 0) {
+        const dupMsg = `✅ Duplicate webhook detected: Reservations with PayMongo reference ${transactionId} already exist (${existingReservationsByPaymongo.length} reservation(s)). Skipping duplicate processing. Reservation IDs: ${existingReservationsByPaymongo.map(r => r.Reservation_ID).join(', ')}`;
         console.log(dupMsg);
         this.logger.log(dupMsg);
         return; // Exit early - reservations already exist for this payment
+      }
+      
+      // CRITICAL: Check for reservations with the same booking reference number
+      // This is the most reliable check since reference number is set before payment
+      if (bookingReferenceNumber) {
+        const existingReservationsByRef = await this.reservationRepository.find({
+          where: { Reference_Number: bookingReferenceNumber },
+        });
+        
+        if (existingReservationsByRef && existingReservationsByRef.length > 0) {
+          const dupMsg = `✅ Duplicate webhook detected: Reservations with booking reference number ${bookingReferenceNumber} already exist (${existingReservationsByRef.length} reservation(s)). This booking was already processed. Skipping duplicate processing. Reservation IDs: ${existingReservationsByRef.map(r => r.Reservation_ID).join(', ')}`;
+          console.log(dupMsg);
+          this.logger.log(dupMsg);
+          return; // Exit early - reservations already exist for this booking reference
+        }
       }
       
       // Additional check: If booking data is available, check for exact duplicate reservations
@@ -713,7 +741,7 @@ export class WebhookController {
       // Create reservation FIRST if booking data is in metadata or provided by caller (checkout session)
       let reservationId = 0;
       let createdReservations: Reservation[] = [];
-      const bookingDataRaw = payment.attributes?.metadata?.bookingData || (bookingDataOverride ? JSON.stringify(bookingDataOverride) : undefined);
+      // bookingDataRaw is already declared above for duplicate checking
       if (bookingDataRaw) {
         try {
           const bookingData = typeof bookingDataRaw === 'string' ? JSON.parse(bookingDataRaw) : bookingDataRaw;
