@@ -60,36 +60,47 @@ import { HealthController } from './health.controller';
         const templateDir = join(process.cwd(), 'src', 'templates');
         
         // Helper function to create dummy transport
-        // Create a mock transport that supports verify() method required by MailerModule
+        // Create a custom transport that supports verify() but never connects
         const createDummyTransport = () => {
           console.warn('⚠️ Using dummy email transport. Emails will not be sent.');
           
           const nodemailer = require('nodemailer');
           
-          // Create a simple mock transport object that implements required methods
-          const mockTransport = {
-            // verify() method required by MailerModule
-            verify: () => {
+          // Create a minimal transport object that implements required methods
+          // but never attempts any network connection
+          const dummyTransport = {
+            name: 'dummy',
+            version: '1.0.0',
+            // verify() method required by MailerModule - always succeeds
+            verify: (callback?: (err: any, success: boolean) => void) => {
               console.log('✅ [DUMMY] Transport verification skipped (dummy mode)');
+              if (callback) {
+                callback(null, true);
+              }
               return Promise.resolve(true);
             },
-            // sendMail() method for sending emails
+            // sendMail() method - just logs and returns success
             sendMail: async (mailOptions: any) => {
               console.log('📧 [DUMMY] Email would be sent:', {
                 to: mailOptions.to,
                 subject: mailOptions.subject,
               });
-              return { 
-                messageId: 'dummy-' + Date.now(),
+              return {
+                messageId: 'dummy-' + Date.now() + '@dummy.local',
                 response: '250 Dummy transport - email not sent',
+                accepted: Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to],
+                rejected: [],
+                pending: [],
               };
             },
             // close() method for cleanup
-            close: () => Promise.resolve(),
+            close: () => {
+              return Promise.resolve();
+            },
           };
           
           return {
-            transport: mockTransport as any,
+            transport: dummyTransport as any,
             defaults: {
               from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
             },
@@ -103,20 +114,16 @@ import { HealthController } from './health.controller';
           };
         };
         
-        // If SMTP credentials are not provided, use a dummy transport
-        if (!smtpUser || !smtpPass || skipSmtp) {
-          if (!smtpUser || !smtpPass) {
-            console.warn('⚠️ SMTP credentials not configured. Email functionality will be disabled.');
-          } else {
-            console.warn('⚠️ SMTP disabled via SKIP_SMTP flag. Email functionality will be disabled.');
-          }
-          return createDummyTransport();
-        }
-        
         // If SKIP_SMTP is set, use dummy transport (useful for Railway free plans)
         if (skipSmtp) {
           console.warn('⚠️  SMTP disabled via SKIP_SMTP flag. Using dummy email transport.');
           console.warn('   Email sending will be disabled. OTPs will be returned in API responses.');
+          return createDummyTransport();
+        }
+        
+        // If SMTP credentials are not provided, use a dummy transport
+        if (!smtpUser || !smtpPass) {
+          console.warn('⚠️ SMTP credentials not configured. Email functionality will be disabled.');
           return createDummyTransport();
         }
         

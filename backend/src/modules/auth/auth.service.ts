@@ -154,14 +154,18 @@ export class AuthService {
       // Log detailed error for debugging
       console.error('❌ Email sending failed:', error?.message || error);
       
-      // Check if it's a connection timeout (Railway blocks SMTP)
+      // Check if it's a connection error (timeout, refused, etc.)
       const isConnectionError = error?.code === 'ETIMEDOUT' || 
                                  error?.code === 'ECONNREFUSED' ||
+                                 error?.code === 'ECONNRESET' ||
                                  error?.message?.includes('timeout') ||
-                                 error?.message?.includes('Connection timeout');
+                                 error?.message?.includes('Connection timeout') ||
+                                 error?.message?.includes('ECONNREFUSED') ||
+                                 error?.message?.includes('connect');
       
       if (isConnectionError) {
-        console.warn('⚠️  SMTP connection blocked (likely Railway free plan). OTP will be returned in response.');
+        console.warn('⚠️  SMTP connection failed (connection refused/timeout). OTP will be returned in response.');
+        console.warn('   This is expected if SKIP_SMTP=true or SMTP is blocked (e.g., Railway free plan).');
       }
       
       // In development or if connection fails, return OTP in response
