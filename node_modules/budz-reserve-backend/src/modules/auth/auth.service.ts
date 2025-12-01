@@ -150,13 +150,22 @@ export class AuthService {
 
       console.log('✅ Email sent successfully to:', email);
       return { message: 'OTP sent to your email address' };
-    } catch (error) {
+    } catch (error: any) {
       // Log detailed error for debugging
-      console.error('❌ Email sending failed:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
+      console.error('❌ Email sending failed:', error?.message || error);
       
-      // In development, return OTP in response if email fails
-      if (isDevelopment) {
+      // Check if it's a connection timeout (Railway blocks SMTP)
+      const isConnectionError = error?.code === 'ETIMEDOUT' || 
+                                 error?.code === 'ECONNREFUSED' ||
+                                 error?.message?.includes('timeout') ||
+                                 error?.message?.includes('Connection timeout');
+      
+      if (isConnectionError) {
+        console.warn('⚠️  SMTP connection blocked (likely Railway free plan). OTP will be returned in response.');
+      }
+      
+      // In development or if connection fails, return OTP in response
+      if (isDevelopment || isConnectionError) {
         console.log('=== DEVELOPMENT FALLBACK - EMAIL FAILED ===');
         console.log('Email:', email);
         console.log('User:', user.name || user.username);

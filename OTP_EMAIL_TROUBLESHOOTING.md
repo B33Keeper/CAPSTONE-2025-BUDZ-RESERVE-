@@ -185,7 +185,8 @@ If you see: `Connection timeout` when verifying transporter
 1. Go to your Railway project
 2. Select your backend service
 3. Go to **Variables** tab
-4. Add these environment variables:
+4. **Option A - If you have Railway Pro+ plan (SMTP enabled):**
+   Add these environment variables:
    ```
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
@@ -193,7 +194,19 @@ If you see: `Connection timeout` when verifying transporter
    SMTP_PASS=your-app-password
    SMTP_FROM=noreply@budzreserve.com
    ```
+   
+   **Option B - If you're on Railway Free/Trial plan (SMTP blocked):**
+   Add this environment variable to disable SMTP and use development mode:
+   ```
+   SKIP_SMTP=true
+   ```
+   This will make the app return OTPs in API responses instead of trying to send emails.
+   
 5. Redeploy the service
+
+**Important:** Railway Free/Trial plans block outbound SMTP connections. You have two options:
+- **Upgrade to Pro+ plan** to enable SMTP
+- **Set SKIP_SMTP=true** to use development mode (OTPs returned in API responses)
 
 ## Still Not Working?
 

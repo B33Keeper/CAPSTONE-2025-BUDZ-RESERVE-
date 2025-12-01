@@ -50,14 +50,18 @@ import { HealthController } from './health.controller';
         const smtpPort = Number(configService.get('SMTP_PORT', 587));
         const smtpUser = configService.get('SMTP_USER');
         const smtpPass = configService.get('SMTP_PASS');
+        const skipSmtp = configService.get('SKIP_SMTP', 'false').toLowerCase() === 'true';
+        // Check for Railway environment (Railway sets RAILWAY_ENVIRONMENT or RAILWAY_PROJECT_ID)
+        const isRailway = !!(configService.get('RAILWAY_ENVIRONMENT') || 
+                             configService.get('RAILWAY_PROJECT_ID') ||
+                             configService.get('RAILWAY'));
         
         // Determine template directory path (needed for both real and dummy transport)
         const templateDir = join(process.cwd(), 'src', 'templates');
         
-        // If SMTP credentials are not provided, use a dummy transport to prevent errors
-        if (!smtpUser || !smtpPass) {
-          console.warn('⚠️ SMTP credentials not configured. Email functionality will be disabled.');
-          // Return a dummy transport that won't actually send emails
+        // Helper function to create dummy transport
+        const createDummyTransport = () => {
+          console.warn('⚠️ Using dummy email transport. Emails will not be sent.');
           return {
             transport: {
               jsonTransport: true, // Use JSON transport as a no-op
@@ -73,9 +77,32 @@ import { HealthController } from './health.controller';
               },
             },
           };
+        };
+        
+        // If SMTP credentials are not provided, use a dummy transport
+        if (!smtpUser || !smtpPass || skipSmtp) {
+          if (!smtpUser || !smtpPass) {
+            console.warn('⚠️ SMTP credentials not configured. Email functionality will be disabled.');
+          } else {
+            console.warn('⚠️ SMTP disabled via SKIP_SMTP flag. Email functionality will be disabled.');
+          }
+          return createDummyTransport();
         }
         
-        // Build transport configuration with timeout settings
+        // If SKIP_SMTP is set, use dummy transport (useful for Railway free plans)
+        if (skipSmtp) {
+          console.warn('⚠️  SMTP disabled via SKIP_SMTP flag. Using dummy email transport.');
+          console.warn('   Email sending will be disabled. OTPs will be returned in API responses.');
+          return createDummyTransport();
+        }
+        
+        // Log Railway detection (but don't auto-disable SMTP - Pro+ plans support it)
+        if (isRailway) {
+          console.log('🚂 Railway environment detected.');
+          console.log('   If SMTP connection fails, set SKIP_SMTP=true to use development mode.');
+        }
+        
+        // Build transport configuration with aggressive timeout settings
         const transportConfig: any = {
           host: smtpHost,
           port: smtpPort,
@@ -84,21 +111,19 @@ import { HealthController } from './health.controller';
             user: smtpUser,
             pass: smtpPass,
           },
-          // Connection timeout settings (in milliseconds)
-          connectionTimeout: 10000, // 10 seconds - reduced to fail faster
-          greetingTimeout: 10000, // 10 seconds
-          socketTimeout: 20000, // 20 seconds for socket operations
+          // Aggressive timeout settings to fail fast if blocked
+          connectionTimeout: 5000, // 5 seconds - fail fast
+          greetingTimeout: 5000, // 5 seconds
+          socketTimeout: 10000, // 10 seconds for socket operations
           // Enable debug for troubleshooting
           debug: configService.get('NODE_ENV') === 'development',
-          // Connection pool settings for better performance
+          // Connection pool settings
           pool: false, // Disable pooling to avoid connection issues
-          // Retry settings
-          retry: {
-            attempts: 2, // Reduced retries
-            delay: 1000, // 1 second between retries
-          },
-          // Skip transporter verification on startup
-          // This prevents blocking the app startup if SMTP is unreachable
+          // Disable retries to fail fast
+          retry: false,
+          // Don't require TLS initially
+          requireTLS: false,
+          // Skip TLS verification if needed
           ignoreTLS: false,
         };
         
@@ -106,11 +131,11 @@ import { HealthController } from './health.controller';
         if (smtpPort !== 465) {
           transportConfig.tls = {
             rejectUnauthorized: false, // Allow self-signed certificates
-            ciphers: 'SSLv3',
+            // Don't specify ciphers - let Node.js choose
           };
         }
         
-        return {
+        const mailerConfig = {
           transport: transportConfig,
           defaults: {
             from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
@@ -123,6 +148,11 @@ import { HealthController } from './health.controller';
             },
           },
         };
+        
+        console.log(`📧 Configuring SMTP: ${smtpHost}:${smtpPort} (user: ${smtpUser})`);
+        console.log('ℹ️  If you see connection timeout errors, set SKIP_SMTP=true or upgrade Railway plan.');
+        
+        return mailerConfig;
       },
       inject: [ConfigService],
     }),
