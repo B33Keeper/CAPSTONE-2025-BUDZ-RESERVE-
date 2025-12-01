@@ -60,12 +60,36 @@ import { HealthController } from './health.controller';
         const templateDir = join(process.cwd(), 'src', 'templates');
         
         // Helper function to create dummy transport
+        // Create a mock transport that supports verify() method required by MailerModule
         const createDummyTransport = () => {
           console.warn('⚠️ Using dummy email transport. Emails will not be sent.');
-          return {
-            transport: {
-              jsonTransport: true, // Use JSON transport as a no-op
+          
+          const nodemailer = require('nodemailer');
+          
+          // Create a simple mock transport object that implements required methods
+          const mockTransport = {
+            // verify() method required by MailerModule
+            verify: () => {
+              console.log('✅ [DUMMY] Transport verification skipped (dummy mode)');
+              return Promise.resolve(true);
             },
+            // sendMail() method for sending emails
+            sendMail: async (mailOptions: any) => {
+              console.log('📧 [DUMMY] Email would be sent:', {
+                to: mailOptions.to,
+                subject: mailOptions.subject,
+              });
+              return { 
+                messageId: 'dummy-' + Date.now(),
+                response: '250 Dummy transport - email not sent',
+              };
+            },
+            // close() method for cleanup
+            close: () => Promise.resolve(),
+          };
+          
+          return {
+            transport: mockTransport as any,
             defaults: {
               from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
             },
