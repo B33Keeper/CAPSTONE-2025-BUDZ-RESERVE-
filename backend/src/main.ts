@@ -215,8 +215,10 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup(`${apiPrefix}/docs`, app, document);
 
-    // Railway provides PORT environment variable directly
-    // Priority: process.env.PORT (Railway) > configService PORT > default 3001
+    // CRITICAL: Railway automatically provides PORT environment variable
+    // DO NOT manually set PORT in Railway environment variables!
+    // Railway assigns a dynamic port at runtime and routes traffic to it
+    // Priority: process.env.PORT (Railway provides this) > configService PORT > default 3001 (local dev only)
     const portEnv = process.env.PORT || configService.get<string>('PORT') || '3001';
     const port = Number(portEnv);
     const host = '0.0.0.0';
@@ -225,8 +227,18 @@ async function bootstrap() {
       throw new Error(`Invalid PORT: ${portEnv}`);
     }
     
+    // Log which PORT source is being used
+    const portSource = process.env.PORT 
+      ? `process.env.PORT (Railway-provided: ${process.env.PORT})` 
+      : configService.get<string>('PORT')
+        ? `configService PORT (${configService.get<string>('PORT')})`
+        : 'default (3001 - local development only)';
+    
     console.log(`🌐 Attempting to start server on ${host}:${port}...`);
-    console.log(`📝 Using PORT from: ${process.env.PORT ? 'process.env.PORT (Railway)' : 'configService or default'}`);
+    console.log(`📝 PORT source: ${portSource}`);
+    console.log(`⚠️  IMPORTANT: If running on Railway, PORT should come from Railway automatically.`);
+    console.log(`   Do NOT set PORT in Railway environment variables - Railway provides it!`);
+    
     await app.listen(port, host);
 
     // Log actual binding and accessible URLs

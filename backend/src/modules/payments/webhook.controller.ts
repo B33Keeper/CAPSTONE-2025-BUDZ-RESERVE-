@@ -134,10 +134,15 @@ export class WebhookController {
     @Req() req: Request & { rawBody?: Buffer },
   ) {
     try {
-      // Log the full request body for debugging
+      // Log the full request body for debugging - USE CONSOLE.LOG FOR RAILWAY VISIBILITY
+      const logMsg = '═══════════════════════════════════════════════════════════\n🔔 PayMongo Webhook Received\n═══════════════════════════════════════════════════════════';
+      console.log(logMsg);
       this.logger.log('═══════════════════════════════════════════════════════════');
       this.logger.log('🔔 PayMongo Webhook Received');
       this.logger.log('═══════════════════════════════════════════════════════════');
+      
+      const requestInfo = `📋 Request URL: ${req.originalUrl}\n📋 Request Method: ${req.method}\n📋 Request Host: ${req.get('host') || req.headers.host || 'unknown'}\n📋 Has rawBody: ${!!req.rawBody}\n📋 rawBody length: ${req.rawBody?.length || 0}\n📋 Has signature header: ${!!signature}\n📋 Signature: ${signature ? (Array.isArray(signature) ? signature[0] : signature).substring(0, 50) + '...' : 'NONE'}\n📋 Has PAYMONGO_WEBHOOK_SECRET: ${!!process.env.PAYMONGO_WEBHOOK_SECRET}\n📋 Environment: ${process.env.NODE_ENV || 'development'}\n📋 Railway Public Domain: ${process.env.RAILWAY_PUBLIC_DOMAIN || 'not set'}`;
+      console.log(requestInfo);
       this.logger.log(`📋 Request URL: ${req.originalUrl}`);
       this.logger.log(`📋 Request Method: ${req.method}`);
       this.logger.log(`📋 Request Host: ${req.get('host') || req.headers.host || 'unknown'}`);
@@ -148,10 +153,16 @@ export class WebhookController {
       this.logger.log(`📋 Has PAYMONGO_WEBHOOK_SECRET: ${!!process.env.PAYMONGO_WEBHOOK_SECRET}`);
       this.logger.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
       this.logger.log(`📋 Railway Public Domain: ${process.env.RAILWAY_PUBLIC_DOMAIN || 'not set'}`);
-      this.logger.log(`📦 Full webhook body: ${JSON.stringify(body, null, 2)}`);
+      
+      const bodyStr = JSON.stringify(body, null, 2);
+      console.log(`📦 Full webhook body: ${bodyStr}`);
+      this.logger.log(`📦 Full webhook body: ${bodyStr}`);
       
       // Log webhook configuration status
       if (!process.env.PAYMONGO_WEBHOOK_SECRET) {
+        console.warn('⚠️  PAYMONGO_WEBHOOK_SECRET is not configured!');
+        console.warn('   Webhook signature verification will be skipped in development mode.');
+        console.warn('   For production, you MUST configure PAYMONGO_WEBHOOK_SECRET!');
         this.logger.warn('⚠️  PAYMONGO_WEBHOOK_SECRET is not configured!');
         this.logger.warn('   Webhook signature verification will be skipped in development mode.');
         this.logger.warn('   For production, you MUST configure PAYMONGO_WEBHOOK_SECRET!');
@@ -190,6 +201,8 @@ export class WebhookController {
       const eventType = data.attributes.type;
       const paymentData = data.attributes.data;
       
+      console.log(`📥 Event Type: ${eventType}`);
+      console.log(`🆔 Event ID: ${data.id}`);
       this.logger.log(`📥 Event Type: ${eventType}`);
       this.logger.log(`🆔 Event ID: ${data.id}`);
       this.logger.log(`📦 Full webhook payload structure:`);
@@ -198,43 +211,67 @@ export class WebhookController {
       this.logger.log(`   data.attributes.data.type: ${paymentData?.type || 'N/A'}`);
       this.logger.log(`   data.attributes.data.id: ${paymentData?.id || 'N/A'}`);
       if (paymentData?.attributes) {
-        this.logger.log(`   data.attributes.data.attributes keys: ${Object.keys(paymentData.attributes).join(', ')}`);
+        const attrKeys = Object.keys(paymentData.attributes).join(', ');
+        console.log(`   data.attributes.data.attributes keys: ${attrKeys}`);
+        this.logger.log(`   data.attributes.data.attributes keys: ${attrKeys}`);
       }
 
       switch (eventType) {
         case 'payment.paid':
+          console.log('✅ Processing payment.paid event...');
           this.logger.log('✅ Processing payment.paid event...');
           await this.handlePaymentPaid(paymentData);
+          console.log('✅ Payment processed successfully!');
           this.logger.log('✅ Payment processed successfully!');
           break;
         case 'checkout_session.payment.paid':
+          console.log('✅ Processing checkout_session.payment.paid event...');
+          console.log(`📋 Checkout Session ID from webhook: ${data.id}`);
           this.logger.log('✅ Processing checkout_session.payment.paid event...');
           this.logger.log(`📋 Checkout Session ID from webhook: ${data.id}`);
-          this.logger.log(`📦 Full paymentData structure: ${JSON.stringify(paymentData, null, 2)}`);
+          const paymentDataStr = JSON.stringify(paymentData, null, 2);
+          console.log(`📦 Full paymentData structure: ${paymentDataStr}`);
+          this.logger.log(`📦 Full paymentData structure: ${paymentDataStr}`);
           
           // Prefer using the checkout session payload embedded in the webhook to avoid API fetch/mode issues
           if (paymentData && paymentData.type === 'checkout_session' && paymentData.attributes) {
             const csAttr: any = paymentData.attributes;
+            console.log(`📋 Checkout session attributes found in webhook payload`);
+            const csMetadataStr = JSON.stringify(csAttr.metadata || {});
+            console.log(`📋 Checkout session metadata: ${csMetadataStr}`);
             this.logger.log(`📋 Checkout session attributes found in webhook payload`);
-            this.logger.log(`📋 Checkout session metadata: ${JSON.stringify(csAttr.metadata || {})}`);
+            this.logger.log(`📋 Checkout session metadata: ${csMetadataStr}`);
             
             let bookingDataFromSession: any | undefined;
             try {
               if (csAttr.metadata?.bookingData) {
                 bookingDataFromSession = JSON.parse(csAttr.metadata.bookingData);
+                console.log(`✅ Booking data found in checkout session metadata from webhook payload`);
+                console.log(`   👤 User ID: ${bookingDataFromSession?.userId}`);
+                console.log(`   📅 Date: ${bookingDataFromSession?.selectedDate}`);
+                console.log(`   🏸 Courts: ${bookingDataFromSession?.courtBookings?.length || 0}`);
+                console.log(`   🎾 Equipment: ${bookingDataFromSession?.equipmentBookings?.length || 0}`);
                 this.logger.log(`✅ Booking data found in checkout session metadata from webhook payload`);
                 this.logger.log(`   👤 User ID: ${bookingDataFromSession?.userId}`);
                 this.logger.log(`   📅 Date: ${bookingDataFromSession?.selectedDate}`);
                 this.logger.log(`   🏸 Courts: ${bookingDataFromSession?.courtBookings?.length || 0}`);
                 this.logger.log(`   🎾 Equipment: ${bookingDataFromSession?.equipmentBookings?.length || 0}`);
               } else {
+                const mdKeys = csAttr.metadata ? Object.keys(csAttr.metadata).join(', ') : 'no metadata';
+                console.warn('⚠️ No bookingData found in checkout session metadata from webhook payload');
+                console.warn(`   Metadata keys: ${mdKeys}`);
+                console.warn(`   Will fetch from API as fallback...`);
                 this.logger.warn('⚠️ No bookingData found in checkout session metadata from webhook payload');
-                this.logger.warn(`   Metadata keys: ${csAttr.metadata ? Object.keys(csAttr.metadata).join(', ') : 'no metadata'}`);
+                this.logger.warn(`   Metadata keys: ${mdKeys}`);
                 this.logger.warn(`   Will fetch from API as fallback...`);
               }
             } catch (e) {
-              this.logger.error(`❌ Error parsing booking data from checkout session: ${e.message}`);
-              this.logger.error(`   Raw metadata: ${JSON.stringify(csAttr.metadata)}`);
+              const errorMsg = `❌ Error parsing booking data from checkout session: ${e.message}`;
+              const rawMetadata = JSON.stringify(csAttr.metadata);
+              console.error(errorMsg);
+              console.error(`   Raw metadata: ${rawMetadata}`);
+              this.logger.error(errorMsg);
+              this.logger.error(`   Raw metadata: ${rawMetadata}`);
             }
 
             // Extract payment id from relationships
@@ -242,25 +279,31 @@ export class WebhookController {
             const paymentsRel = csAttr.payments?.data ?? csAttr.payments ?? [];
             if (Array.isArray(paymentsRel) && paymentsRel.length > 0) {
               paymentId = paymentsRel[0]?.id;
+              console.log(`💳 Payment ID from webhook payload: ${paymentId}`);
               this.logger.log(`💳 Payment ID from webhook payload: ${paymentId}`);
             }
             if (!paymentId && csAttr.payment_intent?.id) {
               // Fall back to API if necessary
+              console.log('📞 Payment ID not in payload, fetching checkout session from PayMongo API...');
               this.logger.log('📞 Payment ID not in payload, fetching checkout session from PayMongo API...');
               await this.handleCheckoutSessionPaid(data.id);
               break;
             }
             if (paymentId) {
+              console.log(`💳 Processing payment with ID: ${paymentId}`);
               this.logger.log(`💳 Processing payment with ID: ${paymentId}`);
               await this.handlePaymentPaid({ id: paymentId }, bookingDataFromSession);
               break;
             } else {
+              console.warn('⚠️ No payment ID found in webhook payload, falling back to API fetch');
               this.logger.warn('⚠️ No payment ID found in webhook payload, falling back to API fetch');
             }
           } else {
+            console.warn('⚠️ Checkout session data not in webhook payload, fetching from API...');
             this.logger.warn('⚠️ Checkout session data not in webhook payload, fetching from API...');
           }
           // Fallback to fetching by id
+          console.log('📞 Fetching checkout session from PayMongo API (fallback)...');
           this.logger.log('📞 Fetching checkout session from PayMongo API (fallback)...');
           await this.handleCheckoutSessionPaid(data.id);
           break;
@@ -280,17 +323,23 @@ export class WebhookController {
           this.logger.log(`⚠️ Unhandled webhook event type: ${eventType}`);
       }
 
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('✅ Webhook processed successfully');
+      console.log('═══════════════════════════════════════════════════════════');
       this.logger.log('═══════════════════════════════════════════════════════════');
       this.logger.log('✅ Webhook processed successfully');
       this.logger.log('═══════════════════════════════════════════════════════════');
       return { success: true, message: 'Webhook processed successfully' };
     } catch (error) {
+      const errorMsg = `═══════════════════════════════════════════════════════════\n❌ Error processing webhook\n═══════════════════════════════════════════════════════════\nError message: ${error.message}\nError stack: ${error.stack}`;
+      console.error(errorMsg);
       this.logger.error('═══════════════════════════════════════════════════════════');
       this.logger.error('❌ Error processing webhook');
       this.logger.error('═══════════════════════════════════════════════════════════');
       this.logger.error(`Error message: ${error.message}`);
       this.logger.error(`Error stack: ${error.stack}`);
       if (error instanceof Error) {
+        console.error(`Error name: ${error.name}`);
         this.logger.error(`Error name: ${error.name}`);
       }
       return { success: false, message: `Webhook processing failed: ${error.message}` };
@@ -299,27 +348,41 @@ export class WebhookController {
 
   private async handleCheckoutSessionPaid(checkoutSessionId: string) {
     try {
+      console.log(`📞 Fetching checkout session ${checkoutSessionId} to resolve payment`);
       this.logger.log(`📞 Fetching checkout session ${checkoutSessionId} to resolve payment`);
       const session = await this.payMongoService.getCheckoutSession(checkoutSessionId);
+      console.log(`✅ Checkout session fetched successfully`);
       this.logger.log(`✅ Checkout session fetched successfully`);
 
       // Extract booking data from checkout session metadata (Checkout stores it here, not on payment)
       let bookingDataFromSession: any | undefined;
       try {
         const md = (session as any)?.attributes?.metadata;
-        this.logger.log(`📋 Checkout session metadata: ${JSON.stringify(md || {})}`);
+        const mdStr = JSON.stringify(md || {});
+        console.log(`📋 Checkout session metadata: ${mdStr}`);
+        this.logger.log(`📋 Checkout session metadata: ${mdStr}`);
         if (md && md.bookingData) {
           bookingDataFromSession = JSON.parse(md.bookingData);
+          console.log(`✅ Booking data extracted from checkout session`);
+          console.log(`   👤 User ID: ${bookingDataFromSession?.userId}`);
+          console.log(`   📅 Date: ${bookingDataFromSession?.selectedDate}`);
+          console.log(`   🏸 Courts: ${bookingDataFromSession?.courtBookings?.length || 0}`);
+          console.log(`   🎾 Equipment: ${bookingDataFromSession?.equipmentBookings?.length || 0}`);
           this.logger.log(`✅ Booking data extracted from checkout session`);
           this.logger.log(`   👤 User ID: ${bookingDataFromSession?.userId}`);
           this.logger.log(`   📅 Date: ${bookingDataFromSession?.selectedDate}`);
           this.logger.log(`   🏸 Courts: ${bookingDataFromSession?.courtBookings?.length || 0}`);
           this.logger.log(`   🎾 Equipment: ${bookingDataFromSession?.equipmentBookings?.length || 0}`);
         } else {
+          const mdKeys = md ? Object.keys(md).join(', ') : 'no metadata';
+          console.error(`❌ No bookingData found in checkout session metadata!`);
+          console.error(`   Metadata keys: ${mdKeys}`);
           this.logger.error(`❌ No bookingData found in checkout session metadata!`);
-          this.logger.error(`   Metadata keys: ${md ? Object.keys(md).join(', ') : 'no metadata'}`);
+          this.logger.error(`   Metadata keys: ${mdKeys}`);
         }
       } catch (e) {
+        console.error(`❌ Failed to parse bookingData from checkout session ${checkoutSessionId}: ${e.message}`);
+        console.error(`   Error stack: ${e.stack}`);
         this.logger.error(`❌ Failed to parse bookingData from checkout session ${checkoutSessionId}: ${e.message}`);
         this.logger.error(`   Error stack: ${e.stack}`);
       }
@@ -354,12 +417,18 @@ export class WebhookController {
       // Reuse existing flow using the payment id, passing booking data from session if payment metadata lacks it
       await this.handlePaymentPaid({ id: paymentId }, bookingDataFromSession);
     } catch (error) {
+      console.error('❌ Error handling checkout_session.payment.paid event:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       this.logger.error('Error handling checkout_session.payment.paid event:', error);
     }
   }
 
   private async handlePaymentPaid(paymentData: any, bookingDataOverride?: any) {
     try {
+      console.log('───────────────────────────────────────────────────────────');
+      console.log(`💳 Processing Payment: ${paymentData.id}`);
+      console.log('───────────────────────────────────────────────────────────');
       this.logger.log('───────────────────────────────────────────────────────────');
       this.logger.log(`💳 Processing Payment: ${paymentData.id}`);
       this.logger.log('───────────────────────────────────────────────────────────');
@@ -369,9 +438,15 @@ export class WebhookController {
         ? { id: paymentData.id, attributes: paymentData.attributes }
         : await this.payMongoService.getPayment(paymentData.id);
       
-      this.logger.log(`💰 Amount: ₱${(payment.attributes.amount / 100).toFixed(2)}`);
-      this.logger.log(`💳 Payment Method: ${payment.attributes.source?.type || 'Unknown'}`);
-      this.logger.log(`📊 Status: ${payment.attributes.status}`);
+      const amount = (payment.attributes.amount / 100).toFixed(2);
+      const paymentMethod = payment.attributes.source?.type || 'Unknown';
+      const status = payment.attributes.status;
+      console.log(`💰 Amount: ₱${amount}`);
+      console.log(`💳 Payment Method: ${paymentMethod}`);
+      console.log(`📊 Status: ${status}`);
+      this.logger.log(`💰 Amount: ₱${amount}`);
+      this.logger.log(`💳 Payment Method: ${paymentMethod}`);
+      this.logger.log(`📊 Status: ${status}`);
       
       // CRITICAL: Idempotency check - prevent duplicate processing if webhook is called multiple times
       const transactionId = payment.id; // PayMongo payment ID is the transaction ID
@@ -382,11 +457,9 @@ export class WebhookController {
       if (existingPayment) {
         // This is expected behavior - PayMongo may send the same webhook multiple times
         // The system correctly prevents duplicate processing
-        this.logger.log(
-          `✅ Duplicate webhook detected and safely ignored: Payment ${transactionId} was already processed. ` +
-          `Existing payment ID: ${existingPayment.id}, Reservation ID: ${existingPayment.reservation_id}. ` +
-          `This is normal - PayMongo may send webhooks multiple times. System prevented duplicate processing.`
-        );
+        const dupMsg = `✅ Duplicate webhook detected and safely ignored: Payment ${transactionId} was already processed. Existing payment ID: ${existingPayment.id}, Reservation ID: ${existingPayment.reservation_id}. This is normal - PayMongo may send webhooks multiple times. System prevented duplicate processing.`;
+        console.log(dupMsg);
+        this.logger.log(dupMsg);
         return; // Exit early - payment already processed
       }
       
@@ -397,6 +470,10 @@ export class WebhookController {
       if (bookingDataRaw) {
         try {
           const bookingData = typeof bookingDataRaw === 'string' ? JSON.parse(bookingDataRaw) : bookingDataRaw;
+          console.log(`📋 Creating reservations from booking data...`);
+          console.log(`   👤 User ID: ${bookingData.userId}`);
+          console.log(`   📅 Date: ${bookingData.selectedDate}`);
+          console.log(`   🏸 Court Bookings: ${bookingData.courtBookings?.length || 0}`);
           this.logger.log(`📋 Creating reservations from booking data...`);
           this.logger.log(`   👤 User ID: ${bookingData.userId}`);
           this.logger.log(`   📅 Date: ${bookingData.selectedDate}`);
@@ -407,19 +484,32 @@ export class WebhookController {
           // Get the first created reservation ID
           if (createdReservations.length > 0) {
             reservationId = createdReservations[0].Reservation_ID;
+            const resIds = createdReservations.map(r => r.Reservation_ID).join(', ');
+            console.log(`✅ Successfully created ${createdReservations.length} reservation(s)`);
+            console.log(`   🆔 Reservation ID(s): ${resIds}`);
+            console.log(`   📝 Reference Number: ${createdReservations[0].Reference_Number}`);
             this.logger.log(`✅ Successfully created ${createdReservations.length} reservation(s)`);
-            this.logger.log(`   🆔 Reservation ID(s): ${createdReservations.map(r => r.Reservation_ID).join(', ')}`);
+            this.logger.log(`   🆔 Reservation ID(s): ${resIds}`);
             this.logger.log(`   📝 Reference Number: ${createdReservations[0].Reference_Number}`);
           } else {
+            console.warn('⚠️ No reservations were created');
             this.logger.warn('⚠️ No reservations were created');
           }
         } catch (error) {
+          console.error('❌ Error creating reservation from payment metadata:', error);
+          console.error('Error details:', error.message, error.stack);
           this.logger.error('❌ Error creating reservation from payment metadata:', error);
           throw error;
         }
       } else {
+        const noBookingMsg = '⚠️ No booking data found in payment metadata or override';
+        const metadataStr = JSON.stringify(payment.attributes?.metadata || {});
+        console.warn(noBookingMsg);
+        console.warn(`   Payment metadata: ${metadataStr}`);
+        console.warn(`   Booking data override: ${bookingDataOverride ? 'provided' : 'not provided'}`);
+        console.error('❌ Cannot create reservations without booking data. Transaction will not be recorded.');
         this.logger.warn('⚠️ No booking data found in payment metadata or override');
-        this.logger.warn(`   Payment metadata: ${JSON.stringify(payment.attributes?.metadata || {})}`);
+        this.logger.warn(`   Payment metadata: ${metadataStr}`);
         this.logger.warn(`   Booking data override: ${bookingDataOverride ? 'provided' : 'not provided'}`);
         this.logger.error('❌ Cannot create reservations without booking data. Transaction will not be recorded.');
         // Don't create payment record if no reservations were created
@@ -437,43 +527,89 @@ export class WebhookController {
       
       if (createdReservations.length > 0) {
         // Create a payment record for each reservation
-        const paymentPromises = createdReservations.map(async (reservation: Reservation) => {
-          // Calculate amount per reservation (divide total by number of reservations)
-          // Or use the reservation's total amount if available
-          const reservationAmount = Number(reservation.Total_Amount) || (totalAmount / createdReservations.length);
+        try {
+          console.log(`💾 Attempting to create ${createdReservations.length} payment record(s) in database...`);
+          this.logger.log(`💾 Attempting to create ${createdReservations.length} payment record(s) in database...`);
+          
+          const paymentPromises = createdReservations.map(async (reservation: Reservation) => {
+            // Calculate amount per reservation (divide total by number of reservations)
+            // Or use the reservation's total amount if available
+            const reservationAmount = Number(reservation.Total_Amount) || (totalAmount / createdReservations.length);
+            
+            console.log(`   💰 Creating payment for Reservation ID: ${reservation.Reservation_ID}, Amount: ₱${reservationAmount}, Transaction ID: ${transactionId}`);
+            this.logger.log(`   💰 Creating payment for Reservation ID: ${reservation.Reservation_ID}, Amount: ₱${reservationAmount}, Transaction ID: ${transactionId}`);
+            
+            const newPayment = this.paymentRepository.create({
+              reservation_id: reservation.Reservation_ID,
+              amount: reservationAmount,
+              payment_method: paymentMethod,
+              transaction_id: transactionId,
+              reference_number: referenceNumber,
+              notes: payment.attributes.description,
+              status: payment.attributes.status === 'paid' ? PaymentStatus.COMPLETED : PaymentStatus.PENDING,
+            });
+            
+            const savedPayment = await this.paymentRepository.save(newPayment);
+            console.log(`   ✅ Payment record created successfully: ID=${savedPayment.id}, Reservation ID=${reservation.Reservation_ID}`);
+            this.logger.log(`   ✅ Payment record created successfully: ID=${savedPayment.id}, Reservation ID=${reservation.Reservation_ID}`);
+            return savedPayment;
+          });
+          
+          const savedPayments = await Promise.all(paymentPromises);
+          console.log(`✅ Successfully created ${savedPayments.length} payment record(s) in database`);
+          this.logger.log(`✅ Created ${savedPayments.length} payment record(s) in database`);
+          savedPayments.forEach((savedPayment: Payment, index: number) => {
+            const paymentRecordMsg = `   🆔 Payment Record ID: ${savedPayment.id}, Linked to Reservation ID: ${createdReservations[index].Reservation_ID}`;
+            console.log(paymentRecordMsg);
+            this.logger.log(paymentRecordMsg);
+          });
+        } catch (dbError) {
+          console.error('❌ CRITICAL: Failed to create payment records in database!');
+          console.error('   Error message:', dbError.message);
+          console.error('   Error stack:', dbError.stack);
+          console.error('   Transaction ID:', transactionId);
+          console.error('   Reservation IDs:', createdReservations.map(r => r.Reservation_ID).join(', '));
+          this.logger.error('❌ CRITICAL: Failed to create payment records in database!', dbError);
+          this.logger.error(`   Transaction ID: ${transactionId}`);
+          this.logger.error(`   Reservation IDs: ${createdReservations.map(r => r.Reservation_ID).join(', ')}`);
+          // Re-throw to be caught by outer try-catch
+          throw dbError;
+        }
+      } else if (reservationId > 0) {
+        // Fallback: if no reservations were created but we have a reservationId, create one payment
+        try {
+          console.log(`💾 Attempting to create payment record for Reservation ID: ${reservationId}...`);
+          this.logger.log(`💾 Attempting to create payment record for Reservation ID: ${reservationId}...`);
           
           const newPayment = this.paymentRepository.create({
-            reservation_id: reservation.Reservation_ID,
-            amount: reservationAmount,
+            reservation_id: reservationId,
+            amount: totalAmount,
             payment_method: paymentMethod,
             transaction_id: transactionId,
             reference_number: referenceNumber,
             notes: payment.attributes.description,
             status: payment.attributes.status === 'paid' ? PaymentStatus.COMPLETED : PaymentStatus.PENDING,
           });
-          return this.paymentRepository.save(newPayment);
-        });
-        
-        const savedPayments = await Promise.all(paymentPromises);
-        this.logger.log(`✅ Created ${savedPayments.length} payment record(s) in database`);
-        savedPayments.forEach((savedPayment: Payment, index: number) => {
-          this.logger.log(`   🆔 Payment Record ID: ${savedPayment.id}, Linked to Reservation ID: ${createdReservations[index].Reservation_ID}`);
-        });
-      } else if (reservationId > 0) {
-        // Fallback: if no reservations were created but we have a reservationId, create one payment
-        const newPayment = this.paymentRepository.create({
-          reservation_id: reservationId,
-          amount: totalAmount,
-          payment_method: paymentMethod,
-          transaction_id: transactionId,
-          reference_number: referenceNumber,
-          notes: payment.attributes.description,
-          status: payment.attributes.status === 'paid' ? PaymentStatus.COMPLETED : PaymentStatus.PENDING,
-        });
-        await this.paymentRepository.save(newPayment);
-        this.logger.log(`✅ Created payment record in database`);
-        this.logger.log(`   🆔 Payment Record ID: ${newPayment.id}`);
-        this.logger.log(`   🔗 Linked to Reservation ID: ${reservationId}`);
+          
+          await this.paymentRepository.save(newPayment);
+          console.log(`✅ Created payment record in database`);
+          console.log(`   🆔 Payment Record ID: ${newPayment.id}`);
+          console.log(`   🔗 Linked to Reservation ID: ${reservationId}`);
+          this.logger.log(`✅ Created payment record in database`);
+          this.logger.log(`   🆔 Payment Record ID: ${newPayment.id}`);
+          this.logger.log(`   🔗 Linked to Reservation ID: ${reservationId}`);
+        } catch (dbError) {
+          console.error('❌ CRITICAL: Failed to create payment record in database!');
+          console.error('   Error message:', dbError.message);
+          console.error('   Error stack:', dbError.stack);
+          console.error('   Transaction ID:', transactionId);
+          console.error('   Reservation ID:', reservationId);
+          this.logger.error('❌ CRITICAL: Failed to create payment record in database!', dbError);
+          this.logger.error(`   Transaction ID: ${transactionId}`);
+          this.logger.error(`   Reservation ID: ${reservationId}`);
+          // Re-throw to be caught by outer try-catch
+          throw dbError;
+        }
       }
       
       // Persist equipment rentals if present in booking data
@@ -497,10 +633,16 @@ export class WebhookController {
       
       // Custom email receipt removed - PayMongo receipt will be sent automatically
 
+      console.log('───────────────────────────────────────────────────────────');
+      console.log('✅ Payment processing completed successfully!');
+      console.log('───────────────────────────────────────────────────────────');
       this.logger.log('───────────────────────────────────────────────────────────');
       this.logger.log('✅ Payment processing completed successfully!');
       this.logger.log('───────────────────────────────────────────────────────────');
     } catch (error) {
+      console.error('❌ Error handling payment.paid event:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       this.logger.error('Error handling payment.paid event:', error);
     }
   }
