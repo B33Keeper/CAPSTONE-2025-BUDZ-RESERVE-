@@ -35,6 +35,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
+# Copy email templates (needed at runtime)
+COPY --from=builder /app/src/templates ./src/templates
+
 # Create uploads directory with proper structure
 RUN mkdir -p uploads/avatars uploads/announcements uploads/gallery uploads/equipments uploads/general && \
     chmod -R 755 uploads

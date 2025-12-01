@@ -5,6 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { join } from 'path';
 
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -50,6 +51,9 @@ import { HealthController } from './health.controller';
         const smtpUser = configService.get('SMTP_USER');
         const smtpPass = configService.get('SMTP_PASS');
         
+        // Determine template directory path (needed for both real and dummy transport)
+        const templateDir = join(process.cwd(), 'src', 'templates');
+        
         // If SMTP credentials are not provided, use a dummy transport to prevent errors
         if (!smtpUser || !smtpPass) {
           console.warn('⚠️ SMTP credentials not configured. Email functionality will be disabled.');
@@ -60,6 +64,13 @@ import { HealthController } from './health.controller';
             },
             defaults: {
               from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
+            },
+            template: {
+              dir: templateDir,
+              adapter: new HandlebarsAdapter(),
+              options: {
+                strict: true,
+              },
             },
           };
         }
@@ -105,7 +116,7 @@ import { HealthController } from './health.controller';
             from: configService.get('SMTP_FROM', 'noreply@budzreserve.com'),
           },
           template: {
-            dir: process.cwd() + '/src/templates',
+            dir: templateDir,
             adapter: new HandlebarsAdapter(),
             options: {
               strict: true,

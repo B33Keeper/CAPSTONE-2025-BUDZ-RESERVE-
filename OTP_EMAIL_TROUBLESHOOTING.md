@@ -158,11 +158,50 @@ SMTP_PASS=your-password
 - [ ] Checked email spam folder
 - [ ] Verified Gmail 2-Step Verification is enabled
 
+## Railway-Specific Issues
+
+### Template Path Error (ENOENT)
+If you see: `ENOENT: no such file or directory, open '/app/src/templates/forgot-password.hbs'`
+
+**Solution:** This has been fixed in the code. Make sure you:
+1. Rebuild your Docker image on Railway
+2. The templates are now copied in the Dockerfile
+
+### Connection Timeout on Railway
+If you see: `Connection timeout` when verifying transporter
+
+**Possible causes:**
+1. **Railway Free/Trial Plans:** Outbound SMTP is disabled on free/trial plans. You need to upgrade to Pro+ plan for SMTP to work.
+2. **SMTP Credentials:** Verify your SMTP credentials are correct in Railway environment variables
+3. **Network Issues:** Railway might be blocking SMTP connections
+
+**Solutions:**
+- Upgrade to Railway Pro+ plan for SMTP support
+- Use an external email service API (SendGrid, Mailgun, etc.) instead of SMTP
+- Check Railway logs for more detailed error messages
+
+### Setting Environment Variables on Railway
+
+1. Go to your Railway project
+2. Select your backend service
+3. Go to **Variables** tab
+4. Add these environment variables:
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASS=your-app-password
+   SMTP_FROM=noreply@budzreserve.com
+   ```
+5. Redeploy the service
+
 ## Still Not Working?
 
 1. Check the backend console for detailed error messages
-2. Verify the `.env` file is in the correct location (`backend/.env`)
-3. Make sure environment variables are being loaded (check `app.module.ts` for env file paths)
-4. Try using a different email service (SendGrid, Mailgun, etc.)
-5. In development mode, the OTP will be shown in the frontend if email fails
+2. Verify the `.env` file is in the correct location (`backend/.env`) for local development
+3. For Railway, check environment variables in the Railway dashboard
+4. Make sure environment variables are being loaded (check `app.module.ts` for env file paths)
+5. Try using a different email service (SendGrid, Mailgun, etc.)
+6. In development mode, the OTP will be shown in the frontend if email fails
+7. **For Railway:** Check if you're on a plan that supports outbound SMTP (Pro+ required)
 
