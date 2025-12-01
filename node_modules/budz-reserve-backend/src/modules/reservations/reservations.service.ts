@@ -203,7 +203,9 @@ export class ReservationsService {
       });
     }
     
-    console.log(`[findByUser] User ID: ${userId}, Found ${reservations.length} reservations`);
+    // Removed verbose logging to prevent Railway rate limits
+    // Only log in development mode if needed for debugging
+    // this.logger.debug(`[findByUser] User ID: ${userId}, Found ${reservations.length} reservations`);
     
     return reservations;
   }

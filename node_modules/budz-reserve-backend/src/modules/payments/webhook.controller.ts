@@ -86,12 +86,7 @@ export class WebhookController {
     @Req() req: Request & { rawBody?: Buffer },
   ) {
     try {
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log('🧪 TEST WEBHOOK SIMULATION TRIGGERED');
-      console.log('═══════════════════════════════════════════════════════════');
-      this.logger.log('═══════════════════════════════════════════════════════════');
-      this.logger.log('🧪 TEST WEBHOOK SIMULATION TRIGGERED');
-      this.logger.log('═══════════════════════════════════════════════════════════');
+      this.logger.log('🧪 Test webhook simulation triggered');
       
       // Create a simulated PayMongo webhook payload
       const testPaymentId = `pay_test_${Date.now()}`;
@@ -216,12 +211,7 @@ export class WebhookController {
         }
       }
 
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log('✅ Test webhook simulation completed successfully');
-      console.log('═══════════════════════════════════════════════════════════');
-      this.logger.log('═══════════════════════════════════════════════════════════');
-      this.logger.log('✅ Test webhook simulation completed successfully');
-      this.logger.log('═══════════════════════════════════════════════════════════');
+      this.logger.log('✅ Test webhook simulation completed');
 
       return {
         success: true,
@@ -310,38 +300,12 @@ export class WebhookController {
     @Req() req: Request & { rawBody?: Buffer },
   ) {
     try {
-      // Log the full request body for debugging - USE CONSOLE.LOG FOR RAILWAY VISIBILITY
-      const logMsg = '═══════════════════════════════════════════════════════════\n🔔 PayMongo Webhook Received\n═══════════════════════════════════════════════════════════';
-      console.log(logMsg);
-      this.logger.log('═══════════════════════════════════════════════════════════');
-      this.logger.log('🔔 PayMongo Webhook Received');
-      this.logger.log('═══════════════════════════════════════════════════════════');
+      // Reduced logging to prevent Railway rate limits
+      this.logger.log(`🔔 PayMongo Webhook: ${req.method} ${req.originalUrl}`);
       
-      const requestInfo = `📋 Request URL: ${req.originalUrl}\n📋 Request Method: ${req.method}\n📋 Request Host: ${req.get('host') || req.headers.host || 'unknown'}\n📋 Has rawBody: ${!!req.rawBody}\n📋 rawBody length: ${req.rawBody?.length || 0}\n📋 Has signature header: ${!!signature}\n📋 Signature: ${signature ? (Array.isArray(signature) ? signature[0] : signature).substring(0, 50) + '...' : 'NONE'}\n📋 Has PAYMONGO_WEBHOOK_SECRET: ${!!process.env.PAYMONGO_WEBHOOK_SECRET}\n📋 Environment: ${process.env.NODE_ENV || 'development'}\n📋 Railway Public Domain: ${process.env.RAILWAY_PUBLIC_DOMAIN || 'not set'}`;
-      console.log(requestInfo);
-      this.logger.log(`📋 Request URL: ${req.originalUrl}`);
-      this.logger.log(`📋 Request Method: ${req.method}`);
-      this.logger.log(`📋 Request Host: ${req.get('host') || req.headers.host || 'unknown'}`);
-      this.logger.log(`📋 Has rawBody: ${!!req.rawBody}`);
-      this.logger.log(`📋 rawBody length: ${req.rawBody?.length || 0}`);
-      this.logger.log(`📋 Has signature header: ${!!signature}`);
-      this.logger.log(`📋 Signature: ${signature ? (Array.isArray(signature) ? signature[0] : signature).substring(0, 50) + '...' : 'NONE'}`);
-      this.logger.log(`📋 Has PAYMONGO_WEBHOOK_SECRET: ${!!process.env.PAYMONGO_WEBHOOK_SECRET}`);
-      this.logger.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
-      this.logger.log(`📋 Railway Public Domain: ${process.env.RAILWAY_PUBLIC_DOMAIN || 'not set'}`);
-      
-      const bodyStr = JSON.stringify(body, null, 2);
-      console.log(`📦 Full webhook body: ${bodyStr}`);
-      this.logger.log(`📦 Full webhook body: ${bodyStr}`);
-      
-      // Log webhook configuration status
-      if (!process.env.PAYMONGO_WEBHOOK_SECRET) {
-        console.warn('⚠️  PAYMONGO_WEBHOOK_SECRET is not configured!');
-        console.warn('   Webhook signature verification will be skipped in development mode.');
-        console.warn('   For production, you MUST configure PAYMONGO_WEBHOOK_SECRET!');
-        this.logger.warn('⚠️  PAYMONGO_WEBHOOK_SECRET is not configured!');
-        this.logger.warn('   Webhook signature verification will be skipped in development mode.');
-        this.logger.warn('   For production, you MUST configure PAYMONGO_WEBHOOK_SECRET!');
+      // Log webhook configuration status (only in production if missing)
+      if (!process.env.PAYMONGO_WEBHOOK_SECRET && process.env.NODE_ENV === 'production') {
+        this.logger.warn('⚠️ PAYMONGO_WEBHOOK_SECRET not configured in production!');
       }
 
       // Verify webhook signature
@@ -377,61 +341,25 @@ export class WebhookController {
       const eventType = data.attributes.type;
       const paymentData = data.attributes.data;
       
-      console.log(`📥 Event Type: ${eventType}`);
-      console.log(`🆔 Event ID: ${data.id}`);
-      this.logger.log(`📥 Event Type: ${eventType}`);
-      this.logger.log(`🆔 Event ID: ${data.id}`);
-      this.logger.log(`📦 Full webhook payload structure:`);
-      this.logger.log(`   data.id: ${data.id}`);
-      this.logger.log(`   data.attributes.type: ${data.attributes.type}`);
-      this.logger.log(`   data.attributes.data.type: ${paymentData?.type || 'N/A'}`);
-      this.logger.log(`   data.attributes.data.id: ${paymentData?.id || 'N/A'}`);
-      if (paymentData?.attributes) {
-        const attrKeys = Object.keys(paymentData.attributes).join(', ');
-        console.log(`   data.attributes.data.attributes keys: ${attrKeys}`);
-        this.logger.log(`   data.attributes.data.attributes keys: ${attrKeys}`);
-      }
+      this.logger.log(`📥 Event: ${eventType} (ID: ${data.id})`);
 
       switch (eventType) {
         case 'payment.paid':
-          console.log('✅ Processing payment.paid event...');
           this.logger.log('✅ Processing payment.paid event...');
           await this.handlePaymentPaid(paymentData);
-          console.log('✅ Payment processed successfully!');
-          this.logger.log('✅ Payment processed successfully!');
           break;
         case 'checkout_session.payment.paid':
-          console.log('✅ Processing checkout_session.payment.paid event...');
-          console.log(`📋 Checkout Session ID from webhook: ${data.id}`);
           this.logger.log('✅ Processing checkout_session.payment.paid event...');
-          this.logger.log(`📋 Checkout Session ID from webhook: ${data.id}`);
-          const paymentDataStr = JSON.stringify(paymentData, null, 2);
-          console.log(`📦 Full paymentData structure: ${paymentDataStr}`);
-          this.logger.log(`📦 Full paymentData structure: ${paymentDataStr}`);
           
           // Prefer using the checkout session payload embedded in the webhook to avoid API fetch/mode issues
           if (paymentData && paymentData.type === 'checkout_session' && paymentData.attributes) {
             const csAttr: any = paymentData.attributes;
-            console.log(`📋 Checkout session attributes found in webhook payload`);
-            const csMetadataStr = JSON.stringify(csAttr.metadata || {});
-            console.log(`📋 Checkout session metadata: ${csMetadataStr}`);
-            this.logger.log(`📋 Checkout session attributes found in webhook payload`);
-            this.logger.log(`📋 Checkout session metadata: ${csMetadataStr}`);
             
             let bookingDataFromSession: any | undefined;
             try {
               if (csAttr.metadata?.bookingData) {
                 bookingDataFromSession = JSON.parse(csAttr.metadata.bookingData);
-                console.log(`✅ Booking data found in checkout session metadata from webhook payload`);
-                console.log(`   👤 User ID: ${bookingDataFromSession?.userId}`);
-                console.log(`   📅 Date: ${bookingDataFromSession?.selectedDate}`);
-                console.log(`   🏸 Courts: ${bookingDataFromSession?.courtBookings?.length || 0}`);
-                console.log(`   🎾 Equipment: ${bookingDataFromSession?.equipmentBookings?.length || 0}`);
-                this.logger.log(`✅ Booking data found in checkout session metadata from webhook payload`);
-                this.logger.log(`   👤 User ID: ${bookingDataFromSession?.userId}`);
-                this.logger.log(`   📅 Date: ${bookingDataFromSession?.selectedDate}`);
-                this.logger.log(`   🏸 Courts: ${bookingDataFromSession?.courtBookings?.length || 0}`);
-                this.logger.log(`   🎾 Equipment: ${bookingDataFromSession?.equipmentBookings?.length || 0}`);
+                this.logger.log(`✅ Booking data found: User ${bookingDataFromSession?.userId}, Date ${bookingDataFromSession?.selectedDate}, ${bookingDataFromSession?.courtBookings?.length || 0} court(s), ${bookingDataFromSession?.equipmentBookings?.length || 0} equipment`);
               } else {
                 const mdKeys = csAttr.metadata ? Object.keys(csAttr.metadata).join(', ') : 'no metadata';
                 console.warn('⚠️ No bookingData found in checkout session metadata from webhook payload');
@@ -499,19 +427,10 @@ export class WebhookController {
           this.logger.log(`⚠️ Unhandled webhook event type: ${eventType}`);
       }
 
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log('✅ Webhook processed successfully');
-      console.log('═══════════════════════════════════════════════════════════');
-      this.logger.log('═══════════════════════════════════════════════════════════');
       this.logger.log('✅ Webhook processed successfully');
-      this.logger.log('═══════════════════════════════════════════════════════════');
       return { success: true, message: 'Webhook processed successfully' };
     } catch (error) {
-      const errorMsg = `═══════════════════════════════════════════════════════════\n❌ Error processing webhook\n═══════════════════════════════════════════════════════════\nError message: ${error.message}\nError stack: ${error.stack}`;
-      console.error(errorMsg);
-      this.logger.error('═══════════════════════════════════════════════════════════');
-      this.logger.error('❌ Error processing webhook');
-      this.logger.error('═══════════════════════════════════════════════════════════');
+      this.logger.error(`❌ Error processing webhook: ${error.message}`, error.stack);
       this.logger.error(`Error message: ${error.message}`);
       this.logger.error(`Error stack: ${error.stack}`);
       if (error instanceof Error) {
@@ -607,27 +526,25 @@ export class WebhookController {
     await queryRunner.startTransaction();
     
     try {
-      console.log('───────────────────────────────────────────────────────────');
-      console.log(`💳 Processing Payment: ${paymentData.id}`);
-      console.log('───────────────────────────────────────────────────────────');
-      this.logger.log('───────────────────────────────────────────────────────────');
-      this.logger.log(`💳 Processing Payment: ${paymentData.id}`);
-      this.logger.log('───────────────────────────────────────────────────────────');
-      
       // Prefer payment details from webhook payload; fallback to API fetch
-      const payment = paymentData?.attributes
-        ? { id: paymentData.id, attributes: paymentData.attributes }
-        : await this.payMongoService.getPayment(paymentData.id);
+      // CRITICAL: Always fetch from API to get the latest payment status
+      // Webhook payload might have stale status, especially in test mode
+      const payment = await this.payMongoService.getPayment(paymentData.id);
       
       const amount = (payment.attributes.amount / 100).toFixed(2);
       const paymentMethodType = payment.attributes.source?.type || 'Unknown';
       const status = payment.attributes.status;
-      console.log(`💰 Amount: ₱${amount}`);
-      console.log(`💳 Payment Method: ${paymentMethodType}`);
-      console.log(`📊 Status: ${status}`);
-      this.logger.log(`💰 Amount: ₱${amount}`);
-      this.logger.log(`💳 Payment Method: ${paymentMethodType}`);
-      this.logger.log(`📊 Status: ${status}`);
+      
+      // Reduced logging - combine into single log statement
+      this.logger.log(`💳 Processing Payment ${paymentData.id}: ₱${amount} via ${paymentMethodType}, Status: ${status}`);
+      
+      // CRITICAL: Only process if payment status is actually "paid"
+      // PayMongo may send webhooks before payment is authorized (especially in test mode)
+      if (status !== 'paid') {
+        await queryRunner.rollbackTransaction();
+        this.logger.log(`⏸️ Payment ${payment.id} status is "${status}", not "paid". Skipping processing.`);
+        return; // Exit early - payment not yet paid
+      }
       
       // CRITICAL: Idempotency check - prevent duplicate processing if webhook is called multiple times
       // Use transaction's repository to ensure we're checking within the same transaction
@@ -655,9 +572,7 @@ export class WebhookController {
       
       if (existingPayment) {
         await queryRunner.rollbackTransaction();
-        const dupMsg = `✅ Duplicate webhook detected and safely ignored: Payment ${transactionId} was already processed. Existing payment ID: ${existingPayment.id}, Reservation ID: ${existingPayment.reservation_id}. This is normal - PayMongo may send webhooks multiple times. System prevented duplicate processing.`;
-        console.log(dupMsg);
-        this.logger.log(dupMsg);
+        this.logger.log(`✅ Duplicate webhook ignored: Payment ${transactionId} already processed (Payment ID: ${existingPayment.id})`);
         return; // Exit early - payment already processed
       }
       
@@ -669,9 +584,7 @@ export class WebhookController {
       
       if (existingReservationsByPaymongo && existingReservationsByPaymongo.length > 0) {
         await queryRunner.rollbackTransaction();
-        const dupMsg = `✅ Duplicate webhook detected: Reservations with PayMongo reference ${transactionId} already exist (${existingReservationsByPaymongo.length} reservation(s)). Skipping duplicate processing. Reservation IDs: ${existingReservationsByPaymongo.map(r => r.Reservation_ID).join(', ')}`;
-        console.log(dupMsg);
-        this.logger.log(dupMsg);
+        this.logger.log(`✅ Duplicate webhook ignored: Reservations for ${transactionId} already exist (${existingReservationsByPaymongo.length} reservation(s))`);
         return; // Exit early - reservations already exist for this payment
       }
       
@@ -685,9 +598,7 @@ export class WebhookController {
         
         if (existingReservationsByRef && existingReservationsByRef.length > 0) {
           await queryRunner.rollbackTransaction();
-          const dupMsg = `✅ Duplicate webhook detected: Reservations with booking reference number ${bookingReferenceNumber} already exist (${existingReservationsByRef.length} reservation(s)). This booking was already processed. Skipping duplicate processing. Reservation IDs: ${existingReservationsByRef.map(r => r.Reservation_ID).join(', ')}`;
-          console.log(dupMsg);
-          this.logger.log(dupMsg);
+          this.logger.log(`✅ Duplicate webhook ignored: Booking ${bookingReferenceNumber} already processed (${existingReservationsByRef.length} reservation(s))`);
           return; // Exit early - reservations already exist for this booking reference
         }
       }
@@ -699,14 +610,7 @@ export class WebhookController {
       if (bookingDataRaw) {
         try {
           const bookingData = typeof bookingDataRaw === 'string' ? JSON.parse(bookingDataRaw) : bookingDataRaw;
-          console.log(`📋 Creating reservations from booking data...`);
-          console.log(`   👤 User ID: ${bookingData.userId}`);
-          console.log(`   📅 Date: ${bookingData.selectedDate}`);
-          console.log(`   🏸 Court Bookings: ${bookingData.courtBookings?.length || 0}`);
-          this.logger.log(`📋 Creating reservations from booking data...`);
-          this.logger.log(`   👤 User ID: ${bookingData.userId}`);
-          this.logger.log(`   📅 Date: ${bookingData.selectedDate}`);
-          this.logger.log(`   🏸 Court Bookings: ${bookingData.courtBookings?.length || 0}`);
+          this.logger.log(`📋 Creating reservations: User ${bookingData.userId}, Date ${bookingData.selectedDate}, ${bookingData.courtBookings?.length || 0} court(s)`);
           
           // Use transaction manager to create reservations within the transaction
           createdReservations = await this.createReservationFromPaymentWithTransaction(queryRunner, payment, bookingData);
@@ -715,37 +619,20 @@ export class WebhookController {
           if (createdReservations.length > 0) {
             reservationId = createdReservations[0].Reservation_ID;
             const resIds = createdReservations.map(r => r.Reservation_ID).join(', ');
-            console.log(`✅ Successfully created ${createdReservations.length} reservation(s)`);
-            console.log(`   🆔 Reservation ID(s): ${resIds}`);
-            console.log(`   📝 Reference Number: ${createdReservations[0].Reference_Number}`);
-            this.logger.log(`✅ Successfully created ${createdReservations.length} reservation(s)`);
-            this.logger.log(`   🆔 Reservation ID(s): ${resIds}`);
-            this.logger.log(`   📝 Reference Number: ${createdReservations[0].Reference_Number}`);
+            this.logger.log(`✅ Created ${createdReservations.length} reservation(s): IDs ${resIds}, Ref: ${createdReservations[0].Reference_Number}`);
           } else {
             await queryRunner.rollbackTransaction();
-            console.warn('⚠️ No reservations were created');
             this.logger.warn('⚠️ No reservations were created');
             return;
           }
         } catch (error) {
           await queryRunner.rollbackTransaction();
-          console.error('❌ Error creating reservation from payment metadata:', error);
-          console.error('Error details:', error.message, error.stack);
-          this.logger.error('❌ Error creating reservation from payment metadata:', error);
+          this.logger.error(`❌ Error creating reservation: ${error.message}`, error.stack);
           throw error;
         }
       } else {
         await queryRunner.rollbackTransaction();
-        const noBookingMsg = '⚠️ No booking data found in payment metadata or override';
-        const metadataStr = JSON.stringify(payment.attributes?.metadata || {});
-        console.warn(noBookingMsg);
-        console.warn(`   Payment metadata: ${metadataStr}`);
-        console.warn(`   Booking data override: ${bookingDataOverride ? 'provided' : 'not provided'}`);
-        console.error('❌ Cannot create reservations without booking data. Transaction will not be recorded.');
-        this.logger.warn('⚠️ No booking data found in payment metadata or override');
-        this.logger.warn(`   Payment metadata: ${metadataStr}`);
-        this.logger.warn(`   Booking data override: ${bookingDataOverride ? 'provided' : 'not provided'}`);
-        this.logger.error('❌ Cannot create reservations without booking data. Transaction will not be recorded.');
+        this.logger.warn('⚠️ No booking data found in payment metadata. Cannot create reservations.');
         return;
       }
       
@@ -761,16 +648,10 @@ export class WebhookController {
       if (createdReservations.length > 0) {
         // Create a payment record for each reservation using transaction manager
         try {
-          console.log(`💾 Attempting to create ${createdReservations.length} payment record(s) in database...`);
-          this.logger.log(`💾 Attempting to create ${createdReservations.length} payment record(s) in database...`);
-          
           const paymentPromises = createdReservations.map(async (reservation: Reservation) => {
             // Calculate amount per reservation (divide total by number of reservations)
             // Or use the reservation's total amount if available
             const reservationAmount = Number(reservation.Total_Amount) || (totalAmount / createdReservations.length);
-            
-            console.log(`   💰 Creating payment for Reservation ID: ${reservation.Reservation_ID}, Amount: ₱${reservationAmount}, Transaction ID: ${transactionId}`);
-            this.logger.log(`   💰 Creating payment for Reservation ID: ${reservation.Reservation_ID}, Amount: ₱${reservationAmount}, Transaction ID: ${transactionId}`);
             
             const newPayment = queryRunner.manager.create(Payment, {
               reservation_id: reservation.Reservation_ID,
@@ -783,37 +664,20 @@ export class WebhookController {
             });
             
             const savedPayment = await queryRunner.manager.save(Payment, newPayment);
-            console.log(`   ✅ Payment record created successfully: ID=${savedPayment.id}, Reservation ID=${reservation.Reservation_ID}`);
-            this.logger.log(`   ✅ Payment record created successfully: ID=${savedPayment.id}, Reservation ID=${reservation.Reservation_ID}`);
             return savedPayment;
           });
           
           const savedPayments = await Promise.all(paymentPromises);
-          console.log(`✅ Successfully created ${savedPayments.length} payment record(s) in database`);
-          this.logger.log(`✅ Created ${savedPayments.length} payment record(s) in database`);
-          savedPayments.forEach((savedPayment: Payment, index: number) => {
-            const paymentRecordMsg = `   🆔 Payment Record ID: ${savedPayment.id}, Linked to Reservation ID: ${createdReservations[index].Reservation_ID}`;
-            console.log(paymentRecordMsg);
-            this.logger.log(paymentRecordMsg);
-          });
+          const paymentIds = savedPayments.map(p => p.id).join(', ');
+          this.logger.log(`✅ Created ${savedPayments.length} payment record(s): IDs ${paymentIds}`);
         } catch (dbError) {
           await queryRunner.rollbackTransaction();
-          console.error('❌ CRITICAL: Failed to create payment records in database!');
-          console.error('   Error message:', dbError.message);
-          console.error('   Error stack:', dbError.stack);
-          console.error('   Transaction ID:', transactionId);
-          console.error('   Reservation IDs:', createdReservations.map(r => r.Reservation_ID).join(', '));
-          this.logger.error('❌ CRITICAL: Failed to create payment records in database!', dbError);
-          this.logger.error(`   Transaction ID: ${transactionId}`);
-          this.logger.error(`   Reservation IDs: ${createdReservations.map(r => r.Reservation_ID).join(', ')}`);
+          this.logger.error(`❌ Failed to create payment records: ${dbError.message}`, dbError.stack);
           throw dbError;
         }
       } else if (reservationId > 0) {
         // Fallback: if no reservations were created but we have a reservationId, create one payment
         try {
-          console.log(`💾 Attempting to create payment record for Reservation ID: ${reservationId}...`);
-          this.logger.log(`💾 Attempting to create payment record for Reservation ID: ${reservationId}...`);
-          
           const newPayment = queryRunner.manager.create(Payment, {
             reservation_id: reservationId,
             amount: totalAmount,
@@ -824,28 +688,20 @@ export class WebhookController {
             status: payment.attributes.status === 'paid' ? PaymentStatus.COMPLETED : PaymentStatus.PENDING,
           });
           
-          await queryRunner.manager.save(Payment, newPayment);
-          console.log(`✅ Created payment record in database`);
-          console.log(`   🆔 Payment Record ID: ${newPayment.id}`);
-          console.log(`   🔗 Linked to Reservation ID: ${reservationId}`);
-          this.logger.log(`✅ Created payment record in database`);
-          this.logger.log(`   🆔 Payment Record ID: ${newPayment.id}`);
-          this.logger.log(`   🔗 Linked to Reservation ID: ${reservationId}`);
+          const savedPayment = await queryRunner.manager.save(Payment, newPayment);
+          this.logger.log(`✅ Created payment record ID: ${savedPayment.id} for Reservation ${reservationId}`);
         } catch (dbError) {
           await queryRunner.rollbackTransaction();
-          console.error('❌ CRITICAL: Failed to create payment record in database!');
-          console.error('   Error message:', dbError.message);
-          console.error('   Error stack:', dbError.stack);
-          console.error('   Transaction ID:', transactionId);
-          console.error('   Reservation ID:', reservationId);
-          this.logger.error('❌ CRITICAL: Failed to create payment record in database!', dbError);
-          this.logger.error(`   Transaction ID: ${transactionId}`);
-          this.logger.error(`   Reservation ID: ${reservationId}`);
+          this.logger.error(`❌ Failed to create payment record: ${dbError.message}`, dbError.stack);
           throw dbError;
         }
       }
       
-      // Persist equipment rentals if present in booking data
+      // Commit the transaction FIRST before creating equipment rentals
+      // Equipment rentals need to query the database, so reservation must be committed
+      await queryRunner.commitTransaction();
+      
+      // Persist equipment rentals if present in booking data (after transaction commit)
       // Link equipment rentals to the first reservation (or could be distributed, but typically equipment is shared across all reservations in a transaction)
       try {
         const effectiveBookingData = bookingDataOverride
@@ -861,27 +717,19 @@ export class WebhookController {
           );
         }
       } catch (e) {
+        // Equipment rental errors are non-critical - log but don't fail the entire process
+        console.error('⚠️ Error saving equipment rentals (non-critical):', e.message);
         this.logger.error('Error saving equipment rentals:', e);
       }
       
       // Custom email receipt removed - PayMongo receipt will be sent automatically
+      // Transaction already committed above before equipment rentals
 
-      // Commit the transaction - all operations succeeded
-      await queryRunner.commitTransaction();
-      
-      console.log('───────────────────────────────────────────────────────────');
-      console.log('✅ Payment processing completed successfully!');
-      console.log('───────────────────────────────────────────────────────────');
-      this.logger.log('───────────────────────────────────────────────────────────');
-      this.logger.log('✅ Payment processing completed successfully!');
-      this.logger.log('───────────────────────────────────────────────────────────');
+      this.logger.log(`✅ Payment ${paymentData.id} processed successfully`);
     } catch (error) {
       // Rollback transaction on any error
       await queryRunner.rollbackTransaction();
-      console.error('❌ Error handling payment.paid event:', error);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-      this.logger.error('Error handling payment.paid event:', error);
+      this.logger.error(`❌ Error processing payment ${paymentData.id}: ${error.message}`, error.stack);
       throw error; // Re-throw to be caught by caller
     } finally {
       // Release the query runner
