@@ -70,12 +70,17 @@ export class SendGridService {
       
       // Log the from email being used (important for debugging sender verification)
       this.logger.log(`📧 Sending email from: ${fromEmail} to: ${to}`);
+      this.logger.log(`📧 Email configuration check: FROM="${fromEmail}" must match verified sender in SendGrid`);
 
+      // Create email message with reply-to matching from (best practice)
       const msg = {
         to,
         from: fromEmail,
+        replyTo: fromEmail, // Set reply-to to match from address
         subject: 'Password Reset OTP - Budz Badminton',
         html,
+        // Add text version for better deliverability
+        text: `Hello ${name || 'User'},\n\nYou have requested to reset your password for your Budz Badminton account.\n\nYour OTP Code is: ${otp}\n\nThis OTP will expire in 15 minutes.\n\nIf you didn't request this password reset, please ignore this email.\n\n© 2024 Budz Badminton. All rights reserved.`,
       };
 
       // Get the mail module (handle different export styles)
