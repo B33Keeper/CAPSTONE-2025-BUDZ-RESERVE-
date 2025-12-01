@@ -48,13 +48,6 @@ export function VerifyOtpPage() {
     // Get email from navigation state
     if (location.state?.email) {
       setEmail(location.state.email)
-      // If development OTP is provided, show it in a toast
-      if (location.state?.developmentOtp) {
-        toast.success(
-          `Development Mode: Your OTP is ${location.state.developmentOtp}`,
-          { duration: 8000 }
-        )
-      }
     } else {
       // If no email in state, redirect to forgot password
       navigate('/forgot-password')
@@ -125,24 +118,12 @@ export function VerifyOtpPage() {
         {/* Title */}
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Verify Your OTP</h2>
-          {location.state?.developmentOtp ? (
-            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 mb-4">
-              <p className="text-sm font-semibold text-yellow-800 mb-1">Development Mode</p>
-              <p className="text-gray-700">
-                Your OTP is: <span className="text-2xl font-mono font-bold text-blue-600">{location.state.developmentOtp}</span>
-              </p>
-              <p className="text-xs text-gray-600 mt-2">SMTP is not configured. Using development OTP.</p>
-            </div>
-          ) : (
-            <>
-              <p className="text-gray-600">
-                We've sent a 6-digit OTP to <span className="text-blue-600 font-semibold">{email}</span>
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                Please check your email and enter the OTP below.
-              </p>
-            </>
-          )}
+          <p className="text-gray-600">
+            We've sent a 6-digit OTP to <span className="text-blue-600 font-semibold">{email}</span>
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Please check your email and enter the OTP below.
+          </p>
         </div>
 
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>

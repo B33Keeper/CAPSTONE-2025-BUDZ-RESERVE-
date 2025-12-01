@@ -114,17 +114,25 @@ import { HealthController } from './health.controller';
           };
         };
         
-        // If SKIP_SMTP is set, use dummy transport (useful for Railway free plans)
+        // If SKIP_SMTP is explicitly set, use dummy transport (for testing only)
         if (skipSmtp) {
           console.warn('⚠️  SMTP disabled via SKIP_SMTP flag. Using dummy email transport.');
-          console.warn('   Email sending will be disabled. OTPs will be returned in API responses.');
+          console.warn('   ⚠️  WARNING: This is for testing only. Emails will NOT be sent!');
           return createDummyTransport();
         }
         
-        // If SMTP credentials are not provided, use a dummy transport
+        // If SMTP credentials are not provided, throw error in production
         if (!smtpUser || !smtpPass) {
-          console.warn('⚠️ SMTP credentials not configured. Email functionality will be disabled.');
-          return createDummyTransport();
+          const nodeEnv = configService.get('NODE_ENV', 'production');
+          if (nodeEnv === 'development') {
+            console.warn('⚠️ SMTP credentials not configured. Using dummy transport for development.');
+            return createDummyTransport();
+          } else {
+            console.error('❌ SMTP credentials not configured. Email functionality will not work.');
+            console.error('   Please set SMTP_USER and SMTP_PASS environment variables.');
+            // Still use dummy transport to prevent app crash, but log error
+            return createDummyTransport();
+          }
         }
         
         // Log Railway detection (but don't auto-disable SMTP - Pro+ plans support it)

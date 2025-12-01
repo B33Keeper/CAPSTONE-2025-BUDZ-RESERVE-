@@ -100,35 +100,6 @@ export class AuthService {
       throw new NotFoundException('User with this email does not exist');
     }
 
-    // Check if SMTP is configured
-    const smtpUser = this.configService.get('SMTP_USER');
-    const smtpPass = this.configService.get('SMTP_PASS');
-    const isDevelopment = this.configService.get('NODE_ENV') === 'development';
-    
-    if (!smtpUser || !smtpPass) {
-      console.error('❌ SMTP credentials not configured. Cannot send email.');
-      if (isDevelopment) {
-        // In development, generate OTP and return it in response
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-        this.otpStore.set(email, { otp, expiresAt });
-        
-        console.log('=== DEVELOPMENT MODE - SMTP NOT CONFIGURED ===');
-        console.log('Email:', email);
-        console.log('OTP Code:', otp);
-        console.log('Expires at:', expiresAt);
-        console.log('==============================================');
-        
-        return { 
-          message: 'SMTP not configured. OTP generated for development: ' + otp,
-          otp: otp, // Include OTP in response for development
-          development: true
-        };
-      } else {
-        throw new BadRequestException('Email service is not configured. Please contact support.');
-      }
-    }
-
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
@@ -153,42 +124,16 @@ export class AuthService {
     } catch (error: any) {
       // Log detailed error for debugging
       console.error('❌ Email sending failed:', error?.message || error);
+      console.error('Error code:', error?.code);
+      console.error('Error stack:', error?.stack);
       
-      // Check if it's a connection error (timeout, refused, etc.)
-      const isConnectionError = error?.code === 'ETIMEDOUT' || 
-                                 error?.code === 'ECONNREFUSED' ||
-                                 error?.code === 'ECONNRESET' ||
-                                 error?.message?.includes('timeout') ||
-                                 error?.message?.includes('Connection timeout') ||
-                                 error?.message?.includes('ECONNREFUSED') ||
-                                 error?.message?.includes('connect');
+      // Remove OTP from store since email failed
+      this.otpStore.delete(email);
       
-      if (isConnectionError) {
-        console.warn('⚠️  SMTP connection failed (connection refused/timeout). OTP will be returned in response.');
-        console.warn('   This is expected if SKIP_SMTP=true or SMTP is blocked (e.g., Railway free plan).');
-      }
-      
-      // In development or if connection fails, return OTP in response
-      if (isDevelopment || isConnectionError) {
-        console.log('=== DEVELOPMENT FALLBACK - EMAIL FAILED ===');
-        console.log('Email:', email);
-        console.log('User:', user.name || user.username);
-        console.log('OTP Code:', otp);
-        console.log('Expires at:', expiresAt);
-        console.log('===========================================');
-        
-        return { 
-          message: 'Email sending failed. OTP generated for development: ' + otp,
-          otp: otp, // Include OTP in response for development
-          development: true,
-          error: error.message || 'Email service error'
-        };
-      } else {
-        // In production, throw error
-        throw new BadRequestException(
-          'Failed to send OTP email. Please try again later or contact support.'
+      // In production, always throw error - don't return OTP in response
+      throw new BadRequestException(
+          'Failed to send OTP email. Please check your email configuration or try again later. If the problem persists, please contact support.'
         );
-      }
     }
   }
 

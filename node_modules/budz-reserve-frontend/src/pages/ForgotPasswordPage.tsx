@@ -54,23 +54,8 @@ export function ForgotPasswordPage() {
     try {
       const response = await api.post('/auth/forgot-password', data)
       
-      // Check if OTP is returned in development mode
-      if (response.data.development && response.data.otp) {
-        toast.success(
-          `Development Mode: OTP is ${response.data.otp}. ${response.data.message}`,
-          { duration: 10000 }
-        )
-        // Store OTP in state to pass to verify page
-        navigate('/verify-otp', { 
-          state: { 
-            email: data.email,
-            developmentOtp: response.data.otp 
-          } 
-        })
-      } else {
-        toast.success(response.data.message || 'OTP sent to your email address!')
-        navigate('/verify-otp', { state: { email: data.email } })
-      }
+      toast.success(response.data.message || 'OTP sent to your email address!')
+      navigate('/verify-otp', { state: { email: data.email } })
     } catch (error) {
       const message = getErrorMessage(error, 'Failed to send OTP')
       setError('root', { type: 'manual', message })
