@@ -22,10 +22,7 @@ export class CreateEquipmentDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^\/|https?:\/\//, {
-    message: 'image_path must be a relative path starting with "/" or a valid URL',
-  })
-  image_path?: string;
+  image_path?: string; // Can be base64 data URL, file path, or external URL
 
   @IsOptional()
   @IsString()

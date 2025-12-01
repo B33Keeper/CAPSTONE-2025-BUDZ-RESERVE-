@@ -7,6 +7,24 @@ import * as path from 'path';
 export class UploadService {
   constructor(private configService: ConfigService) {}
 
+  /**
+   * Convert image file to base64 data URL
+   * This stores images directly in the database instead of file system
+   */
+  async convertImageToBase64(file: Express.Multer.File): Promise<string> {
+    // Convert buffer to base64
+    const base64String = file.buffer.toString('base64');
+    
+    // Create data URL with proper MIME type
+    const dataUrl = `data:${file.mimetype};base64,${base64String}`;
+    
+    return dataUrl;
+  }
+
+  /**
+   * Legacy method: Upload file to file system (kept for backward compatibility)
+   * @deprecated Use convertImageToBase64 instead for hosted environments
+   */
   async uploadFile(file: Express.Multer.File, subfolder: string = 'general'): Promise<string> {
     // Ensure we use absolute path
     const uploadDir = this.configService.get('UPLOAD_DEST', 'uploads');

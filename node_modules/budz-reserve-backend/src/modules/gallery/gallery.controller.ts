@@ -92,12 +92,13 @@ export class GalleryController {
       throw new BadRequestException('File too large. Maximum size is 10MB.');
     }
 
-    const filePath = await this.uploadService.uploadFile(file, 'gallery');
+    // Convert image to base64 and store in database
+    const base64Image = await this.uploadService.convertImageToBase64(file);
     
     const createGalleryDto: CreateGalleryDto = {
       title,
       description,
-      image_path: filePath,
+      image_path: base64Image,
       status: 'active',
     };
 

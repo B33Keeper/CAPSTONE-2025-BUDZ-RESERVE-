@@ -23,7 +23,7 @@ export class Equipment {
   @Column({ default: 'Available' })
   status: string;
 
-  @Column({ type: 'varchar', length: 255, default: '/assets/img/equipments/racket.png' })
+  @Column({ type: 'longtext', nullable: true })
   image_path: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })

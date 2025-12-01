@@ -46,7 +46,7 @@ export class User {
   @Column({ length: 20, nullable: true })
   contact_number: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   profile_picture: string;
 
   @Column({ default: true })

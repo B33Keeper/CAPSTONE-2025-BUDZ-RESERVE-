@@ -55,17 +55,18 @@ export class UploadController {
       throw new BadRequestException('File too large. Maximum size is 10MB.');
     }
 
-    // Delete old avatar before uploading new one
+    // Delete old avatar before uploading new one (only if it's a file path)
     await this.uploadService.deleteOldAvatar(req.user.id, this.usersService);
     
-    const filePath = await this.uploadService.uploadFile(file, 'avatars');
+    // Convert image to base64 and store in database
+    const base64Image = await this.uploadService.convertImageToBase64(file);
     
-    // Update user's profile picture in database
-    await this.usersService.updateProfilePicture(req.user.id, filePath);
+    // Update user's profile picture in database with base64
+    await this.usersService.updateProfilePicture(req.user.id, base64Image);
 
     return {
       message: 'Avatar uploaded successfully',
-      profilePicture: filePath,
+      profilePicture: base64Image,
     };
   }
 

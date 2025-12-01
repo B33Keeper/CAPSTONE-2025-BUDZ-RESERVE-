@@ -27,12 +27,18 @@ export function getBackendBaseUrl(): string {
 
 /**
  * Resolve a full URL for an uploaded image
- * @param imagePath - The image path from the backend (e.g., "/uploads/avatars/image.jpg")
- * @returns Full URL to the image
+ * Handles base64 images, file paths, URLs, and static assets
+ * @param imagePath - The image path from the backend (e.g., "/uploads/avatars/image.jpg" or "data:image/jpeg;base64,...")
+ * @returns Full URL to the image or base64 data URL
  */
 export function resolveImageUrl(imagePath: string | null | undefined): string {
   if (!imagePath) {
     return ''
+  }
+
+  // If it's a base64 data URL (stored in database), return as-is
+  if (imagePath.startsWith('data:image/')) {
+    return imagePath
   }
 
   // If it's already a full URL, return as-is

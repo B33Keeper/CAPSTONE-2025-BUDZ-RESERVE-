@@ -53,8 +53,9 @@ export class EquipmentController {
   ) {
     if (file) {
       this.validateImage(file);
-      const imagePath = await this.uploadService.uploadFile(file, 'equipments');
-      createEquipmentDto.image_path = imagePath;
+      // Convert image to base64 and store in database
+      const base64Image = await this.uploadService.convertImageToBase64(file);
+      createEquipmentDto.image_path = base64Image;
     }
 
     return this.equipmentService.create(createEquipmentDto);
@@ -100,16 +101,18 @@ export class EquipmentController {
     if (file) {
       this.validateImage(file);
 
-      // Upload new image
-      const imagePath = await this.uploadService.uploadFile(file, 'equipments');
-      updateEquipmentDto.image_path = imagePath;
+      // Convert new image to base64 and store in database
+      const base64Image = await this.uploadService.convertImageToBase64(file);
+      updateEquipmentDto.image_path = base64Image;
 
-      // Delete old image if it was stored locally and not the default asset
+      // Delete old image if it was stored as a file path (for backward compatibility)
       if (
         existingEquipment.image_path &&
         !existingEquipment.image_path.startsWith('http') &&
-        !existingEquipment.image_path.startsWith('/assets/')
+        !existingEquipment.image_path.startsWith('/assets/') &&
+        !existingEquipment.image_path.startsWith('data:image/')
       ) {
+        // Only delete if it's a file path, not base64 or URL
         await this.uploadService.deleteFile(existingEquipment.image_path);
       }
     }

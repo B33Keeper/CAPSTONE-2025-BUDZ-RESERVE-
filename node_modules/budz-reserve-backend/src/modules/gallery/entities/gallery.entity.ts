@@ -11,7 +11,7 @@ export class Gallery {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ length: 500 })
+  @Column({ type: 'longtext' })
   image_path: string;
 
   @Column({ length: 50, default: 'active' })

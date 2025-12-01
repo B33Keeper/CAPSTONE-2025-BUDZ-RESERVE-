@@ -111,8 +111,8 @@ export class UsersService {
   async remove(id: number): Promise<void> {
     const user = await this.findOne(id);
     
-    // Delete user's profile picture if it exists
-    if (user.profile_picture && !user.profile_picture.startsWith('http')) {
+    // Delete user's profile picture if it exists (only if it's a file path, not base64)
+    if (user.profile_picture && !user.profile_picture.startsWith('http') && !user.profile_picture.startsWith('data:image/')) {
       try {
         const { UploadService } = await import('../upload/upload.service');
         const { ConfigService } = await import('@nestjs/config');
