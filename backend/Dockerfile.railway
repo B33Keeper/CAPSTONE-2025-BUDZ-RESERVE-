@@ -16,8 +16,8 @@ RUN apk add --no-cache \
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
-# Use npm ci for faster, reliable, reproducible builds
-RUN npm ci && npm cache clean --force
+# Use npm install to update package-lock.json if needed
+RUN npm install && npm cache clean --force
 
 # Copy source code
 COPY . .
