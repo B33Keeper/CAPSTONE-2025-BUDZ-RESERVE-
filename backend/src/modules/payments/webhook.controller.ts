@@ -55,6 +55,7 @@ export class WebhookController {
   @Get('paymongo/test')
   @HttpCode(HttpStatus.OK)
   async testWebhookEndpoint(@Req() req: Request) {
+    console.log('🧪 Test webhook endpoint called (GET)');
     this.logger.log('🧪 Test webhook endpoint called');
     return {
       success: true,
@@ -67,6 +68,159 @@ export class WebhookController {
         'user-agent': req.get('user-agent'),
       },
     };
+  }
+
+  @Post('paymongo/test')
+  @HttpCode(HttpStatus.OK)
+  @UsePipes(new WebhookValidationPipe())
+  async testWebhookSimulation(
+    @Body() testData: {
+      userId?: number;
+      selectedDate?: string;
+      courtBookings?: Array<{ court: string; schedule: string; subtotal: number }>;
+      equipmentBookings?: Array<any>;
+      referenceNumber?: string;
+      amount?: number;
+    },
+    @Req() req: Request & { rawBody?: Buffer },
+  ) {
+    try {
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('🧪 TEST WEBHOOK SIMULATION TRIGGERED');
+      console.log('═══════════════════════════════════════════════════════════');
+      this.logger.log('═══════════════════════════════════════════════════════════');
+      this.logger.log('🧪 TEST WEBHOOK SIMULATION TRIGGERED');
+      this.logger.log('═══════════════════════════════════════════════════════════');
+      
+      // Create a simulated PayMongo webhook payload
+      const testPaymentId = `pay_test_${Date.now()}`;
+      const testCheckoutSessionId = `cs_test_${Date.now()}`;
+      const amount = testData.amount || 75000; // Default to 750 PHP in centavos
+      
+      const bookingData = {
+        userId: testData.userId || 1,
+        selectedDate: testData.selectedDate || new Date().toISOString().split('T')[0],
+        courtBookings: testData.courtBookings || [
+          { court: 'Court 1', schedule: '8:00 AM - 9:00 AM', subtotal: 250 }
+        ],
+        equipmentBookings: testData.equipmentBookings || [],
+        referenceNumber: testData.referenceNumber || `REF${Date.now()}`,
+      };
+
+      console.log('📦 Test Data Received:');
+      console.log(JSON.stringify(testData, null, 2));
+      this.logger.log(`📦 Test Data: ${JSON.stringify(testData, null, 2)}`);
+
+      // Simulate checkout_session.payment.paid event
+      const simulatedWebhookPayload = {
+        data: {
+          id: testCheckoutSessionId,
+          type: 'event',
+          attributes: {
+            type: 'checkout_session.payment.paid',
+            livemode: false,
+            data: {
+              id: testCheckoutSessionId,
+              type: 'checkout_session',
+              attributes: {
+                id: testCheckoutSessionId,
+                type: 'checkout_session',
+                amount: amount,
+                currency: 'PHP',
+                status: 'paid',
+                payment_intent: {
+                  id: `pi_test_${Date.now()}`,
+                  type: 'payment_intent',
+                },
+                payments: {
+                  data: [
+                    {
+                      id: testPaymentId,
+                      type: 'payment',
+                    }
+                  ]
+                },
+                metadata: {
+                  bookingData: JSON.stringify(bookingData),
+                },
+              },
+            },
+            created_at: Math.floor(Date.now() / 1000),
+          },
+        },
+      };
+
+      console.log('📤 Simulated Webhook Payload:');
+      console.log(JSON.stringify(simulatedWebhookPayload, null, 2));
+      this.logger.log(`📤 Simulated Payload: ${JSON.stringify(simulatedWebhookPayload, null, 2)}`);
+
+      // Process the simulated webhook
+      const { data } = simulatedWebhookPayload;
+      const eventType = data.attributes.type;
+      const paymentData = data.attributes.data;
+
+      console.log(`📥 Simulated Event Type: ${eventType}`);
+      console.log(`🆔 Simulated Event ID: ${data.id}`);
+      this.logger.log(`📥 Simulated Event Type: ${eventType}`);
+      this.logger.log(`🆔 Simulated Event ID: ${data.id}`);
+
+      // Handle the simulated checkout_session.payment.paid event
+      if (eventType === 'checkout_session.payment.paid') {
+        console.log('✅ Processing simulated checkout_session.payment.paid event...');
+        this.logger.log('✅ Processing simulated checkout_session.payment.paid event...');
+        
+        const csAttr: any = paymentData.attributes;
+        if (csAttr && csAttr.metadata?.bookingData) {
+          const bookingDataFromSession = JSON.parse(csAttr.metadata.bookingData);
+          console.log(`✅ Booking data found in simulated checkout session`);
+          console.log(`   👤 User ID: ${bookingDataFromSession?.userId}`);
+          console.log(`   📅 Date: ${bookingDataFromSession?.selectedDate}`);
+          console.log(`   🏸 Courts: ${bookingDataFromSession?.courtBookings?.length || 0}`);
+          this.logger.log(`✅ Booking data found in simulated checkout session`);
+          this.logger.log(`   👤 User ID: ${bookingDataFromSession?.userId}`);
+          this.logger.log(`   📅 Date: ${bookingDataFromSession?.selectedDate}`);
+          this.logger.log(`   🏸 Courts: ${bookingDataFromSession?.courtBookings?.length || 0}`);
+
+          // Extract payment id
+          const paymentId = csAttr.payments?.data?.[0]?.id || testPaymentId;
+          console.log(`💳 Simulated Payment ID: ${paymentId}`);
+          this.logger.log(`💳 Simulated Payment ID: ${paymentId}`);
+
+          // Process the payment
+          await this.handlePaymentPaid({ id: paymentId }, bookingDataFromSession);
+        } else {
+          console.warn('⚠️ No booking data in simulated payload');
+          this.logger.warn('⚠️ No booking data in simulated payload');
+        }
+      }
+
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('✅ Test webhook simulation completed successfully');
+      console.log('═══════════════════════════════════════════════════════════');
+      this.logger.log('═══════════════════════════════════════════════════════════');
+      this.logger.log('✅ Test webhook simulation completed successfully');
+      this.logger.log('═══════════════════════════════════════════════════════════');
+
+      return {
+        success: true,
+        message: 'Test webhook simulation completed successfully!',
+        timestamp: new Date().toISOString(),
+        simulatedPaymentId: testPaymentId,
+        simulatedCheckoutSessionId: testCheckoutSessionId,
+        bookingData: bookingData,
+      };
+    } catch (error) {
+      console.error('❌ Error in test webhook simulation:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      this.logger.error('❌ Error in test webhook simulation:', error);
+      return {
+        success: false,
+        message: `Test webhook simulation failed: ${error.message}`,
+        error: error.message,
+        stack: error.stack,
+      };
+    }
   }
 
   @Get('paymongo')
