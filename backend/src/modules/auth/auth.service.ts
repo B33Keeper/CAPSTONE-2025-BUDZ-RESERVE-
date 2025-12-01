@@ -115,13 +115,21 @@ export class AuthService {
       
       // Use SendGrid API if configured (works on Railway Hobby)
       if (sendGridApiKey) {
-        await this.sendGridService.sendOtpEmail(
-          email,
-          otp,
-          user.name || user.username,
-        );
-        console.log('✅ Email sent successfully via SendGrid API to:', email);
-        return { message: 'OTP sent to your email address' };
+        try {
+          const result = await this.sendGridService.sendOtpEmail(
+            email,
+            otp,
+            user.name || user.username,
+          );
+          console.log('✅ Email sent successfully via SendGrid API to:', email);
+          console.log('SendGrid result:', result);
+          return { message: 'OTP sent to your email address' };
+        } catch (sendGridError: any) {
+          console.error('❌ SendGrid service error:', sendGridError);
+          console.error('SendGrid error message:', sendGridError?.message);
+          // Re-throw to be caught by outer catch
+          throw sendGridError;
+        }
       }
       
       // Fallback to SMTP (won't work on Railway Hobby, but kept for other hosts)

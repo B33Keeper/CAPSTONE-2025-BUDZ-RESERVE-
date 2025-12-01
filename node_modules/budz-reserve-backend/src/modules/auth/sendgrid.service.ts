@@ -82,15 +82,36 @@ export class SendGridService {
         throw new Error('SendGrid send method not available');
       }
       
-      await mailModule.send(msg);
-      this.logger.log(`✅ OTP email sent successfully to: ${to}`);
-      return true;
+      // Send email - SendGrid send() returns [response, body] or throws error
+      try {
+        const result = await mailModule.send(msg);
+        
+        // Handle response (result is [response, body] array)
+        const response = Array.isArray(result) ? result[0] : result;
+        
+        // Log success
+        this.logger.log(`✅ OTP email sent successfully to: ${to}`);
+        if (response?.statusCode) {
+          this.logger.log(`SendGrid response status: ${response.statusCode}`);
+        }
+        
+        return true;
+      } catch (sendError: any) {
+        // If send() throws, log and re-throw
+        this.logger.error('SendGrid send() threw error:', sendError);
+        throw sendError;
+      }
     } catch (error: any) {
       this.logger.error(`❌ Failed to send OTP email to ${to}:`, error);
+      this.logger.error('Error message:', error?.message);
+      this.logger.error('Error code:', error?.code);
       if (error.response) {
-        this.logger.error('SendGrid error details:', error.response.body);
+        this.logger.error('SendGrid error details:', JSON.stringify(error.response.body, null, 2));
+        this.logger.error('SendGrid status code:', error.response.statusCode);
       }
-      throw error;
+      // Re-throw with more context
+      const errorMessage = error.response?.body?.errors?.[0]?.message || error.message || 'Failed to send email';
+      throw new Error(`SendGrid error: ${errorMessage}`);
     }
   }
 }
