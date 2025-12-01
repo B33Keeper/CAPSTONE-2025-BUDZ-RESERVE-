@@ -186,8 +186,29 @@ export class WebhookController {
           console.log(`💳 Simulated Payment ID: ${paymentId}`);
           this.logger.log(`💳 Simulated Payment ID: ${paymentId}`);
 
-          // Process the payment
-          await this.handlePaymentPaid({ id: paymentId }, bookingDataFromSession);
+          // Create a complete payment object with attributes to avoid PayMongo API call
+          // This simulates what PayMongo would send in a real webhook
+          const simulatedPayment = {
+            id: paymentId,
+            attributes: {
+              amount: amount,
+              currency: 'PHP',
+              status: 'paid',
+              description: `Test Payment - ${bookingData.referenceNumber}`,
+              source: {
+                type: 'gcash', // Default to GCash for test
+              },
+              metadata: {
+                bookingData: JSON.stringify(bookingData),
+              },
+            },
+          };
+
+          console.log(`📦 Using simulated payment object (no PayMongo API call needed)`);
+          this.logger.log(`📦 Using simulated payment object (no PayMongo API call needed)`);
+
+          // Process the payment with complete attributes
+          await this.handlePaymentPaid(simulatedPayment, bookingDataFromSession);
         } else {
           console.warn('⚠️ No booking data in simulated payload');
           this.logger.warn('⚠️ No booking data in simulated payload');
