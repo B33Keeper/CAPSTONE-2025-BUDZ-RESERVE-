@@ -317,31 +317,6 @@ export function PaymentSummaryStep({
           </div>
         </div>
 
-        {/* Webhook Test Result */}
-        {webhookTestResult && (
-          <div className={`mt-4 p-4 rounded-xl border-2 ${
-            webhookTestResult.success 
-              ? 'bg-green-50 border-green-200' 
-              : 'bg-red-50 border-red-200'
-          }`}>
-            <div className="flex items-center gap-2">
-              {webhookTestResult.success ? (
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              <p className={`text-sm font-semibold ${
-                webhookTestResult.success ? 'text-green-800' : 'text-red-800'
-              }`}>
-                {webhookTestResult.message}
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4">
