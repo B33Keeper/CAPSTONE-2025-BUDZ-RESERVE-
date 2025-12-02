@@ -38,9 +38,14 @@ export class EquipmentRentalSchedulerService {
     this.logger.log('Checking for expired equipment rentals...');
 
     try {
+      // Get current time in UTC to match database datetime storage
       const now = new Date();
       
+      // Log for debugging
+      this.logger.debug(`Current time (UTC): ${now.toISOString()}, Local: ${now.toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}`);
+      
       // Find all rental items that have expired (rental_end_time <= now) and stock hasn't been restored
+      // Use LessThanOrEqual to include rentals that have exactly reached their end time
       const expiredRentals = await this.rentalItemRepository.find({
         where: {
           rental_end_time: LessThanOrEqual(now),
@@ -48,15 +53,37 @@ export class EquipmentRentalSchedulerService {
         },
         relations: ['rental'],
       });
+      
+      // Additional validation: filter out rentals that haven't actually ended yet
+      // This prevents timezone-related false positives
+      const actuallyExpiredRentals = expiredRentals.filter(rentalItem => {
+        if (!rentalItem.rental_end_time) {
+          return false; // Skip rentals without end time
+        }
+        
+        const endTime = new Date(rentalItem.rental_end_time);
+        const isExpired = endTime <= now;
+        
+        if (!isExpired) {
+          this.logger.debug(
+            `Rental item ${rentalItem.id} filtered out: end_time=${endTime.toISOString()} > now=${now.toISOString()}`
+          );
+        }
+        
+        return isExpired;
+      });
 
-      if (expiredRentals.length === 0) {
+      if (actuallyExpiredRentals.length === 0) {
         this.logger.log('No expired rentals found.');
+        if (expiredRentals.length > 0) {
+          this.logger.log(`Note: ${expiredRentals.length} rental(s) were filtered out due to timezone/date validation.`);
+        }
         return;
       }
 
-      this.logger.log(`Found ${expiredRentals.length} expired rental(s). Processing...`);
+      this.logger.log(`Found ${actuallyExpiredRentals.length} expired rental(s) (${expiredRentals.length} before filtering). Processing...`);
 
-      for (const rentalItem of expiredRentals) {
+      for (const rentalItem of actuallyExpiredRentals) {
         try {
           // Mark stock as restored (stock is calculated dynamically, so no need to restore in database)
           // This marks the rental as expired so it's no longer counted in available stock calculation
@@ -86,7 +113,7 @@ export class EquipmentRentalSchedulerService {
         }
       }
 
-      this.logger.log(`Successfully processed ${expiredRentals.length} expired rental(s).`);
+      this.logger.log(`Successfully processed ${actuallyExpiredRentals.length} expired rental(s).`);
     } catch (error) {
       this.logger.error('Error during expired rentals check:', error);
     }
@@ -168,6 +195,8 @@ export class EquipmentRentalSchedulerService {
     this.logger.log('Manual check for expired rentals triggered...');
     
     const now = new Date();
+    this.logger.debug(`Current time (UTC): ${now.toISOString()}, Local: ${now.toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}`);
+    
     const expiredRentals = await this.rentalItemRepository.find({
       where: {
         rental_end_time: LessThanOrEqual(now),
@@ -175,13 +204,22 @@ export class EquipmentRentalSchedulerService {
       },
       relations: ['rental'],
     });
+    
+    // Additional validation: filter out rentals that haven't actually ended yet
+    const actuallyExpiredRentals = expiredRentals.filter(rentalItem => {
+      if (!rentalItem.rental_end_time) {
+        return false;
+      }
+      const endTime = new Date(rentalItem.rental_end_time);
+      return endTime <= now;
+    });
 
     let processedCount = 0;
     let emailSentCount = 0;
     const processedItems: any[] = [];
 
-    if (expiredRentals.length > 0) {
-      for (const rentalItem of expiredRentals) {
+    if (actuallyExpiredRentals.length > 0) {
+      for (const rentalItem of actuallyExpiredRentals) {
         try {
           // Mark stock as restored
           await this.rentalItemRepository.update(rentalItem.id, {
@@ -223,10 +261,10 @@ export class EquipmentRentalSchedulerService {
     }
 
     return {
-      message: expiredRentals.length > 0
-        ? `Found and processed ${expiredRentals.length} expired rental(s). ${emailSentCount} notification(s) created.`
+      message: actuallyExpiredRentals.length > 0
+        ? `Found and processed ${actuallyExpiredRentals.length} expired rental(s). ${emailSentCount} notification(s) created.`
         : 'No expired rentals found.',
-      expiredRentalsFound: expiredRentals.length,
+      expiredRentalsFound: actuallyExpiredRentals.length,
       processedCount,
       notificationCount: emailSentCount,
       processedItems,
