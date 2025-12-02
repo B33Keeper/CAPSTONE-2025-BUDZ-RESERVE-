@@ -674,13 +674,10 @@ export function QueueSettingsPage() {
           }
 
           // Re-add player to queue players page
-          // Check if player already exists in queue (by ID or by name)
-          const existingInQueueById = players.find(p => p.id === playerId)
-          const existingInQueueByName = players.find(
-            p => p.name.toLowerCase().trim() === playerRecord.name.toLowerCase().trim()
-          )
+          // Check if player already exists in queue
+          const existingInQueue = players.find(p => p.id === playerId)
           
-          if (!existingInQueueById && !existingInQueueByName) {
+          if (!existingInQueue) {
             // Player doesn't exist in queue, create them
             // Try to get skill from playerRecord, or look up from history, or default to Intermediate
             let playerSkill: 'Beginner' | 'Intermediate' | 'Advanced' = 'Intermediate'
@@ -701,31 +698,17 @@ export function QueueSettingsPage() {
               }
             }
             
-            try {
-              await apiServices.createQueuePlayer({
-                name: playerRecord.name,
-                sex: playerRecord.sex,
-                skill: playerSkill,
-                status: 'In Queue',
-                lastPlayed: todayISODate
-              })
-              
-              // Reload players to include the restored player
-              await loadPlayers()
-              // Note: loadPlayers will update playersRef.current
-            } catch (error: any) {
-              // Handle duplicate name error
-              const errorMessage = error?.response?.data?.message || error?.message
-              if (errorMessage && errorMessage.includes('already exists')) {
-                toast.error(errorMessage)
-              } else {
-                console.error('Failed to restore player to queue', error)
-                toast.error('Failed to restore player to queue. Please try again.')
-              }
-            }
-          } else if (existingInQueueByName && !existingInQueueById) {
-            // Player with same name exists but different ID
-            toast.error(`A player with the name "${existingInQueueByName.name}" already exists. You cannot save the same name twice.`)
+            await apiServices.createQueuePlayer({
+              name: playerRecord.name,
+              sex: playerRecord.sex,
+              skill: playerSkill,
+              status: 'In Queue',
+              lastPlayed: todayISODate
+            })
+            
+            // Reload players to include the restored player
+            await loadPlayers()
+            // Note: loadPlayers will update playersRef.current
           }
 
           // Update payment status
