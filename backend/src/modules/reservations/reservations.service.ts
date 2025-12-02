@@ -171,8 +171,10 @@ export class ReservationsService {
   }
 
   async findByUser(userId: number): Promise<Reservation[]> {
+    // Include both user-created and admin-created reservations for this user
+    // Admin-created reservations are linked to users when the email matches an existing user
     const reservations = await this.reservationsRepository.find({
-      where: { User_ID: userId, Is_Admin_Created: false },
+      where: { User_ID: userId },
       relations: ['court', 'payments'],
       order: { Created_at: 'DESC' },
     });

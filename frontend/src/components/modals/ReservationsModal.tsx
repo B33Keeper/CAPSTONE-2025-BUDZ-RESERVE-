@@ -184,6 +184,7 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
   const itemsPerPage = useMemo(() => 5, [])
 
   // Determine if reservation has already ended
+  // A reservation is "due" (ended) when the reservation date + end time has passed
   const isReservationEnded = (reservation: Reservation) => {
     try {
       // Parse reservation date and end time
@@ -203,27 +204,29 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
         : new Date(reservationDate).toISOString().split('T')[0]
       
       // Format time string (handle both "HH:MM:SS" and "HH:MM" formats)
-      let timeStr = endTime
+      let timeStr = String(endTime).trim()
       if (timeStr.split(':').length === 2) {
         timeStr = `${timeStr}:00` // Add seconds if missing
       }
       
-      // Create end datetime string in ISO format
-      const endDateTimeStr = `${dateStr}T${timeStr}`
-      const endDateTime = new Date(endDateTimeStr)
+      // Create end datetime by combining date and time in local timezone
+      // Parse date components
+      const [year, month, day] = dateStr.split('-').map(Number)
+      const [hours, minutes, seconds = 0] = timeStr.split(':').map(Number)
+      
+      // Create date object in local timezone (not UTC)
+      const endDateTime = new Date(year, month - 1, day, hours, minutes, seconds || 0)
       
       if (isNaN(endDateTime.getTime())) {
-        console.warn('[ReservationsModal] Invalid end datetime:', endDateTimeStr)
+        console.warn('[ReservationsModal] Invalid end datetime:', { dateStr, timeStr, year, month, day, hours, minutes, seconds })
         return false
       }
       
+      // Get current date/time in local timezone
       const now = new Date()
-      const hasEnded = endDateTime < now
       
-      // Log for debugging
-      if (hasEnded) {
-        console.log(`[ReservationsModal] Reservation ${reservation.Reservation_ID} ended: ${endDateTime.toLocaleString()} < ${now.toLocaleString()}`)
-      }
+      // Compare: reservation has ended if endDateTime is in the past
+      const hasEnded = endDateTime < now
       
       return hasEnded
     } catch (error) {
@@ -255,8 +258,8 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
       }
 
       // Filter by tab (current vs history)
-      // My Reservations: Show only reservations that haven't ended yet (regardless of status, except cancelled/completed)
-      // History: Show only reservations that have ended OR are cancelled/completed (max 10)
+      // My Reservations: Show only reservations where reservation date + end time hasn't passed yet
+      // History: Show only reservations where reservation date + end time has passed (max 10)
       if (activeTab === 'current') {
         const beforeTabFilter = filteredReservations.length
         filteredReservations = filteredReservations.filter((res: Reservation) => {
@@ -264,13 +267,9 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
           const isCancelledOrCompleted = res.Status === 'Cancelled' || res.Status === 'Completed'
           
           // Show in "My Reservations" if:
-          // 1. Reservation hasn't ended yet (booking period is still active)
+          // 1. Reservation date + end time hasn't passed yet (still active)
           // 2. Status is not Cancelled or Completed
           const shouldShow = !ended && !isCancelledOrCompleted
-          
-          if (!shouldShow && ended) {
-            console.log(`[ReservationsModal] Moving reservation ${res.Reservation_ID} to history (ended)`)
-          }
           
           return shouldShow
         })
@@ -279,12 +278,10 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
         const beforeTabFilter = filteredReservations.length
         filteredReservations = filteredReservations.filter((res: Reservation) => {
           const ended = isReservationEnded(res)
-          const isCancelledOrCompleted = res.Status === 'Cancelled' || res.Status === 'Completed'
           
           // Show in "History" if:
-          // 1. Reservation has ended (booking period is done), OR
-          // 2. Status is Cancelled or Completed
-          return ended || isCancelledOrCompleted
+          // Reservation date + end time has passed (reservation is due/ended)
+          return ended
         })
         console.log(`[ReservationsModal] Tab filter (history): ${beforeTabFilter} → ${filteredReservations.length}`)
       }
