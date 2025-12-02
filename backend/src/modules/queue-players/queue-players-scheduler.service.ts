@@ -196,6 +196,7 @@ export class QueuePlayersSchedulerService {
     message: string;
     savedCount: number;
     players: QueuePlayer[];
+    skippedCount: number;
   }> {
     this.logger.log(`Saving today's players to history for user ${userId}...`);
 
@@ -212,11 +213,48 @@ export class QueuePlayersSchedulerService {
         message: 'No players found to save to history.',
         savedCount: 0,
         players: [],
+        skippedCount: 0,
       };
     }
 
-    // Create history records for all players
-    const historyRecords = currentPlayers.map((player) => {
+    // Get today's date range (start and end of today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Get all history records saved today (based on archivedAt date)
+    const todayHistoryRecords = await this.queuePlayersHistoryRepository
+      .createQueryBuilder('history')
+      .where('history.userId = :userId', { userId })
+      .andWhere('history.archivedAt >= :today', { today })
+      .andWhere('history.archivedAt < :tomorrow', { tomorrow })
+      .getMany();
+
+    // Create a set of names that already exist in today's history (case-insensitive)
+    const existingNamesSet = new Set<string>();
+    todayHistoryRecords.forEach((record) => {
+      existingNamesSet.add(record.name.toLowerCase().trim());
+    });
+
+    // Filter out players that already exist in today's history
+    const playersToSave = currentPlayers.filter((player) => {
+      const normalizedName = player.name.toLowerCase().trim();
+      return !existingNamesSet.has(normalizedName);
+    });
+
+    if (playersToSave.length === 0) {
+      this.logger.log(`All ${currentPlayers.length} player(s) already exist in today's history. Nothing to save.`);
+      return {
+        message: `All ${currentPlayers.length} player(s) already exist in today's history. Nothing to save.`,
+        savedCount: 0,
+        players: currentPlayers,
+        skippedCount: currentPlayers.length,
+      };
+    }
+
+    // Create history records only for players that don't already exist
+    const historyRecords = playersToSave.map((player) => {
       return this.queuePlayersHistoryRepository.create({
         userId: player.userId,
         originalId: player.id,
@@ -234,15 +272,20 @@ export class QueuePlayersSchedulerService {
 
     // Save all history records
     await this.queuePlayersHistoryRepository.save(historyRecords);
-    this.logger.log(`Successfully saved ${historyRecords.length} player(s) to history.`);
+    const skippedCount = currentPlayers.length - playersToSave.length;
+    
+    this.logger.log(
+      `Successfully saved ${historyRecords.length} player(s) to history. ${skippedCount} player(s) skipped (already exist in today's history).`
+    );
 
     // Note: Players remain in the current table - they are not deleted
     // This allows users to continue using the same players while having a history record
 
     return {
-      message: `Successfully saved ${historyRecords.length} player(s) to history.`,
+      message: `Successfully saved ${historyRecords.length} player(s) to history. ${skippedCount > 0 ? `${skippedCount} player(s) skipped (already exist).` : ''}`,
       savedCount: historyRecords.length,
       players: currentPlayers,
+      skippedCount,
     };
   }
 

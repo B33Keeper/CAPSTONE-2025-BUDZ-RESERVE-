@@ -775,11 +775,20 @@ export function QueuePlayersPage() {
     try {
       const result = await apiServices.savePlayersToHistory()
       const savedCount = result.savedCount || 0
+      const skippedCount = result.skippedCount || 0
       
       if (savedCount === 0) {
-        toast.error('No players were saved to history.')
+        if (skippedCount > 0) {
+          toast.info(`All ${skippedCount} player${skippedCount === 1 ? '' : 's'} already exist in today's history. Nothing to save.`)
+        } else {
+          toast.error('No players were saved to history.')
+        }
       } else {
-        toast.success(`Successfully saved ${savedCount} player${savedCount === 1 ? '' : 's'} to history.`)
+        let message = `Successfully saved ${savedCount} player${savedCount === 1 ? '' : 's'} to history.`
+        if (skippedCount > 0) {
+          message += ` ${skippedCount} player${skippedCount === 1 ? '' : 's'} skipped (already exist).`
+        }
+        toast.success(message)
         // Reload history to show the newly saved players
         await loadHistory()
       }
