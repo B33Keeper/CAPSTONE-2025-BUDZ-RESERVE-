@@ -717,47 +717,21 @@ export class ReservationsService {
               return false;
             }
             
-            // Mark this equipment as processed using a unique key FIRST
-            // Use equipment name + sorted schedules to create a consistent key
-            // This ensures we only process each equipment booking once, regardless of how many schedules it's for
-            const sortedSchedules = [...eqBooking.selectedCourtSchedules].sort().join(',');
-            const equipmentKey = `${eqBooking.equipment}::${sortedSchedules}`;
+            // IMPORTANT: Create separate rental items for each schedule
+            // Use equipment name + specific schedule to create a unique key per schedule
+            // This ensures each schedule gets its own rental item and stock reduction
+            const equipmentKey = `${eqBooking.equipment}::${scheduleKey}`;
             
-            // Check if already processed - this is the PRIMARY check to prevent duplicates
+            // Check if already processed for this specific schedule - this prevents duplicates within the same schedule
             if (processedEquipment.has(equipmentKey)) {
-              this.logger.log(`[Equipment Rental] ⚠️ Skipping duplicate equipment booking: ${equipmentKey} for schedule ${scheduleKey}`);
-              return false; // Already processed
-            }
-            
-            // If equipment is for multiple schedules, only create rental ONCE for the first/earliest schedule
-            // BUT: The rental time will span ALL selected schedules so availability is reduced in all of them
-            if (eqBooking.selectedCourtSchedules.length > 1) {
-              // Find the first/earliest schedule from the selected schedules
-              // sortedCourtBookings is already sorted by start time
-              const matchingSchedules = sortedCourtBookings.filter(cb => 
-                eqBooking.selectedCourtSchedules && eqBooking.selectedCourtSchedules.includes(`${cb.court}-${cb.schedule}`)
-              );
-              
-              if (matchingSchedules.length > 0) {
-                // Get the first schedule (earliest) from the matching schedules
-                const firstSchedule = matchingSchedules[0];
-                const firstScheduleKey = `${firstSchedule.court}-${firstSchedule.schedule}`;
-                
-                // Only create rental if this is the first/earliest schedule
-                // The rental time will be calculated to span ALL selected schedules in createEquipmentRentalsFromBooking
-                if (scheduleKey !== firstScheduleKey) {
-                  this.logger.log(
-                    `[Equipment Rental] Skipping non-first schedule: ${scheduleKey} (first is ${firstScheduleKey}) for equipment ${equipmentKey}. ` +
-                    `Rental will be created for first schedule but will span all ${eqBooking.selectedCourtSchedules.length} selected schedules.`
-                  );
-                  return false; // Skip - will be created for the first schedule with time spanning all schedules
-                }
-              }
+              this.logger.log(`[Equipment Rental] ⚠️ Skipping duplicate equipment booking: ${equipmentKey} (already processed for this schedule)`);
+              return false; // Already processed for this schedule
             }
             
             // Mark as processed BEFORE returning true - CRITICAL: Do this before returning
+            // This ensures each schedule gets its own rental item
             processedEquipment.add(equipmentKey);
-            this.logger.log(`[Equipment Rental] ✅ Processing equipment booking: ${equipmentKey} for schedule ${scheduleKey}, quantity: ${eqBooking.quantity || 1}`);
+            this.logger.log(`[Equipment Rental] ✅ Processing equipment booking: ${eqBooking.equipment} for schedule ${scheduleKey}, quantity: ${eqBooking.quantity || 1} (separate rental per schedule)`);
             
             return true;
           });
@@ -771,42 +745,8 @@ export class ReservationsService {
               ).join(', ')}`
             );
             
-            // CRITICAL: Only create rentals if this is the first/earliest schedule for multi-schedule equipment
-            // Check if any equipment has multiple schedules and if this is the first schedule
-            const hasMultiScheduleEquipment = relevantEquipmentBookings.some((eq: any) => 
-              eq.selectedCourtSchedules && eq.selectedCourtSchedules.length > 1
-            );
-            
-            if (hasMultiScheduleEquipment) {
-              // For multi-schedule equipment, verify this is the first schedule
-              const multiScheduleEquipment = relevantEquipmentBookings.filter((eq: any) => 
-                eq.selectedCourtSchedules && eq.selectedCourtSchedules.length > 1
-              );
-              
-              for (const eq of multiScheduleEquipment) {
-                const matchingSchedules = sortedCourtBookings.filter(cb => 
-                  eq.selectedCourtSchedules && eq.selectedCourtSchedules.includes(`${cb.court}-${cb.schedule}`)
-                );
-                
-                if (matchingSchedules.length > 0) {
-                  const firstSchedule = matchingSchedules[0];
-                  const firstScheduleKey = `${firstSchedule.court}-${firstSchedule.schedule}`;
-                  
-                  if (scheduleKey !== firstScheduleKey) {
-                    this.logger.log(
-                      `[Equipment Rental] ⚠️ SKIPPING rental creation for reservation ${savedReservation.Reservation_ID} ` +
-                      `because this is not the first schedule (${scheduleKey} vs ${firstScheduleKey}) for multi-schedule equipment ${eq.equipment}. ` +
-                      `Rental will be created for the first schedule with time spanning all schedules.`
-                    );
-                    // Remove this equipment from the list for this reservation
-                    const index = relevantEquipmentBookings.indexOf(eq);
-                    if (index > -1) {
-                      relevantEquipmentBookings.splice(index, 1);
-                    }
-                  }
-                }
-              }
-            }
+            // IMPORTANT: Create separate rentals for each schedule
+            // No need to skip non-first schedules since each schedule gets its own rental item
             
             if (relevantEquipmentBookings.length > 0) {
               // CRITICAL: Check stock availability AGAIN right before creating equipment rentals
@@ -1790,13 +1730,14 @@ export class ReservationsService {
       let rentalStartTime: Date | null = null;
       let rentalEndTime: Date | null = null;
       
-      // If equipment is for multiple schedules, calculate time range that covers all schedules
-      // If only one schedule is selected, rental time will only cover that one schedule (handled in fallback)
+      // IMPORTANT: Each equipment booking should have only ONE schedule (frontend creates separate bookings per schedule)
+      // Create rental item for the specific schedule only, not spanning multiple schedules
       this.logger.log(
         `[Equipment Rental] Checking selectedCourtSchedules: ${b.selectedCourtSchedules ? `[${b.selectedCourtSchedules.join(', ')}] (length: ${b.selectedCourtSchedules.length})` : 'undefined/null'}`
       );
       
-      if (b.selectedCourtSchedules && b.selectedCourtSchedules.length > 1) {
+      // Find the reservation that matches this schedule to get the exact time range
+      if (b.selectedCourtSchedules && b.selectedCourtSchedules.length > 0) {
         this.logger.log(
           `[Equipment Rental] ✅ Multi-schedule rental detected: ${b.selectedCourtSchedules.length} schedules selected: ${b.selectedCourtSchedules.join(', ')}`
         );
@@ -1844,71 +1785,39 @@ export class ReservationsService {
           `[Equipment Rental] Found ${relevantReservations.length} relevant reservations out of ${matchingReservations.length} matching reservations`
         );
         
+        // IMPORTANT: Create separate rental for EACH schedule (not one spanning all)
+        // Since frontend creates separate bookings per schedule, we should create separate rentals
+        // This ensures each schedule shows its own stock reduction
         if (relevantReservations.length > 0) {
-          // Find earliest start time and latest end time from all relevant schedules
-          // CRITICAL: This works even if schedules are on different courts (e.g., Court 4 and Court 5)
-          let earliestStart: Date | null = null;
-          let latestEnd: Date | null = null;
+          // Use the FIRST matching reservation (should be only one since frontend sends separate bookings per schedule)
+          const matchingReservation = relevantReservations[0];
+          
+          // Parse reservation date and time for this specific schedule
+          const resDateStr = typeof matchingReservation.Reservation_Date === 'string' 
+            ? matchingReservation.Reservation_Date 
+            : new Date(matchingReservation.Reservation_Date).toISOString().split('T')[0];
+          const [year, month, day] = resDateStr.split('-').map(Number);
+          
+          const [startHour, startMin] = matchingReservation.Start_Time.split(':').map(Number);
+          const resStart = new Date(year, month - 1, day, startHour, startMin || 0, 0);
+          
+          const [endHour, endMin] = matchingReservation.End_Time.split(':').map(Number);
+          const resEnd = new Date(year, month - 1, day, endHour, endMin || 0, 0);
+          
+          // Rental time should match this specific schedule's time range
+          rentalStartTime = resStart;
+          // Use the later of: schedule end time OR start + rental hours
+          const minEndTime = new Date(resStart);
+          minEndTime.setHours(minEndTime.getHours() + hours);
+          rentalEndTime = resEnd > minEndTime ? resEnd : minEndTime;
           
           this.logger.log(
-            `[Equipment Rental] Calculating rental time for ${relevantReservations.length} schedules: ` +
-            `${relevantReservations.map(r => `${r.court?.Court_Name || 'Unknown'} ${r.Start_Time}-${r.End_Time}`).join(', ')}`
+            `[Equipment Rental] ✅ Separate rental per schedule: ` +
+            `Schedule: ${matchingReservation.court?.Court_Name || 'Unknown'} ${matchingReservation.Start_Time}-${matchingReservation.End_Time}, ` +
+            `rental time: ${resStart.toISOString()} to ${rentalEndTime.toISOString()}, ` +
+            `quantity: ${quantity}. ` +
+            `This rental will reduce stock for THIS specific schedule only.`
           );
-          
-          for (const res of relevantReservations) {
-            // Parse reservation date and time
-            // Use date components to avoid timezone issues when creating Date objects
-            const resDateStr = typeof res.Reservation_Date === 'string' 
-              ? res.Reservation_Date 
-              : new Date(res.Reservation_Date).toISOString().split('T')[0];
-            const [year, month, day] = resDateStr.split('-').map(Number);
-            
-            const [startHour, startMin] = res.Start_Time.split(':').map(Number);
-            const resStart = new Date(year, month - 1, day, startHour, startMin || 0, 0);
-            
-            const [endHour, endMin] = res.End_Time.split(':').map(Number);
-            const resEnd = new Date(year, month - 1, day, endHour, endMin || 0, 0);
-            
-            this.logger.log(
-              `[Equipment Rental] Schedule: ${res.court?.Court_Name || 'Unknown'} ` +
-              `${res.Start_Time}-${res.End_Time}, ` +
-              `parsed: ${resStart.toISOString()} to ${resEnd.toISOString()}`
-            );
-            
-            if (!earliestStart || resStart < earliestStart) {
-              earliestStart = resStart;
-            }
-            if (!latestEnd || resEnd > latestEnd) {
-              latestEnd = resEnd;
-            }
-          }
-          
-          // Rental should cover from earliest start to latest end
-          // CRITICAL: This ensures the rental spans ALL selected schedules (even on different courts)
-          // so availability is reduced in ALL schedule cells
-          if (earliestStart && latestEnd) {
-            rentalStartTime = earliestStart;
-            // Use the later of: latest schedule end time OR earliest start + rental hours
-            // This ensures the rental covers the entire duration of all selected schedules
-            const minEndTime = new Date(earliestStart);
-            minEndTime.setHours(minEndTime.getHours() + hours);
-            rentalEndTime = latestEnd > minEndTime ? latestEnd : minEndTime;
-            
-            this.logger.log(
-              `[Equipment Rental] ✅✅✅ Multi-schedule rental calculated: ` +
-              `covering ${relevantReservations.length} schedules (${b.selectedCourtSchedules?.join(', ') || 'unknown'}), ` +
-              `rental time: ${earliestStart.toISOString()} to ${rentalEndTime.toISOString()}, ` +
-              `quantity: ${quantity}. ` +
-              `This rental will reduce stock in ALL ${relevantReservations.length} schedule cells when checking availability. ` +
-              `Time span: ${earliestStart.toLocaleTimeString()} to ${rentalEndTime.toLocaleTimeString()}`
-            );
-          } else {
-            this.logger.error(
-              `[Equipment Rental] ❌ CRITICAL ERROR: Could not calculate multi-schedule rental time! ` +
-              `earliestStart=${earliestStart}, latestEnd=${latestEnd}, relevantReservations=${relevantReservations.length}, ` +
-              `matchingReservations=${matchingReservations.length}, selectedSchedules=${b.selectedCourtSchedules?.join(', ') || 'none'}`
-            );
-          }
         } else {
           this.logger.error(
             `[Equipment Rental] ❌ CRITICAL: No relevant reservations found for selected schedules! ` +
