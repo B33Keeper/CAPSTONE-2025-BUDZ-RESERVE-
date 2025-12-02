@@ -23,11 +23,13 @@ COPY . .
 
 # Explicitly pass VITE_API_URL as build argument
 # Railway provides environment variables, but we need to explicitly pass them to the build stage
-ARG VITE_API_URL
-ARG VITE_APP_NAME
+# Use empty string as default to prevent build failures if not set
+ARG VITE_API_URL=""
+ARG VITE_APP_NAME=""
 ARG NODE_ENV=production
 
 # Set as environment variables for Vite to pick up during build
+# Vite will use fallback values from the code if these are empty
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_APP_NAME=${VITE_APP_NAME}
 ENV NODE_ENV=${NODE_ENV}

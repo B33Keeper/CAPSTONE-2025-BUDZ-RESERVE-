@@ -95,35 +95,33 @@ export class PaymentsController {
 
         switch (periodValue) {
           case 'daily':
-            // For daily, get today's date range from start of day to current time
+            // For daily, get today's date range from start of day to end of day
+            // This ensures the report shows all records for the current day until midnight
+            // The day will only reset at 12:00 AM (midnight), not before
             // Get current date components in local timezone
             const todayYear = now.getFullYear();
             const todayMonth = now.getMonth();
             const todayDay = now.getDate();
             
-            // Create start of day in local timezone
+            // Create start of day in local timezone (00:00:00.000)
             const localStart = new Date(todayYear, todayMonth, todayDay, 0, 0, 0, 0);
-            // Use current time as end date to include all records created today up to now
-            const localEnd = now;
+            // Create end of day in local timezone (23:59:59.999)
+            // Using end of day instead of current time ensures:
+            // 1. The report doesn't become blank before midnight
+            // 2. The day only resets at actual midnight (12:00 AM)
+            // 3. All records from the current day are included
+            const localEnd = new Date(todayYear, todayMonth, todayDay, 23, 59, 59, 999);
             
-            // Get timezone offset in minutes
-            const timezoneOffset = localStart.getTimezoneOffset();
-            
-            // Adjust for timezone: if server is ahead of UTC (negative offset), we need to subtract hours
-            // Convert to UTC for database query
-            // The database stores timestamps, so we need to ensure we cover the full day in UTC
-            startDate = new Date(localStart.getTime() - (timezoneOffset * 60 * 1000));
-            endDate = new Date(localEnd.getTime() - (timezoneOffset * 60 * 1000));
-            
-            // Actually, let's use a simpler approach - use the local dates directly
-            // TypeORM should handle the timezone conversion
+            // Use local dates directly - TypeORM will handle timezone conversion for database queries
+            // Important: Using end of day (23:59:59.999) prevents the report from resetting
+            // before midnight, which was causing the "blank report" issue
             startDate = localStart;
-            endDate = localEnd; // Use current time instead of end of day
+            endDate = localEnd;
             
             console.log(`[SalesReport Controller] Daily period - Start: ${startDate.toISOString()}, End: ${endDate.toISOString()}`);
             console.log(`[SalesReport Controller] Daily period - Local Start: ${startDate.toLocaleString()}, Local End: ${endDate.toLocaleString()}`);
-            console.log(`[SalesReport Controller] Daily period - Timezone Offset: ${timezoneOffset} minutes`);
             console.log(`[SalesReport Controller] Daily period - Now: ${now.toISOString()}, Now Local: ${now.toLocaleString()}`);
+            console.log(`[SalesReport Controller] Daily period - Using end of day to prevent early reset`);
             break;
           case 'weekly':
             // Weekly: Show last 7 days including today (today and 6 days before)

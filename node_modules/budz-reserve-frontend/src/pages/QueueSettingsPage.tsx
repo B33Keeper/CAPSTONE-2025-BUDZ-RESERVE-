@@ -35,6 +35,24 @@ type FeeManagementRecord = {
   updatedAt: string | Date
 }
 
+type FeeManagementHistoryRecord = {
+  id: number
+  playerId: number
+  userId: number | null
+  playerName: string
+  playerSex: 'male' | 'female'
+  gamesPlayed: number
+  shuttleFee: number
+  courtFee: number
+  totalAmount: number
+  paymentStatus: 'paid' | 'unpaid'
+  feeDate: string | Date
+  paidAt: string | Date | null
+  notes: string | null
+  createdAt: string | Date
+  updatedAt: string | Date
+}
+
 type FeeRow = {
   playerId: number
   label: string
@@ -62,6 +80,8 @@ export function QueueSettingsPage() {
   const [selectedHistoryDate, setSelectedHistoryDate] = useState<string | null>(null)
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false)
   const [isSavingToHistory, setIsSavingToHistory] = useState(false)
+  const [feeManagementHistory, setFeeManagementHistory] = useState<FeeManagementHistoryRecord[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
   const dateDropdownRef = useRef<HTMLDivElement | null>(null)
   const playersRef = useRef<QueuePlayer[]>([])
 
@@ -119,41 +139,33 @@ export function QueueSettingsPage() {
     return Array.from(playersMap.values())
   }, [players, paidPlayers])
 
-  // Group players by date for history view
+  // Group fee management history records by date
   const historyByDate = useMemo(() => {
-    return players.reduce((acc, player) => {
-      // Skip players without lastPlayed date
-      if (!player.lastPlayed) {
-        return acc
-      }
-      
-      // Extract date part (YYYY-MM-DD) from lastPlayed using local timezone
-      let playerDate: string
-      if (typeof player.lastPlayed === 'string') {
-        playerDate = player.lastPlayed.slice(0, 10)
+    return feeManagementHistory.reduce((acc, record) => {
+      // Extract date part (YYYY-MM-DD) from feeDate
+      let recordDate: string
+      if (typeof record.feeDate === 'string') {
+        recordDate = record.feeDate.slice(0, 10)
       } else {
         // Use local timezone, not UTC, to match backend behavior
-        const date = new Date(player.lastPlayed)
+        const date = new Date(record.feeDate)
         const year = date.getFullYear()
         const month = String(date.getMonth() + 1).padStart(2, '0')
         const day = String(date.getDate()).padStart(2, '0')
-        playerDate = `${year}-${month}-${day}`
+        recordDate = `${year}-${month}-${day}`
       }
       
-      // Only include players with dates BEFORE today (not today or future dates)
-      if (playerDate < todayISODate) {
-        if (!acc[playerDate]) {
-          acc[playerDate] = []
-        }
-        acc[playerDate].push(player)
+      if (!acc[recordDate]) {
+        acc[recordDate] = []
       }
+      acc[recordDate].push(record)
       
       return acc
-    }, {} as Record<string, QueuePlayer[]>)
-  }, [players, todayISODate])
+    }, {} as Record<string, FeeManagementHistoryRecord[]>)
+  }, [feeManagementHistory])
 
-  // Extract unique dates that have players, sorted descending, limited to 5 most recent
-  const HISTORY_DATE_LIMIT = 5
+  // Extract unique dates that have records, sorted descending, limited to 10 most recent
+  const HISTORY_DATE_LIMIT = 10
   const historyDates = useMemo(() => {
     const sortedDates = Object.keys(historyByDate).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
     return sortedDates.slice(0, HISTORY_DATE_LIMIT)
@@ -228,22 +240,22 @@ export function QueueSettingsPage() {
     })
   }, [activePlayers, numericCourtFee, numericDoublesFee, paymentStatus, activeMatches, pendingMatches])
 
-  // History rows for selected date
-  const historyRows = useMemo<Omit<FeeRow, 'status'>[]>(() => {
+  // History rows for selected date - using actual fee management history records
+  const historyRows = useMemo<Array<Omit<FeeRow, 'status' | 'playerStatus'> & { id: number }>>(() => {
     if (!selectedHistoryDate || !historyByDate[selectedHistoryDate]) {
       return []
     }
     
-    return historyByDate[selectedHistoryDate].map((player) => ({
-      playerId: player.id,
-      label: player.name,
-      sex: player.sex,
-      games: player.gamesPlayed,
-      shuttleFee: player.gamesPlayed * numericDoublesFee,
-      courtFee: numericCourtFee,
-      playerStatus: 'Playing' as const
+    return historyByDate[selectedHistoryDate].map((record) => ({
+      id: record.id,
+      playerId: record.playerId,
+      label: record.playerName,
+      sex: record.playerSex,
+      games: record.gamesPlayed,
+      shuttleFee: Number(record.shuttleFee),
+      courtFee: Number(record.courtFee)
     }))
-  }, [selectedHistoryDate, historyByDate, numericCourtFee, numericDoublesFee])
+  }, [selectedHistoryDate, historyByDate])
 
   const totals = useMemo(() => {
     return rows.reduce(
@@ -360,12 +372,13 @@ export function QueueSettingsPage() {
             row.games.toString(),
             formatCurrency(row.shuttleFee),
             formatCurrency(row.courtFee),
-            formatCurrency(row.shuttleFee + row.courtFee)
+            formatCurrency(row.shuttleFee + row.courtFee),
+            'Paid' // All history records are paid since they can only be saved when all are paid
           ])
 
       const tableHeaders = activeTab === 'current'
         ? ['Player', 'Gender', 'Games', 'Shuttle Fees', 'Court Fee', 'Total', 'Status']
-        : ['Player', 'Gender', 'Games', 'Shuttle Fees', 'Court Fee', 'Total']
+        : ['Player', 'Gender', 'Games', 'Shuttle Fees', 'Court Fee', 'Total', 'Status']
 
       // Generate table with adjusted column widths to fit page
       autoTable(doc, {
@@ -398,13 +411,14 @@ export function QueueSettingsPage() {
               6: { cellWidth: 20, halign: 'center' } // Status
             }
           : {
-              // History tab: 6 columns (total: 168 units)
-              0: { cellWidth: 45, halign: 'left' }, // Player
-              1: { cellWidth: 22, halign: 'center' }, // Gender
-              2: { cellWidth: 20, halign: 'center' }, // Games
-              3: { cellWidth: 28, halign: 'right' }, // Shuttle Fees
-              4: { cellWidth: 25, halign: 'right' }, // Court Fee
-              5: { cellWidth: 28, halign: 'right' } // Total
+              // History tab: 7 columns (total: 170 units)
+              0: { cellWidth: 40, halign: 'left' }, // Player
+              1: { cellWidth: 20, halign: 'center' }, // Gender
+              2: { cellWidth: 18, halign: 'center' }, // Games
+              3: { cellWidth: 25, halign: 'right' }, // Shuttle Fees
+              4: { cellWidth: 22, halign: 'right' }, // Court Fee
+              5: { cellWidth: 25, halign: 'right' }, // Total
+              6: { cellWidth: 20, halign: 'center' } // Status
             },
         alternateRowStyles: {
           fillColor: [245, 247, 250]
@@ -873,6 +887,20 @@ export function QueueSettingsPage() {
     }
   }, [])
 
+  // Load fee management history
+  const loadFeeManagementHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    try {
+      const historyRecords: FeeManagementHistoryRecord[] = await apiServices.getFeeManagementHistory()
+      setFeeManagementHistory(historyRecords)
+    } catch (error) {
+      console.error('Failed to load fee management history', error)
+      toast.error('Failed to load fee management history')
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
+
   // Save all fee management records to history
   const handleSaveAllToHistory = useCallback(async () => {
     if (!allPlayersPaid || isSavingToHistory) return
@@ -884,6 +912,8 @@ export function QueueSettingsPage() {
       // Reload players and fee management records to reflect changes
       await loadPlayers()
       await loadFeeManagementRecords()
+      // Reload history to show newly saved records
+      await loadFeeManagementHistory()
     } catch (error: any) {
       console.error('Failed to save to history', error)
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to save to history. Please try again.'
@@ -891,7 +921,14 @@ export function QueueSettingsPage() {
     } finally {
       setIsSavingToHistory(false)
     }
-  }, [allPlayersPaid, isSavingToHistory, todayISODate, loadPlayers, loadFeeManagementRecords])
+  }, [allPlayersPaid, isSavingToHistory, todayISODate, loadPlayers, loadFeeManagementRecords, loadFeeManagementHistory])
+
+  // Load history when switching to history tab
+  useEffect(() => {
+    if (activeTab === 'history') {
+      void loadFeeManagementHistory()
+    }
+  }, [activeTab, loadFeeManagementHistory])
 
   useEffect(() => {
     void loadPlayers()
@@ -1041,7 +1078,7 @@ export function QueueSettingsPage() {
                 <button
                   type="button"
                   onClick={handleExportPDF}
-                  disabled={playersLoading || (activeTab === 'history' && (!selectedHistoryDate || filteredHistoryRows.length === 0)) || (activeTab === 'current' && filteredRows.length === 0)}
+                  disabled={(activeTab === 'current' && (playersLoading || filteredRows.length === 0)) || (activeTab === 'history' && (historyLoading || !selectedHistoryDate || filteredHistoryRows.length === 0))}
                   className="rounded-md bg-blue-500 px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
                 >
                   Export
@@ -1289,10 +1326,10 @@ export function QueueSettingsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {playersLoading ? (
+                      {historyLoading ? (
                         <tr>
                           <td colSpan={5} className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 text-center text-xs sm:text-sm text-white/60">
-                            Loading players...
+                            Loading history...
                           </td>
                         </tr>
                       ) : historyDates.length === 0 ? (
@@ -1314,8 +1351,10 @@ export function QueueSettingsPage() {
                           </td>
                         </tr>
                       ) : (
-                        filteredHistoryRows.map((row) => (
-                          <tr key={row.label} className="border-b border-white/18 bg-[#14070e] transition-colors hover:bg-[#1a0a12]">
+                        filteredHistoryRows.map((row) => {
+                          const rowWithId = row as Omit<FeeRow, 'status' | 'playerStatus'> & { id: number }
+                          return (
+                          <tr key={`history-${rowWithId.id}`} className="border-b border-white/18 bg-[#14070e] transition-colors hover:bg-[#1a0a12]">
                             <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-white">
                               <div className="flex items-center gap-2 sm:gap-3">
                                 <span
@@ -1343,7 +1382,8 @@ export function QueueSettingsPage() {
                             <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm">{formatCurrency(row.courtFee)}</td>
                             <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-xs sm:text-sm">{formatCurrency(row.shuttleFee + row.courtFee)}</td>
                           </tr>
-                        ))
+                          )
+                        })
                       )}
                     </tbody>
                   </table>

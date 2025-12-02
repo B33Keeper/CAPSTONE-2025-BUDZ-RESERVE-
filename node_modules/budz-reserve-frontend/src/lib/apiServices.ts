@@ -371,6 +371,11 @@ export const apiServices = {
     return response.data
   },
 
+  async getFeeManagementHistoryByDate(date: string) {
+    const response = await api.get(`/fee-management/history/by-date?date=${date}`)
+    return response.data
+  },
+
   async clearTodayFeeManagement() {
     const response = await api.delete('/fee-management/today/clear')
     return response.data
