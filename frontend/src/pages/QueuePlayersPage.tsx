@@ -523,11 +523,10 @@ export function QueuePlayersPage() {
       setPlayers((prev) => [...prev, createdPlayer])
       setPlayerName('')
       toast.success(`${createdPlayer.name} added to queue.`)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to create queue player', error)
-      const errorMessage = error?.response?.data?.message || error?.message || 'Unable to add player. Please try again.'
-      setPlayersError(errorMessage)
-      toast.error(errorMessage)
+      setPlayersError('Unable to add player. Please try again.')
+      toast.error('Failed to add player. Please try again.')
     } finally {
       setIsAddingPlayer(false)
     }
@@ -585,17 +584,12 @@ export function QueuePlayersPage() {
 
   const handleImportHistoryPlayer = useCallback(
     async (player: QueuePlayerHistory) => {
-      // Check if a player with the same name already exists in all current players (case-insensitive)
-      const alreadyInQueue = players.some(
-        (existing) => existing.name.toLowerCase().trim() === player.name.toLowerCase().trim()
+      const alreadyInQueue = todaysPlayers.some(
+        (existing) => existing.name.toLowerCase() === player.name.toLowerCase()
       )
 
       if (alreadyInQueue) {
-        const existingPlayer = players.find(
-          (existing) => existing.name.toLowerCase().trim() === player.name.toLowerCase().trim()
-        )
-        setPlayersError(`A player with the name "${existingPlayer?.name || player.name}" already exists. You cannot save the same name twice.`)
-        toast.error(`A player with the name "${existingPlayer?.name || player.name}" already exists. You cannot save the same name twice.`)
+        toast('Player is already in today\'s queue.')
         return
       }
 
@@ -610,15 +604,14 @@ export function QueuePlayersPage() {
         })
 
         setPlayers((prev) => [...prev, createdPlayer])
-        toast.success(`${player.name} added to today's queue.`)
-      } catch (error: any) {
+        toast.success(`${player.name} added to today’s queue.`)
+      } catch (error) {
         console.error('Failed to import player from history', error)
-        const errorMessage = error?.response?.data?.message || error?.message || 'Unable to import player. Please try again.'
-        setPlayersError(errorMessage)
-        toast.error(errorMessage)
+        setPlayersError('Unable to import player. Please try again.')
+        toast.error('Unable to import player. Please try again.')
       }
     },
-    [setPlayersError, players, todayISODate]
+    [setPlayersError, todaysPlayers, todayISODate]
   )
 
   const handleUpdatePlayer = useCallback(async () => {
@@ -702,16 +695,15 @@ export function QueuePlayersPage() {
       const generatedCount = response?.matchesGenerated ?? 0
       const activeCount = response?.activeMatches?.length ?? 0
       const pendingCount = response?.pendingMatches?.length ?? 0
-      const reason = response?.reason
 
       if (generatedCount > 0) {
         toast.success(
           `Generated ${generatedCount} ${gameTypeLabel} match${generatedCount === 1 ? '' : 'es'} (${activeCount} active, ${pendingCount} pending).`
         )
       } else {
-        // Show specific reason if provided (e.g., no active courts)
-        if (reason) {
-          toast.error(reason)
+        // Check if there's a specific reason (e.g., no active courts)
+        if (response?.reason) {
+          toast.error(response.reason)
         } else {
           const genderRequired = 
             selectedGameType === 'mens-doubles' ? 'male' :

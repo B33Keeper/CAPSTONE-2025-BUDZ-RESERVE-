@@ -60,24 +60,6 @@ export class QueueMatchesService {
   async generateMatches(dto: GenerateQueueMatchesDto, userId: number) {
     const todayISO = this.getTodayISODate();
 
-    // Check if there are any available courts before proceeding
-    const availableCourts = await this.queueingCourtsRepository.find({
-      where: { status: QueueingCourtStatus.AVAILABLE },
-    });
-
-    if (availableCourts.length === 0) {
-      console.log(
-        `[Match Generation] ERROR: No available courts found. Cannot generate matches.`,
-      );
-      return {
-        matchesGenerated: 0,
-        activeMatches: [],
-        pendingMatches: [],
-        skippedPlayers: [],
-        reason: 'There are no active courts. Add courts so you can proceed.',
-      };
-    }
-
     // Removed logic that prevents players from being paired in the same team twice
     // Players can now be paired together multiple times
 
@@ -236,6 +218,28 @@ export class QueueMatchesService {
         skippedPlayers: eligiblePlayers.map((player) => player.id),
         reason:
           'Unable to create fair matches with the current player distribution.',
+      };
+    }
+
+    // Check if there are any active courts (not in maintenance or unavailable)
+    const activeCourts = await this.queueingCourtsRepository.find({
+      where: [
+        { status: QueueingCourtStatus.AVAILABLE },
+        { status: QueueingCourtStatus.OCCUPIED },
+      ],
+    });
+
+    if (activeCourts.length === 0) {
+      console.log(
+        `[Match Generation] ERROR: No active courts found. Cannot generate matches without courts.`,
+      );
+      return {
+        matchesGenerated: 0,
+        activeMatches: [],
+        pendingMatches: [],
+        skippedPlayers: eligiblePlayers.map((player) => player.id),
+        reason:
+          'No active courts available. Please add courts so you can proceed.',
       };
     }
 
