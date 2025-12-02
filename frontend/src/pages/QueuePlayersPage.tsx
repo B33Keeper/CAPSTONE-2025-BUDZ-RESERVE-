@@ -785,7 +785,7 @@ export function QueuePlayersPage() {
       if (savedCount === 0) {
         if (skippedCount > 0) {
           // Inform user that all players already exist in today's history
-          toast(`All ${skippedCount} player${skippedCount === 1 ? '' : 's'} already exist in today's history. Nothing to save.`)
+          toast.success(`All ${skippedCount} player${skippedCount === 1 ? '' : 's'} are already added to today's history.`)
         } else {
           toast.error('No players were saved to history.')
         }
