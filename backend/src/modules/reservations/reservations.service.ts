@@ -876,9 +876,6 @@ export class ReservationsService {
             duration: this.calculateDuration(firstReservation.Start_Time, firstReservation.End_Time)
           };
 
-          // Calculate total amount
-          const totalAmount = reservations.reduce((sum, res) => sum + Number(res.Total_Amount || 0), 0);
-          
           // Get payment method from paymentData
           const paymentMethodType = paymentData.paymentMethod || 'Cash';
           const paymentMethodDisplay = paymentMethodType === 'Cash' ? 'Cash' : paymentMethodType === 'QR Ph' ? 'QR Ph' : 'Cash';
@@ -886,13 +883,17 @@ export class ReservationsService {
           // Build order items from court bookings and equipment bookings
           const orderItems: Array<{ name: string; price: string; quantity: number; total: string }> = [];
           
-          // Add court reservations
+          // Calculate court reservations total
+          let courtReservationsTotal = 0;
           if (bookingData.courtBookings && Array.isArray(bookingData.courtBookings)) {
             for (const courtBooking of bookingData.courtBookings) {
+              const courtSubtotal = Number(courtBooking.subtotal || 0);
+              courtReservationsTotal += courtSubtotal;
+              
               const courtPrice = new Intl.NumberFormat('en-PH', {
                 style: 'currency',
                 currency: 'PHP',
-              }).format(Number(courtBooking.subtotal || 0));
+              }).format(courtSubtotal);
               
               orderItems.push({
                 name: `Court Reservation`,
@@ -903,27 +904,42 @@ export class ReservationsService {
             }
           }
           
-          // Add equipment rentals
+          // Calculate equipment rentals total
+          let equipmentRentalsTotal = 0;
           if (bookingData.equipmentBookings && Array.isArray(bookingData.equipmentBookings)) {
             for (const equipmentBooking of bookingData.equipmentBookings) {
+              const equipmentSubtotal = Number(equipmentBooking.subtotal || 0);
+              equipmentRentalsTotal += equipmentSubtotal;
+              
+              // Calculate unit price (price per hour * hours)
+              const timeMatch = equipmentBooking.time.match(/(\d+(?:\.\d+)?)\s*hr/i);
+              const hours = timeMatch ? parseFloat(timeMatch[1]) : 1;
+              const quantity = equipmentBooking.quantity || 1;
+              
+              // Get equipment price from equipment data if available, otherwise calculate from subtotal
+              let unitPrice = equipmentSubtotal / (hours * quantity);
+              
               const equipmentPrice = new Intl.NumberFormat('en-PH', {
                 style: 'currency',
                 currency: 'PHP',
-              }).format(Number(equipmentBooking.subtotal || 0) / (equipmentBooking.quantity || 1));
+              }).format(unitPrice);
               
               const equipmentTotal = new Intl.NumberFormat('en-PH', {
                 style: 'currency',
                 currency: 'PHP',
-              }).format(Number(equipmentBooking.subtotal || 0));
+              }).format(equipmentSubtotal);
               
               orderItems.push({
                 name: `Rent: ${equipmentBooking.equipment}`,
                 price: equipmentPrice,
-                quantity: equipmentBooking.quantity || 1,
+                quantity: quantity,
                 total: equipmentTotal
               });
             }
           }
+          
+          // Calculate total amount including both court reservations and equipment rentals
+          const totalAmount = courtReservationsTotal + equipmentRentalsTotal;
 
           // Send email receipt
           await this.emailReceiptService.sendPaymentReceipt({
