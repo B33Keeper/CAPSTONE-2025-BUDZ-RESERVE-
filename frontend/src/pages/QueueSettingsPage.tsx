@@ -81,6 +81,7 @@ export function QueueSettingsPage() {
   const [isSavingToHistory, setIsSavingToHistory] = useState(false)
   const [feeManagementHistory, setFeeManagementHistory] = useState<FeeManagementHistoryRecord[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState<string>(getTodayISODate())
   const playersRef = useRef<QueuePlayer[]>([])
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -255,16 +256,6 @@ export function QueueSettingsPage() {
     return rows.filter((row) => row.label.toLowerCase().includes(query))
   }, [rows, searchQuery])
 
-  // Filter batches by search query
-  const filteredBatches = useMemo(() => {
-    if (!searchQuery.trim()) return historyBatches
-    
-    const query = searchQuery.toLowerCase()
-    return historyBatches.filter(batchKey => {
-      const records = historyByBatch[batchKey]
-      return records.some(record => record.playerName.toLowerCase().includes(query))
-    })
-  }, [historyBatches, historyByBatch, searchQuery])
 
   // Format date for dropdown display
   const formatDateForDropdown = useCallback((dateStr: string) => {
@@ -331,12 +322,9 @@ export function QueueSettingsPage() {
         doc.text(`Unpaids: ${formatCurrency(totals.outstanding)}`, margin, yPos)
       } else {
         // Calculate total from all filtered batches
-        const historyTotal = filteredBatches.reduce((sum, batchKey) => {
-          const batchRecords = historyByBatch[batchKey]
-          const filteredBatchRecords = searchQuery.trim()
-            ? batchRecords.filter(record => record.playerName.toLowerCase().includes(searchQuery.toLowerCase()))
-            : batchRecords
-          return sum + filteredBatchRecords.reduce((batchSum, record) => 
+        const historyTotal = filteredHistoryBatches.reduce((sum, batchKey) => {
+          const batchRecords = filteredHistoryByBatch[batchKey]
+          return sum + batchRecords.reduce((batchSum, record) => 
             batchSum + Number(record.shuttleFee) + Number(record.courtFee), 0
           )
         }, 0)
@@ -355,12 +343,9 @@ export function QueueSettingsPage() {
             formatCurrency(row.shuttleFee + row.courtFee),
             row.status === 'paid' ? 'Paid' : 'Unpaid'
           ])
-        : filteredBatches.flatMap((batchKey) => {
-            const batchRecords = historyByBatch[batchKey]
-            const filteredBatchRecords = searchQuery.trim()
-              ? batchRecords.filter(record => record.playerName.toLowerCase().includes(searchQuery.toLowerCase()))
-              : batchRecords
-            return filteredBatchRecords.map((record) => [
+        : filteredHistoryBatches.flatMap((batchKey) => {
+            const batchRecords = filteredHistoryByBatch[batchKey]
+            return batchRecords.map((record) => [
               record.playerName,
               record.playerSex === 'male' ? 'Male' : 'Female',
               record.gamesPlayed.toString(),
@@ -461,9 +446,10 @@ export function QueueSettingsPage() {
     activeTab,
     todayISODate,
     filteredRows,
-    filteredBatches,
-    historyByBatch,
+    filteredHistoryBatches,
+    filteredHistoryByBatch,
     searchQuery,
+    selectedHistoryDate,
     totals,
     formatCurrency,
     formatDateForPDF
@@ -1074,7 +1060,7 @@ export function QueueSettingsPage() {
                 <button
                   type="button"
                   onClick={handleExportPDF}
-                  disabled={(activeTab === 'current' && (playersLoading || filteredRows.length === 0)) || (activeTab === 'history' && (historyLoading || filteredBatches.length === 0))}
+                  disabled={(activeTab === 'current' && (playersLoading || filteredRows.length === 0)) || (activeTab === 'history' && (historyLoading || filteredHistoryBatches.length === 0))}
                   className="rounded-md bg-blue-500 px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
                 >
                   Export
@@ -1132,6 +1118,24 @@ export function QueueSettingsPage() {
                   onChange={(event) => setSearchQuery(event.target.value)}
                   className="w-full sm:max-w-xs rounded-lg sm:rounded-xl border border-white/20 bg-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs text-white placeholder:text-white/60 outline-none transition focus:border-white/40 focus:bg-white/25"
                 />
+                {activeTab === 'history' && (
+                  <div className="flex flex-col gap-1.5">
+                    <input
+                      type="date"
+                      value={selectedHistoryDate}
+                      onChange={(event) => setSelectedHistoryDate(event.target.value)}
+                      className="w-full sm:w-auto rounded-lg sm:rounded-xl border border-white/20 bg-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs text-white outline-none transition focus:border-white/40 focus:bg-white/25 [color-scheme:dark]"
+                    />
+                    {selectedHistoryDate && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/20 border border-blue-400/30 rounded text-[9px] sm:text-[10px] text-blue-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a75.93 75.93 0 00-7.714 0M9.75 9V6.5a.25.25 0 01.5 0V9h2.5V6.5a.25.25 0 01.5 0V9h.5a.5.5 0 01.5.5v.5a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5v-.5a.5.5 0 01.5-.5h.5V6.5a.25.25 0 01.5 0V9h2.5z" clipRule="evenodd" />
+                        </svg>
+                        <span>{formatDateForDropdown(selectedHistoryDate)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div className="overflow-hidden rounded-2xl sm:rounded-3xl border border-white/10 bg-white/[0.07]">
@@ -1252,20 +1256,17 @@ export function QueueSettingsPage() {
                       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 text-center text-xs sm:text-sm text-white/60">
                         Loading history...
                       </div>
-                    ) : filteredBatches.length === 0 ? (
+                    ) : filteredHistoryBatches.length === 0 ? (
                       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 text-center text-xs sm:text-sm text-white/60">
-                        {historyBatches.length === 0 ? 'No fee history recorded yet.' : 'No batches match the current search.'}
+                        {feeManagementHistory.length === 0 ? 'No fee history recorded yet.' : 'No records match the selected date and search.'}
                       </div>
                     ) : (
-                      filteredBatches.map((batchKey) => {
-                        const batchRecords = historyByBatch[batchKey]
-                        const filteredBatchRecords = searchQuery.trim()
-                          ? batchRecords.filter(record => record.playerName.toLowerCase().includes(searchQuery.toLowerCase()))
-                          : batchRecords
+                      filteredHistoryBatches.map((batchKey) => {
+                        const batchRecords = filteredHistoryByBatch[batchKey]
                         
-                        if (filteredBatchRecords.length === 0) return null
+                        if (batchRecords.length === 0) return null
                         
-                        const batchTotal = filteredBatchRecords.reduce((sum, record) => 
+                        const batchTotal = batchRecords.reduce((sum, record) => 
                           sum + Number(record.shuttleFee) + Number(record.courtFee), 0
                         )
                         
@@ -1282,15 +1283,15 @@ export function QueueSettingsPage() {
                             <table className="min-w-full divide-y divide-white/10 text-xs sm:text-sm text-white/80">
                               <thead className="border-b border-white/18 bg-[#14070e] text-left uppercase tracking-wide text-white/60">
                                 <tr>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Player</th>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Games</th>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Shuttle Fees</th>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Court Fee</th>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Total</th>
+                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">PLAYER</th>
+                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">GAMES</th>
+                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs"></th>
+                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">COURT FEE</th>
+                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">TOTAL</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {filteredBatchRecords.map((record) => (
+                                {batchRecords.map((record) => (
                                   <tr key={`history-${record.id}`} className="border-b border-white/18 bg-[#14070e] transition-colors hover:bg-[#1a0a12]">
                                     <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-white">
                                       <div className="flex items-center gap-2 sm:gap-3">
