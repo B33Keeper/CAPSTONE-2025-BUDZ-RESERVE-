@@ -239,6 +239,28 @@ export function QueueSettingsPage() {
     )
   }, [filteredHistoryByDate])
 
+  // Get all unique dates from history records (sorted, most recent first)
+  const availableHistoryDates = useMemo(() => {
+    const dateSet = new Set<string>()
+    feeManagementHistory.forEach(record => {
+      const recordDate = typeof record.feeDate === 'string' 
+        ? record.feeDate.slice(0, 10) 
+        : new Date(record.feeDate).toISOString().slice(0, 10)
+      dateSet.add(recordDate)
+    })
+    return Array.from(dateSet).sort((a, b) => b.localeCompare(a)) // Most recent first
+  }, [feeManagementHistory])
+
+  // Set selected date to first available date when history tab is opened or when history loads
+  useEffect(() => {
+    if (activeTab === 'history' && availableHistoryDates.length > 0) {
+      // If current selection doesn't have records, select the first available date
+      if (!availableHistoryDates.includes(selectedHistoryDate)) {
+        setSelectedHistoryDate(availableHistoryDates[0])
+      }
+    }
+  }, [activeTab, availableHistoryDates, selectedHistoryDate])
+
   // Format date for dropdown display
   const formatDateForDropdown = useCallback((dateStr: string) => {
     const date = new Date(dateStr)
@@ -1095,18 +1117,31 @@ export function QueueSettingsPage() {
                 />
                 {activeTab === 'history' && (
                   <div className="flex flex-col gap-1.5">
-                    <input
-                      type="date"
-                      value={selectedHistoryDate}
-                      onChange={(event) => setSelectedHistoryDate(event.target.value)}
-                      className="w-full sm:w-auto rounded-lg sm:rounded-xl border border-white/20 bg-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs text-white outline-none transition focus:border-white/40 focus:bg-white/25 [color-scheme:dark]"
-                    />
-                    {selectedHistoryDate && (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/20 border border-blue-400/30 rounded text-[9px] sm:text-[10px] text-blue-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a75.93 75.93 0 00-7.714 0M9.75 9V6.5a.25.25 0 01.5 0V9h2.5V6.5a.25.25 0 01.5 0V9h.5a.5.5 0 01.5.5v.5a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5v-.5a.5.5 0 01.5-.5h.5V6.5a.25.25 0 01.5 0V9h2.5z" clipRule="evenodd" />
-                        </svg>
-                        <span>{formatDateForDropdown(selectedHistoryDate)}</span>
+                    {availableHistoryDates.length > 0 ? (
+                      <>
+                        <select
+                          value={selectedHistoryDate}
+                          onChange={(event) => setSelectedHistoryDate(event.target.value)}
+                          className="w-full sm:w-auto rounded-lg sm:rounded-xl border border-white/20 bg-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs text-white outline-none transition focus:border-white/40 focus:bg-white/25 [color-scheme:dark] cursor-pointer"
+                        >
+                          {availableHistoryDates.map((date) => (
+                            <option key={date} value={date} className="bg-gray-800 text-white">
+                              {formatDateForDropdown(date)}
+                            </option>
+                          ))}
+                        </select>
+                        {selectedHistoryDate && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/20 border border-blue-400/30 rounded text-[9px] sm:text-[10px] text-blue-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a75.93 75.93 0 00-7.714 0M9.75 9V6.5a.25.25 0 01.5 0V9h2.5V6.5a.25.25 0 01.5 0V9h.5a.5.5 0 01.5.5v.5a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5v-.5a.5.5 0 01.5-.5h.5V6.5a.25.25 0 01.5 0V9h2.5z" clipRule="evenodd" />
+                            </svg>
+                            <span>{formatDateForDropdown(selectedHistoryDate)}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-[10px] sm:text-xs text-white/60 px-3 sm:px-4 py-1.5 sm:py-2">
+                        No history dates available
                       </div>
                     )}
                   </div>
