@@ -67,17 +67,56 @@ const AdminDashboard = () => {
   const calculateDailySalesFromReservations = useCallback((reservations: any[]) => {
     if (!Array.isArray(reservations)) return 0
 
-    return reservations.reduce((sum, reservation) => {
+    // Group reservations by transaction (same logic as Sales Report)
+    // This prevents double-counting when multiple reservations share the same transaction
+    const transactionMap = new Map<string, {
+      reservations: any[]
+      payments: any[]
+      equipmentRentals: any[]
+    }>()
+
+    // First pass: Group reservations by transaction
+    for (const reservation of reservations) {
       const status = reservation?.Status?.toLowerCase?.() ?? ''
       if (status === 'cancelled') {
-        return sum
+        continue // Skip cancelled reservations (same as Sales Report)
       }
 
-      // Get reservation amount (court fees)
-      const reservationAmount = extractReservationAmount(reservation)
+      // Use same transaction key logic as Sales Report
+      let transactionKey = reservation.Reference_Number || reservation.Paymongo_Reference_Number
       
-      // Get equipment rental amount (if any)
-      let equipmentRentalAmount = 0
+      // Fallback: Use payment transaction_id if available
+      if (!transactionKey && reservation.payments && reservation.payments.length > 0) {
+        transactionKey = reservation.payments[0]?.transaction_id
+      }
+      
+      // Last resort: Unique key per reservation
+      if (!transactionKey) {
+        transactionKey = `${reservation.Reservation_Date}_${reservation.Start_Time}_${reservation.End_Time}_${reservation.Reservation_ID}`
+      }
+
+      if (!transactionMap.has(transactionKey)) {
+        transactionMap.set(transactionKey, {
+          reservations: [],
+          payments: [],
+          equipmentRentals: []
+        })
+      }
+
+      const transaction = transactionMap.get(transactionKey)!
+      transaction.reservations.push(reservation)
+      
+      // Collect payments (avoid duplicates)
+      if (reservation.payments && Array.isArray(reservation.payments)) {
+        for (const payment of reservation.payments) {
+          const paymentId = payment?.transaction_id || payment?.id || `${payment?.amount}_${Date.now()}`
+          if (!transaction.payments.find(p => (p?.transaction_id || p?.id) === paymentId)) {
+            transaction.payments.push(payment)
+          }
+        }
+      }
+      
+      // Collect equipment rentals
       const rentalsArray = Array.isArray(reservation.rentals)
         ? reservation.rentals
         : Array.isArray(reservation.equipmentRentals)
@@ -85,17 +124,55 @@ const AdminDashboard = () => {
           : []
       
       if (rentalsArray.length > 0) {
-        equipmentRentalAmount = rentalsArray.reduce((rentalSum: number, rental: any) => {
-          // Use total_amount from rental (same as sales report)
-          const rentalTotal = Number(rental?.total_amount ?? rental?.totalAmount ?? 0)
-          return rentalSum + (isNaN(rentalTotal) ? 0 : rentalTotal)
+        transaction.equipmentRentals.push(...rentalsArray)
+      }
+    }
+
+    // Second pass: Calculate total for each transaction (same as Sales Report)
+    let totalSales = 0
+    for (const [transactionKey, transaction] of transactionMap.entries()) {
+      // Calculate transaction total amount
+      // Priority 1: Sum of payment amounts (if payments exist)
+      let transactionAmount = 0
+      if (transaction.payments.length > 0) {
+        transactionAmount = transaction.payments.reduce((sum: number, payment: any) => {
+          const amount = Number(payment?.amount ?? 0)
+          return sum + (isNaN(amount) ? 0 : amount)
         }, 0)
       }
       
-      // Return sum of reservation amount + equipment rental amount (same as sales report)
-      return sum + reservationAmount + equipmentRentalAmount
-    }, 0)
-  }, [extractReservationAmount])
+      // Priority 2: Sum of Total_Amount from all reservations in transaction (if no payments)
+      if (transactionAmount === 0) {
+        transactionAmount = transaction.reservations.reduce((sum: number, res: any) => {
+          const totalAmount = Number(res.Total_Amount ?? res.total_amount ?? res.totalAmount ?? 0)
+          return sum + (isNaN(totalAmount) ? 0 : totalAmount)
+        }, 0)
+      }
+      
+      // Add equipment rental amounts (sum from all reservations in transaction)
+      let equipmentRentalAmount = 0
+      if (transaction.equipmentRentals.length > 0) {
+        // Use Set to avoid double-counting same rental
+        const uniqueRentals = new Map<string, any>()
+        for (const rental of transaction.equipmentRentals) {
+          const rentalId = rental?.id || `${rental?.total_amount}_${rental?.reservation_id}`
+          if (!uniqueRentals.has(rentalId)) {
+            uniqueRentals.set(rentalId, rental)
+          }
+        }
+        
+        equipmentRentalAmount = Array.from(uniqueRentals.values()).reduce((sum: number, rental: any) => {
+          const rentalTotal = Number(rental?.total_amount ?? rental?.totalAmount ?? 0)
+          return sum + (isNaN(rentalTotal) ? 0 : rentalTotal)
+        }, 0)
+      }
+      
+      // Total for this transaction = transaction amount + equipment rental amount
+      totalSales += transactionAmount + equipmentRentalAmount
+    }
+
+    return totalSales
+  }, [])
 
   const extractRacketRentalCount = useCallback((reservation: any) => {
     if (!reservation) return 0
