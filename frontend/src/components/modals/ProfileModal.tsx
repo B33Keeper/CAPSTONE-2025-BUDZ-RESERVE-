@@ -397,7 +397,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
           {/* Exit Button - Upper Right */}
           <button
             onClick={onClose}
-            className="absolute top-2 right-2 sm:top-3 sm:right-3 md:top-4 md:right-4 z-20 text-gray-400 hover:text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-all duration-200 p-1.5 sm:p-2 rounded-lg sm:rounded-xl group shadow-sm hover:shadow-md"
+            className="absolute top-2 right-2 sm:top-3 sm:right-3 md:top-4 md:right-4 z-20 text-red-500 hover:text-red-700 hover:bg-red-50 active:bg-red-100 transition-all duration-200 p-1.5 sm:p-2 rounded-lg sm:rounded-xl group shadow-sm hover:shadow-md border border-red-200 hover:border-red-300"
             aria-label="Close profile modal"
             title="Close"
           >
