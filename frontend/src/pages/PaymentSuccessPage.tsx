@@ -530,17 +530,23 @@ export function PaymentSuccessPage() {
                   Equipment Bookings
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {bookingSummary.equipmentBookings.map((booking: any, index: number) => (
+                {bookingSummary.equipmentBookings.map((booking: any, index: number) => {
+                  const quantity = booking.quantity || 1;
+                  return (
                     <div key={index} className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{booking.equipment}</p>
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {booking.equipment}
+                            {quantity > 1 && <span className="text-xs text-gray-500 ml-1">(Qty: {quantity})</span>}
+                          </p>
                           <p className="text-xs text-gray-600 mt-0.5 truncate">{booking.time}</p>
                         </div>
                         <p className="text-sm font-bold text-indigo-600 whitespace-nowrap">₱{booking.subtotal.toLocaleString()}</p>
                       </div>
                   </div>
-                ))}
+                  );
+                })}
                 </div>
               </div>
             )}

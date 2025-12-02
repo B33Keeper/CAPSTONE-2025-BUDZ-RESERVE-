@@ -7,6 +7,7 @@ interface BookingItem {
   courtName: string;
   timeSlot: string;
   subtotal: number;
+  quantity?: number; // For equipment bookings
 }
 
 interface PaymentSummaryStepProps {
@@ -54,7 +55,21 @@ export function PaymentSummaryStep({
     }));
   };
 
-  const allBookings = [...courtBookings, ...equipmentBookings];
+  // Expand equipment bookings with quantity > 1 into separate items
+  const expandedEquipmentBookings: BookingItem[] = [];
+  equipmentBookings.forEach(booking => {
+    const quantity = booking.quantity || 1;
+    // Create separate rows for each racket
+    for (let i = 0; i < quantity; i++) {
+      expandedEquipmentBookings.push({
+        courtName: booking.courtName,
+        timeSlot: booking.timeSlot,
+        subtotal: booking.subtotal / quantity, // Divide subtotal by quantity for individual item
+      });
+    }
+  });
+
+  const allBookings = [...courtBookings, ...expandedEquipmentBookings];
 
   return (
     <div className="max-w-6xl mx-auto relative">

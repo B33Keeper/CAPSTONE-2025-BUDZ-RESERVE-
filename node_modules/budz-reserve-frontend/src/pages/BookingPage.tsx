@@ -1965,7 +1965,8 @@ export function BookingPage() {
               equipmentBookings={equipmentBookings.map(booking => ({
                 courtName: booking.equipment,
                 timeSlot: booking.time,
-                subtotal: booking.subtotal
+                subtotal: booking.subtotal,
+                quantity: booking.quantity || 1
               }))}
               totalAmount={totalAmount}
               selectedDate={selectedDate}
