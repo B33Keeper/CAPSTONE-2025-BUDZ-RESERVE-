@@ -32,8 +32,23 @@ export class QueuePlayersService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    // Check if a player with the same name already exists in the current queue (case-insensitive)
+    const trimmedName = createQueuePlayerDto.name.trim();
+    const existingPlayer = await this.queuePlayersRepository
+      .createQueryBuilder('player')
+      .where('player.userId = :userId', { userId })
+      .andWhere('LOWER(TRIM(player.name)) = LOWER(:name)', { name: trimmedName })
+      .getOne();
+
+    if (existingPlayer) {
+      throw new BadRequestException(
+        `A player with the name "${existingPlayer.name}" already exists. You cannot save the same name twice.`,
+      );
+    }
+    
     const player = this.queuePlayersRepository.create({
       ...createQueuePlayerDto,
+      name: trimmedName,
       userId,
       status: createQueuePlayerDto.status ?? 'In Queue',
       gamesPlayed: 0,

@@ -523,10 +523,11 @@ export function QueuePlayersPage() {
       setPlayers((prev) => [...prev, createdPlayer])
       setPlayerName('')
       toast.success(`${createdPlayer.name} added to queue.`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create queue player', error)
-      setPlayersError('Unable to add player. Please try again.')
-      toast.error('Failed to add player. Please try again.')
+      const errorMessage = error?.response?.data?.message || error?.message || 'Unable to add player. Please try again.'
+      setPlayersError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsAddingPlayer(false)
     }
@@ -584,12 +585,17 @@ export function QueuePlayersPage() {
 
   const handleImportHistoryPlayer = useCallback(
     async (player: QueuePlayerHistory) => {
-      const alreadyInQueue = todaysPlayers.some(
-        (existing) => existing.name.toLowerCase() === player.name.toLowerCase()
+      // Check if a player with the same name already exists in all current players (case-insensitive)
+      const alreadyInQueue = players.some(
+        (existing) => existing.name.toLowerCase().trim() === player.name.toLowerCase().trim()
       )
 
       if (alreadyInQueue) {
-        toast('Player is already in today\'s queue.')
+        const existingPlayer = players.find(
+          (existing) => existing.name.toLowerCase().trim() === player.name.toLowerCase().trim()
+        )
+        setPlayersError(`A player with the name "${existingPlayer?.name || player.name}" already exists. You cannot save the same name twice.`)
+        toast.error(`A player with the name "${existingPlayer?.name || player.name}" already exists. You cannot save the same name twice.`)
         return
       }
 
@@ -604,14 +610,15 @@ export function QueuePlayersPage() {
         })
 
         setPlayers((prev) => [...prev, createdPlayer])
-        toast.success(`${player.name} added to today’s queue.`)
-      } catch (error) {
+        toast.success(`${player.name} added to today's queue.`)
+      } catch (error: any) {
         console.error('Failed to import player from history', error)
-        setPlayersError('Unable to import player. Please try again.')
-        toast.error('Unable to import player. Please try again.')
+        const errorMessage = error?.response?.data?.message || error?.message || 'Unable to import player. Please try again.'
+        setPlayersError(errorMessage)
+        toast.error(errorMessage)
       }
     },
-    [setPlayersError, todaysPlayers, todayISODate]
+    [setPlayersError, players, todayISODate]
   )
 
   const handleUpdatePlayer = useCallback(async () => {
