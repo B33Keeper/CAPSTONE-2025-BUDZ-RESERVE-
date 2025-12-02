@@ -607,25 +607,68 @@ export function BookingPage() {
         ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`]
         : []
     
-    // Update time first so that quantity change uses the correct time
+    // Update both quantity and time maps first
+    setRacketQuantities(prev => {
+      const newMap = new Map(prev)
+      if (quantity === 0) {
+        newMap.delete(racketName)
+      } else {
+        newMap.set(racketName, quantity)
+      }
+      return newMap
+    })
+    
     setRacketTimes(prev => {
       const newMap = new Map(prev)
       newMap.set(racketName, time)
       return newMap
     })
     
-    // When multiple schedules are selected, quantity per schedule is 1 (one racket per schedule)
-    // The total number of rackets will equal the number of selected schedules
-    if (selectedSchedules.length > 1) {
-      // Multiple schedules: create separate bookings, each with quantity 1
-      handleRacketQuantityChange(racketName, 1, selectedSchedules, time)
-      handleRacketTimeChange(racketName, time, selectedSchedules)
+    // Find the equipment to get its price
+    const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
+    const price = Number(equipmentItem?.price) || 0
+    
+    // Get existing booking to preserve selected schedules if they exist
+    const existingBooking = equipmentBookings.find(b => b.equipment === racketName)
+    const schedulesToUse = selectedSchedules || existingBooking?.selectedCourtSchedules || 
+      (courtBookings.length === 1 ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`] : [])
+    
+    // Update equipment bookings in a single operation to avoid race conditions
+    if (quantity === 0) {
+      // Remove all bookings for this racket
+      setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
     } else {
-      // Single schedule: use the quantity from modal
-      // Pass the time as override to ensure the booking uses the correct time
-      handleRacketQuantityChange(racketName, quantity, selectedSchedules, time)
-      // Time is already updated above, but call handleRacketTimeChange to ensure booking is updated
-      handleRacketTimeChange(racketName, time, selectedSchedules)
+      // CRITICAL: If multiple schedules are selected, create separate bookings - one per schedule
+      if (schedulesToUse.length > 1) {
+        // Multiple schedules: create separate bookings, each with quantity 1
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          
+          // Create separate booking for each selected schedule
+          const newBookings: EquipmentBooking[] = schedulesToUse.map(scheduleKey => ({
+            equipment: racketName,
+            time: `${time} hr`,
+            subtotal: price * time * 1, // Each schedule gets full price (1 racket per schedule)
+            quantity: 1, // One racket per schedule
+            selectedCourtSchedules: [scheduleKey] // Single schedule per booking
+          }))
+          
+          return [...filtered, ...newBookings]
+        })
+      } else {
+        // Single schedule - create one booking with both quantity and time
+        const newBooking: EquipmentBooking = {
+          equipment: racketName,
+          time: `${time} hr`,
+          subtotal: price * time * quantity,
+          quantity: quantity,
+          selectedCourtSchedules: schedulesToUse.length > 0 ? schedulesToUse : undefined
+        }
+        setEquipmentBookings(prev => {
+          const filtered = prev.filter(booking => booking.equipment !== racketName)
+          return [...filtered, newBooking]
+        })
+      }
     }
   }
 
