@@ -189,6 +189,10 @@ export class QueuePlayersSchedulerService {
    * This creates history records for all players in the current queue
    * Players remain in the current table after being saved to history
    * 
+   * IMPORTANT: This method prevents duplicate entries for the same date.
+   * If a player's name already exists in today's history, it will be skipped.
+   * Only players that don't already exist in today's history will be added.
+   * 
    * @param userId - The user ID to filter players
    * @returns Information about the saved players
    */
@@ -218,12 +222,14 @@ export class QueuePlayersSchedulerService {
     }
 
     // Get today's date range (start and end of today)
+    // This ensures we only check for duplicates within the same date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     // Get all history records saved today (based on archivedAt date)
+    // This is used to check which players already exist in today's history
     const todayHistoryRecords = await this.queuePlayersHistoryRepository
       .createQueryBuilder('history')
       .where('history.userId = :userId', { userId })
@@ -231,16 +237,32 @@ export class QueuePlayersSchedulerService {
       .andWhere('history.archivedAt < :tomorrow', { tomorrow })
       .getMany();
 
+    this.logger.log(`Found ${todayHistoryRecords.length} existing history record(s) for today.`);
+
     // Create a set of names that already exist in today's history (case-insensitive)
+    // This prevents duplicate entries when saving players multiple times on the same date
     const existingNamesSet = new Set<string>();
     todayHistoryRecords.forEach((record) => {
-      existingNamesSet.add(record.name.toLowerCase().trim());
+      if (record.name) {
+        existingNamesSet.add(record.name.toLowerCase().trim());
+      }
     });
 
+    this.logger.log(`Found ${existingNamesSet.size} unique player name(s) already in today's history.`);
+
     // Filter out players that already exist in today's history
+    // Only players that aren't already added will be saved
     const playersToSave = currentPlayers.filter((player) => {
+      if (!player.name) {
+        // Skip players without names
+        return false;
+      }
       const normalizedName = player.name.toLowerCase().trim();
-      return !existingNamesSet.has(normalizedName);
+      const isDuplicate = existingNamesSet.has(normalizedName);
+      if (isDuplicate) {
+        this.logger.debug(`Skipping duplicate player: ${player.name} (already exists in today's history)`);
+      }
+      return !isDuplicate;
     });
 
     if (playersToSave.length === 0) {
@@ -253,7 +275,10 @@ export class QueuePlayersSchedulerService {
       };
     }
 
+    this.logger.log(`Saving ${playersToSave.length} new player(s) to history (${currentPlayers.length - playersToSave.length} skipped as duplicates).`);
+
     // Create history records only for players that don't already exist
+    // This ensures no duplicates are created for the same date
     const historyRecords = playersToSave.map((player) => {
       return this.queuePlayersHistoryRepository.create({
         userId: player.userId,
@@ -280,6 +305,7 @@ export class QueuePlayersSchedulerService {
 
     // Note: Players remain in the current table - they are not deleted
     // This allows users to continue using the same players while having a history record
+    // When saving again on the same date, duplicates are prevented by checking existing history records
 
     return {
       message: `Successfully saved ${historyRecords.length} player(s) to history. ${skippedCount > 0 ? `${skippedCount} player(s) skipped (already exist).` : ''}`,
