@@ -55,7 +55,8 @@ export function BookingPage() {
   const [availabilityData, setAvailabilityData] = useState<Map<number, any[]>>(new Map())
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [loadingEquipmentAvailability, setLoadingEquipmentAvailability] = useState(false)
-  const [equipmentAvailability, setEquipmentAvailability] = useState<Map<number, number>>(new Map()) // equipmentId -> available stock
+  const [equipmentAvailability, setEquipmentAvailability] = useState<Map<number, number>>(new Map()) // equipmentId -> available stock (merged for display)
+  const [equipmentAvailabilityPerSchedule, setEquipmentAvailabilityPerSchedule] = useState<Map<string, Map<number, number>>>(new Map()) // scheduleKey -> equipmentId -> available stock
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false)
   const [showEquipmentGuard, setShowEquipmentGuard] = useState(false)
@@ -544,51 +545,61 @@ export function BookingPage() {
     if (!selectedDate || courtBookings.length === 0 || selectedCells.size === 0) {
       // If no schedule cells selected, clear availability map to show full stock
       setEquipmentAvailability(new Map())
+      setEquipmentAvailabilityPerSchedule(new Map())
       return
     }
 
     try {
       setLoadingEquipmentAvailability(true)
       
-      // IMPORTANT: When multiple schedules are selected, we need to check availability for EACH schedule
-      // because rentals spanning multiple schedules should reduce stock in ALL schedule cells
-      if (courtBookings.length === 1) {
-        // Single schedule - just load for that schedule
-        await loadEquipmentAvailabilityForSchedule(courtBookings[0].court, courtBookings[0].schedule)
-      } else {
-        // Multiple schedules - load availability for each schedule separately
-        // This ensures rentals spanning multiple schedules are counted in each schedule's availability
-        const availabilityMap = new Map<number, number>()
+      // IMPORTANT: Track availability per schedule so each schedule shows its own stock
+      // When renting 1 racket for 3 schedules, each schedule should show 1 less stock
+      const perScheduleMap = new Map<string, Map<number, number>>()
+      const mergedAvailabilityMap = new Map<number, number>()
+      
+      for (const booking of courtBookings) {
+        const scheduleKey = `${booking.court}-${booking.schedule}`
         
-        for (const booking of courtBookings) {
-          try {
-            const timeInfo = parseScheduleToStartTimeAndHours(booking.schedule)
-            if (timeInfo) {
-              const availability = await apiServices.getEquipmentAvailability(
-                selectedDate,
-                timeInfo.startTime,
-                timeInfo.hours
-              )
-              
-              // Merge availability - use the minimum available stock across all schedules
-              // (since a rental spanning multiple schedules affects all of them)
-              availability.forEach((item: any) => {
-                const equipmentItem = equipment.find(eq => eq.equipment_name === item.equipment_name)
-                if (equipmentItem) {
-                  const currentAvailable = availabilityMap.get(equipmentItem.id) ?? equipmentItem.stocks ?? 0
-                  const scheduleAvailable = item.available || 0
-                  // Use the minimum - if one schedule shows less availability, use that
-                  availabilityMap.set(equipmentItem.id, Math.min(currentAvailable, scheduleAvailable))
-                }
-              })
-            }
-          } catch (error) {
-            console.error(`Error loading availability for schedule ${booking.schedule}:`, error)
-          }
+        // Only load availability for schedules that are actually selected in cells
+        if (!selectedCells.has(`COURT ${getCourtIdFromName(booking.court)}-${booking.schedule}`)) {
+          continue
         }
         
-        setEquipmentAvailability(availabilityMap)
+        try {
+          const timeInfo = parseScheduleToStartTimeAndHours(booking.schedule)
+          if (timeInfo) {
+            const availability = await apiServices.getEquipmentAvailability(
+              selectedDate,
+              timeInfo.startTime,
+              timeInfo.hours
+            )
+            
+            // Store availability for this specific schedule
+            const scheduleAvailabilityMap = new Map<number, number>()
+            availability.forEach((item: any) => {
+              const equipmentItem = equipment.find(eq => eq.equipment_name === item.equipment_name)
+              if (equipmentItem) {
+                const availableStock = item.available || 0
+                scheduleAvailabilityMap.set(equipmentItem.id, availableStock)
+                
+                // For merged map (for general display), use minimum across all selected schedules
+                const currentMerged = mergedAvailabilityMap.get(equipmentItem.id) ?? equipmentItem.stocks ?? 0
+                mergedAvailabilityMap.set(equipmentItem.id, Math.min(currentMerged, availableStock))
+              }
+            })
+            
+            perScheduleMap.set(scheduleKey, scheduleAvailabilityMap)
+          }
+        } catch (error) {
+          console.error(`Error loading availability for schedule ${booking.schedule}:`, error)
+        }
       }
+      
+      // Store per-schedule availability
+      setEquipmentAvailabilityPerSchedule(perScheduleMap)
+      
+      // For general display, use merged map (minimum across schedules)
+      setEquipmentAvailability(mergedAvailabilityMap)
     } catch (error) {
       console.error('Error loading equipment availability for schedules:', error)
     } finally {
@@ -605,6 +616,7 @@ export function BookingPage() {
       // Clear availability map when no schedule cells are selected
       // This ensures full stock is shown when no cells are selected
       setEquipmentAvailability(new Map())
+      setEquipmentAvailabilityPerSchedule(new Map())
     }
   }, [selectedDate, courtBookings, selectedCells])
 
@@ -1806,10 +1818,38 @@ export function BookingPage() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                   {equipment.map((item, index) => {
-                    // Get availability: if schedule cells are selected, use schedule-specific availability, otherwise use default stocks from admin
-                    const availableStock = selectedCells.size > 0 && equipmentAvailability.has(item.id)
-                      ? equipmentAvailability.get(item.id) ?? 0
-                      : (item.stocks ?? 0)
+                    // Get availability: if schedule cells are selected, calculate based on selected schedules for this racket
+                    // When multiple schedules are selected, show the minimum availability across those schedules
+                    let availableStock = item.stocks ?? 0
+                    
+                    if (selectedCells.size > 0) {
+                      // Check if this racket is booked for specific schedules
+                      const racketBookings = equipmentBookings.filter(b => b.equipment === item.equipment_name)
+                      
+                      if (racketBookings.length > 0 && equipmentAvailabilityPerSchedule.size > 0) {
+                        // Get availability for schedules where this racket is booked
+                        const availabilities: number[] = []
+                        racketBookings.forEach(booking => {
+                          if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+                            booking.selectedCourtSchedules.forEach(scheduleKey => {
+                              const scheduleAvail = equipmentAvailabilityPerSchedule.get(scheduleKey)
+                              if (scheduleAvail && scheduleAvail.has(item.id)) {
+                                availabilities.push(scheduleAvail.get(item.id) ?? 0)
+                              }
+                            })
+                          }
+                        })
+                        
+                        if (availabilities.length > 0) {
+                          availableStock = Math.min(...availabilities)
+                        } else if (equipmentAvailability.has(item.id)) {
+                          availableStock = equipmentAvailability.get(item.id) ?? 0
+                        }
+                      } else if (equipmentAvailability.has(item.id)) {
+                        // Fallback to merged availability
+                        availableStock = equipmentAvailability.get(item.id) ?? 0
+                      }
+                    }
                     
                     return (
                     <div
@@ -2106,12 +2146,33 @@ export function BookingPage() {
           return selectedRacketForModal ? (racketTimes.get(selectedRacketForModal.equipment_name) || 1) : 1
         })()}
         maxTime={courtBookings.length > 0 ? calculateReservationDuration() : undefined}
-        scheduleSpecificAvailability={
-          // Only show reduced availability if schedule cells are selected AND availability has been calculated
-          selectedRacketForModal && selectedCells.size > 0 && courtBookings.length > 0 && equipmentAvailability.has(selectedRacketForModal.id)
-            ? equipmentAvailability.get(selectedRacketForModal.id) ?? undefined
-            : undefined
-        }
+        scheduleSpecificAvailability={(() => {
+          // Calculate availability based on selected schedules for this racket
+          if (!selectedRacketForModal || selectedCells.size === 0 || courtBookings.length === 0) {
+            return undefined
+          }
+          
+          // If we have per-schedule availability and schedules selected for this racket, use it
+          if (equipmentAvailabilityPerSchedule.size > 0 && selectedCourtSchedulesForRacket.size > 0) {
+            const availabilities: number[] = []
+            selectedCourtSchedulesForRacket.forEach((scheduleKey) => {
+              const scheduleAvailMap = equipmentAvailabilityPerSchedule.get(scheduleKey)
+              if (scheduleAvailMap && scheduleAvailMap.has(selectedRacketForModal.id)) {
+                availabilities.push(scheduleAvailMap.get(selectedRacketForModal.id) ?? 0)
+              }
+            })
+            if (availabilities.length > 0) {
+              return Math.min(...availabilities)
+            }
+          }
+          
+          // Fallback to general availability
+          if (equipmentAvailability.has(selectedRacketForModal.id)) {
+            return equipmentAvailability.get(selectedRacketForModal.id) ?? undefined
+          }
+          
+          return undefined
+        })()}
         onConfirm={(quantity, time) => {
           if (selectedRacketForModal) {
             handleRacketModalConfirm(selectedRacketForModal.equipment_name, quantity, time)
