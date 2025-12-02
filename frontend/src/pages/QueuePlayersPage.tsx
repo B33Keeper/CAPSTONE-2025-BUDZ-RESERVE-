@@ -779,17 +779,22 @@ export function QueuePlayersPage() {
         skippedCount?: number
         players?: any[]
       }
-      const savedCount = result?.savedCount ?? 0
-      const skippedCount = result?.skippedCount ?? 0
       
-      if (savedCount === 0) {
-        if (skippedCount > 0) {
-          // Inform user that all players already exist in today's history
-          toast.success(`All ${skippedCount} player${skippedCount === 1 ? '' : 's'} are already added to today's history.`)
-        } else {
-          toast.error('No players were saved to history.')
-        }
+      // Ensure we have valid numbers
+      const savedCount = Number(result?.savedCount) || 0
+      const skippedCount = Number(result?.skippedCount) || 0
+      
+      // When all players are already in history (savedCount is 0 but skippedCount > 0)
+      if (savedCount === 0 && skippedCount > 0) {
+        // Show success message that all players are already added
+        toast.success(`All ${skippedCount} player${skippedCount === 1 ? '' : 's'} are already added to today's history.`)
+        // Reload history to ensure UI is up to date
+        await loadHistory()
+      } else if (savedCount === 0 && skippedCount === 0) {
+        // No players to save (empty queue)
+        toast.error('No players were saved to history.')
       } else {
+        // Some or all players were saved
         let message = `Successfully saved ${savedCount} player${savedCount === 1 ? '' : 's'} to history.`
         if (skippedCount > 0) {
           message += ` ${skippedCount} player${skippedCount === 1 ? '' : 's'} skipped (already exist).`
