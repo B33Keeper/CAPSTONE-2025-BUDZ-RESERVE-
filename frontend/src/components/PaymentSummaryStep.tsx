@@ -55,54 +55,6 @@ export function PaymentSummaryStep({
   };
 
   const allBookings = [...courtBookings, ...equipmentBookings];
-  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
-  const [webhookTestResult, setWebhookTestResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  const handleTestWebhook = async () => {
-    setIsTestingWebhook(true);
-    setWebhookTestResult(null);
-    
-    try {
-      const testData = {
-        userId: user?.id || 1,
-        selectedDate: selectedDate,
-        courtBookings: courtBookings.map(b => ({
-          court: b.courtName,
-          schedule: b.timeSlot,
-          subtotal: b.subtotal,
-        })),
-        equipmentBookings: equipmentBookings.map(b => ({
-          equipment: b.courtName, // Using courtName as equipment name for equipment bookings
-          time: b.timeSlot,
-          subtotal: b.subtotal,
-        })),
-        referenceNumber: referenceNumber,
-        amount: totalAmount * 100, // Convert to centavos
-      };
-
-      const result = await PaymentService.testWebhook(testData);
-      
-      setWebhookTestResult({
-        success: result.success || false,
-        message: result.message || (result.success ? 'Webhook test completed! Check backend logs for details.' : 'Webhook test failed'),
-      });
-
-      if (result.success) {
-        alert('✅ Webhook test successful! Check the backend logs to see the full webhook processing flow.');
-      } else {
-        alert(`❌ Webhook test failed: ${result.message}`);
-      }
-    } catch (error) {
-      console.error('Webhook test error:', error);
-      setWebhookTestResult({
-        success: false,
-        message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      });
-      alert(`❌ Webhook test error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsTestingWebhook(false);
-    }
-  };
 
   return (
     <div className="max-w-6xl mx-auto relative">
@@ -401,16 +353,6 @@ export function PaymentSummaryStep({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back
-          </button>
-          <button
-            onClick={handleTestWebhook}
-            disabled={isTestingWebhook || !userInfo.name || !userInfo.email || !userInfo.contactNumber}
-            className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 font-semibold disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-[1.02] transform disabled:hover:scale-100"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {isTestingWebhook ? 'Testing...' : 'Test Webhook'}
           </button>
           <button
             onClick={() => onProceedToPayment(userInfo)}
