@@ -773,9 +773,14 @@ export function QueuePlayersPage() {
     setPlayersError(null)
 
     try {
-      const result = await apiServices.savePlayersToHistory()
-      const savedCount = result.savedCount || 0
-      const skippedCount = result.skippedCount || 0
+      const result = await apiServices.savePlayersToHistory() as {
+        message?: string
+        savedCount?: number
+        skippedCount?: number
+        players?: any[]
+      }
+      const savedCount = result?.savedCount ?? 0
+      const skippedCount = result?.skippedCount ?? 0
       
       if (savedCount === 0) {
         if (skippedCount > 0) {
