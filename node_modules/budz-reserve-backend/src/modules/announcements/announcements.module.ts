@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
+import * as multer from 'multer';
 import { AnnouncementsService } from './announcements.service';
 import { AnnouncementsController } from './announcements.controller';
 import { Announcement } from './entities/announcement.entity';
@@ -11,6 +12,7 @@ import { UploadModule } from '../upload/upload.module';
   imports: [
     TypeOrmModule.forFeature([Announcement, User]),
     MulterModule.register({
+      storage: multer.memoryStorage(),
       limits: {
         fileSize: 10 * 1024 * 1024, // 10MB
       },

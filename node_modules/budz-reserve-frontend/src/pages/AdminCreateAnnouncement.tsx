@@ -162,23 +162,23 @@ export default function AdminCreateAnnouncement() {
         />
 
         {/* Main Content */}
-        <main className="p-4 sm:p-6 lg:p-8 overflow-x-hidden animate-fadeIn transition-all duration-300 md:ml-64">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden animate-fadeIn transition-all duration-300 md:ml-64">
           {/* Page Header - Title Container */}
-          <div className="mb-8">
-            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-3xl shadow-2xl border border-gray-200/60 p-8 sm:p-10 animate-slideDown backdrop-blur-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mb-4 sm:mb-6 lg:mb-8">
+            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200/60 p-4 sm:p-6 lg:p-8 xl:p-10 animate-slideDown backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+                    <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg flex-shrink-0">
+                      <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                       </svg>
                     </div>
-                    <div>
-                      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-2">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-1 sm:mb-2 break-words">
                         Create Announcement
                       </h1>
-                      <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+                      <p className="text-sm sm:text-base lg:text-lg text-gray-600 leading-relaxed">
                         Share important updates with users
                       </p>
                     </div>
@@ -187,13 +187,14 @@ export default function AdminCreateAnnouncement() {
                 {/* Announcement History Button */}
                 <button
                   onClick={() => setShowAnnouncementHistory(true)}
-                  className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-gray-200/60 hover:border-blue-400/60 text-gray-700 hover:text-blue-700 transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95 font-semibold"
+                  className="flex items-center justify-center space-x-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-white/80 backdrop-blur-sm hover:bg-white border-2 border-gray-200/60 hover:border-blue-400/60 text-gray-700 hover:text-blue-700 transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95 font-semibold text-sm sm:text-base flex-shrink-0 w-full sm:w-auto"
                   title="View Announcement History"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span className="hidden sm:inline">Announcements</span>
+                  <span className="sm:hidden">History</span>
                 </button>
               </div>
             </div>
@@ -201,14 +202,14 @@ export default function AdminCreateAnnouncement() {
 
           {/* Form Container */}
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-3xl shadow-2xl border border-gray-200/60 p-6 sm:p-8 lg:p-10">
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200/60 p-4 sm:p-6 md:p-8 lg:p-10">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 {/* Announcement Type Selection */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-4">
+                  <label className="block text-sm sm:text-base font-bold text-gray-700 mb-3 sm:mb-4">
                     Announcement Type
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <button
                       type="button"
                       onClick={() => {
@@ -219,7 +220,7 @@ export default function AdminCreateAnnouncement() {
                           fileInputRef.current.value = ''
                         }
                       }}
-                      className={`relative px-6 py-5 rounded-2xl border-2 transition-all duration-300 font-semibold group overflow-hidden ${
+                      className={`relative px-4 sm:px-6 py-4 sm:py-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 font-semibold group overflow-hidden text-sm sm:text-base ${
                         announcementType === 'text'
                           ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 shadow-lg scale-105'
                           : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50/50 hover:scale-105'
@@ -228,23 +229,23 @@ export default function AdminCreateAnnouncement() {
                       {announcementType === 'text' && (
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10"></div>
                       )}
-                      <div className="relative flex items-center justify-center space-x-3">
-                        <div className={`p-2.5 rounded-xl ${
+                      <div className="relative flex items-center justify-center space-x-2 sm:space-x-3">
+                        <div className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl flex-shrink-0 ${
                           announcementType === 'text' 
                             ? 'bg-blue-600 text-white' 
                             : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
                         } transition-colors`}>
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                         </div>
-                        <span>Text Announcement</span>
+                        <span className="truncate">Text Announcement</span>
                       </div>
                     </button>
                     <button
                       type="button"
                       onClick={() => setAnnouncementType('image')}
-                      className={`relative px-6 py-5 rounded-2xl border-2 transition-all duration-300 font-semibold group overflow-hidden ${
+                      className={`relative px-4 sm:px-6 py-4 sm:py-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 font-semibold group overflow-hidden text-sm sm:text-base ${
                         announcementType === 'image'
                           ? 'border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 shadow-lg scale-105'
                           : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50/50 hover:scale-105'
@@ -253,17 +254,17 @@ export default function AdminCreateAnnouncement() {
                       {announcementType === 'image' && (
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10"></div>
                       )}
-                      <div className="relative flex items-center justify-center space-x-3">
-                        <div className={`p-2.5 rounded-xl ${
+                      <div className="relative flex items-center justify-center space-x-2 sm:space-x-3">
+                        <div className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl flex-shrink-0 ${
                           announcementType === 'image' 
                             ? 'bg-blue-600 text-white' 
                             : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600'
                         } transition-colors`}>
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </div>
-                        <span>Image Announcement</span>
+                        <span className="truncate">Image Announcement</span>
                       </div>
                     </button>
                   </div>
@@ -271,7 +272,7 @@ export default function AdminCreateAnnouncement() {
 
                 {/* Title */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                  <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 sm:mb-3">
                     Title <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -279,7 +280,7 @@ export default function AdminCreateAnnouncement() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Enter announcement title"
-                    className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all bg-white text-gray-900 font-medium"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 border-2 border-gray-300 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all bg-white text-gray-900 font-medium text-sm sm:text-base"
                     required
                     disabled={isSubmitting}
                   />
@@ -288,15 +289,15 @@ export default function AdminCreateAnnouncement() {
                 {/* Content (for text type) */}
                 {announcementType === 'text' && (
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">
+                    <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 sm:mb-3">
                       Content <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       placeholder="Enter announcement content"
-                      rows={10}
-                      className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none bg-white text-gray-900"
+                      rows={8}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 border-2 border-gray-300 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none bg-white text-gray-900 text-sm sm:text-base"
                       required
                       disabled={isSubmitting}
                     />
@@ -306,29 +307,29 @@ export default function AdminCreateAnnouncement() {
                 {/* Image Upload (for image type) */}
                 {announcementType === 'image' && (
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-3">
+                    <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 sm:mb-3">
                       Image <span className="text-red-500">*</span>
                     </label>
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {!imagePreview ? (
                         <div
                           onClick={() => fileInputRef.current?.click()}
-                          className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center cursor-pointer hover:border-blue-500 hover:bg-gradient-to-br hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300 group"
+                          className="border-2 border-dashed border-gray-300 rounded-xl sm:rounded-2xl p-6 sm:p-8 lg:p-12 text-center cursor-pointer hover:border-blue-500 hover:bg-gradient-to-br hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300 group"
                         >
                           <div className="flex flex-col items-center">
-                            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 mb-4 group-hover:scale-110 transition-transform">
-                              <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                              <svg className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                               </svg>
                             </div>
-                            <p className="text-lg font-semibold text-gray-700 mb-2 group-hover:text-blue-600 transition-colors">
+                            <p className="text-base sm:text-lg font-semibold text-gray-700 mb-1 sm:mb-2 group-hover:text-blue-600 transition-colors">
                               Click to upload an image
                             </p>
-                            <p className="text-sm text-gray-500">PNG, JPG, GIF, WEBP up to 10MB</p>
+                            <p className="text-xs sm:text-sm text-gray-500">PNG, JPG, GIF, WEBP up to 10MB</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="relative rounded-2xl overflow-hidden border-2 border-gray-200 shadow-lg">
+                        <div className="relative rounded-xl sm:rounded-2xl overflow-hidden border-2 border-gray-200 shadow-lg">
                           <img
                             src={imagePreview}
                             alt="Preview"
@@ -338,10 +339,10 @@ export default function AdminCreateAnnouncement() {
                           <button
                             type="button"
                             onClick={handleRemoveImage}
-                            className="absolute top-4 right-4 bg-red-600/90 backdrop-blur-sm text-white p-3 rounded-xl hover:bg-red-700 transition-all duration-200 shadow-lg hover:scale-110"
+                            className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-red-600/90 backdrop-blur-sm text-white p-2 sm:p-3 rounded-lg sm:rounded-xl hover:bg-red-700 transition-all duration-200 shadow-lg hover:scale-110"
                             disabled={isSubmitting}
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
@@ -357,15 +358,15 @@ export default function AdminCreateAnnouncement() {
                       />
                       {imagePreview && (
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-3">
+                          <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 sm:mb-3">
                             Optional Content (Caption)
                           </label>
                           <textarea
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             placeholder="Enter optional caption or description"
-                            rows={5}
-                            className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none bg-white text-gray-900"
+                            rows={4}
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 border-2 border-gray-300 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none bg-white text-gray-900 text-sm sm:text-base"
                             disabled={isSubmitting}
                           />
                         </div>
@@ -375,20 +376,20 @@ export default function AdminCreateAnnouncement() {
                 )}
 
                 {/* Submit Button */}
-                <div className="flex justify-center pt-6">
+                <div className="flex justify-center pt-4 sm:pt-6">
                   <button
                     type="submit"
-                    className="px-10 py-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 text-white rounded-xl font-bold text-lg hover:from-blue-700 hover:via-blue-800 hover:to-indigo-700 transition-all duration-200 disabled:from-gray-400 disabled:via-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed flex items-center space-x-3 shadow-xl hover:shadow-2xl transform hover:scale-105 active:scale-95"
+                    className="w-full sm:w-auto px-6 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 text-white rounded-lg sm:rounded-xl font-bold text-base sm:text-lg hover:from-blue-700 hover:via-blue-800 hover:to-indigo-700 transition-all duration-200 disabled:from-gray-400 disabled:via-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed flex items-center justify-center space-x-2 sm:space-x-3 shadow-xl hover:shadow-2xl transform hover:scale-105 active:scale-95"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>
                         <span>Creating...</span>
                       </>
                     ) : (
                       <>
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
                         <span>Create Announcement</span>

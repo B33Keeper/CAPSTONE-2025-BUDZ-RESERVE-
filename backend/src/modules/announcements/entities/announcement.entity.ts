@@ -25,7 +25,7 @@ export class Announcement {
   @Column({ type: 'text', nullable: true })
   content: string;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   image_url: string;
 
   @Column({

@@ -171,8 +171,10 @@ export class ReservationsService {
   }
 
   async findByUser(userId: number): Promise<Reservation[]> {
+    // Include both user-created and admin-created reservations for this user
+    // Admin-created reservations are linked to users when the email matches an existing user
     const reservations = await this.reservationsRepository.find({
-      where: { User_ID: userId, Is_Admin_Created: false },
+      where: { User_ID: userId },
       relations: ['court', 'payments'],
       order: { Created_at: 'DESC' },
     });
@@ -1855,14 +1857,17 @@ export class ReservationsService {
           
           for (const res of relevantReservations) {
             // Parse reservation date and time
-            const resDate = new Date(res.Reservation_Date);
+            // Use date components to avoid timezone issues when creating Date objects
+            const resDateStr = typeof res.Reservation_Date === 'string' 
+              ? res.Reservation_Date 
+              : new Date(res.Reservation_Date).toISOString().split('T')[0];
+            const [year, month, day] = resDateStr.split('-').map(Number);
+            
             const [startHour, startMin] = res.Start_Time.split(':').map(Number);
-            const resStart = new Date(resDate);
-            resStart.setHours(startHour, startMin || 0, 0, 0);
+            const resStart = new Date(year, month - 1, day, startHour, startMin || 0, 0);
             
             const [endHour, endMin] = res.End_Time.split(':').map(Number);
-            const resEnd = new Date(resDate);
-            resEnd.setHours(endHour, endMin || 0, 0, 0);
+            const resEnd = new Date(year, month - 1, day, endHour, endMin || 0, 0);
             
             this.logger.log(
               `[Equipment Rental] Schedule: ${res.court?.Court_Name || 'Unknown'} ` +

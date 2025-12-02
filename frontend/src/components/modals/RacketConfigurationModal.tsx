@@ -41,6 +41,7 @@ export function RacketConfigurationModal({
 
   useEffect(() => {
     if (isOpen && equipment) {
+      // Always sync with the latest initialQuantity when modal opens or equipment changes
       setQuantity(initialQuantity)
       // Clamp initial time to maxTime if provided
       const clampedInitialTime = maxTime !== undefined 

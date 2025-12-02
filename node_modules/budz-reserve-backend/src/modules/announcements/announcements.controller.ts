@@ -72,9 +72,14 @@ export class AnnouncementsController {
         throw new BadRequestException('File too large. Maximum size is 10MB.');
       }
 
-      // Upload image
-      const imagePath = await this.uploadService.uploadFile(file, 'announcements');
-      body.image_url = imagePath;
+      // Ensure file buffer is available (required for base64 conversion)
+      if (!file.buffer) {
+        throw new BadRequestException('File buffer is not available. Please ensure memory storage is configured.');
+      }
+
+      // Convert image to base64 and save in database
+      const base64Image = await this.uploadService.convertImageToBase64(file);
+      body.image_url = base64Image;
       body.announcement_type = 'image';
     }
 

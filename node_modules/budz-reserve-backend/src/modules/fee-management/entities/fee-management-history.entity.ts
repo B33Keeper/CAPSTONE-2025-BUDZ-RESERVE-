@@ -17,6 +17,7 @@ export enum PaymentStatus {
 @Index('idx_fee_management_history_user_id', ['userId'])
 @Index('idx_fee_management_history_fee_date', ['feeDate'])
 @Index('idx_fee_management_history_payment_status', ['paymentStatus'])
+@Index('idx_fee_management_history_batch_id', ['batchId'])
 export class FeeManagementHistory {
   @PrimaryGeneratedColumn()
   id: number;
@@ -26,6 +27,9 @@ export class FeeManagementHistory {
 
   @Column({ name: 'user_id', type: 'int', nullable: true })
   userId: number | null;
+
+  @Column({ name: 'batch_id', type: 'varchar', length: 100, nullable: true })
+  batchId: string | null;
 
   @Column({ name: 'player_name', type: 'varchar', length: 120 })
   playerName: string;

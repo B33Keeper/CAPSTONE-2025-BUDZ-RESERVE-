@@ -246,7 +246,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-blue-900/20 to-purple-900/20 backdrop-blur-md flex justify-center items-start sm:items-center overflow-y-auto sm:overflow-hidden z-50 p-3 sm:p-6"
+      className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-blue-900/20 to-purple-900/20 backdrop-blur-md flex justify-center items-start sm:items-center z-50 p-2 sm:p-3 md:p-6 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose()
@@ -254,11 +254,11 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       }}
     >
       <div 
-        className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 w-full max-w-3xl sm:max-w-5xl lg:max-w-6xl flex flex-col sm:flex-row overflow-hidden max-h-[calc(100vh-1rem)] sm:max-h-[700px] sm:min-h-[620px] animate-in slide-in-from-bottom-4 duration-500"
+        className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl border border-white/20 w-full max-w-3xl sm:max-w-5xl lg:max-w-6xl flex flex-col sm:flex-row my-2 sm:my-4 md:my-6 animate-in slide-in-from-bottom-4 duration-500"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Left Sidebar */}
-        <div className="w-full sm:w-1/3 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 border-b sm:border-b-0 sm:border-r border-blue-200/30 flex flex-col relative overflow-hidden flex-shrink-0">
+        <div className="w-full sm:w-1/3 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 border-b sm:border-b-0 sm:border-r border-blue-200/30 flex flex-col relative flex-shrink-0">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
@@ -393,74 +393,76 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         </div>
 
         {/* Right Content */}
-        <div className="w-full sm:w-2/3 flex flex-col bg-gradient-to-br from-gray-50/50 to-white/80 overflow-hidden">
-          {/* Header - Sticky */}
-          <div className="sticky top-0 z-10 bg-gradient-to-br from-gray-50/50 to-white/80 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-2 mb-3 sm:mb-4 flex-shrink-0 p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 border-b border-gray-200/30">
-            <div className="relative flex-1 min-w-0">
-              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent">
+        <div className="w-full sm:w-2/3 flex flex-col bg-gradient-to-br from-gray-50/50 to-white/80 relative">
+          {/* Exit Button - Upper Right */}
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 sm:top-3 sm:right-3 md:top-4 md:right-4 z-20 text-red-500 hover:text-red-700 hover:bg-red-50 active:bg-red-100 transition-all duration-200 p-1.5 sm:p-2 rounded-lg sm:rounded-xl group shadow-sm hover:shadow-md border border-red-200 hover:border-red-300"
+            aria-label="Close profile modal"
+            title="Close"
+          >
+            <X className="w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform duration-200" />
+          </button>
+
+          {/* Header */}
+          <div className="flex flex-col gap-2 sm:gap-2 mb-2 sm:mb-3 md:mb-4 flex-shrink-0 p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 border-b border-gray-200/30">
+            <div className="relative flex-1 min-w-0 pr-8 sm:pr-10 md:pr-12">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent break-words">
                 {activeTab === 'profile' ? 'My Profile' : 'Change Password'}
               </h2>
               <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2 font-medium">
                 {activeTab === 'profile' ? 'Manage your personal information' : 'Update your account security'}
               </p>
-              <div className="absolute -bottom-1 sm:-bottom-2 left-0 w-12 sm:w-16 h-0.5 sm:h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"></div>
+              <div className="absolute -bottom-1 sm:-bottom-2 left-0 w-10 sm:w-12 md:w-16 h-0.5 sm:h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"></div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-all duration-300 p-2 sm:p-3 hover:bg-gray-100 rounded-lg sm:rounded-xl group flex-shrink-0"
-              aria-label="Close profile modal"
-              title="Close profile modal"
-            >
-              <X className="w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform duration-200" />
-            </button>
           </div>
 
           {/* Mobile tab controls */}
-          <div className="sm:hidden grid grid-cols-2 gap-2 sm:gap-3 mb-3 flex-shrink-0 px-3 sm:px-4 md:px-6">
+          <div className="sm:hidden grid grid-cols-2 gap-2 mb-2 sm:mb-3 flex-shrink-0 px-3 sm:px-4 md:px-6">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold transition-all duration-300 active:scale-95 touch-manipulation ${
+              className={`flex items-center justify-center gap-1.5 rounded-lg sm:rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-300 active:scale-95 touch-manipulation ${
                 activeTab === 'profile'
                   ? 'bg-blue-500 text-white shadow-lg'
                   : 'bg-white/80 text-gray-700 border border-gray-200'
               }`}
             >
-              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <User className="w-3.5 h-3.5" />
               <span>Profile</span>
             </button>
             <button
               onClick={() => setActiveTab('password')}
-              className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold transition-all duration-300 active:scale-95 touch-manipulation ${
+              className={`flex items-center justify-center gap-1.5 rounded-lg sm:rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-300 active:scale-95 touch-manipulation ${
                 activeTab === 'password'
                   ? 'bg-indigo-500 text-white shadow-lg'
                   : 'bg-white/80 text-gray-700 border border-gray-200'
               }`}
             >
-              <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <Lock className="w-3.5 h-3.5" />
               <span>Password</span>
             </button>
           </div>
 
           {/* Content - Scrollable */}
-          <div className="flex-1 flex justify-center overflow-y-auto min-h-0 px-3 sm:px-4 md:px-6">
-            <div className="max-w-2xl w-full py-2 sm:py-3">
+          <div className="flex justify-center px-3 sm:px-4 md:px-6 pb-2">
+            <div className="max-w-2xl w-full py-2 sm:py-3 md:py-4">
               {activeTab === 'profile' ? (
-                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-3 sm:space-y-4">
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-3 sm:space-y-4 md:space-y-5">
                   {/* Username Field */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-bold text-gray-800 flex items-center">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                  <div className="space-y-2 sm:space-y-3">
+                    <label className="text-xs sm:text-sm font-bold text-gray-800 flex items-center">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full mr-2 sm:mr-3"></div>
                       Username
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 md:pl-5 flex items-center pointer-events-none">
-                        <div className="p-1.5 sm:p-2 rounded-lg bg-blue-50 group-focus-within:bg-blue-100 transition-colors duration-300">
-                          <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 group-focus-within:text-blue-600 transition-colors duration-200" />
+                      <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <div className="p-1 sm:p-1.5 md:p-2 rounded-lg bg-blue-50 group-focus-within:bg-blue-100 transition-colors duration-300">
+                          <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-500 group-focus-within:text-blue-600 transition-colors duration-200" />
                         </div>
                       </div>
                       <input
                         {...profileForm.register('name')}
-                        className="w-full pl-14 sm:pl-16 md:pl-20 pr-4 sm:pr-6 py-3 sm:py-4 md:py-5 border-2 border-gray-200 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg text-sm sm:text-base"
+                        className="w-full pl-11 sm:pl-14 md:pl-16 lg:pl-20 pr-3 sm:pr-4 md:pr-6 py-2.5 sm:py-3 md:py-4 lg:py-5 border-2 border-gray-200 rounded-lg sm:rounded-xl md:rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg text-sm sm:text-base"
                         placeholder="Enter your name"
                         autoComplete="name"
                       />
@@ -478,21 +480,21 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                   </div>
 
                   {/* Email Field */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-bold text-gray-800 flex items-center">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                  <div className="space-y-2 sm:space-y-3">
+                    <label className="text-xs sm:text-sm font-bold text-gray-800 flex items-center">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full mr-2 sm:mr-3"></div>
                       Email
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 md:pl-5 flex items-center pointer-events-none">
-                        <div className="p-1.5 sm:p-2 rounded-lg bg-green-50 group-focus-within:bg-green-100 transition-colors duration-300">
-                          <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 group-focus-within:text-green-600 transition-colors duration-200" />
+                      <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <div className="p-1 sm:p-1.5 md:p-2 rounded-lg bg-green-50 group-focus-within:bg-green-100 transition-colors duration-300">
+                          <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-green-500 group-focus-within:text-green-600 transition-colors duration-200" />
                         </div>
                       </div>
                       <input
                         {...profileForm.register('email')}
                         type="email"
-                        className="w-full pl-14 sm:pl-16 md:pl-20 pr-4 sm:pr-6 py-3 sm:py-4 md:py-5 border-2 border-gray-200 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg text-sm sm:text-base"
+                        className="w-full pl-11 sm:pl-14 md:pl-16 lg:pl-20 pr-3 sm:pr-4 md:pr-6 py-2.5 sm:py-3 md:py-4 lg:py-5 border-2 border-gray-200 rounded-lg sm:rounded-xl md:rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg text-sm sm:text-base"
                         placeholder="Enter your email"
                         autoComplete="email"
                       />
@@ -510,23 +512,23 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                   </div>
 
                   {/* Age and Sex Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
                     {/* Age Field */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-bold text-gray-800 flex items-center">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
+                    <div className="space-y-2 sm:space-y-3">
+                      <label className="text-xs sm:text-sm font-bold text-gray-800 flex items-center">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full mr-2 sm:mr-3"></div>
                         Age
                       </label>
                       <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 md:pl-5 flex items-center pointer-events-none">
-                          <div className="p-1.5 sm:p-2 rounded-lg bg-purple-50 group-focus-within:bg-purple-100 transition-colors duration-300">
-                            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 group-focus-within:text-purple-600 transition-colors duration-200" />
+                        <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 md:pl-4 flex items-center pointer-events-none">
+                          <div className="p-1 sm:p-1.5 md:p-2 rounded-lg bg-purple-50 group-focus-within:bg-purple-100 transition-colors duration-300">
+                            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-500 group-focus-within:text-purple-600 transition-colors duration-200" />
                           </div>
                         </div>
                         <input
                           {...profileForm.register('age', { valueAsNumber: true })}
                           type="number"
-                          className="w-full pl-14 sm:pl-16 md:pl-20 pr-4 sm:pr-6 py-3 sm:py-4 md:py-5 border-2 border-gray-200 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg text-sm sm:text-base"
+                          className="w-full pl-11 sm:pl-14 md:pl-16 lg:pl-20 pr-3 sm:pr-4 md:pr-6 py-2.5 sm:py-3 md:py-4 lg:py-5 border-2 border-gray-200 rounded-lg sm:rounded-xl md:rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg text-sm sm:text-base"
                           placeholder="Enter your age"
                         />
                       </div>
@@ -543,26 +545,26 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                     </div>
 
                     {/* Sex Field */}
-                    <div className="space-y-3">
-                      <label className="text-sm font-bold text-gray-800 flex items-center">
-                        <div className="w-2 h-2 bg-pink-500 rounded-full mr-3"></div>
+                    <div className="space-y-2 sm:space-y-3">
+                      <label className="text-xs sm:text-sm font-bold text-gray-800 flex items-center">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-pink-500 rounded-full mr-2 sm:mr-3"></div>
                         Gender
                       </label>
                       <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 md:pl-5 flex items-center pointer-events-none">
-                          <div className="p-1.5 sm:p-2 rounded-lg bg-pink-50 group-focus-within:bg-pink-100 transition-colors duration-300">
-                            <div className="w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                        <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 md:pl-4 flex items-center pointer-events-none">
+                          <div className="p-1 sm:p-1.5 md:p-2 rounded-lg bg-pink-50 group-focus-within:bg-pink-100 transition-colors duration-300">
+                            <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 flex items-center justify-center">
                               {user?.sex === 'Male' ? (
-                                <span className="text-pink-500 text-base sm:text-lg font-bold">♂</span>
+                                <span className="text-pink-500 text-sm sm:text-base md:text-lg font-bold">♂</span>
                               ) : (
-                                <span className="text-pink-500 text-base sm:text-lg font-bold">♀</span>
+                                <span className="text-pink-500 text-sm sm:text-base md:text-lg font-bold">♀</span>
                               )}
                             </div>
                           </div>
                         </div>
                         <select
                           {...profileForm.register('sex')}
-                          className="w-full pl-14 sm:pl-16 md:pl-20 pr-10 sm:pr-12 py-3 sm:py-4 md:py-5 border-2 border-gray-200 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg appearance-none cursor-pointer text-sm sm:text-base"
+                          className="w-full pl-11 sm:pl-14 md:pl-16 lg:pl-20 pr-8 sm:pr-10 md:pr-12 py-2.5 sm:py-3 md:py-4 lg:py-5 border-2 border-gray-200 rounded-lg sm:rounded-xl md:rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg appearance-none cursor-pointer text-sm sm:text-base"
                         >
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
@@ -587,21 +589,21 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                   </div>
 
                   {/* Contact Number Field */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-bold text-gray-800 flex items-center">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
+                  <div className="space-y-2 sm:space-y-3">
+                    <label className="text-xs sm:text-sm font-bold text-gray-800 flex items-center">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-500 rounded-full mr-2 sm:mr-3"></div>
                       Contact Number
                     </label>
                     <div className="relative group">
-                      <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 md:pl-5 flex items-center pointer-events-none">
-                        <div className="p-1.5 sm:p-2 rounded-lg bg-orange-50 group-focus-within:bg-orange-100 transition-colors duration-300">
-                          <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500 group-focus-within:text-orange-600 transition-colors duration-200" />
+                      <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 md:pl-4 flex items-center pointer-events-none">
+                        <div className="p-1 sm:p-1.5 md:p-2 rounded-lg bg-orange-50 group-focus-within:bg-orange-100 transition-colors duration-300">
+                          <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-orange-500 group-focus-within:text-orange-600 transition-colors duration-200" />
                         </div>
                       </div>
                       <input
                         {...profileForm.register('contact_number')}
                         type="tel"
-                        className="w-full pl-14 sm:pl-16 md:pl-20 pr-4 sm:pr-6 py-3 sm:py-4 md:py-5 border-2 border-gray-200 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 sm:focus:ring-4 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg text-sm sm:text-base"
+                        className="w-full pl-11 sm:pl-14 md:pl-16 lg:pl-20 pr-3 sm:pr-4 md:pr-6 py-2.5 sm:py-3 md:py-4 lg:py-5 border-2 border-gray-200 rounded-lg sm:rounded-xl md:rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg text-sm sm:text-base"
                         placeholder="+63 9XX XXX XXXX"
                         autoComplete="tel"
                         onChange={(e) => {
@@ -623,33 +625,33 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                   </div>
                 </form>
               ) : (
-                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4 sm:space-y-5 md:space-y-6 py-2 sm:py-3 md:py-4">
+                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6 py-2 sm:py-3 md:py-4">
                   {/* Current Password */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-700">
                       Current Password
                     </label>
                     <div className="relative group">
                       <input
                         {...passwordForm.register('currentPassword')}
                         type={showPasswords.current ? 'text' : 'password'}
-                        className="w-full px-4 py-3 sm:py-4 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 md:py-4 pr-10 sm:pr-12 border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white text-sm sm:text-base"
                         placeholder="Enter current password"
                         autoComplete="current-password"
                       />
                       <button
                         type="button"
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-100 rounded-r-xl transition-colors duration-200"
+                        className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center hover:bg-gray-100 rounded-r-lg sm:rounded-r-xl transition-colors duration-200"
                         onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
                         aria-label={showPasswords.current ? "Hide current password" : "Show current password"}
                         title={showPasswords.current ? "Hide current password" : "Show current password"}
                       >
                         {showPasswords.current ? (
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                           </svg>
                         ) : (
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
@@ -668,30 +670,30 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
                   {/* New Password */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-700">
                       New Password
                     </label>
                     <div className="relative group">
                       <input
                         {...passwordForm.register('newPassword')}
                         type={showPasswords.new ? 'text' : 'password'}
-                        className="w-full px-4 py-3 sm:py-4 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 md:py-4 pr-10 sm:pr-12 border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white text-sm sm:text-base"
                         placeholder="Enter new password"
                         autoComplete="new-password"
                       />
                       <button
                         type="button"
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-100 rounded-r-xl transition-colors duration-200"
+                        className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center hover:bg-gray-100 rounded-r-lg sm:rounded-r-xl transition-colors duration-200"
                         onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
                         aria-label={showPasswords.new ? "Hide new password" : "Show new password"}
                         title={showPasswords.new ? "Hide new password" : "Show new password"}
                       >
                         {showPasswords.new ? (
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                           </svg>
                         ) : (
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
@@ -710,30 +712,30 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
                   {/* Confirm Password */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-700">
                       Confirm New Password
                     </label>
                     <div className="relative group">
                       <input
                         {...passwordForm.register('confirmPassword')}
                         type={showPasswords.confirm ? 'text' : 'password'}
-                        className="w-full px-4 py-3 sm:py-4 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 md:py-4 pr-10 sm:pr-12 border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 bg-gray-50/50 focus:bg-white text-sm sm:text-base"
                         placeholder="Confirm new password"
                         autoComplete="new-password"
                       />
                       <button
                         type="button"
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center hover:bg-gray-100 rounded-r-xl transition-colors duration-200"
+                        className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center hover:bg-gray-100 rounded-r-lg sm:rounded-r-xl transition-colors duration-200"
                         onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
                         aria-label={showPasswords.confirm ? "Hide confirm password" : "Show confirm password"}
                         title={showPasswords.confirm ? "Hide confirm password" : "Show confirm password"}
                       >
                         {showPasswords.confirm ? (
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                           </svg>
                         ) : (
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
@@ -754,12 +756,12 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             </div>
           </div>
 
-          {/* Save Button - Sticky */}
-          <div className="sticky bottom-0 z-10 bg-gradient-to-br from-gray-50/50 to-white/80 backdrop-blur-sm flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-3 sm:pt-4 pb-3 sm:pb-4 border-t border-gray-200/50 flex-shrink-0 px-3 sm:px-4 md:px-6 -mx-3 sm:-mx-4 md:-mx-6">
+          {/* Save Button */}
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2 sm:pt-3 md:pt-4 pb-2 sm:pb-3 md:pb-4 border-t border-gray-200/50 flex-shrink-0 px-3 sm:px-4 md:px-6">
             <button
               onClick={activeTab === 'profile' ? profileForm.handleSubmit(onProfileSubmit) : passwordForm.handleSubmit(onPasswordSubmit)}
               disabled={isPasswordChanging}
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-xl sm:rounded-2xl font-bold hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center space-x-2 sm:space-x-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 disabled:transform-none disabled:hover:scale-100 w-full sm:w-auto min-h-[44px] sm:min-h-[52px] touch-manipulation text-sm sm:text-base"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 sm:px-5 md:px-6 lg:px-8 py-2.5 sm:py-3 md:py-4 rounded-lg sm:rounded-xl md:rounded-2xl font-bold hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center space-x-2 sm:space-x-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 disabled:transform-none disabled:hover:scale-100 w-full sm:w-auto min-h-[44px] sm:min-h-[48px] md:min-h-[52px] touch-manipulation text-sm sm:text-base"
             >
               {isPasswordChanging ? (
                 <>
