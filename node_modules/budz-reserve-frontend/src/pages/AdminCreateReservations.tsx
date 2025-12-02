@@ -2582,9 +2582,23 @@ export default function AdminCreateReservations() {
                   {/* QR Code Display - Show when QR code is generated */}
                   {selectedPaymentMethod === 'qrph' && selectedQrProvider && qrCodeData && (
                     <div className="mt-4 p-6 bg-gray-50 rounded-xl border-2 border-gray-200">
-                      <h4 className="text-base font-semibold text-gray-900 mb-3 text-center">
-                        Scan QR Code to Pay via {selectedQrProvider === 'gcash' ? 'GCash' : selectedQrProvider === 'paymaya' ? 'PayMaya' : 'GrabPay'}
-                      </h4>
+                      <div className="flex items-center justify-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center overflow-hidden p-1.5">
+                          <img 
+                            src={selectedQrProvider === 'gcash' 
+                              ? '/assets/PAYMENT METHOD IMAGE/GCASH.png'
+                              : selectedQrProvider === 'paymaya'
+                              ? '/assets/PAYMENT METHOD IMAGE/maya.jpg'
+                              : '/assets/PAYMENT METHOD IMAGE/Grabpay.png'
+                            } 
+                            alt={selectedQrProvider === 'gcash' ? 'GCash' : selectedQrProvider === 'paymaya' ? 'PayMaya' : 'GrabPay'} 
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <h4 className="text-base font-semibold text-gray-900 text-center">
+                          Scan QR Code to Pay via {selectedQrProvider === 'gcash' ? 'GCash' : selectedQrProvider === 'paymaya' ? 'PayMaya' : 'GrabPay'}
+                        </h4>
+                      </div>
                       <div className="flex justify-center mb-4">
                         <div className="bg-white p-4 rounded-lg shadow-lg">
                           <img 
@@ -3302,8 +3316,12 @@ export default function AdminCreateReservations() {
                 disabled={isProcessingPayment}
                 className="p-6 border-2 border-gray-300 rounded-xl bg-white hover:border-green-500 hover:bg-green-50 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-4"
               >
-                <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-3xl font-bold text-green-600">GC</span>
+                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden p-2">
+                  <img 
+                    src="/assets/PAYMENT METHOD IMAGE/GCASH.png" 
+                    alt="GCash" 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <div className="flex-1 text-left">
                   <span className="text-lg font-semibold text-gray-900 block">GCash</span>
@@ -3321,8 +3339,12 @@ export default function AdminCreateReservations() {
                 disabled={isProcessingPayment}
                 className="p-6 border-2 border-gray-300 rounded-xl bg-white hover:border-purple-500 hover:bg-purple-50 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-4"
               >
-                <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-3xl font-bold text-purple-600">PM</span>
+                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden p-2">
+                  <img 
+                    src="/assets/PAYMENT METHOD IMAGE/maya.jpg" 
+                    alt="PayMaya" 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <div className="flex-1 text-left">
                   <span className="text-lg font-semibold text-gray-900 block">PayMaya</span>
@@ -3340,8 +3362,12 @@ export default function AdminCreateReservations() {
                 disabled={isProcessingPayment}
                 className="p-6 border-2 border-gray-300 rounded-xl bg-white hover:border-orange-500 hover:bg-orange-50 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-4"
               >
-                <div className="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-3xl font-bold text-orange-600">GP</span>
+                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden p-2">
+                  <img 
+                    src="/assets/PAYMENT METHOD IMAGE/Grabpay.png" 
+                    alt="GrabPay" 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <div className="flex-1 text-left">
                   <span className="text-lg font-semibold text-gray-900 block">GrabPay</span>
