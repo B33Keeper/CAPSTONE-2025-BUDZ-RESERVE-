@@ -695,19 +695,25 @@ export function QueuePlayersPage() {
       const generatedCount = response?.matchesGenerated ?? 0
       const activeCount = response?.activeMatches?.length ?? 0
       const pendingCount = response?.pendingMatches?.length ?? 0
+      const reason = response?.reason
 
       if (generatedCount > 0) {
         toast.success(
           `Generated ${generatedCount} ${gameTypeLabel} match${generatedCount === 1 ? '' : 'es'} (${activeCount} active, ${pendingCount} pending).`
         )
       } else {
-        const genderRequired = 
-          selectedGameType === 'mens-doubles' ? 'male' :
-          selectedGameType === 'womens-doubles' ? 'female' :
-          'male and female'
-        toast.error(
-          `No ${gameTypeLabel} matches generated. Need at least 4 ${genderRequired} players.`
-        )
+        // Show specific reason if provided (e.g., no active courts)
+        if (reason) {
+          toast.error(reason)
+        } else {
+          const genderRequired = 
+            selectedGameType === 'mens-doubles' ? 'male' :
+            selectedGameType === 'womens-doubles' ? 'female' :
+            'male and female'
+          toast.error(
+            `No ${gameTypeLabel} matches generated. Need at least 4 ${genderRequired} players.`
+          )
+        }
       }
       await Promise.all([loadPlayers(), loadMatches()]) // Refresh players and matches to update statuses
     } catch (error: any) {

@@ -60,6 +60,24 @@ export class QueueMatchesService {
   async generateMatches(dto: GenerateQueueMatchesDto, userId: number) {
     const todayISO = this.getTodayISODate();
 
+    // Check if there are any available courts before proceeding
+    const availableCourts = await this.queueingCourtsRepository.find({
+      where: { status: QueueingCourtStatus.AVAILABLE },
+    });
+
+    if (availableCourts.length === 0) {
+      console.log(
+        `[Match Generation] ERROR: No available courts found. Cannot generate matches.`,
+      );
+      return {
+        matchesGenerated: 0,
+        activeMatches: [],
+        pendingMatches: [],
+        skippedPlayers: [],
+        reason: 'There are no active courts. Add courts so you can proceed.',
+      };
+    }
+
     // Removed logic that prevents players from being paired in the same team twice
     // Players can now be paired together multiple times
 
