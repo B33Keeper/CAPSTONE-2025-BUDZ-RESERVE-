@@ -139,36 +139,6 @@ export function QueueSettingsPage() {
     return Array.from(playersMap.values())
   }, [players, paidPlayers])
 
-  // Group fee management history records by batch_id (each save operation creates a separate batch)
-  const historyByBatch = useMemo(() => {
-    return feeManagementHistory.reduce((acc, record) => {
-      // Use batch_id as the key, or fallback to a combination of date and created_at if batch_id is null (for old records)
-      const batchKey = record.batchId || `legacy_${typeof record.feeDate === 'string' ? record.feeDate.slice(0, 10) : new Date(record.feeDate).toISOString().slice(0, 10)}_${record.createdAt}`
-      
-      if (!acc[batchKey]) {
-        acc[batchKey] = []
-      }
-      acc[batchKey].push(record)
-      
-      return acc
-    }, {} as Record<string, FeeManagementHistoryRecord[]>)
-  }, [feeManagementHistory])
-
-  // Extract unique batch keys, sorted by the most recent record's createdAt, limited to 20 most recent batches
-  const HISTORY_BATCH_LIMIT = 20
-  const historyBatches = useMemo(() => {
-    const sortedBatches = Object.keys(historyByBatch).sort((a, b) => {
-      // Get the most recent createdAt from each batch
-      const batchA = historyByBatch[a]
-      const batchB = historyByBatch[b]
-      const latestA = Math.max(...batchA.map(r => new Date(r.createdAt).getTime()))
-      const latestB = Math.max(...batchB.map(r => new Date(r.createdAt).getTime()))
-      return latestB - latestA // Descending order
-    })
-    return sortedBatches.slice(0, HISTORY_BATCH_LIMIT)
-  }, [historyByBatch])
-
-  // No need to auto-select batches - we'll show all of them
 
 
   // Current fees rows
@@ -212,29 +182,6 @@ export function QueueSettingsPage() {
     })
   }, [activePlayers, numericCourtFee, numericDoublesFee, paymentStatus, activeMatches, pendingMatches])
 
-  // Helper function to format batch date/time for display
-  const formatBatchLabel = (batchKey: string, records: FeeManagementHistoryRecord[]): string => {
-    if (batchKey.startsWith('legacy_')) {
-      // For legacy records without batch_id, use the date from the key
-      const datePart = batchKey.split('_')[1]
-      return `Legacy: ${datePart}`
-    }
-    
-    // For batches with batch_id, use the most recent record's date and time
-    const latestRecord = records.reduce((latest, record) => {
-      const recordTime = new Date(record.createdAt).getTime()
-      const latestTime = new Date(latest.createdAt).getTime()
-      return recordTime > latestTime ? record : latest
-    })
-    
-    const date = typeof latestRecord.feeDate === 'string' 
-      ? new Date(latestRecord.feeDate) 
-      : latestRecord.feeDate
-    const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-    const timeStr = new Date(latestRecord.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    
-    return `${dateStr} at ${timeStr}`
-  }
 
   const totals = useMemo(() => {
     return rows.reduce(
@@ -257,7 +204,7 @@ export function QueueSettingsPage() {
     return rows.filter((row) => row.label.toLowerCase().includes(query))
   }, [rows, searchQuery])
 
-  // Filter history by selected date and search query
+  // Filter history by selected date and search query - show all records for the date in one table
   const filteredHistoryByDate = useMemo(() => {
     let filtered = feeManagementHistory
 
@@ -277,32 +224,20 @@ export function QueueSettingsPage() {
       filtered = filtered.filter(record => record.playerName.toLowerCase().includes(query))
     }
 
-    return filtered
+    // Sort by creation time (most recent first)
+    return filtered.sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime()
+      const timeB = new Date(b.createdAt).getTime()
+      return timeB - timeA
+    })
   }, [feeManagementHistory, selectedHistoryDate, searchQuery])
 
-  // Group filtered history by batch
-  const filteredHistoryByBatch = useMemo(() => {
-    return filteredHistoryByDate.reduce((acc, record) => {
-      const batchKey = record.batchId || `legacy_${typeof record.feeDate === 'string' ? record.feeDate.slice(0, 10) : new Date(record.feeDate).toISOString().slice(0, 10)}_${record.createdAt}`
-      if (!acc[batchKey]) {
-        acc[batchKey] = []
-      }
-      acc[batchKey].push(record)
-      return acc
-    }, {} as Record<string, FeeManagementHistoryRecord[]>)
+  // Calculate total for all filtered records
+  const filteredHistoryTotal = useMemo(() => {
+    return filteredHistoryByDate.reduce((sum: number, record: FeeManagementHistoryRecord) => 
+      sum + Number(record.shuttleFee) + Number(record.courtFee), 0
+    )
   }, [filteredHistoryByDate])
-
-  // Get sorted batch keys for filtered history
-  const filteredHistoryBatches = useMemo(() => {
-    const sortedBatches = Object.keys(filteredHistoryByBatch).sort((a, b) => {
-      const batchA = filteredHistoryByBatch[a]
-      const batchB = filteredHistoryByBatch[b]
-      const latestA = Math.max(...batchA.map(r => new Date(r.createdAt).getTime()))
-      const latestB = Math.max(...batchB.map(r => new Date(r.createdAt).getTime()))
-      return latestB - latestA
-    })
-    return sortedBatches.slice(0, HISTORY_BATCH_LIMIT)
-  }, [filteredHistoryByBatch])
 
   // Format date for dropdown display
   const formatDateForDropdown = useCallback((dateStr: string) => {
@@ -368,13 +303,10 @@ export function QueueSettingsPage() {
         yPos += 6
         doc.text(`Unpaids: ${formatCurrency(totals.outstanding)}`, margin, yPos)
       } else {
-        // Calculate total from all filtered batches
-        const historyTotal = filteredHistoryBatches.reduce((sum: number, batchKey: string) => {
-          const batchRecords = filteredHistoryByBatch[batchKey]
-          return sum + batchRecords.reduce((batchSum: number, record: FeeManagementHistoryRecord) => 
-            batchSum + Number(record.shuttleFee) + Number(record.courtFee), 0
-          )
-        }, 0)
+        // Calculate total from all filtered records
+        const historyTotal = filteredHistoryByDate.reduce((sum: number, record: FeeManagementHistoryRecord) => 
+          sum + Number(record.shuttleFee) + Number(record.courtFee), 0
+        )
         doc.text(`Total Fees: ${formatCurrency(historyTotal)}`, margin, yPos)
       }
       yPos += 10
@@ -390,18 +322,15 @@ export function QueueSettingsPage() {
             formatCurrency(row.shuttleFee + row.courtFee),
             row.status === 'paid' ? 'Paid' : 'Unpaid'
           ])
-        : filteredHistoryBatches.flatMap((batchKey: string) => {
-            const batchRecords = filteredHistoryByBatch[batchKey]
-            return batchRecords.map((record: FeeManagementHistoryRecord) => [
-              record.playerName,
-              record.playerSex === 'male' ? 'Male' : 'Female',
-              record.gamesPlayed.toString(),
-              formatCurrency(Number(record.shuttleFee)),
-              formatCurrency(Number(record.courtFee)),
-              formatCurrency(Number(record.shuttleFee) + Number(record.courtFee)),
-              'Paid' // All history records are paid since they can only be saved when all are paid
-            ])
-          })
+        : filteredHistoryByDate.map((record: FeeManagementHistoryRecord) => [
+            record.playerName,
+            record.playerSex === 'male' ? 'Male' : 'Female',
+            record.gamesPlayed.toString(),
+            formatCurrency(Number(record.shuttleFee)),
+            formatCurrency(Number(record.courtFee)),
+            formatCurrency(Number(record.shuttleFee) + Number(record.courtFee)),
+            'Paid' // All history records are paid since they can only be saved when all are paid
+          ])
 
       const tableHeaders = activeTab === 'current'
         ? ['Player', 'Gender', 'Games', 'Shuttle Fees', 'Court Fee', 'Total', 'Status']
@@ -493,8 +422,7 @@ export function QueueSettingsPage() {
     activeTab,
     todayISODate,
     filteredRows,
-    filteredHistoryBatches,
-    filteredHistoryByBatch,
+    filteredHistoryByDate,
     searchQuery,
     selectedHistoryDate,
     totals,
@@ -1107,7 +1035,7 @@ export function QueueSettingsPage() {
                 <button
                   type="button"
                   onClick={handleExportPDF}
-                  disabled={(activeTab === 'current' && (playersLoading || filteredRows.length === 0)) || (activeTab === 'history' && (historyLoading || filteredHistoryBatches.length === 0))}
+                  disabled={(activeTab === 'current' && (playersLoading || filteredRows.length === 0)) || (activeTab === 'history' && (historyLoading || filteredHistoryByDate.length === 0))}
                   className="rounded-md bg-blue-500 px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
                 >
                   Export
@@ -1297,82 +1225,70 @@ export function QueueSettingsPage() {
                     </tbody>
                   </table>
                 ) : (
-                  // History - Show all batches as separate tables
-                  <div className="space-y-6">
+                  // History - Show all records for selected date in one table
+                  <div>
                     {historyLoading ? (
                       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 text-center text-xs sm:text-sm text-white/60">
                         Loading history...
                       </div>
-                    ) : filteredHistoryBatches.length === 0 ? (
+                    ) : filteredHistoryByDate.length === 0 ? (
                       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 text-center text-xs sm:text-sm text-white/60">
                         {feeManagementHistory.length === 0 ? 'No fee history recorded yet.' : 'No records match the selected date and search.'}
                       </div>
                     ) : (
-                      filteredHistoryBatches.map((batchKey: string) => {
-                        const batchRecords = filteredHistoryByBatch[batchKey]
-                        
-                        if (batchRecords.length === 0) return null
-                        
-                        const batchTotal = batchRecords.reduce((sum: number, record: FeeManagementHistoryRecord) => 
-                          sum + Number(record.shuttleFee) + Number(record.courtFee), 0
-                        )
-                        
-                        return (
-                          <div key={batchKey} className="space-y-2">
-                            <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-white/5 border-b border-white/10">
-                              <h3 className="text-xs sm:text-sm font-semibold text-white/80">
-                                {formatBatchLabel(batchKey, batchRecords)}
-                              </h3>
-                              <span className="text-xs sm:text-sm font-semibold text-white/60">
-                                Total: {formatCurrency(batchTotal)}
-                              </span>
-                            </div>
-                            <table className="min-w-full divide-y divide-white/10 text-xs sm:text-sm text-white/80">
-                              <thead className="border-b border-white/18 bg-[#14070e] text-left uppercase tracking-wide text-white/60">
-                                <tr>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">PLAYER</th>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">GAMES</th>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs"></th>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">COURT FEE</th>
-                                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">TOTAL</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {batchRecords.map((record) => (
-                                  <tr key={`history-${record.id}`} className="border-b border-white/18 bg-[#14070e] transition-colors hover:bg-[#1a0a12]">
-                                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-white">
-                                      <div className="flex items-center gap-2 sm:gap-3">
-                                        <span
-                                          className={`inline-flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-white/10 text-xs sm:text-sm shadow-inner flex-shrink-0 ${
-                                            record.playerSex === 'male' ? 'text-sky-300 bg-sky-500/15' : 'text-pink-300 bg-pink-500/15'
-                                          }`}
-                                          aria-label={record.playerSex === 'male' ? 'Male player' : 'Female player'}
-                                          title={record.playerSex === 'male' ? 'Male player' : 'Female player'}
-                                        >
-                                          {record.playerSex === 'male' ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 sm:h-4 sm:w-4">
-                                              <path d="M13.5 2a.75.75 0 000 1.5h1.69l-3.2 3.2a4.5 4.5 0 10.884.884l3.2-3.2V6.5a.75.75 0 001.5 0V2.75A.75.75 0 0016.75 2H13.5zm-4 5a3 3 0 110 6 3 3 0 010-6z" />
-                                            </svg>
-                                          ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 sm:h-4 sm:w-4">
-                                              <path d="M10 2a4.5 4.5 0 10.878 8.9l-.378.378H8.75a.75.75 0 000 1.5h1.25v1.25a.75.75 0 001.5 0V12.78l.378-.378A4.5 4.5 0 0010 2zm0 1.5a3 3 0 110 6 3 3 0 010-6z" />
-                                            </svg>
-                                          )}
-                                        </span>
-                                        <span className="truncate text-xs sm:text-sm">{record.playerName}</span>
-                                      </div>
-                                    </td>
-                                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm">{record.gamesPlayed}</td>
-                                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm">{formatCurrency(Number(record.shuttleFee))}</td>
-                                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm">{formatCurrency(Number(record.courtFee))}</td>
-                                    <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-xs sm:text-sm">{formatCurrency(Number(record.shuttleFee) + Number(record.courtFee))}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )
-                      })
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-white/5 border-b border-white/10">
+                          <h3 className="text-xs sm:text-sm font-semibold text-white/80">
+                            {formatDateForDropdown(selectedHistoryDate)}
+                          </h3>
+                          <span className="text-xs sm:text-sm font-semibold text-white/60">
+                            Total: {formatCurrency(filteredHistoryTotal)}
+                          </span>
+                        </div>
+                        <table className="min-w-full divide-y divide-white/10 text-xs sm:text-sm text-white/80">
+                          <thead className="border-b border-white/18 bg-[#14070e] text-left uppercase tracking-wide text-white/60">
+                            <tr>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">PLAYER</th>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">GAMES</th>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs"></th>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">COURT FEE</th>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">TOTAL</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredHistoryByDate.map((record: FeeManagementHistoryRecord) => (
+                              <tr key={`history-${record.id}`} className="border-b border-white/18 bg-[#14070e] transition-colors hover:bg-[#1a0a12]">
+                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-white">
+                                  <div className="flex items-center gap-2 sm:gap-3">
+                                    <span
+                                      className={`inline-flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-white/10 text-xs sm:text-sm shadow-inner flex-shrink-0 ${
+                                        record.playerSex === 'male' ? 'text-sky-300 bg-sky-500/15' : 'text-pink-300 bg-pink-500/15'
+                                      }`}
+                                      aria-label={record.playerSex === 'male' ? 'Male player' : 'Female player'}
+                                      title={record.playerSex === 'male' ? 'Male player' : 'Female player'}
+                                    >
+                                      {record.playerSex === 'male' ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 sm:h-4 sm:w-4">
+                                          <path d="M13.5 2a.75.75 0 000 1.5h1.69l-3.2 3.2a4.5 4.5 0 10.884.884l3.2-3.2V6.5a.75.75 0 001.5 0V2.75A.75.75 0 0016.75 2H13.5zm-4 5a3 3 0 110 6 3 3 0 010-6z" />
+                                        </svg>
+                                      ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 sm:h-4 sm:w-4">
+                                          <path d="M10 2a4.5 4.5 0 10.878 8.9l-.378.378H8.75a.75.75 0 000 1.5h1.25v1.25a.75.75 0 001.5 0V12.78l.378-.378A4.5 4.5 0 0010 2zm0 1.5a3 3 0 110 6 3 3 0 010-6z" />
+                                        </svg>
+                                      )}
+                                    </span>
+                                    <span className="truncate text-xs sm:text-sm">{record.playerName}</span>
+                                  </div>
+                                </td>
+                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm">{record.gamesPlayed}</td>
+                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm">{formatCurrency(Number(record.shuttleFee))}</td>
+                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm">{formatCurrency(Number(record.courtFee))}</td>
+                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-xs sm:text-sm">{formatCurrency(Number(record.shuttleFee) + Number(record.courtFee))}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
                   </div>
                 )}
