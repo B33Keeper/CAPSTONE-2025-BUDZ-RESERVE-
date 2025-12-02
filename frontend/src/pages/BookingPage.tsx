@@ -421,6 +421,43 @@ export function BookingPage() {
     return { startTime, hours }
   }
 
+  // Calculate reservation duration from court bookings
+  const calculateReservationDuration = (): number => {
+    if (courtBookings.length === 0) {
+      return 1 // Default to 1 hour if no bookings
+    }
+
+    // If there are selected court schedules for the racket, use those
+    if (selectedCourtSchedulesForRacket.size > 0) {
+      const durations = Array.from(selectedCourtSchedulesForRacket).map(scheduleKey => {
+        // Find the matching court booking by matching the schedule key
+        const matchingBooking = courtBookings.find(
+          booking => `${booking.court}-${booking.schedule}` === scheduleKey
+        )
+        if (matchingBooking) {
+          const timeInfo = parseScheduleToStartTimeAndHours(matchingBooking.schedule)
+          return timeInfo ? timeInfo.hours : 1
+        }
+        return 1
+      })
+      // Use minimum duration to ensure rental doesn't exceed any booking
+      return durations.length > 0 ? Math.min(...durations) : 1
+    }
+
+    // For single court booking, use its duration
+    if (courtBookings.length === 1) {
+      const timeInfo = parseScheduleToStartTimeAndHours(courtBookings[0].schedule)
+      return timeInfo ? timeInfo.hours : 1
+    }
+
+    // For multiple court bookings, use the minimum duration
+    const durations = courtBookings.map(booking => {
+      const timeInfo = parseScheduleToStartTimeAndHours(booking.schedule)
+      return timeInfo ? timeInfo.hours : 1
+    })
+    return durations.length > 0 ? Math.min(...durations) : 1
+  }
+
   // Load equipment availability for a specific schedule
   const loadEquipmentAvailabilityForSchedule = async (schedule: string) => {
     if (!selectedDate) return
@@ -2006,7 +2043,15 @@ export function BookingPage() {
         }}
         equipment={selectedRacketForModal}
         initialQuantity={selectedRacketForModal ? (racketQuantities.get(selectedRacketForModal.equipment_name) || 0) : 0}
-        initialTime={selectedRacketForModal ? (racketTimes.get(selectedRacketForModal.equipment_name) || 1) : 1}
+        initialTime={(() => {
+          // If there are court bookings, use the reservation duration
+          // Otherwise, use stored time or default to 1
+          if (courtBookings.length > 0) {
+            return calculateReservationDuration()
+          }
+          return selectedRacketForModal ? (racketTimes.get(selectedRacketForModal.equipment_name) || 1) : 1
+        })()}
+        maxTime={courtBookings.length > 0 ? calculateReservationDuration() : undefined}
         scheduleSpecificAvailability={
           // Only show reduced availability if schedule cells are selected AND availability has been calculated
           selectedRacketForModal && selectedCells.size > 0 && courtBookings.length > 0 && equipmentAvailability.has(selectedRacketForModal.id)

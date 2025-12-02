@@ -1071,7 +1071,27 @@ export default function AdminCreateReservations() {
     return Math.min(...durations)
   }
 
+  // Calculate reservation duration from court bookings (for initial time in modal)
+  const calculateReservationDuration = (): number => {
+    if (courtBookings.length === 0) {
+      return 1 // Default to 1 hour if no bookings
+    }
 
+    // If there are selected court schedules for the racket, use those
+    if (selectedCourtSchedulesForRacket.size > 0) {
+      const scheduleKeys = Array.from(selectedCourtSchedulesForRacket)
+      return getMinScheduleDuration(scheduleKeys)
+    }
+
+    // For single court booking, use its duration
+    if (courtBookings.length === 1) {
+      return calculateScheduleDuration(courtBookings[0].schedule)
+    }
+
+    // For multiple court bookings, use the minimum duration
+    const durations = courtBookings.map(booking => calculateScheduleDuration(booking.schedule))
+    return durations.length > 0 ? Math.min(...durations) : 1
+  }
 
   // Handle admin cash payment
   const handleProcessCashPayment = async () => {
@@ -2849,7 +2869,14 @@ export default function AdminCreateReservations() {
         }}
         equipment={selectedRacketForModal}
         initialQuantity={selectedRacketForModal ? (racketQuantities.get(selectedRacketForModal.equipment_name) || 0) : 0}
-        initialTime={selectedRacketForModal ? (racketTimes.get(selectedRacketForModal.equipment_name) || 1) : 1}
+        initialTime={(() => {
+          // If there are court bookings, use the reservation duration
+          // Otherwise, use stored time or default to 1
+          if (courtBookings.length > 0) {
+            return calculateReservationDuration()
+          }
+          return selectedRacketForModal ? (racketTimes.get(selectedRacketForModal.equipment_name) || 1) : 1
+        })()}
         maxTime={(() => {
           // Calculate max time based on selected schedules
           if (!selectedRacketForModal) return undefined
