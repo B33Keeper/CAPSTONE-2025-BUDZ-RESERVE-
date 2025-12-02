@@ -54,6 +54,7 @@ export function BookingPage() {
   const [error, setError] = useState<string | null>(null)
   const [availabilityData, setAvailabilityData] = useState<Map<number, any[]>>(new Map())
   const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [loadingEquipmentAvailability, setLoadingEquipmentAvailability] = useState(false)
   const [equipmentAvailability, setEquipmentAvailability] = useState<Map<number, number>>(new Map()) // equipmentId -> available stock
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false)
@@ -419,6 +420,49 @@ export function BookingPage() {
     const startTime = `${startHour24.toString().padStart(2, '0')}:${startMin24.toString().padStart(2, '0')}:00`
 
     return { startTime, hours }
+  }
+
+  // Calculate schedule duration in hours
+  const calculateScheduleDuration = (schedule: string): number => {
+    try {
+      const { startTime, endTime } = parseScheduleToTimes(schedule)
+      const [startH, startM] = startTime.split(':').map(Number)
+      const [endH, endM] = endTime.split(':').map(Number)
+      
+      const startMinutes = startH * 60 + startM
+      const endMinutes = endH * 60 + endM
+      const durationMinutes = endMinutes - startMinutes
+      
+      // Convert to hours (round to 1 decimal place)
+      const hours = Math.round((durationMinutes / 60) * 10) / 10
+      return Math.max(1, hours) // Minimum 1 hour
+    } catch (error) {
+      console.error('Error calculating schedule duration:', error)
+      return 1 // Default to 1 hour if parsing fails
+    }
+  }
+
+  // Get the minimum duration from selected schedules (for multiple schedules, use the shortest)
+  const getMinScheduleDuration = (scheduleKeys: string[]): number => {
+    if (scheduleKeys.length === 0) {
+      // If no schedules selected, use the first court booking's duration
+      if (courtBookings.length > 0) {
+        return calculateScheduleDuration(courtBookings[0].schedule)
+      }
+      return 1
+    }
+    
+    const durations = scheduleKeys.map(key => {
+      const [courtName, schedule] = key.split('-')
+      const courtBooking = courtBookings.find(cb => cb.court === courtName && cb.schedule === schedule)
+      if (courtBooking) {
+        return calculateScheduleDuration(courtBooking.schedule)
+      }
+      return 1
+    })
+    
+    // Return the minimum duration (shortest schedule)
+    return Math.min(...durations)
   }
 
   // Calculate reservation duration from court bookings
