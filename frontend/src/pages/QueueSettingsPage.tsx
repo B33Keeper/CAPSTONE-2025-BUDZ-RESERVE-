@@ -81,6 +81,8 @@ export function QueueSettingsPage() {
   const [isSavingToHistory, setIsSavingToHistory] = useState(false)
   const [feeManagementHistory, setFeeManagementHistory] = useState<FeeManagementHistoryRecord[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false)
+  const dateDropdownRef = useRef<HTMLDivElement | null>(null)
   const playersRef = useRef<QueuePlayer[]>([])
 
   // Get today's date in ISO format (YYYY-MM-DD) using local timezone
@@ -260,6 +262,24 @@ export function QueueSettingsPage() {
       }
     }
   }, [activeTab, availableHistoryDates, selectedHistoryDate])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      requestAnimationFrame(() => {
+        if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target as Node)) {
+          requestAnimationFrame(() => {
+            setIsDateDropdownOpen(false)
+          })
+        }
+      })
+    }
+
+    document.addEventListener('mousedown', handleClickOutside, true)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside, true)
+    }
+  }, [])
 
   // Format date for dropdown display
   const formatDateForDropdown = useCallback((dateStr: string) => {
@@ -906,6 +926,9 @@ export function QueueSettingsPage() {
   useEffect(() => {
     if (activeTab === 'history') {
       void loadFeeManagementHistory()
+    } else {
+      // Close dropdown when switching away from history tab
+      setIsDateDropdownOpen(false)
     }
   }, [activeTab, loadFeeManagementHistory])
 
@@ -1115,33 +1138,71 @@ export function QueueSettingsPage() {
                   onChange={(event) => setSearchQuery(event.target.value)}
                   className="w-full sm:max-w-xs rounded-lg sm:rounded-xl border border-white/20 bg-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs text-white placeholder:text-white/60 outline-none transition focus:border-white/40 focus:bg-white/25"
                 />
-                {activeTab === 'history' && (
-                  <div className="flex flex-col gap-1.5">
-                    {availableHistoryDates.length > 0 ? (
-                      <>
-                        <select
-                          value={selectedHistoryDate}
-                          onChange={(event) => setSelectedHistoryDate(event.target.value)}
-                          className="w-full sm:w-auto rounded-lg sm:rounded-xl border border-white/20 bg-white/20 px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs text-white outline-none transition focus:border-white/40 focus:bg-white/25 [color-scheme:dark] cursor-pointer"
-                        >
-                          {availableHistoryDates.map((date) => (
-                            <option key={date} value={date} className="bg-gray-800 text-white">
-                              {formatDateForDropdown(date)}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedHistoryDate && (
-                          <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/20 border border-blue-400/30 rounded text-[9px] sm:text-[10px] text-blue-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a75.93 75.93 0 00-7.714 0M9.75 9V6.5a.25.25 0 01.5 0V9h2.5V6.5a.25.25 0 01.5 0V9h.5a.5.5 0 01.5.5v.5a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5v-.5a.5.5 0 01.5-.5h.5V6.5a.25.25 0 01.5 0V9h2.5z" clipRule="evenodd" />
-                            </svg>
-                            <span>{formatDateForDropdown(selectedHistoryDate)}</span>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-[10px] sm:text-xs text-white/60 px-3 sm:px-4 py-1.5 sm:py-2">
-                        No history dates available
+                {activeTab === 'history' && availableHistoryDates.length > 0 && (
+                  <div className="relative" ref={dateDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsDateDropdownOpen((prev) => !prev)}
+                      className="flex w-full sm:w-auto items-center justify-between gap-2 sm:gap-3 rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-r from-[#14070e]/90 to-[#14070e]/70 px-3 sm:px-4 py-2.5 sm:py-3 text-left text-white shadow-[0_18px_35px_rgba(5,5,32,0.35)] outline-none transition hover:border-white/30 focus-visible:ring-2 focus-visible:ring-[#5560ff]/50 sm:min-w-[200px]"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-white/40">Date</p>
+                        <p className="text-xs sm:text-sm font-semibold text-white truncate">
+                          {selectedHistoryDate ? formatDateForDropdown(selectedHistoryDate) : 'Select date'}
+                        </p>
+                      </div>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={`h-4 w-4 sm:h-5 sm:w-5 text-white/70 transition-transform flex-shrink-0 ${isDateDropdownOpen ? 'rotate-180' : ''}`}
+                      >
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </button>
+
+                    {isDateDropdownOpen && (
+                      <div className="absolute left-0 right-0 sm:right-auto sm:left-0 z-20 mt-2 sm:mt-3 w-full sm:w-auto sm:min-w-[200px] overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-[#11142b]/95 shadow-[0_25px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                        <div className="max-h-[50vh] sm:max-h-[300px] overflow-y-auto divide-y divide-white/5">
+                          {availableHistoryDates.map((date) => {
+                            const isActive = date === selectedHistoryDate
+                            return (
+                              <button
+                                key={`history-date-${date}`}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedHistoryDate(date)
+                                  setIsDateDropdownOpen(false)
+                                }}
+                                className={`flex w-full items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 text-left text-xs sm:text-sm font-medium transition ${
+                                  isActive
+                                    ? 'bg-[#273373]/60 text-white'
+                                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                }`}
+                              >
+                                <span className="truncate">{formatDateForDropdown(date)}</span>
+                                {isActive && (
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#8ea2ff] flex-shrink-0 ml-2"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
