@@ -607,15 +607,24 @@ export function BookingPage() {
         ? [`${courtBookings[0].court}-${courtBookings[0].schedule}`]
         : []
     
+    // Update time first so that quantity change uses the correct time
+    setRacketTimes(prev => {
+      const newMap = new Map(prev)
+      newMap.set(racketName, time)
+      return newMap
+    })
+    
     // When multiple schedules are selected, quantity per schedule is 1 (one racket per schedule)
     // The total number of rackets will equal the number of selected schedules
     if (selectedSchedules.length > 1) {
       // Multiple schedules: create separate bookings, each with quantity 1
-      handleRacketQuantityChange(racketName, 1, selectedSchedules)
+      handleRacketQuantityChange(racketName, 1, selectedSchedules, time)
       handleRacketTimeChange(racketName, time, selectedSchedules)
     } else {
       // Single schedule: use the quantity from modal
-      handleRacketQuantityChange(racketName, quantity, selectedSchedules)
+      // Pass the time as override to ensure the booking uses the correct time
+      handleRacketQuantityChange(racketName, quantity, selectedSchedules, time)
+      // Time is already updated above, but call handleRacketTimeChange to ensure booking is updated
       handleRacketTimeChange(racketName, time, selectedSchedules)
     }
   }
@@ -633,7 +642,7 @@ export function BookingPage() {
     }
   }
 
-  const handleRacketQuantityChange = (racketName: string, newQuantity: number, selectedSchedules?: string[]) => {
+  const handleRacketQuantityChange = (racketName: string, newQuantity: number, selectedSchedules?: string[], overrideTime?: number) => {
     // Update quantity for this specific racket
     setRacketQuantities(prev => {
       const newMap = new Map(prev)
@@ -649,8 +658,8 @@ export function BookingPage() {
     const equipmentItem = equipment.find(eq => eq.equipment_name === racketName)
     const price = Number(equipmentItem?.price) || 0 // Use 0 if not found to avoid incorrect calculations
     
-    // Get the time for this specific racket (default to 1 if not set)
-    const racketTime = racketTimes.get(racketName) || 1
+    // Get the time for this specific racket (use overrideTime if provided, otherwise from map, default to 1)
+    const racketTime = overrideTime !== undefined ? overrideTime : (racketTimes.get(racketName) || 1)
     
     // Get existing booking to preserve selected schedules if they exist
     const existingBooking = equipmentBookings.find(b => b.equipment === racketName)
