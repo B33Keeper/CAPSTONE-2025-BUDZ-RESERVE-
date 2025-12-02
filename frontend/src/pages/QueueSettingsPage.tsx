@@ -81,8 +81,19 @@ export function QueueSettingsPage() {
   const [isSavingToHistory, setIsSavingToHistory] = useState(false)
   const [feeManagementHistory, setFeeManagementHistory] = useState<FeeManagementHistoryRecord[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
-  const [selectedHistoryDate, setSelectedHistoryDate] = useState<string>(getTodayISODate())
   const playersRef = useRef<QueuePlayer[]>([])
+
+  // Get today's date in ISO format (YYYY-MM-DD) using local timezone
+  // This matches the logic in QueuePlayersPage for consistency
+  const getTodayISODate = useCallback(() => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }, [])
+
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState<string>(getTodayISODate())
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
@@ -103,16 +114,6 @@ export function QueueSettingsPage() {
 
   const numericDoublesFee = useMemo(() => Number(feeForm.doublesFee || 0), [feeForm.doublesFee])
   const numericCourtFee = useMemo(() => Number(feeForm.courtFee || 0), [feeForm.courtFee])
-
-  // Get today's date in ISO format (YYYY-MM-DD) using local timezone
-  // This matches the logic in QueuePlayersPage for consistency
-  const getTodayISODate = useCallback(() => {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }, [])
 
   const todayISODate = getTodayISODate()
 
@@ -256,6 +257,52 @@ export function QueueSettingsPage() {
     return rows.filter((row) => row.label.toLowerCase().includes(query))
   }, [rows, searchQuery])
 
+  // Filter history by selected date and search query
+  const filteredHistoryByDate = useMemo(() => {
+    let filtered = feeManagementHistory
+
+    // Filter by selected date
+    if (selectedHistoryDate) {
+      filtered = filtered.filter(record => {
+        const recordDate = typeof record.feeDate === 'string' 
+          ? record.feeDate.slice(0, 10) 
+          : new Date(record.feeDate).toISOString().slice(0, 10)
+        return recordDate === selectedHistoryDate
+      })
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(record => record.playerName.toLowerCase().includes(query))
+    }
+
+    return filtered
+  }, [feeManagementHistory, selectedHistoryDate, searchQuery])
+
+  // Group filtered history by batch
+  const filteredHistoryByBatch = useMemo(() => {
+    return filteredHistoryByDate.reduce((acc, record) => {
+      const batchKey = record.batchId || `legacy_${typeof record.feeDate === 'string' ? record.feeDate.slice(0, 10) : new Date(record.feeDate).toISOString().slice(0, 10)}_${record.createdAt}`
+      if (!acc[batchKey]) {
+        acc[batchKey] = []
+      }
+      acc[batchKey].push(record)
+      return acc
+    }, {} as Record<string, FeeManagementHistoryRecord[]>)
+  }, [filteredHistoryByDate])
+
+  // Get sorted batch keys for filtered history
+  const filteredHistoryBatches = useMemo(() => {
+    const sortedBatches = Object.keys(filteredHistoryByBatch).sort((a, b) => {
+      const batchA = filteredHistoryByBatch[a]
+      const batchB = filteredHistoryByBatch[b]
+      const latestA = Math.max(...batchA.map(r => new Date(r.createdAt).getTime()))
+      const latestB = Math.max(...batchB.map(r => new Date(r.createdAt).getTime()))
+      return latestB - latestA
+    })
+    return sortedBatches.slice(0, HISTORY_BATCH_LIMIT)
+  }, [filteredHistoryByBatch])
 
   // Format date for dropdown display
   const formatDateForDropdown = useCallback((dateStr: string) => {
@@ -322,9 +369,9 @@ export function QueueSettingsPage() {
         doc.text(`Unpaids: ${formatCurrency(totals.outstanding)}`, margin, yPos)
       } else {
         // Calculate total from all filtered batches
-        const historyTotal = filteredHistoryBatches.reduce((sum, batchKey) => {
+        const historyTotal = filteredHistoryBatches.reduce((sum: number, batchKey: string) => {
           const batchRecords = filteredHistoryByBatch[batchKey]
-          return sum + batchRecords.reduce((batchSum, record) => 
+          return sum + batchRecords.reduce((batchSum: number, record: FeeManagementHistoryRecord) => 
             batchSum + Number(record.shuttleFee) + Number(record.courtFee), 0
           )
         }, 0)
@@ -343,9 +390,9 @@ export function QueueSettingsPage() {
             formatCurrency(row.shuttleFee + row.courtFee),
             row.status === 'paid' ? 'Paid' : 'Unpaid'
           ])
-        : filteredHistoryBatches.flatMap((batchKey) => {
+        : filteredHistoryBatches.flatMap((batchKey: string) => {
             const batchRecords = filteredHistoryByBatch[batchKey]
-            return batchRecords.map((record) => [
+            return batchRecords.map((record: FeeManagementHistoryRecord) => [
               record.playerName,
               record.playerSex === 'male' ? 'Male' : 'Female',
               record.gamesPlayed.toString(),
@@ -1261,12 +1308,12 @@ export function QueueSettingsPage() {
                         {feeManagementHistory.length === 0 ? 'No fee history recorded yet.' : 'No records match the selected date and search.'}
                       </div>
                     ) : (
-                      filteredHistoryBatches.map((batchKey) => {
+                      filteredHistoryBatches.map((batchKey: string) => {
                         const batchRecords = filteredHistoryByBatch[batchKey]
                         
                         if (batchRecords.length === 0) return null
                         
-                        const batchTotal = batchRecords.reduce((sum, record) => 
+                        const batchTotal = batchRecords.reduce((sum: number, record: FeeManagementHistoryRecord) => 
                           sum + Number(record.shuttleFee) + Number(record.courtFee), 0
                         )
                         
