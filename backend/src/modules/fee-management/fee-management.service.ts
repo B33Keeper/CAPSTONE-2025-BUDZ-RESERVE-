@@ -341,6 +341,7 @@ export class FeeManagementService {
       return {
         message: 'No paid records found for this date',
         movedCount: 0,
+        queuePlayersSavedCount: 0,
       };
     }
 
@@ -457,8 +458,8 @@ export class FeeManagementService {
 
       // Get queue players saved count (from the loop above)
       let queuePlayersSavedCount = 0;
-      const userIds = [...new Set(paidRecords.map(r => r.userId).filter(id => id !== null))];
-      for (const uid of userIds) {
+      const userIdsForCount = [...new Set(paidRecords.map(r => r.userId).filter(id => id !== null))];
+      for (const uid of userIdsForCount) {
         const currentPlayers = await this.queuePlayersRepository.find({
           where: { userId: uid },
         });
@@ -549,6 +550,7 @@ export class FeeManagementService {
       return {
         message: 'No fee management records found for this date',
         movedCount: 0,
+        queuePlayersSavedCount: 0,
       };
     }
 
