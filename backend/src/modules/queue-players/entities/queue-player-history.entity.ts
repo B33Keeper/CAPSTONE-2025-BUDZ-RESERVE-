@@ -43,4 +43,7 @@ export class QueuePlayerHistory {
 
   @Column({ name: 'archived_at', type: 'datetime' })
   archivedAt: Date;
+
+  @Column({ name: 'time', type: 'time', nullable: true })
+  time: string | null;
 }

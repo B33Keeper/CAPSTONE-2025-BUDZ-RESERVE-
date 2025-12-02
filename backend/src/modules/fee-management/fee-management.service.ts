@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, DataSource } from 'typeorm';
 import { FeeManagement, PaymentStatus } from './entities/fee-management.entity';
 import { FeeManagementHistory } from './entities/fee-management-history.entity';
+import { QueuePlayerHistory } from '../queue-players/entities/queue-player-history.entity';
+import { QueuePlayer } from '../queue-players/entities/queue-player.entity';
 import { CreateFeeManagementDto } from './dto/create-fee-management.dto';
 import { UpdateFeeManagementDto } from './dto/update-fee-management.dto';
 
@@ -15,6 +17,10 @@ export class FeeManagementService {
     private readonly feeManagementRepository: Repository<FeeManagement>,
     @InjectRepository(FeeManagementHistory)
     private readonly feeManagementHistoryRepository: Repository<FeeManagementHistory>,
+    @InjectRepository(QueuePlayerHistory)
+    private readonly queuePlayersHistoryRepository: Repository<QueuePlayerHistory>,
+    @InjectRepository(QueuePlayer)
+    private readonly queuePlayersRepository: Repository<QueuePlayer>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -211,6 +217,80 @@ export class FeeManagementService {
         await queryRunner.manager.save(FeeManagementHistory, historyRecords);
         this.logger.log(`Successfully moved ${historyRecords.length} fee record(s) to history.`);
 
+        // Also save queue players to history
+        // Get current time for this batch to prevent duplicates
+        const now = new Date();
+        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+        
+        // Get today's date range
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        // Get all unique user IDs from fee records
+        const userIds = [...new Set(feeRecords.map(r => r.userId).filter(id => id !== null))];
+        
+        for (const userId of userIds) {
+          // Get all current players for this user
+          const currentPlayers = await this.queuePlayersRepository.find({
+            where: { userId },
+            order: { name: 'ASC' },
+          });
+
+          if (currentPlayers.length > 0) {
+            // Check for existing history records with the same date and time (within 1 minute window to prevent duplicates)
+            const oneMinuteAgo = new Date(now.getTime() - 60000);
+            const existingHistoryRecords = await this.queuePlayersHistoryRepository
+              .createQueryBuilder('history')
+              .where('history.userId = :userId', { userId })
+              .andWhere('DATE(history.archivedAt) = DATE(:now)', { now })
+              .andWhere('history.time IS NOT NULL')
+              .andWhere('TIME(history.time) >= TIME(:oneMinuteAgo)', { oneMinuteAgo })
+              .andWhere('TIME(history.time) <= TIME(:now)', { now })
+              .getMany();
+
+            const existingNamesSet = new Set<string>();
+            existingHistoryRecords.forEach((record) => {
+              if (record.name) {
+                existingNamesSet.add(record.name.toLowerCase().trim());
+              }
+            });
+
+            // Filter out players that already exist in this batch
+            const playersToSave = currentPlayers.filter((player) => {
+              if (!player.name) {
+                return false;
+              }
+              const normalizedName = player.name.toLowerCase().trim();
+              return !existingNamesSet.has(normalizedName);
+            });
+
+            if (playersToSave.length > 0) {
+              // Create history records with time to prevent duplicates
+              const queueHistoryRecords = playersToSave.map((player) => {
+                return this.queuePlayersHistoryRepository.create({
+                  userId: player.userId,
+                  originalId: player.id,
+                  name: player.name,
+                  sex: player.sex,
+                  skill: player.skill,
+                  gamesPlayed: player.gamesPlayed,
+                  status: player.status,
+                  lastPlayed: player.lastPlayed || new Date(),
+                  createdAt: player.createdAt,
+                  updatedAt: player.updatedAt,
+                  archivedAt: now,
+                  time: currentTime,
+                });
+              });
+
+              await queryRunner.manager.save(QueuePlayerHistory, queueHistoryRecords);
+              this.logger.log(`Successfully saved ${queueHistoryRecords.length} queue player(s) to history for user ${userId} at time ${currentTime}.`);
+            }
+          }
+        }
+
         // Delete records from current table after moving to history
         const recordIds = feeRecords.map((r) => r.id);
         await queryRunner.manager.delete(FeeManagement, recordIds);
@@ -283,6 +363,77 @@ export class FeeManagementService {
 
       // Save all history records
       await queryRunner.manager.save(FeeManagementHistory, historyRecords);
+
+      // Also save queue players to history
+      const now = new Date();
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+      
+      // Get today's date range
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Get all unique user IDs from paid records
+      const userIds = [...new Set(paidRecords.map(r => r.userId).filter(id => id !== null))];
+      
+      for (const userId of userIds) {
+        // Get all current players for this user
+        const currentPlayers = await this.queuePlayersRepository.find({
+          where: { userId },
+          order: { name: 'ASC' },
+        });
+
+        if (currentPlayers.length > 0) {
+          // Check for existing history records with the same date and time (within 1 minute window)
+          const oneMinuteAgo = new Date(now.getTime() - 60000);
+          const existingHistoryRecords = await this.queuePlayersHistoryRepository
+            .createQueryBuilder('history')
+            .where('history.userId = :userId', { userId })
+            .andWhere('DATE(history.archivedAt) = DATE(:now)', { now })
+            .andWhere('history.time IS NOT NULL')
+            .andWhere('TIME(history.time) >= TIME(:oneMinuteAgo)', { oneMinuteAgo })
+            .andWhere('TIME(history.time) <= TIME(:now)', { now })
+            .getMany();
+
+          const existingNamesSet = new Set<string>();
+          existingHistoryRecords.forEach((record) => {
+            if (record.name) {
+              existingNamesSet.add(record.name.toLowerCase().trim());
+            }
+          });
+
+          // Filter out players that already exist in this batch
+          const playersToSave = currentPlayers.filter((player) => {
+            if (!player.name) {
+              return false;
+            }
+            const normalizedName = player.name.toLowerCase().trim();
+            return !existingNamesSet.has(normalizedName);
+          });
+
+          if (playersToSave.length > 0) {
+            // Create history records with time to prevent duplicates
+            const queueHistoryRecords = playersToSave.map((player) => {
+              return this.queuePlayersHistoryRepository.create({
+                userId: player.userId,
+                originalId: player.id,
+                name: player.name,
+                sex: player.sex,
+                skill: player.skill,
+                gamesPlayed: player.gamesPlayed,
+                status: player.status,
+                lastPlayed: player.lastPlayed || new Date(),
+                createdAt: player.createdAt,
+                updatedAt: player.updatedAt,
+                archivedAt: now,
+                time: currentTime,
+              });
+            });
+
+            await queryRunner.manager.save(QueuePlayerHistory, queueHistoryRecords);
+            this.logger.log(`Successfully saved ${queueHistoryRecords.length} queue player(s) to history for user ${userId} at time ${currentTime}.`);
+          }
+        }
+      }
 
       // Delete records from current table
       const recordIds = paidRecords.map((r) => r.id);
