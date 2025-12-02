@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -52,17 +53,17 @@ export class FeeManagementController {
   }
 
   @Get('history')
-  @ApiOperation({ summary: 'Get all historical fee management records' })
+  @ApiOperation({ summary: 'Get all historical fee management records for the current user' })
   @ApiResponse({ status: 200, description: 'List of historical fee management records' })
-  findHistory() {
-    return this.feeManagementService.findHistory();
+  findHistory(@Request() req: any) {
+    return this.feeManagementService.findHistory(req.user.id);
   }
 
   @Get('history/by-date')
-  @ApiOperation({ summary: 'Get historical fee management records by date' })
+  @ApiOperation({ summary: 'Get historical fee management records by date for the current user' })
   @ApiResponse({ status: 200, description: 'List of historical fee management records for the specified date' })
-  findHistoryByDate(@Query('date') date: string) {
-    return this.feeManagementService.findHistoryByDate(date);
+  findHistoryByDate(@Query('date') date: string, @Request() req: any) {
+    return this.feeManagementService.findHistoryByDate(date, req.user.id);
   }
 
   @Get(':id')
@@ -109,9 +110,9 @@ export class FeeManagementController {
   @ApiOperation({ summary: 'Move all fee management records for today to history (only if all are paid)' })
   @ApiResponse({ status: 200, description: 'All records moved to history successfully' })
   @ApiResponse({ status: 400, description: 'Cannot save: not all players are marked as paid' })
-  saveAllToHistory(@Query('date') date?: string) {
+  saveAllToHistory(@Query('date') date?: string, @Request() req?: any) {
     const targetDate = date || new Date().toISOString().split('T')[0];
-    return this.feeManagementService.moveAllToHistoryIfAllPaid(targetDate);
+    return this.feeManagementService.moveAllToHistoryIfAllPaid(targetDate, req?.user?.id);
   }
 
   @Delete(':id')

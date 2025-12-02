@@ -139,24 +139,26 @@ export class FeeManagementService {
   }
 
   /**
-   * Get all historical fee management records
+   * Get all historical fee management records for a specific user
    */
-  async findHistory(): Promise<FeeManagementHistory[]> {
+  async findHistory(userId: number): Promise<FeeManagementHistory[]> {
     return this.feeManagementHistoryRepository.find({
+      where: { userId },
       order: { feeDate: 'DESC', createdAt: 'DESC' },
     });
   }
 
   /**
-   * Get historical fee management records by date
+   * Get historical fee management records by date for a specific user
    */
-  async findHistoryByDate(feeDate: Date | string): Promise<FeeManagementHistory[]> {
+  async findHistoryByDate(feeDate: Date | string, userId: number): Promise<FeeManagementHistory[]> {
     const date = typeof feeDate === 'string' ? new Date(feeDate) : feeDate;
     // Format date to YYYY-MM-DD for comparison
     const dateStr = date.toISOString().split('T')[0];
     return this.feeManagementHistoryRepository
       .createQueryBuilder('fee')
       .where('DATE(fee.feeDate) = :date', { date: dateStr })
+      .andWhere('fee.userId = :userId', { userId })
       .orderBy('fee.createdAt', 'DESC')
       .getMany();
   }
@@ -313,20 +315,27 @@ export class FeeManagementService {
   /**
    * Manually move all paid records for a specific date to history
    */
-  async movePaidRecordsToHistory(feeDate: Date | string): Promise<{
+  async movePaidRecordsToHistory(feeDate: Date | string, userId?: number): Promise<{
     message: string;
     movedCount: number;
+    queuePlayersSavedCount: number;
   }> {
     const date = typeof feeDate === 'string' ? new Date(feeDate) : feeDate;
     // Format date to YYYY-MM-DD for comparison
     const dateStr = date.toISOString().split('T')[0];
     
-    // Get all paid fee records for this date
-    const paidRecords = await this.feeManagementRepository
+    // Build query for paid records
+    const queryBuilder = this.feeManagementRepository
       .createQueryBuilder('fee')
       .where('DATE(fee.feeDate) = :date', { date: dateStr })
-      .andWhere('fee.paymentStatus = :status', { status: PaymentStatus.PAID })
-      .getMany();
+      .andWhere('fee.paymentStatus = :status', { status: PaymentStatus.PAID });
+    
+    // Filter by userId if provided
+    if (userId) {
+      queryBuilder.andWhere('fee.userId = :userId', { userId });
+    }
+    
+    const paidRecords = await queryBuilder.getMany();
 
     if (paidRecords.length === 0) {
       return {
@@ -341,11 +350,15 @@ export class FeeManagementService {
     await queryRunner.startTransaction();
 
     try {
-      // Create history records
+      // Generate unique batch_id for this save operation
+      const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create history records with batch_id
       const historyRecords = paidRecords.map((record) => {
         return this.feeManagementHistoryRepository.create({
           playerId: record.playerId,
           userId: record.userId,
+          batchId: batchId,
           playerName: record.playerName,
           playerSex: record.playerSex,
           gamesPlayed: record.gamesPlayed,
@@ -442,11 +455,24 @@ export class FeeManagementService {
       // Commit transaction
       await queryRunner.commitTransaction();
 
-      this.logger.log(`Manually moved ${historyRecords.length} paid fee record(s) to history.`);
+      // Get queue players saved count (from the loop above)
+      let queuePlayersSavedCount = 0;
+      const userIds = [...new Set(paidRecords.map(r => r.userId).filter(id => id !== null))];
+      for (const uid of userIds) {
+        const currentPlayers = await this.queuePlayersRepository.find({
+          where: { userId: uid },
+        });
+        if (currentPlayers.length > 0) {
+          queuePlayersSavedCount += currentPlayers.length;
+        }
+      }
+
+      this.logger.log(`Manually moved ${historyRecords.length} paid fee record(s) to history with batch_id ${batchId}.`);
 
       return {
-        message: `Successfully moved ${historyRecords.length} paid record(s) to history`,
+        message: `Successfully moved ${historyRecords.length} paid record(s) to history. ${queuePlayersSavedCount} queue player(s) also saved.`,
         movedCount: historyRecords.length,
+        queuePlayersSavedCount,
       };
     } catch (error) {
       // Rollback transaction on error
@@ -498,19 +524,26 @@ export class FeeManagementService {
   /**
    * Move all fee management records for today to history, but only if all are paid
    */
-  async moveAllToHistoryIfAllPaid(feeDate: Date | string): Promise<{
+  async moveAllToHistoryIfAllPaid(feeDate: Date | string, userId?: number): Promise<{
     message: string;
     movedCount: number;
+    queuePlayersSavedCount: number;
   }> {
     const date = typeof feeDate === 'string' ? new Date(feeDate) : feeDate;
     // Format date to YYYY-MM-DD for comparison
     const dateStr = date.toISOString().split('T')[0];
     
-    // Get all fee records for this date
-    const allRecords = await this.feeManagementRepository
+    // Build query for all records
+    const queryBuilder = this.feeManagementRepository
       .createQueryBuilder('fee')
-      .where('DATE(fee.feeDate) = :date', { date: dateStr })
-      .getMany();
+      .where('DATE(fee.feeDate) = :date', { date: dateStr });
+    
+    // Filter by userId if provided
+    if (userId) {
+      queryBuilder.andWhere('fee.userId = :userId', { userId });
+    }
+    
+    const allRecords = await queryBuilder.getMany();
 
     if (allRecords.length === 0) {
       return {
@@ -533,11 +566,15 @@ export class FeeManagementService {
     await queryRunner.startTransaction();
 
     try {
-      // Create history records for ALL records (since all are paid)
+      // Generate unique batch_id for this save operation
+      const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create history records for ALL records (since all are paid) with batch_id
       const historyRecords = allRecords.map((record) => {
         return this.feeManagementHistoryRepository.create({
           playerId: record.playerId,
           userId: record.userId,
+          batchId: batchId,
           playerName: record.playerName,
           playerSex: record.playerSex,
           gamesPlayed: record.gamesPlayed,
@@ -556,6 +593,75 @@ export class FeeManagementService {
       // Save all history records
       await queryRunner.manager.save(FeeManagementHistory, historyRecords);
 
+      // Also save queue players to history
+      const now = new Date();
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+      
+      // Get all unique user IDs from all records
+      const userIds = [...new Set(allRecords.map(r => r.userId).filter(id => id !== null))];
+      let queuePlayersSavedCount = 0;
+      
+      for (const uid of userIds) {
+        // Get all current players for this user
+        const currentPlayers = await this.queuePlayersRepository.find({
+          where: { userId: uid },
+          order: { name: 'ASC' },
+        });
+
+        if (currentPlayers.length > 0) {
+          // Check for existing history records with the same date and time (within 1 minute window)
+          const oneMinuteAgo = new Date(now.getTime() - 60000);
+          const existingHistoryRecords = await this.queuePlayersHistoryRepository
+            .createQueryBuilder('history')
+            .where('history.userId = :userId', { userId: uid })
+            .andWhere('DATE(history.archivedAt) = DATE(:now)', { now })
+            .andWhere('history.time IS NOT NULL')
+            .andWhere('TIME(history.time) >= TIME(:oneMinuteAgo)', { oneMinuteAgo })
+            .andWhere('TIME(history.time) <= TIME(:now)', { now })
+            .getMany();
+
+          const existingNamesSet = new Set<string>();
+          existingHistoryRecords.forEach((record) => {
+            if (record.name) {
+              existingNamesSet.add(record.name.toLowerCase().trim());
+            }
+          });
+
+          // Filter out players that already exist in this batch
+          const playersToSave = currentPlayers.filter((player) => {
+            if (!player.name) {
+              return false;
+            }
+            const normalizedName = player.name.toLowerCase().trim();
+            return !existingNamesSet.has(normalizedName);
+          });
+
+          if (playersToSave.length > 0) {
+            // Create history records with time to prevent duplicates
+            const queueHistoryRecords = playersToSave.map((player) => {
+              return this.queuePlayersHistoryRepository.create({
+                userId: player.userId,
+                originalId: player.id,
+                name: player.name,
+                sex: player.sex,
+                skill: player.skill,
+                gamesPlayed: player.gamesPlayed,
+                status: player.status,
+                lastPlayed: player.lastPlayed || new Date(),
+                createdAt: player.createdAt,
+                updatedAt: player.updatedAt,
+                archivedAt: now,
+                time: currentTime,
+              });
+            });
+
+            await queryRunner.manager.save(QueuePlayerHistory, queueHistoryRecords);
+            queuePlayersSavedCount += queueHistoryRecords.length;
+            this.logger.log(`Successfully saved ${queueHistoryRecords.length} queue player(s) to history for user ${uid} at time ${currentTime}.`);
+          }
+        }
+      }
+
       // Delete records from current table
       const recordIds = allRecords.map((r) => r.id);
       await queryRunner.manager.delete(FeeManagement, recordIds);
@@ -563,11 +669,12 @@ export class FeeManagementService {
       // Commit transaction
       await queryRunner.commitTransaction();
 
-      this.logger.log(`Moved ${historyRecords.length} fee management record(s) to history for date ${dateStr}.`);
+      this.logger.log(`Moved ${historyRecords.length} fee management record(s) to history for date ${dateStr} with batch_id ${batchId}.`);
 
       return {
-        message: `Successfully moved ${historyRecords.length} record(s) to history`,
+        message: `Successfully moved ${historyRecords.length} record(s) to history. ${queuePlayersSavedCount} queue player(s) also saved.`,
         movedCount: historyRecords.length,
+        queuePlayersSavedCount,
       };
     } catch (error) {
       // Rollback transaction on error
