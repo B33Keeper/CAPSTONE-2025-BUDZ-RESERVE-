@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, Between, MoreThanOrEqual, LessThanOrEqual, LessThan } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ReservationsService } from '../reservations/reservations.service';
@@ -82,26 +82,38 @@ export class PaymentsService {
     const queryStartDate = new Date(startDate);
     const queryEndDate = new Date(endDate);
     
+    // For daily reports, ensure we capture the full day (12:00 AM to 11:59:59 PM)
+    // Calculate next day's start time for exclusive upper bound
+    // This ensures we capture ALL records from 12:00:00.000 AM to 11:59:59.999 PM
+    const nextDayStart = new Date(queryEndDate);
+    nextDayStart.setDate(nextDayStart.getDate() + 1);
+    nextDayStart.setHours(0, 0, 0, 0);
+    
     // Log the dates for debugging
     console.log(`[SalesReport Service] Query dates - Start: ${queryStartDate.toISOString()} (Local: ${queryStartDate.toLocaleString()}), End: ${queryEndDate.toISOString()} (Local: ${queryEndDate.toLocaleString()})`);
+    console.log(`[SalesReport Service] Query range: >= ${queryStartDate.toISOString()} AND < ${nextDayStart.toISOString()} (captures full day 12:00 AM to 11:59:59 PM)`);
     
     // Use database WHERE clause instead of fetching all and filtering in JavaScript
     // This is MUCH faster, especially with large datasets
-    // Use query builder with date comparison to handle timezone issues
+    // Use MoreThanOrEqual and LessThan to ensure we capture the full day range
+    // This approach is more reliable than Between for capturing all records from 12:00 AM to 11:59:59 PM
     let reservations;
     try {
       console.log(`[SalesReport Service] Querying reservations with date filter at database level...`);
       
-      // The dates from controller are already in local timezone with correct hours
-      // Use them directly - TypeORM will handle the timezone conversion for database queries
-      reservations = await this.reservationsRepository.find({
-        where: {
-          Created_at: Between(queryStartDate, queryEndDate),
-        },
-        relations: ['user', 'court', 'payments'],
-        order: { Created_at: 'DESC' },
-      });
-      console.log(`[SalesReport Service] Found ${reservations.length} reservations created in date range`);
+      // Use query builder for more explicit control over the date range
+      // This ensures we capture ALL reservations from 12:00:00.000 AM to 11:59:59.999 PM
+      reservations = await this.reservationsRepository
+        .createQueryBuilder('reservation')
+        .where('reservation.Created_at >= :startDate', { startDate: queryStartDate })
+        .andWhere('reservation.Created_at < :nextDayStart', { nextDayStart: nextDayStart })
+        .leftJoinAndSelect('reservation.user', 'user')
+        .leftJoinAndSelect('reservation.court', 'court')
+        .leftJoinAndSelect('reservation.payments', 'payments')
+        .orderBy('reservation.Created_at', 'DESC')
+        .getMany();
+      
+      console.log(`[SalesReport Service] Found ${reservations.length} reservations created in date range (12:00 AM to 11:59:59 PM)`);
       
       // Debug: Log first few reservation Created_at dates to verify they're in range
       if (reservations.length > 0) {
