@@ -254,11 +254,11 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       }}
     >
       <div 
-        className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl border border-white/20 w-full max-w-3xl sm:max-w-5xl lg:max-w-6xl flex flex-col sm:flex-row overflow-hidden my-2 sm:my-4 md:my-6 max-h-[calc(100vh-1rem)] sm:max-h-[90vh] md:max-h-[700px] sm:min-h-[500px] md:min-h-[620px] animate-in slide-in-from-bottom-4 duration-500"
+        className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl border border-white/20 w-full max-w-3xl sm:max-w-5xl lg:max-w-6xl flex flex-col sm:flex-row my-2 sm:my-4 md:my-6 animate-in slide-in-from-bottom-4 duration-500"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Left Sidebar */}
-        <div className="w-full sm:w-1/3 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 border-b sm:border-b-0 sm:border-r border-blue-200/30 flex flex-col relative overflow-hidden flex-shrink-0">
+        <div className="w-full sm:w-1/3 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 border-b sm:border-b-0 sm:border-r border-blue-200/30 flex flex-col relative flex-shrink-0">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
@@ -393,7 +393,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         </div>
 
         {/* Right Content */}
-        <div className="w-full sm:w-2/3 flex flex-col bg-gradient-to-br from-gray-50/50 to-white/80 overflow-hidden relative">
+        <div className="w-full sm:w-2/3 flex flex-col bg-gradient-to-br from-gray-50/50 to-white/80 relative">
           {/* Exit Button - Upper Right */}
           <button
             onClick={onClose}
@@ -404,8 +404,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             <X className="w-5 h-5 sm:w-6 sm:h-6 group-hover:scale-110 transition-transform duration-200" />
           </button>
 
-          {/* Header - Sticky */}
-          <div className="sticky top-0 z-10 bg-gradient-to-br from-gray-50/50 to-white/80 backdrop-blur-sm flex flex-col gap-2 sm:gap-2 mb-2 sm:mb-3 md:mb-4 flex-shrink-0 p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 border-b border-gray-200/30">
+          {/* Header */}
+          <div className="flex flex-col gap-2 sm:gap-2 mb-2 sm:mb-3 md:mb-4 flex-shrink-0 p-3 sm:p-4 md:p-6 pb-2 sm:pb-3 border-b border-gray-200/30">
             <div className="relative flex-1 min-w-0 pr-8 sm:pr-10 md:pr-12">
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent break-words">
                 {activeTab === 'profile' ? 'My Profile' : 'Change Password'}
@@ -444,7 +444,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
           </div>
 
           {/* Content - Scrollable */}
-          <div className="flex-1 flex justify-center overflow-y-auto overscroll-contain min-h-0 px-3 sm:px-4 md:px-6 pb-2">
+          <div className="flex justify-center px-3 sm:px-4 md:px-6 pb-2">
             <div className="max-w-2xl w-full py-2 sm:py-3 md:py-4">
               {activeTab === 'profile' ? (
                 <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-3 sm:space-y-4 md:space-y-5">
@@ -756,8 +756,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             </div>
           </div>
 
-          {/* Save Button - Sticky */}
-          <div className="sticky bottom-0 z-10 bg-gradient-to-br from-gray-50/50 to-white/80 backdrop-blur-sm flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2 sm:pt-3 md:pt-4 pb-2 sm:pb-3 md:pb-4 border-t border-gray-200/50 flex-shrink-0 px-3 sm:px-4 md:px-6 -mx-3 sm:-mx-4 md:-mx-6">
+          {/* Save Button */}
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2 sm:pt-3 md:pt-4 pb-2 sm:pb-3 md:pb-4 border-t border-gray-200/50 flex-shrink-0 px-3 sm:px-4 md:px-6">
             <button
               onClick={activeTab === 'profile' ? profileForm.handleSubmit(onProfileSubmit) : passwordForm.handleSubmit(onPasswordSubmit)}
               disabled={isPasswordChanging}
