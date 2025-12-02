@@ -577,23 +577,23 @@ const AdminSalesReport = () => {
         />
 
         {/* Main Content */}
-        <main className="p-4 sm:p-6 lg:p-8 overflow-x-hidden bg-gray-50 min-h-screen animate-fadeIn transition-all duration-300 md:ml-64">
+        <main className="p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden bg-gray-50 min-h-screen animate-fadeIn transition-all duration-300 md:ml-64">
           {/* Enhanced Header Section */}
-          <div className="mb-8">
-            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-3xl shadow-2xl border border-gray-200/60 p-8 sm:p-10 animate-slideDown backdrop-blur-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mb-4 sm:mb-6 lg:mb-8">
+            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200/60 p-4 sm:p-6 lg:p-8 xl:p-10 animate-slideDown backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+                    <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg flex-shrink-0">
+                      <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
                     </div>
-                    <div>
-                      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-2">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-1 sm:mb-2 break-words">
                         Sales Report
                       </h1>
-                      <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+                      <p className="text-sm sm:text-base lg:text-lg text-gray-600 leading-relaxed">
                         Track revenue, reservations, and performance metrics with detailed analytics and insights
                       </p>
                     </div>
