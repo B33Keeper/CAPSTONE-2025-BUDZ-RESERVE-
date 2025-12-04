@@ -150,11 +150,32 @@ const AdminCreateUser = () => {
         <AdminSidebar activeItem={activeSidebarItem} onItemChange={setActiveSidebarItem} />
         <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 md:p-8">
-              <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Create User Account</h1>
-                <p className="text-gray-600">Create a new user account. Users created here can be granted queueing management access.</p>
+            {/* Page Header - Title Container */}
+            <div className="mb-6">
+              <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200/60 p-4 sm:p-6 lg:p-8 xl:p-10 animate-slideDown backdrop-blur-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+                      <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg flex-shrink-0">
+                        <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-1 sm:mb-2 break-words">
+                          Create User Account
+                        </h1>
+                        <p className="text-sm sm:text-base lg:text-lg text-gray-600 leading-relaxed">
+                          Create a new user account. Users created here can be granted queueing management access.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 md:p-8">
 
               <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
                 {/* First Row - First Name, Middle Initial, Last Name */}
