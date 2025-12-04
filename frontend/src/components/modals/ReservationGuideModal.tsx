@@ -56,12 +56,24 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   const [dontShowAgain, setDontShowAgain] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(0)
       setShowVideo(false)
+      setIsMusicPlaying(false)
+    }
+    
+    // Cleanup: stop music when modal closes
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+        setIsMusicPlaying(false)
+      }
     }
   }, [isOpen])
 
@@ -84,8 +96,26 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
       videoRef.current.play().catch((error) => {
         console.error('Error playing video:', error)
       })
+      
+      // Play background music when video is shown
+      if (audioRef.current && !isMusicPlaying) {
+        audioRef.current.volume = 0.3 // Set volume to 30% so it doesn't overpower the video
+        audioRef.current.loop = true
+        audioRef.current.play().then(() => {
+          setIsMusicPlaying(true)
+        }).catch((error) => {
+          console.error('Error playing background music:', error)
+        })
+      }
+    } else {
+      // Stop background music when video is hidden
+      if (audioRef.current && isMusicPlaying) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+        setIsMusicPlaying(false)
+      }
     }
-  }, [showVideo])
+  }, [showVideo, isMusicPlaying])
 
   const handleClose = () => {
     if (dontShowAgain) {
@@ -172,6 +202,17 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* Hidden audio element for background music */}
+          <audio
+            ref={audioRef}
+            preload="auto"
+            onEnded={() => setIsMusicPlaying(false)}
+          >
+            <source src="/assets/background-music.mp3" type="audio/mpeg" />
+            <source src="/assets/background-music.ogg" type="audio/ogg" />
+            Your browser does not support the audio element.
+          </audio>
+          
           {showVideo ? (
             <div className="w-full">
               <div className="bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4 relative">
@@ -235,6 +276,45 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   </div>
                 </div>
               )}
+              
+              {/* Music Control */}
+              {isMusicPlaying && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                      </svg>
+                      <span className="text-sm text-purple-700">Background music playing</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (audioRef.current) {
+                          if (isMusicPlaying) {
+                            audioRef.current.pause()
+                            setIsMusicPlaying(false)
+                          } else {
+                            audioRef.current.play()
+                            setIsMusicPlaying(true)
+                          }
+                        }
+                      }}
+                      className="text-purple-600 hover:text-purple-800 transition-colors"
+                      aria-label={isMusicPlaying ? "Mute music" : "Unmute music"}
+                    >
+                      {isMusicPlaying ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
               <p className="text-center text-gray-600 text-sm">
                 Watch this video guide to see the complete booking process step by step.
               </p>
@@ -287,31 +367,32 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <button
               onClick={handlePrevious}
               disabled={currentStep === 0}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="flex items-center justify-center space-x-2 px-3 md:px-4 py-2 rounded-lg border-2 border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              aria-label="Previous"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Previous</span>
+              <span className="hidden md:inline">Previous</span>
             </button>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 md:space-x-3 flex-1 justify-end">
               <button
                 onClick={() => setShowVideo(!showVideo)}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg border-2 border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                className="flex items-center space-x-1 md:space-x-2 px-2 md:px-4 py-2 rounded-lg border-2 border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200 text-sm md:text-base"
                 aria-label="Toggle video"
               >
                 {showVideo ? (
                   <>
                     <X className="w-4 h-4" />
-                    <span>Hide Video</span>
+                    <span className="hidden sm:inline">Hide Video</span>
                   </>
                 ) : (
                   <>
                     <Play className="w-4 h-4" />
-                    <span>Watch Video</span>
+                    <span className="hidden sm:inline">Watch Video</span>
                   </>
                 )}
               </button>
@@ -319,17 +400,19 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               {currentStep < steps.length - 1 ? (
                 <button
                   onClick={handleNext}
-                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="flex items-center justify-center space-x-2 px-3 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  aria-label="Next"
                 >
-                  <span>Next</span>
+                  <span className="hidden md:inline">Next</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               ) : (
                 <button
                   onClick={handleClose}
-                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="flex items-center justify-center space-x-2 px-3 md:px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  aria-label="Got it"
                 >
-                  <span>Got it!</span>
+                  <span className="hidden md:inline">Got it!</span>
                   <CheckCircle className="w-4 h-4" />
                 </button>
               )}
