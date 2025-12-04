@@ -50,18 +50,15 @@ const signupSchema = z
       .regex(PASSWORD_REGEX, 'Password must contain uppercase, lowercase, number, and special character'),
     confirmPassword: z.string({ required_error: 'Please confirm your password' }),
     contact_number: z
-      .preprocess(
+      .string({ required_error: 'Contact number is required' })
+      .trim()
+      .min(1, 'Contact number is required')
+      .refine(
         (value) => {
-          if (typeof value !== 'string') return value
           const normalized = value.replace(/[\s-]/g, '').trim()
-          return normalized.length === 0 ? undefined : normalized
+          return CONTACT_NUMBER_REGEX.test(normalized)
         },
-        z
-          .union([
-            z.string().regex(CONTACT_NUMBER_REGEX, 'Contact number must contain 10 to 15 digits and may start with +'),
-            z.undefined()
-          ])
-          .optional(),
+        { message: 'Contact number must contain 10 to 15 digits and may start with +' }
       ),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -113,7 +110,7 @@ export function SignupPage() {
       email: '',
       password: '',
       confirmPassword: '',
-      contact_number: undefined,
+      contact_number: '',
     },
     shouldFocusError: true,
   })
@@ -126,10 +123,11 @@ export function SignupPage() {
     clearErrors('root')
     try {
       // Remove confirmPassword and individual name fields (they're combined into 'name' by the transform)
-      const { confirmPassword, firstName, middleInitial, lastName, contact_number, ...userData } = data
+      const { confirmPassword, firstName, middleInitial, lastName, ...userData } = data
+      // Normalize contact number (remove spaces and dashes)
       const sanitizedData = {
         ...userData,
-        contact_number: contact_number ?? undefined,
+        contact_number: userData.contact_number.replace(/[\s-]/g, '').trim(),
       }
       await registerUser(sanitizedData)
       toast.success('Account created successfully!')
@@ -465,7 +463,7 @@ export function SignupPage() {
           {/* Contact Number Field - Full Width */}
           <div>
             <label htmlFor="contact_number" className="block text-sm font-medium text-gray-700 mb-2">
-              Contact Number <span className="text-gray-400 font-normal">(Optional)</span>
+              Contact Number
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors duration-200 group-focus-within:text-blue-600">
@@ -477,6 +475,7 @@ export function SignupPage() {
                 {...register('contact_number')}
                 id="contact_number"
                 type="tel"
+                required
                 className={`w-full pl-10 pr-4 py-3 border-2 rounded-lg transition-all duration-200 ${
                   errors.contact_number 
                     ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 

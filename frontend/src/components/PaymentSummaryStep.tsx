@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { formatPHPhoneNumber } from '../lib/validation';
 import { PaymentService } from '../lib/paymentService';
 
 interface BookingItem {
@@ -45,15 +44,6 @@ export function PaymentSummaryStep({
       });
     }
   }, [user]);
-
-  const handleInputChange = (field: string, value: string) => {
-    // Format phone number if it's the contactNumber field
-    const formattedValue = field === 'contactNumber' ? formatPHPhoneNumber(value) : value;
-    setUserInfo(prev => ({
-      ...prev,
-      [field]: formattedValue
-    }));
-  };
 
   // Expand equipment bookings with quantity > 1 into separate items
   const expandedEquipmentBookings: BookingItem[] = [];
@@ -111,42 +101,27 @@ export function PaymentSummaryStep({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Name
+                  Full Name
                 </label>
-                <input
-                  type="text"
-                  value={userInfo.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="Enter your Complete Name"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm hover:shadow-md"
-                  required
-                />
+                <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-900 shadow-sm">
+                  {userInfo.name || <span className="text-gray-400">Not available</span>}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Contact Number
                 </label>
-                <input
-                  type="tel"
-                  value={userInfo.contactNumber}
-                  onChange={(e) => handleInputChange('contactNumber', e.target.value)}
-                  placeholder="+63 9XX XXX XXXX"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm hover:shadow-md"
-                  required
-                />
+                <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-900 shadow-sm">
+                  {userInfo.contactNumber || <span className="text-gray-400">Not available</span>}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Email Address
                 </label>
-                <input
-                  type="email"
-                  value={userInfo.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="Enter your Email Address"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm hover:shadow-md"
-                  required
-                />
+                <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-900 shadow-sm">
+                  {userInfo.email || <span className="text-gray-400">Not available</span>}
+                </div>
               </div>
             </div>
           </div>
