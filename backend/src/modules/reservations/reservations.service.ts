@@ -1500,45 +1500,51 @@ export class ReservationsService {
       const bookingHours = this.parseHours(booking.time);
 
       // If equipment is associated with specific court schedules, check availability
-      // IMPORTANT: When equipment is for multiple schedules, we only need to check if there's enough stock
-      // for the quantity ONCE (not per schedule), since we only create ONE rental item
+      // IMPORTANT: When equipment is for multiple schedules, we need to check availability for EACH schedule
+      // to ensure stock is available at each time slot
       if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0 && courtBookings) {
-        // Get the earliest schedule to check availability (since we'll create rental for the earliest one)
+        // Get all matching schedules
         const matchingSchedules = courtBookings
           .filter(cb => booking.selectedCourtSchedules && booking.selectedCourtSchedules.includes(`${cb.court}-${cb.schedule}`))
           .sort((a, b) => this.compareScheduleStartTimes(a.schedule, b.schedule));
         
         if (matchingSchedules.length > 0) {
-          const earliestSchedule = matchingSchedules[0];
-          const [startTime] = this.parseScheduleToTimes(earliestSchedule.schedule);
-          const bookingStartTime = this.ensureTimeFormat(startTime);
+          // Check availability for EACH schedule separately
+          // This ensures stock is available at each time slot
+          for (const schedule of matchingSchedules) {
+            const [startTime] = this.parseScheduleToTimes(schedule.schedule);
+            const bookingStartTime = this.ensureTimeFormat(startTime);
 
-          if (!bookingStartTime) {
-            throw new BadRequestException(
-              `Missing start time for equipment rental of ${equipmentRow.equipment_name}.`,
+            if (!bookingStartTime) {
+              throw new BadRequestException(
+                `Missing start time for equipment rental of ${equipmentRow.equipment_name} for schedule ${schedule.court} - ${schedule.schedule}.`,
+              );
+            }
+
+            // Check availability for this specific schedule time slot
+            const reservedQuantity = await this.getReservedQuantityForRange(
+              equipmentRow.id,
+              reservationDate,
+              bookingStartTime,
+              bookingHours,
+              excludeReservationId,
             );
-          }
 
-          // Check availability - we only need quantity available (not quantity per schedule)
-          // because we're only creating ONE rental item for all selected schedules
-          const reservedQuantity = await this.getReservedQuantityForRange(
-            equipmentRow.id,
-            reservationDate,
-            bookingStartTime,
-            bookingHours,
-            excludeReservationId,
+            const remaining = equipmentRow.stocks - reservedQuantity;
+
+            // Ensure there's enough stock available at this specific schedule time
+            if (remaining < quantity) {
+              throw new BadRequestException(
+                `Not enough stock for ${equipmentRow.equipment_name} on ${reservationDate} at ${schedule.court} - ${schedule.schedule}. ` +
+                  `Remaining: ${Math.max(remaining, 0)}, Required: ${quantity}`,
+              );
+            }
+          }
+          
+          this.logger.log(
+            `[Stock Check] ✅ Verified stock availability for ${equipmentRow.equipment_name}: ` +
+            `quantity ${quantity} available for all ${matchingSchedules.length} selected schedule(s)`
           );
-
-          const remaining = equipmentRow.stocks - reservedQuantity;
-
-          // Only need the specified quantity available (not multiplied by number of schedules)
-          if (remaining < quantity) {
-            const schedulesList = booking.selectedCourtSchedules.join(', ');
-            throw new BadRequestException(
-              `Not enough stock for ${equipmentRow.equipment_name} on ${reservationDate}. ` +
-                `Remaining: ${Math.max(remaining, 0)}, Required: ${quantity} (for schedules: ${schedulesList})`,
-            );
-          }
         }
       } else {
         // Backward compatibility: use single start time
@@ -1708,9 +1714,12 @@ export class ReservationsService {
         `quantity: ${quantity}, reservation: ${reservation.Reservation_ID}`
       );
 
-      if (equipmentRow) {
+      // Stock availability check is now done in ensureEquipmentAvailabilityForDate
+      // which properly checks each selected schedule separately
+      // This check here is redundant but kept for backward compatibility
+      if (equipmentRow && (!b.selectedCourtSchedules || b.selectedCourtSchedules.length === 0)) {
         const reservationDate = this.formatDateOnly(reservation.Reservation_Date);
-        // Use reservation's start time (which is the court booking's start time) since equipment is tied to this reservation
+        // Only use reservation's start time if no specific schedules are selected
         const bookingStartTime = this.ensureTimeFormat(reservation.Start_Time ?? b.startTime ?? normalizedDefaultStart);
         if (!bookingStartTime) {
           throw new BadRequestException(
@@ -1754,93 +1763,84 @@ export class ReservationsService {
       
       // Find the reservation that matches this schedule to get the exact time range
       if (b.selectedCourtSchedules && b.selectedCourtSchedules.length > 0) {
+        // Since frontend creates separate bookings per schedule, each booking should have only ONE schedule
+        // Use the first (and only) schedule to get the time
+        const scheduleKey = b.selectedCourtSchedules[0];
         this.logger.log(
-          `[Equipment Rental] ✅ Multi-schedule rental detected: ${b.selectedCourtSchedules.length} schedules selected: ${b.selectedCourtSchedules.join(', ')}`
-        );
-        // Find all reservations that match the selected schedules
-        const matchingReservations = await this.reservationsRepository.find({
-          where: {
-            Reservation_Date: new Date(reservationDate),
-            Reference_Number: reservation.Reference_Number,
-          },
-        });
-        
-        // Filter to only reservations that match the selected schedules
-        // Schedule key format is: "Court Name-Schedule String" (e.g., "Court 4-3:00 PM - 4:00 PM")
-        // Get all courts once before filtering
-        const courts = await this.courtsService.findAll();
-        
-        this.logger.log(
-          `[Equipment Rental] Matching reservations to selected schedules. ` +
-          `Matching reservations: ${matchingReservations.length}, ` +
-          `Selected schedules: ${b.selectedCourtSchedules?.join(', ') || 'none'}`
+          `[Equipment Rental] ✅ Schedule-based rental: ${b.selectedCourtSchedules.length} schedule(s) selected: ${b.selectedCourtSchedules.join(', ')}`
         );
         
-        const relevantReservations = matchingReservations.filter((res) => {
-          // Get court name
-          const court = courts.find(c => c.Court_Id === res.Court_ID);
-          const courtName = court?.Court_Name || '';
-          
-          // Convert 24-hour time to 12-hour format for schedule string
-          const scheduleStr = this.formatTimeTo12Hour(res.Start_Time, res.End_Time);
-          const resScheduleKey = `${courtName}-${scheduleStr}`;
-          
-          const matches = b.selectedCourtSchedules?.includes(resScheduleKey) || false;
-          
-          this.logger.log(
-            `[Equipment Rental] Checking reservation ${res.Reservation_ID}: ` +
-            `Court=${courtName}, Time=${res.Start_Time}-${res.End_Time}, ` +
-            `ScheduleStr=${scheduleStr}, ScheduleKey=${resScheduleKey}, ` +
-            `Matches=${matches}`
-          );
-          
-          return matches;
-        });
-        
-        this.logger.log(
-          `[Equipment Rental] Found ${relevantReservations.length} relevant reservations out of ${matchingReservations.length} matching reservations`
-        );
-        
-        // IMPORTANT: Create separate rental for EACH schedule (not one spanning all)
-        // Since frontend creates separate bookings per schedule, we should create separate rentals
-        // This ensures each schedule shows its own stock reduction
-        if (relevantReservations.length > 0) {
-          // Use the FIRST matching reservation (should be only one since frontend sends separate bookings per schedule)
-          const matchingReservation = relevantReservations[0];
-          
-          // Parse reservation date and time for this specific schedule
-          const resDateStr = typeof matchingReservation.Reservation_Date === 'string' 
-            ? matchingReservation.Reservation_Date 
-            : new Date(matchingReservation.Reservation_Date).toISOString().split('T')[0];
-          const [year, month, day] = resDateStr.split('-').map(Number);
-          
-          const [startHour, startMin] = matchingReservation.Start_Time.split(':').map(Number);
-          const resStart = new Date(year, month - 1, day, startHour, startMin || 0, 0);
-          
-          const [endHour, endMin] = matchingReservation.End_Time.split(':').map(Number);
-          const resEnd = new Date(year, month - 1, day, endHour, endMin || 0, 0);
-          
-          // Rental time should match this specific schedule's time range
-          rentalStartTime = resStart;
-          // Use the later of: schedule end time OR start + rental hours
-          const minEndTime = new Date(resStart);
-          minEndTime.setHours(minEndTime.getHours() + hours);
-          rentalEndTime = resEnd > minEndTime ? resEnd : minEndTime;
-          
-          this.logger.log(
-            `[Equipment Rental] ✅ Separate rental per schedule: ` +
-            `Schedule: ${matchingReservation.court?.Court_Name || 'Unknown'} ${matchingReservation.Start_Time}-${matchingReservation.End_Time}, ` +
-            `rental time: ${resStart.toISOString()} to ${rentalEndTime.toISOString()}, ` +
-            `quantity: ${quantity}. ` +
-            `This rental will reduce stock for THIS specific schedule only.`
-          );
-        } else {
-          this.logger.error(
-            `[Equipment Rental] ❌ CRITICAL: No relevant reservations found for selected schedules! ` +
-            `Selected schedules: ${b.selectedCourtSchedules?.join(', ') || 'none'}, ` +
-            `Matching reservations found: ${matchingReservations.length}, ` +
-            `Reference number: ${reservation.Reference_Number}, Date: ${reservationDate}`
-          );
+        // Parse schedule key to get time directly (format: "Court Name-Start Time - End Time")
+        // Example: "Court 1-8:00 am - 9:00 am"
+        const firstDashIndex = scheduleKey.indexOf('-');
+        if (firstDashIndex > 0) {
+          const scheduleStr = scheduleKey.substring(firstDashIndex + 1).trim();
+          // Parse schedule string like "8:00 am - 9:00 am"
+          const timeMatch = scheduleStr.match(/(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)/i);
+          if (timeMatch) {
+            const [, startHour, startMin, startPeriod, endHour, endMin, endPeriod] = timeMatch;
+            const convertTo24Hour = (hour: number, period: string): number => {
+              let h = parseInt(hour.toString());
+              if (period.toUpperCase() === 'PM' && h !== 12) h += 12;
+              else if (period.toUpperCase() === 'AM' && h === 12) h = 0;
+              return h;
+            };
+            
+            const startH = convertTo24Hour(parseInt(startHour), startPeriod);
+            const endH = convertTo24Hour(parseInt(endHour), endPeriod);
+            
+            const [year, month, day] = reservationDate.split('-').map(Number);
+            rentalStartTime = new Date(year, month - 1, day, startH, parseInt(startMin), 0);
+            const scheduleEnd = new Date(year, month - 1, day, endH, parseInt(endMin), 0);
+            
+            // Use the later of: schedule end time OR start + rental hours
+            const minEndTime = new Date(rentalStartTime);
+            minEndTime.setHours(minEndTime.getHours() + hours);
+            rentalEndTime = scheduleEnd > minEndTime ? scheduleEnd : minEndTime;
+            
+            this.logger.log(
+              `[Equipment Rental] ✅ Schedule-based rental time: ` +
+              `Schedule: ${scheduleKey}, ` +
+              `rental time: ${rentalStartTime.toISOString()} to ${rentalEndTime.toISOString()}, ` +
+              `quantity: ${quantity}. ` +
+              `This rental will reduce stock for THIS specific schedule.`
+            );
+          } else {
+            // Fallback: Try to find matching reservation
+            const matchingReservations = await this.reservationsRepository.find({
+              where: {
+                Reservation_Date: new Date(reservationDate),
+                Reference_Number: reservation.Reference_Number,
+              },
+            });
+            
+            const courts = await this.courtsService.findAll();
+            const relevantReservations = matchingReservations.filter((res) => {
+              const court = courts.find(c => c.Court_Id === res.Court_ID);
+              const courtName = court?.Court_Name || '';
+              const scheduleStr = this.formatTimeTo12Hour(res.Start_Time, res.End_Time);
+              const resScheduleKey = `${courtName}-${scheduleStr}`;
+              return b.selectedCourtSchedules?.includes(resScheduleKey) || false;
+            });
+            
+            if (relevantReservations.length > 0) {
+              const matchingReservation = relevantReservations[0];
+              const resDateStr = typeof matchingReservation.Reservation_Date === 'string' 
+                ? matchingReservation.Reservation_Date 
+                : new Date(matchingReservation.Reservation_Date).toISOString().split('T')[0];
+              const [year, month, day] = resDateStr.split('-').map(Number);
+              
+              const [startHour, startMin] = matchingReservation.Start_Time.split(':').map(Number);
+              rentalStartTime = new Date(year, month - 1, day, startHour, startMin || 0, 0);
+              
+              const [endHour, endMin] = matchingReservation.End_Time.split(':').map(Number);
+              const resEnd = new Date(year, month - 1, day, endHour, endMin || 0, 0);
+              
+              const minEndTime = new Date(rentalStartTime);
+              minEndTime.setHours(minEndTime.getHours() + hours);
+              rentalEndTime = resEnd > minEndTime ? resEnd : minEndTime;
+            }
+          }
         }
       }
       
