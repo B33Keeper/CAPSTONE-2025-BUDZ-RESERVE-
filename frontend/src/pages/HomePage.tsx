@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { HelpCircle } from 'lucide-react'
 import { HeroSection } from '@/components/sections/HeroSection'
 import { WhyChooseSection } from '@/components/sections/WhyChooseSection'
 import { FeaturesSection } from '@/components/sections/FeaturesSection'
@@ -34,25 +36,16 @@ export function HomePage() {
       <ContactSection />
       
       {/* Floating "How it Works" Button - Lower Left */}
-      <button
+      <motion.button
         onClick={() => setShowGuide(true)}
-        className="fixed bottom-6 left-6 z-40 w-14 h-14 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg border border-white/30 hover:border-white/50 transition-all duration-300 hover:scale-110 group"
+        className="fixed bottom-6 left-6 z-40 flex items-center space-x-2 px-6 py-4 text-white bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 rounded-lg font-semibold transition-all duration-300 group shadow-lg"
+        whileHover={{ scale: 1.05, y: -2 }}
+        whileTap={{ scale: 0.95 }}
         aria-label="How it Works"
       >
-        <svg 
-          className="w-7 h-7 text-white group-hover:text-white transition-colors duration-300" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-          />
-        </svg>
-      </button>
+        <HelpCircle className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+        <span>How it Works</span>
+      </motion.button>
       
       <ReservationGuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
     </div>
