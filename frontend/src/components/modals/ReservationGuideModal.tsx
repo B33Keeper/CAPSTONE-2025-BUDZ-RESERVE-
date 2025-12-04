@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Calendar, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, MapPin, ShoppingCart, ClipboardCheck, Play } from 'lucide-react'
 
 interface ReservationGuideModalProps {
@@ -55,6 +55,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   const [currentStep, setCurrentStep] = useState(0)
   const [dontShowAgain, setDontShowAgain] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -62,6 +63,12 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
       setShowVideo(false)
     }
   }, [isOpen])
+
+  useEffect(() => {
+    if (showVideo && videoRef.current) {
+      videoRef.current.load()
+    }
+  }, [showVideo])
 
   const handleClose = () => {
     if (dontShowAgain) {
@@ -106,28 +113,9 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">How to Make a Reservation</h2>
-              <p className="text-white/90 text-sm">Follow these simple steps to book your badminton court</p>
-            </div>
-            <button
-              onClick={() => setShowVideo(!showVideo)}
-              className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 backdrop-blur-sm"
-              aria-label="Toggle video"
-            >
-              {showVideo ? (
-                <>
-                  <X className="w-4 h-4" />
-                  <span className="text-sm font-medium">Hide Video</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" />
-                  <span className="text-sm font-medium">Watch Video</span>
-                </>
-              )}
-            </button>
+          <div>
+            <h2 className="text-2xl font-bold mb-2">How to Make a Reservation</h2>
+            <p className="text-white/90 text-sm">Follow these simple steps to book your badminton court</p>
           </div>
         </div>
 
@@ -171,10 +159,12 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
             <div className="w-full">
               <div className="bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4">
                 <video
+                  ref={videoRef}
                   className="w-full h-full object-contain"
                   controls
                   autoPlay={false}
-                  preload="metadata"
+                  preload="auto"
+                  playsInline
                 >
                   <source src="/assets/BookingProcess Video guide/BookingProcess.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
@@ -242,23 +232,43 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               <span>Previous</span>
             </button>
 
-            {currentStep < steps.length - 1 ? (
+            <div className="flex items-center space-x-3">
               <button
-                onClick={handleNext}
-                className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                onClick={() => setShowVideo(!showVideo)}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg border-2 border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                aria-label="Toggle video"
               >
-                <span>Next</span>
-                <ArrowRight className="w-4 h-4" />
+                {showVideo ? (
+                  <>
+                    <X className="w-4 h-4" />
+                    <span>Hide Video</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    <span>Watch Video</span>
+                  </>
+                )}
               </button>
-            ) : (
-              <button
-                onClick={handleClose}
-                className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <span>Got it!</span>
-                <CheckCircle className="w-4 h-4" />
-              </button>
-            )}
+
+              {currentStep < steps.length - 1 ? (
+                <button
+                  onClick={handleNext}
+                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleClose}
+                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <span>Got it!</span>
+                  <CheckCircle className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

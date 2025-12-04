@@ -247,12 +247,12 @@ const AdminCreateUser = () => {
                       id="middleInitial"
                       type="text"
                       maxLength={1}
-                      className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 text-center text-lg font-semibold uppercase ${
+                      className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 ${
                         errors.middleInitial 
                           ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
                           : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
                       } focus:outline-none focus:ring-4 bg-white`}
-                      placeholder="M"
+                      placeholder="Middle initial"
                       onChange={(e) => {
                         // Only allow letters and convert to uppercase, limit to 1 character
                         const value = e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 1)
