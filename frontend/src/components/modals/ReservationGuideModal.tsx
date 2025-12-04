@@ -10,7 +10,7 @@ const steps = [
   {
     number: 1,
     title: 'Create Account & Login',
-    description: 'First, you need to create an account if you don\'t have one yet. Click "Get Started" or "Sign Up" to register. After creating your account, make sure to log in. You must be logged in to make a reservation.',
+    description: 'First, you need to create an account if you don\'t have one yet. Click "Get Started" or "Sign Up" to register. You must read and agree to the Terms and Conditions before you can proceed with registration. After creating your account, make sure to log in. You must be logged in to make a reservation.',
     icon: UserPlus,
     color: 'blue'
   },
