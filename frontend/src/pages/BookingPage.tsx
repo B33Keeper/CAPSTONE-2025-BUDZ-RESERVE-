@@ -2097,7 +2097,8 @@ export function BookingPage() {
                 courtName: booking.equipment,
                 timeSlot: booking.time,
                 subtotal: booking.subtotal,
-                quantity: booking.quantity || 1
+                quantity: booking.quantity || 1,
+                selectedCourtSchedules: booking.selectedCourtSchedules
               }))}
               totalAmount={totalAmount}
               selectedDate={selectedDate}

@@ -7,6 +7,7 @@ interface BookingItem {
   timeSlot: string;
   subtotal: number;
   quantity?: number; // For equipment bookings
+  selectedCourtSchedules?: string[]; // For equipment bookings - which schedules they're associated with
 }
 
 interface PaymentSummaryStepProps {
@@ -45,21 +46,86 @@ export function PaymentSummaryStep({
     }
   }, [user]);
 
-  // Expand equipment bookings with quantity > 1 into separate items
-  const expandedEquipmentBookings: BookingItem[] = [];
+  // Organize equipment bookings: group by equipment name + schedule
+  // If same equipment + same schedule with quantity > 1 → group as "Equipment x5"
+  // If same equipment but different schedules → show separate rows with schedule specified
+  const organizedEquipmentBookings: BookingItem[] = [];
+  
+  // Group equipment bookings by equipment name and schedule
+  const equipmentGroups = new Map<string, {
+    equipment: string;
+    schedule: string;
+    quantity: number;
+    subtotal: number;
+    scheduleDisplay: string;
+  }>();
+  
   equipmentBookings.forEach(booking => {
     const quantity = booking.quantity || 1;
-    // Create separate rows for each racket
-    for (let i = 0; i < quantity; i++) {
-      expandedEquipmentBookings.push({
-        courtName: booking.courtName,
-        timeSlot: booking.timeSlot,
-        subtotal: booking.subtotal / quantity, // Divide subtotal by quantity for individual item
+    const equipmentName = booking.courtName; // Equipment name is stored in courtName field
+    const timeSlot = booking.timeSlot; // This is the rental duration (e.g., "1 hr")
+    
+    // Get the associated court schedule(s) for this equipment
+    if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+      // Equipment is associated with specific court schedules
+      // For each schedule, create a separate group entry
+      booking.selectedCourtSchedules.forEach(scheduleKeyStr => {
+        const [courtName, schedule] = scheduleKeyStr.split('-');
+        const scheduleKey = `${equipmentName}-${scheduleKeyStr}`; // Unique key: equipment-schedule
+        const scheduleDisplay = `${courtName} - ${schedule}`; // Display: "Court 1 - 8:00am-9:00am"
+        
+        // Calculate per-item subtotal (divide total by quantity)
+        const perItemSubtotal = booking.subtotal / quantity;
+        
+        // Check if this equipment-schedule combination already exists
+        if (equipmentGroups.has(scheduleKey)) {
+          const existing = equipmentGroups.get(scheduleKey)!;
+          existing.quantity += quantity; // Add quantity
+          existing.subtotal += booking.subtotal; // Add full subtotal (already includes quantity)
+        } else {
+          equipmentGroups.set(scheduleKey, {
+            equipment: equipmentName,
+            schedule: scheduleKeyStr,
+            quantity: quantity,
+            subtotal: booking.subtotal,
+            scheduleDisplay: scheduleDisplay
+          });
+        }
       });
+    } else {
+      // No specific schedule association - use the time slot as schedule
+      const scheduleKey = `${equipmentName}-${timeSlot}`;
+      const scheduleDisplay = timeSlot;
+      
+      if (equipmentGroups.has(scheduleKey)) {
+        const existing = equipmentGroups.get(scheduleKey)!;
+        existing.quantity += quantity;
+        existing.subtotal += booking.subtotal;
+      } else {
+        equipmentGroups.set(scheduleKey, {
+          equipment: equipmentName,
+          schedule: timeSlot,
+          quantity: quantity,
+          subtotal: booking.subtotal,
+          scheduleDisplay: scheduleDisplay
+        });
+      }
     }
   });
+  
+  // Convert grouped equipment into booking items
+  equipmentGroups.forEach((group) => {
+    organizedEquipmentBookings.push({
+      courtName: group.quantity > 1 
+        ? `${group.equipment} x${group.quantity}` 
+        : group.equipment,
+      timeSlot: group.scheduleDisplay || group.schedule,
+      subtotal: group.subtotal,
+      quantity: group.quantity
+    });
+  });
 
-  const allBookings = [...courtBookings, ...expandedEquipmentBookings];
+  const allBookings = [...courtBookings, ...organizedEquipmentBookings];
 
   return (
     <div className="max-w-6xl mx-auto relative">
