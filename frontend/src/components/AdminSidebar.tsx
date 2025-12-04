@@ -151,7 +151,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
 
       {/* Desktop Sidebar */}
       <div 
-        className="hidden md:block fixed top-16 left-0 z-30 w-64 h-[calc(100vh-4rem-6rem)] overflow-y-auto bg-gradient-to-b from-white via-gray-50/30 to-white border-r border-gray-200/80 shadow-xl sidebar-scroll"
+        className="hidden md:block fixed top-16 left-0 z-30 w-64 h-[calc(100vh-4rem)] overflow-y-auto bg-gradient-to-b from-white via-gray-50/30 to-white border-r border-gray-200/80 shadow-xl sidebar-scroll"
       >
         {/* Custom Scrollbar Styles */}
         <style dangerouslySetInnerHTML={{ __html: `
@@ -188,7 +188,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
           </div>
         </div>
 
-        <nav className="px-3 py-4 space-y-1">
+        <nav className="px-3 py-4 space-y-1 pb-6">
           {sidebarItems.map((item, index) => {
             const isActive = activeItem === item.id
             const hasDivider = !item.indented && index > 0 && !sidebarItems[index - 1].indented
@@ -270,7 +270,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
       </div>
 
       {/* Mobile Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-40 w-80 bg-gradient-to-b from-white via-gray-50/50 to-white shadow-2xl border-r border-gray-200/80 transform transition-transform duration-300 ease-out md:hidden ${
+      <div className={`fixed inset-y-0 left-0 z-40 w-80 bg-gradient-to-b from-white via-gray-50/50 to-white shadow-2xl border-r border-gray-200/80 transform transition-transform duration-300 ease-out md:hidden overflow-hidden flex flex-col ${
         isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Mobile Header */}
@@ -297,7 +297,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
           </button>
         </div>
         
-        <nav className="px-4 py-5 space-y-2 overflow-y-auto max-h-[calc(100vh-100px)]">
+        <nav className="px-4 py-5 space-y-2 overflow-y-auto flex-1 pb-6">
           {sidebarItems.map((item, index) => {
             const isActive = activeItem === item.id
             const hasDivider = !item.indented && index > 0 && !sidebarItems[index - 1].indented
