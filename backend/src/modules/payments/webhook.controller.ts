@@ -748,7 +748,7 @@ export class WebhookController {
   private async createEquipmentRentalsFromBooking(
     userId: number,
     reservationId: number,
-    equipmentBookings: Array<{ equipment: string; time: string; subtotal?: number; quantity?: number; startTime?: string }>,
+    equipmentBookings: Array<{ equipment: string; time: string; subtotal?: number; quantity?: number; startTime?: string; selectedCourtSchedules?: string[] }>,
   ) {
     if (!reservationId || !userId) return;
 
@@ -785,24 +785,89 @@ export class WebhookController {
       const hourlyPrice = equipmentRow ? Number(equipmentRow.price) : Number(((b.subtotal || 0) / Math.max(1, hours * quantity)).toFixed(2)) || 0;
       const subtotal = b.subtotal != null && b.subtotal > 0 ? Number(b.subtotal) : Number((hourlyPrice * hours * quantity).toFixed(2));
 
-      // Calculate rental start and end times
-      // IMPORTANT: Rental starts when the court booking starts (reservation Start_Time)
-      // This ensures equipment is available during the customer's court booking period
-      const reservationDate = reservation.Reservation_Date;
-      // Always use the reservation's Start_Time (when court booking starts)
-      const courtStartTime = reservation.Start_Time || defaultStartTime;
+      const reservationDate = typeof reservation.Reservation_Date === 'string' 
+        ? reservation.Reservation_Date 
+        : new Date(reservation.Reservation_Date).toISOString().split('T')[0];
       
+      // IMPORTANT: When equipment is rented for multiple schedules, create SEPARATE rental items for EACH schedule
+      // This ensures stock is reduced for each specific schedule time slot
+      if (b.selectedCourtSchedules && b.selectedCourtSchedules.length > 0 && equipmentRow) {
+        this.logger.log(
+          `[Webhook Equipment Rental] Multi-schedule rental detected: ${b.selectedCourtSchedules.length} schedule(s) selected: ${b.selectedCourtSchedules.join(', ')}`
+        );
+        
+        // Create a separate rental item for EACH schedule
+        for (const scheduleKey of b.selectedCourtSchedules) {
+          let scheduleRentalStartTime: Date | null = null;
+          let scheduleRentalEndTime: Date | null = null;
+          
+          // Parse schedule key to get time directly (format: "Court Name-Start Time - End Time")
+          const firstDashIndex = scheduleKey.indexOf('-');
+          if (firstDashIndex > 0) {
+            const scheduleStr = scheduleKey.substring(firstDashIndex + 1).trim();
+            const timeMatch = scheduleStr.match(/(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)/i);
+            if (timeMatch) {
+              const [, startHour, startMin, startPeriod, endHour, endMin, endPeriod] = timeMatch;
+              const convertTo24Hour = (hour: number, period: string): number => {
+                let h = parseInt(hour.toString());
+                if (period.toUpperCase() === 'PM' && h !== 12) h += 12;
+                else if (period.toUpperCase() === 'AM' && h === 12) h = 0;
+                return h;
+              };
+              
+              const startH = convertTo24Hour(parseInt(startHour), startPeriod);
+              const endH = convertTo24Hour(parseInt(endHour), endPeriod);
+              
+              const [year, month, day] = reservationDate.split('-').map(Number);
+              scheduleRentalStartTime = new Date(year, month - 1, day, startH, parseInt(startMin), 0);
+              const scheduleEnd = new Date(year, month - 1, day, endH, parseInt(endMin), 0);
+              
+              const minEndTime = new Date(scheduleRentalStartTime);
+              minEndTime.setHours(minEndTime.getHours() + hours);
+              scheduleRentalEndTime = scheduleEnd > minEndTime ? scheduleEnd : minEndTime;
+              
+              // Create rental item for this specific schedule
+              const scheduleSubtotal = b.subtotal != null && b.subtotal > 0 
+                ? Number((b.subtotal / b.selectedCourtSchedules.length).toFixed(2))
+                : Number((hourlyPrice * hours * quantity).toFixed(2));
+              
+              const item = this.rentalItemRepository.create({
+                rental_id: savedRental.id,
+                equipment_id: equipmentRow.id,
+                quantity: quantity,
+                hours: hours,
+                hourly_price: hourlyPrice,
+                subtotal: scheduleSubtotal,
+                rental_start_time: scheduleRentalStartTime,
+                rental_end_time: scheduleRentalEndTime,
+                stock_restored: false,
+                notification_sent: false,
+              } as Partial<EquipmentRentalItem>);
+              
+              await this.rentalItemRepository.save(item);
+              total += scheduleSubtotal;
+              
+              this.logger.log(
+                `[Webhook] Created rental item ${item.id} for ${equipmentRow.equipment_name} ` +
+                `(qty: ${quantity}) for schedule ${scheduleKey}. Stock reduced for this schedule.`
+              );
+            }
+          }
+        }
+        
+        // Skip single rental item creation since we've created separate items for each schedule
+        continue;
+      }
+
+      // Single schedule or no selectedCourtSchedules - use reservation's time
       let rentalStartTime: Date | null = null;
       let rentalEndTime: Date | null = null;
       
+      const courtStartTime = reservation.Start_Time || defaultStartTime;
       if (courtStartTime && reservationDate) {
-        // Parse time string (HH:MM:SS or HH:MM)
         const [startHour, startMin] = courtStartTime.split(':').map(Number);
         const dateObj = new Date(reservationDate);
-        // Rental starts when the court booking starts
         rentalStartTime = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), startHour, startMin || 0, 0);
-        
-        // Calculate end time by adding rental hours to the court start time
         rentalEndTime = new Date(rentalStartTime);
         rentalEndTime.setHours(rentalEndTime.getHours() + hours);
       }
@@ -821,8 +886,6 @@ export class WebhookController {
       } as Partial<EquipmentRentalItem>);
       await this.rentalItemRepository.save(item);
       
-      // Note: Stock is now calculated dynamically based on active rentals
-      // No need to decrease stock permanently - available stock = total_stock - active_rentals
       this.logger.log(`Created rental item for ${equipmentRow?.equipment_name || 'unknown'}, quantity: ${quantity}, hours: ${hours}`);
       
       total += subtotal;

@@ -130,28 +130,20 @@ export class PaymentsService {
         }
         queryBuilder.orderBy('reservation.Created_at', 'DESC');
       } else {
-        // Reservation_Date is date type - need to compare date-only
-        // For date fields, TypeORM/MySQL will automatically compare date part only
-        // But we need to ensure we're using the correct date range
-        // For inclusive end, we need to include the full end date
-        const startDateOnly = new Date(queryStartDate);
-        startDateOnly.setHours(0, 0, 0, 0);
+        // Reservation_Date is DATE type (date-only, no time)
+        // Create date-only Date objects for comparison (strip time components)
+        const startDateOnly = new Date(queryStartDate.getFullYear(), queryStartDate.getMonth(), queryStartDate.getDate());
+        const endDateOnly = new Date(queryEndDate.getFullYear(), queryEndDate.getMonth(), queryEndDate.getDate());
         
-        // For end date, if exclusive, use the date before; if inclusive, use the end date
-        const endDateForComparison = useExclusiveEnd 
-          ? new Date(endDateForQuery)
-          : new Date(queryEndDate);
-        endDateForComparison.setHours(23, 59, 59, 999);
+        console.log(`[SalesReport Service] DATE comparison - Start: ${startDateOnly.toISOString().split('T')[0]}, End: ${endDateOnly.toISOString().split('T')[0]}`);
+        console.log(`[SalesReport Service] Original query dates - Start: ${queryStartDate.toISOString()} (Local: ${queryStartDate.toLocaleDateString()}), End: ${queryEndDate.toISOString()} (Local: ${queryEndDate.toLocaleDateString()})`);
         
-        if (useExclusiveEnd) {
-          // For exclusive, we want < endDate, so we compare with the date itself (not next day)
-          queryBuilder.where(`reservation.Reservation_Date >= :startDate`, { startDate: startDateOnly });
-          queryBuilder.andWhere(`reservation.Reservation_Date < :endDate`, { endDate: endDateForComparison });
-        } else {
-          // For inclusive, use <= to include the end date
-          queryBuilder.where(`reservation.Reservation_Date >= :startDate`, { startDate: startDateOnly });
-          queryBuilder.andWhere(`reservation.Reservation_Date <= :endDate`, { endDate: endDateForComparison });
-        }
+        // Use Between operator for DATE field - TypeORM handles DATE type comparisons correctly
+        // Between is inclusive on both ends (>= start AND <= end)
+        queryBuilder.where('reservation.Reservation_Date BETWEEN :startDate AND :endDate', { 
+          startDate: startDateOnly.toISOString().split('T')[0], // YYYY-MM-DD format
+          endDate: endDateOnly.toISOString().split('T')[0] // YYYY-MM-DD format
+        });
         queryBuilder.orderBy('reservation.Reservation_Date', 'DESC');
       }
       

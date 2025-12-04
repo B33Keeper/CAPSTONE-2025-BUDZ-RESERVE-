@@ -1686,7 +1686,9 @@ export class ReservationsService {
       }
       
       // Additional safety check: Verify no rental item already exists for this equipment and reservation
-      if (equipmentRow) {
+      // IMPORTANT: For multi-schedule rentals, we allow multiple items (one per schedule)
+      // So we only check for duplicates if there are no selectedCourtSchedules or if it's a single schedule
+      if (equipmentRow && (!b.selectedCourtSchedules || b.selectedCourtSchedules.length <= 1)) {
         const existingRental = await this.equipmentRentalRepository.findOne({
           where: { reservation_id: reservation.Reservation_ID },
           relations: ['items'],
@@ -1761,87 +1763,105 @@ export class ReservationsService {
         `[Equipment Rental] Checking selectedCourtSchedules: ${b.selectedCourtSchedules ? `[${b.selectedCourtSchedules.join(', ')}] (length: ${b.selectedCourtSchedules.length})` : 'undefined/null'}`
       );
       
-      // Find the reservation that matches this schedule to get the exact time range
+      // IMPORTANT: When equipment is rented for multiple schedules, create SEPARATE rental items for EACH schedule
+      // This ensures stock is reduced for each specific schedule time slot
       if (b.selectedCourtSchedules && b.selectedCourtSchedules.length > 0) {
-        // Since frontend creates separate bookings per schedule, each booking should have only ONE schedule
-        // Use the first (and only) schedule to get the time
-        const scheduleKey = b.selectedCourtSchedules[0];
         this.logger.log(
-          `[Equipment Rental] ✅ Schedule-based rental: ${b.selectedCourtSchedules.length} schedule(s) selected: ${b.selectedCourtSchedules.join(', ')}`
+          `[Equipment Rental] ✅ Multi-schedule rental detected: ${b.selectedCourtSchedules.length} schedule(s) selected: ${b.selectedCourtSchedules.join(', ')}`
         );
         
-        // Parse schedule key to get time directly (format: "Court Name-Start Time - End Time")
-        // Example: "Court 1-8:00 am - 9:00 am"
-        const firstDashIndex = scheduleKey.indexOf('-');
-        if (firstDashIndex > 0) {
-          const scheduleStr = scheduleKey.substring(firstDashIndex + 1).trim();
-          // Parse schedule string like "8:00 am - 9:00 am"
-          const timeMatch = scheduleStr.match(/(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)/i);
-          if (timeMatch) {
-            const [, startHour, startMin, startPeriod, endHour, endMin, endPeriod] = timeMatch;
-            const convertTo24Hour = (hour: number, period: string): number => {
-              let h = parseInt(hour.toString());
-              if (period.toUpperCase() === 'PM' && h !== 12) h += 12;
-              else if (period.toUpperCase() === 'AM' && h === 12) h = 0;
-              return h;
-            };
-            
-            const startH = convertTo24Hour(parseInt(startHour), startPeriod);
-            const endH = convertTo24Hour(parseInt(endHour), endPeriod);
-            
-            const [year, month, day] = reservationDate.split('-').map(Number);
-            rentalStartTime = new Date(year, month - 1, day, startH, parseInt(startMin), 0);
-            const scheduleEnd = new Date(year, month - 1, day, endH, parseInt(endMin), 0);
-            
-            // Use the later of: schedule end time OR start + rental hours
-            const minEndTime = new Date(rentalStartTime);
-            minEndTime.setHours(minEndTime.getHours() + hours);
-            rentalEndTime = scheduleEnd > minEndTime ? scheduleEnd : minEndTime;
-            
-            this.logger.log(
-              `[Equipment Rental] ✅ Schedule-based rental time: ` +
-              `Schedule: ${scheduleKey}, ` +
-              `rental time: ${rentalStartTime.toISOString()} to ${rentalEndTime.toISOString()}, ` +
-              `quantity: ${quantity}. ` +
-              `This rental will reduce stock for THIS specific schedule.`
-            );
-          } else {
-            // Fallback: Try to find matching reservation
-            const matchingReservations = await this.reservationsRepository.find({
-              where: {
-                Reservation_Date: new Date(reservationDate),
-                Reference_Number: reservation.Reference_Number,
-              },
-            });
-            
-            const courts = await this.courtsService.findAll();
-            const relevantReservations = matchingReservations.filter((res) => {
-              const court = courts.find(c => c.Court_Id === res.Court_ID);
-              const courtName = court?.Court_Name || '';
-              const scheduleStr = this.formatTimeTo12Hour(res.Start_Time, res.End_Time);
-              const resScheduleKey = `${courtName}-${scheduleStr}`;
-              return b.selectedCourtSchedules?.includes(resScheduleKey) || false;
-            });
-            
-            if (relevantReservations.length > 0) {
-              const matchingReservation = relevantReservations[0];
-              const resDateStr = typeof matchingReservation.Reservation_Date === 'string' 
-                ? matchingReservation.Reservation_Date 
-                : new Date(matchingReservation.Reservation_Date).toISOString().split('T')[0];
-              const [year, month, day] = resDateStr.split('-').map(Number);
+        // Create a separate rental item for EACH schedule
+        for (const scheduleKey of b.selectedCourtSchedules) {
+          let scheduleRentalStartTime: Date | null = null;
+          let scheduleRentalEndTime: Date | null = null;
+          
+          // Parse schedule key to get time directly (format: "Court Name-Start Time - End Time")
+          // Example: "Court 1-8:00 am - 9:00 am"
+          const firstDashIndex = scheduleKey.indexOf('-');
+          if (firstDashIndex > 0) {
+            const scheduleStr = scheduleKey.substring(firstDashIndex + 1).trim();
+            // Parse schedule string like "8:00 am - 9:00 am"
+            const timeMatch = scheduleStr.match(/(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm|AM|PM)/i);
+            if (timeMatch) {
+              const [, startHour, startMin, startPeriod, endHour, endMin, endPeriod] = timeMatch;
+              const convertTo24Hour = (hour: number, period: string): number => {
+                let h = parseInt(hour.toString());
+                if (period.toUpperCase() === 'PM' && h !== 12) h += 12;
+                else if (period.toUpperCase() === 'AM' && h === 12) h = 0;
+                return h;
+              };
               
-              const [startHour, startMin] = matchingReservation.Start_Time.split(':').map(Number);
-              rentalStartTime = new Date(year, month - 1, day, startHour, startMin || 0, 0);
+              const startH = convertTo24Hour(parseInt(startHour), startPeriod);
+              const endH = convertTo24Hour(parseInt(endHour), endPeriod);
               
-              const [endHour, endMin] = matchingReservation.End_Time.split(':').map(Number);
-              const resEnd = new Date(year, month - 1, day, endHour, endMin || 0, 0);
+              const [year, month, day] = reservationDate.split('-').map(Number);
+              scheduleRentalStartTime = new Date(year, month - 1, day, startH, parseInt(startMin), 0);
+              const scheduleEnd = new Date(year, month - 1, day, endH, parseInt(endMin), 0);
               
-              const minEndTime = new Date(rentalStartTime);
+              // Use the later of: schedule end time OR start + rental hours
+              const minEndTime = new Date(scheduleRentalStartTime);
               minEndTime.setHours(minEndTime.getHours() + hours);
-              rentalEndTime = resEnd > minEndTime ? resEnd : minEndTime;
+              scheduleRentalEndTime = scheduleEnd > minEndTime ? scheduleEnd : minEndTime;
+              
+              // Check if rental item already exists for this specific schedule time range
+              if (equipmentRow && scheduleRentalStartTime && scheduleRentalEndTime) {
+                const existingScheduleRental = await this.equipmentRentalItemRepository
+                  .createQueryBuilder('item')
+                  .innerJoin('item.rental', 'rental')
+                  .where('rental.reservation_id = :reservationId', { reservationId: reservation.Reservation_ID })
+                  .andWhere('item.equipment_id = :equipmentId', { equipmentId: equipmentRow.id })
+                  .andWhere('item.rental_start_time = :startTime', { startTime: scheduleRentalStartTime })
+                  .andWhere('item.rental_end_time = :endTime', { endTime: scheduleRentalEndTime })
+                  .getOne();
+                
+                if (existingScheduleRental) {
+                  this.logger.warn(
+                    `[Equipment Rental] ⚠️ Rental item already exists for schedule ${scheduleKey} ` +
+                    `(equipment: ${equipmentRow.equipment_name}, reservation: ${reservation.Reservation_ID}). ` +
+                    `Skipping to prevent duplicate.`
+                  );
+                  continue; // Skip this schedule - already has a rental item
+                }
+              }
+              
+              this.logger.log(
+                `[Equipment Rental] ✅ Creating rental item for schedule ${scheduleKey}: ` +
+                `rental time: ${scheduleRentalStartTime.toISOString()} to ${scheduleRentalEndTime.toISOString()}, ` +
+                `quantity: ${quantity}. ` +
+                `This rental will reduce stock for THIS specific schedule only.`
+              );
+              
+              // Create rental item for this specific schedule
+              const scheduleSubtotal = b.subtotal != null && b.subtotal > 0 
+                ? Number((b.subtotal / b.selectedCourtSchedules.length).toFixed(2))
+                : Number((hourlyPrice * hours * quantity).toFixed(2));
+              
+              const rentalItem = this.equipmentRentalItemRepository.create({
+                rental_id: savedRental.id,
+                equipment_id: equipmentRow.id,
+                quantity: quantity,
+                hours: hours,
+                hourly_price: hourlyPrice,
+                subtotal: scheduleSubtotal,
+                rental_start_time: scheduleRentalStartTime,
+                rental_end_time: scheduleRentalEndTime,
+                stock_restored: false,
+                notification_sent: false,
+              } as Partial<EquipmentRentalItem>);
+              
+              await this.equipmentRentalItemRepository.save(rentalItem);
+              total += scheduleSubtotal;
+              
+              this.logger.log(
+                `[Equipment Rental] ✅ Created rental item ${rentalItem.id} for ${equipmentRow.equipment_name} ` +
+                `(qty: ${quantity}) for schedule ${scheduleKey}. Stock reduced for this schedule.`
+              );
             }
           }
         }
+        
+        // Skip the single rental item creation below since we've created separate items for each schedule
+        continue;
       }
       
       // Fallback: Use current reservation's time (for single schedule or if multi-schedule calculation failed)
@@ -1936,10 +1956,11 @@ export class ReservationsService {
       }
 
       // Final safety check: Verify no rental item already exists for this exact combination
-      // This prevents duplicates even if all other checks fail
-      if (equipmentRow) {
+      // IMPORTANT: For multi-schedule rentals, we allow multiple items (one per schedule)
+      // Only check for duplicates if it's a single schedule rental
+      if (equipmentRow && (!b.selectedCourtSchedules || b.selectedCourtSchedules.length <= 1)) {
         // Check for ANY existing rental item for this equipment in this reservation
-        // (regardless of quantity/hours, since we only want ONE rental item per equipment per reservation)
+        // (for single schedule rentals, we only want ONE rental item per equipment per reservation)
         const existingRental = await this.equipmentRentalItemRepository
           .createQueryBuilder('item')
           .innerJoin('item.rental', 'rental')
@@ -1965,7 +1986,8 @@ export class ReservationsService {
       }
 
       // CRITICAL: Double-check one more time before creating (race condition protection)
-      if (equipmentRow) {
+      // Only for single schedule rentals
+      if (equipmentRow && (!b.selectedCourtSchedules || b.selectedCourtSchedules.length <= 1)) {
         const finalCheck = await this.equipmentRentalItemRepository
           .createQueryBuilder('item')
           .innerJoin('item.rental', 'rental')
