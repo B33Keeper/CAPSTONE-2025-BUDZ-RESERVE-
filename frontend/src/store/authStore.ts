@@ -13,6 +13,7 @@ interface User {
   contact_number?: string
   profile_picture?: string
   role?: string
+  can_manage_queueing?: boolean
 }
 
 interface AuthState {

@@ -321,12 +321,14 @@ export function Header() {
               >
                 Book Court
               </button>
-              <button
-                onClick={handleManageQueueingClick}
-                className={getManageQueueingClasses()}
-              >
-                {renderManageQueueingLabel()}
-              </button>
+              {isAuthenticated && user?.can_manage_queueing && (
+                <button
+                  onClick={handleManageQueueingClick}
+                  className={getManageQueueingClasses()}
+                >
+                  {renderManageQueueingLabel()}
+                </button>
+              )}
             </nav>
             
             {/* Right Side - Login/Sign Up or Profile */}
@@ -531,15 +533,17 @@ export function Header() {
               >
                 Book Court
               </button>
-              <button
-                onClick={() => {
-                  handleManageQueueingClick()
-                  setIsMenuOpen(false)
-                }}
-                className={getManageQueueingClasses('mobile')}
-              >
-                {renderManageQueueingLabel('mobile')}
-              </button>
+              {isAuthenticated && user?.can_manage_queueing && (
+                <button
+                  onClick={() => {
+                    handleManageQueueingClick()
+                    setIsMenuOpen(false)
+                  }}
+                  className={getManageQueueingClasses('mobile')}
+                >
+                  {renderManageQueueingLabel('mobile')}
+                </button>
+              )}
               {isAuthenticated ? (
                 <>
                   {/* Mobile User Info */}

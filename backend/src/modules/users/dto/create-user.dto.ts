@@ -1,4 +1,4 @@
-import { IsEmail, IsString, IsEnum, IsInt, Min, Max, Length, Matches } from 'class-validator';
+import { IsEmail, IsString, IsEnum, IsInt, Min, Max, Length, Matches, IsOptional, IsBoolean } from 'class-validator';
 import { Gender } from '../entities/user.entity';
 
 export class CreateUserDto {
@@ -29,4 +29,8 @@ export class CreateUserDto {
   @IsString()
   @Length(10, 20)
   contact_number: string;
+
+  @IsOptional()
+  @IsBoolean()
+  can_manage_queueing?: boolean;
 }

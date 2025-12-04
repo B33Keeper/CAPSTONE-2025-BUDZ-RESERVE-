@@ -22,6 +22,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
     { id: 'Dashboard', icon: 'grid', label: 'Dashboard', indented: false },
     { id: 'Upload photo', icon: 'picture', label: 'Upload photo', indented: true },
     { id: 'Add Announcement', icon: 'announcement', label: 'Add Announcement', indented: true },
+    { id: 'Create User', icon: 'user', label: 'Create User', indented: true },
     { id: 'Manage Courts', icon: 'calendar', label: 'Manage Courts', indented: false },
     { id: 'Manage Rackets', icon: 'racket', label: 'Manage Rackets', indented: false },
     { id: 'Create Reservations', icon: 'reservation', label: 'Create Reservations', indented: false },
@@ -30,7 +31,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
   ]
 
   // Auto-expand dashboard if a sub-item is active
-  const dashboardSubItems = ['Upload photo', 'Add Announcement']
+  const dashboardSubItems = ['Upload photo', 'Add Announcement', 'Create User']
   const isDashboardSubItemActive = dashboardSubItems.includes(activeItem)
 
   useEffect(() => {
@@ -57,6 +58,8 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
       navigate('/admin/upload-photo')
     } else if (itemId === 'Add Announcement') {
       navigate('/admin/create-announcement')
+    } else if (itemId === 'Create User') {
+      navigate('/admin/create-user')
     }
     
     if (onItemChange) {
@@ -123,6 +126,12 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        )
+      case 'user':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         )
       default:

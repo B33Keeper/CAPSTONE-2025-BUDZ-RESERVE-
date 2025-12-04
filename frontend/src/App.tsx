@@ -23,6 +23,7 @@ import AdminCreateReservations from '@/pages/AdminCreateReservations'
 import AdminSalesReport from '@/pages/AdminSalesReport'
 import AdminViewSuggestions from '@/pages/AdminViewSuggestions'
 import AdminCreateAnnouncement from '@/pages/AdminCreateAnnouncement'
+import AdminCreateUser from '@/pages/AdminCreateUser'
 import UploadPhoto from '@/pages/UploadPhoto'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AnnouncementModal } from '@/components/modals/AnnouncementModal'
@@ -122,6 +123,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminCreateAnnouncement />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/admin/create-user" 
+          element={
+            <ProtectedRoute>
+              <AdminCreateUser />
             </ProtectedRoute>
           }
         />

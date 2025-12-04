@@ -58,6 +58,9 @@ export class User {
   @Column({ default: 'user' })
   role: string;
 
+  @Column({ default: false })
+  can_manage_queueing: boolean;
+
   @Column({ nullable: true })
   verification_token: string;
 
