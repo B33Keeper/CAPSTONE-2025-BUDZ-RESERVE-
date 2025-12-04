@@ -6,11 +6,6 @@ export class CreateUserDto {
   @Length(2, 100)
   name: string;
 
-  @IsInt()
-  @Min(1)
-  @Max(120)
-  age: number;
-
   @IsEnum(Gender)
   sex: Gender;
 

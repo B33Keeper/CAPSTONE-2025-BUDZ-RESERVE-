@@ -12,29 +12,24 @@ import { ShuttlecockLoader } from '@/components/ShuttlecockLoader'
 
 const signupSchema = z
   .object({
-    name: z
-      .string({ required_error: 'Name is required' })
+    firstName: z
+      .string({ required_error: 'First name is required' })
       .trim()
-      .min(2, 'Name must be at least 2 characters')
-      .max(100, 'Name must be at most 100 characters')
-      .refine((value) => /[A-Za-z]/.test(value), 'Name must contain letters'),
-    age: z
-      .preprocess(
-        (value) => {
-          if (typeof value === 'number' && Number.isNaN(value)) {
-            return undefined
-          }
-          return value
-        },
-        z
-          .number({
-            required_error: 'Age is required',
-            invalid_type_error: 'Age must be a valid number',
-          })
-          .int('Age must be a whole number')
-          .min(1, 'Age must be at least 1')
-          .max(120, 'Age must be less than or equal to 120')
-      ),
+      .min(1, 'First name is required')
+      .max(50, 'First name must be at most 50 characters')
+      .refine((value) => /[A-Za-z]/.test(value), 'First name must contain letters'),
+    middleInitial: z
+      .string()
+      .trim()
+      .max(1, 'Middle initial must be a single character')
+      .optional()
+      .transform((val) => (val && val.length > 0 ? val.toUpperCase() : undefined)),
+    lastName: z
+      .string({ required_error: 'Last name is required' })
+      .trim()
+      .min(1, 'Last name is required')
+      .max(50, 'Last name must be at most 50 characters')
+      .refine((value) => /[A-Za-z]/.test(value), 'Last name must contain letters'),
     sex: z.enum(['Male', 'Female'], {
       required_error: 'Please select a sex',
     }),
@@ -73,12 +68,22 @@ const signupSchema = z
     message: "Passwords don't match",
     path: ['confirmPassword'],
   })
-  .transform((data) => ({
-    ...data,
-    name: data.name.trim(),
-    username: data.username.trim(),
-    email: data.email.trim().toLowerCase(),
-  }))
+  .transform((data) => {
+    // Combine firstName, middleInitial, and lastName into a single name field
+    const nameParts = [data.firstName.trim()]
+    if (data.middleInitial && data.middleInitial.trim().length > 0) {
+      nameParts.push(data.middleInitial.trim().toUpperCase())
+    }
+    nameParts.push(data.lastName.trim())
+    const fullName = nameParts.join(' ')
+    
+    return {
+      ...data,
+      name: fullName, // Combined name for backend
+      username: data.username.trim(),
+      email: data.email.trim().toLowerCase(),
+    }
+  })
 
 type SignupFormData = z.infer<typeof signupSchema>
 
@@ -100,8 +105,9 @@ export function SignupPage() {
     mode: 'onChange',
     reValidateMode: 'onBlur',
     defaultValues: {
-      name: '',
-      age: undefined,
+      firstName: '',
+      middleInitial: '',
+      lastName: '',
       sex: undefined,
       username: '',
       email: '',
@@ -119,7 +125,8 @@ export function SignupPage() {
   const onSubmit = async (data: SignupFormData) => {
     clearErrors('root')
     try {
-      const { confirmPassword, contact_number, ...userData } = data
+      // Remove confirmPassword and individual name fields (they're combined into 'name' by the transform)
+      const { confirmPassword, firstName, middleInitial, lastName, contact_number, ...userData } = data
       const sanitizedData = {
         ...userData,
         contact_number: contact_number ?? undefined,
@@ -149,12 +156,12 @@ export function SignupPage() {
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit(onSubmit, handleInvalidSubmit)}>
-          {/* First Row - Full Name and Age */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Full Name Field */}
+          {/* First Row - First Name, Middle Initial, Last Name */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* First Name Field */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                First Name
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors duration-200 group-focus-within:text-blue-600">
@@ -163,59 +170,99 @@ export function SignupPage() {
                   </svg>
                 </div>
                 <input
-                  {...register('name')}
-                  id="name"
+                  {...register('firstName')}
+                  id="firstName"
                   type="text"
-                  autoComplete="name"
+                  autoComplete="given-name"
                   className={`w-full pl-10 pr-4 py-3 border-2 rounded-lg transition-all duration-200 ${
-                    errors.name 
+                    errors.firstName 
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
                       : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
                   } focus:outline-none focus:ring-4 bg-white hover:bg-blue-50/30 placeholder:text-gray-400`}
-                  placeholder="Enter your full name"
+                  placeholder="Enter first name"
                 />
               </div>
-              {errors.name && (
+              {errors.firstName && (
                 <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
-                  {errors.name.message}
+                  {errors.firstName.message}
                 </p>
               )}
             </div>
 
-            {/* Age Field */}
+            {/* Middle Initial Field */}
             <div>
-              <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
-                Age
+              <label htmlFor="middleInitial" className="block text-sm font-medium text-gray-700 mb-2">
+                Middle Initial <span className="text-gray-400 font-normal">(Optional)</span>
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors duration-200 group-focus-within:text-blue-600">
                   <svg className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
                 <input
-                  {...register('age', { valueAsNumber: true })}
-                  id="age"
-                  type="number"
-                  min="1"
-                  max="120"
+                  {...register('middleInitial')}
+                  id="middleInitial"
+                  type="text"
+                  autoComplete="additional-name"
+                  maxLength={1}
                   className={`w-full pl-10 pr-4 py-3 border-2 rounded-lg transition-all duration-200 ${
-                    errors.age 
+                    errors.middleInitial 
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
                       : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
-                  } focus:outline-none focus:ring-4 bg-white hover:bg-blue-50/30 placeholder:text-gray-400`}
-                  placeholder="Enter your age"
+                  } focus:outline-none focus:ring-4 bg-white hover:bg-blue-50/30 placeholder:text-gray-400 text-center text-lg font-semibold uppercase`}
+                  placeholder="M"
+                  onChange={(e) => {
+                    // Only allow letters and convert to uppercase
+                    const value = e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 1)
+                    e.target.value = value
+                    register('middleInitial').onChange(e)
+                  }}
                 />
               </div>
-              {errors.age && (
+              {errors.middleInitial && (
                 <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
-                  {errors.age.message}
+                  {errors.middleInitial.message}
+                </p>
+              )}
+            </div>
+
+            {/* Last Name Field */}
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                Last Name / Surname
+              </label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors duration-200 group-focus-within:text-blue-600">
+                  <svg className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <input
+                  {...register('lastName')}
+                  id="lastName"
+                  type="text"
+                  autoComplete="family-name"
+                  className={`w-full pl-10 pr-4 py-3 border-2 rounded-lg transition-all duration-200 ${
+                    errors.lastName 
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
+                      : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
+                  } focus:outline-none focus:ring-4 bg-white hover:bg-blue-50/30 placeholder:text-gray-400`}
+                  placeholder="Enter last name"
+                />
+              </div>
+              {errors.lastName && (
+                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {errors.lastName.message}
                 </p>
               )}
             </div>
