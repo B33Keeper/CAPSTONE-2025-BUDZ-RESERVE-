@@ -252,7 +252,7 @@ const AdminCreateUser = () => {
                           ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
                           : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
                       } focus:outline-none focus:ring-4 bg-white`}
-                      placeholder="Enter middle initial"
+                      placeholder="M"
                       onChange={(e) => {
                         // Only allow letters and convert to uppercase, limit to 1 character
                         const value = e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 1)
