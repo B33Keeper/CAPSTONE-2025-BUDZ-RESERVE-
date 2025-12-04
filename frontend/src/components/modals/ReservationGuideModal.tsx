@@ -55,6 +55,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   const [currentStep, setCurrentStep] = useState(0)
   const [dontShowAgain, setDontShowAgain] = useState(false)
   const [showVideo, setShowVideo] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -63,6 +64,18 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
       setShowVideo(false)
     }
   }, [isOpen])
+
+  useEffect(() => {
+    // Detect if user is on mobile device
+    const checkMobile = () => {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768
+      setIsMobile(isMobileDevice)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     if (showVideo && videoRef.current) {
@@ -185,23 +198,43 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   Your browser does not support the video tag.
                 </video>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-900 mb-1">
-                      💡 Tip: Watch in Fullscreen
-                    </p>
-                    <p className="text-sm text-blue-700">
-                      For the best viewing experience, click the fullscreen button (⛶) in the video player controls to watch in fullscreen mode.
-                    </p>
+              {isMobile ? (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <svg className="w-5 h-5 text-orange-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-orange-900 mb-1">
+                        📱 Tip: Rotate to Landscape
+                      </p>
+                      <p className="text-sm text-orange-700">
+                        For the best viewing experience on mobile, please rotate your device to landscape mode (horizontal orientation).
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-900 mb-1">
+                        💡 Tip: Watch in Fullscreen
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        For the best viewing experience, click the fullscreen button (⛶) in the video player controls to watch in fullscreen mode.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <p className="text-center text-gray-600 text-sm">
                 Watch this video guide to see the complete booking process step by step.
               </p>
