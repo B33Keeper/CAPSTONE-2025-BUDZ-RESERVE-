@@ -225,7 +225,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
           
           {showVideo ? (
             <div className="w-full">
-              <div className="bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4 relative">
+              <div className="bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4 relative group">
                 <video
                   ref={videoRef}
                   className="w-full h-full object-contain"
@@ -248,6 +248,36 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   <source src="/assets/BookingProcess%20Video%20guide/BookingProcess.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
+                {/* Background Music Control Button */}
+                <button
+                  onClick={() => {
+                    if (audioRef.current) {
+                      if (isMusicPlaying) {
+                        audioRef.current.pause()
+                        setIsMusicPlaying(false)
+                      } else {
+                        audioRef.current.play().then(() => {
+                          setIsMusicPlaying(true)
+                        }).catch((error) => {
+                          console.error('Error playing background music:', error)
+                        })
+                      }
+                    }
+                  }}
+                  className="absolute bottom-16 right-4 md:bottom-20 bg-black/70 hover:bg-black/90 rounded-lg p-2.5 transition-all duration-200 z-10 backdrop-blur-sm"
+                  aria-label={isMusicPlaying ? "Turn off background music" : "Turn on background music"}
+                  title={isMusicPlaying ? "Background Music: On" : "Background Music: Off"}
+                >
+                  {isMusicPlaying ? (
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    </svg>
+                  )}
+                </button>
               </div>
               {isMobile ? (
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
@@ -283,45 +313,6 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                         For the best viewing experience, click the fullscreen button (⛶) in the video player controls to watch in fullscreen mode.
                       </p>
                     </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Music Control */}
-              {isMusicPlaying && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                      </svg>
-                      <span className="text-sm text-purple-700">Background music playing</span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        if (audioRef.current) {
-                          if (isMusicPlaying) {
-                            audioRef.current.pause()
-                            setIsMusicPlaying(false)
-                          } else {
-                            audioRef.current.play()
-                            setIsMusicPlaying(true)
-                          }
-                        }
-                      }}
-                      className="text-purple-600 hover:text-purple-800 transition-colors"
-                      aria-label={isMusicPlaying ? "Mute music" : "Unmute music"}
-                    >
-                      {isMusicPlaying ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                        </svg>
-                      )}
-                    </button>
                   </div>
                 </div>
               )}
