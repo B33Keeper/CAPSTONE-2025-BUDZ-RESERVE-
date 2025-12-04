@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { apiServices } from '@/lib/apiServices'
 import toast from 'react-hot-toast'
+import { QueueingLoadingScreen } from './QueueingLoadingScreen'
 
 interface ProtectedQueueingRouteProps {
   children: React.ReactNode
@@ -56,14 +57,7 @@ export function ProtectedQueueingRoute({ children }: ProtectedQueueingRouteProps
   }, [hasAccess, checkingAccess])
 
   if (isLoading || checkingAccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking reservation access...</p>
-        </div>
-      </div>
-    )
+    return <QueueingLoadingScreen />
   }
 
   if (!isAuthenticated) {
