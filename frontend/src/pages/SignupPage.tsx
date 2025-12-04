@@ -212,9 +212,9 @@ export function SignupPage() {
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
                       : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
                   } focus:outline-none focus:ring-4 bg-white hover:bg-blue-50/30 placeholder:text-gray-400 text-center text-lg font-semibold uppercase`}
-                  placeholder="M"
+                  placeholder="Enter middle initial"
                   onChange={(e) => {
-                    // Only allow letters and convert to uppercase
+                    // Only allow letters and convert to uppercase, limit to 1 character
                     const value = e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 1)
                     e.target.value = value
                     register('middleInitial').onChange(e)
