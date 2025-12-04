@@ -9,7 +9,6 @@ import api from '@/lib/api'
 import toast from 'react-hot-toast'
 import { ShuttlecockLoader } from '@/components/ShuttlecockLoader'
 import AdminSidebar from '@/components/AdminSidebar'
-import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 
 interface CourtBooking {
@@ -3295,11 +3294,6 @@ export default function AdminCreateReservations() {
           </div>
         </div>
       )}
-
-      {/* Footer - positioned to the right of sidebar */}
-      <footer className="md:ml-64">
-        <AdminFooter />
-      </footer>
     </div>
   )
 }

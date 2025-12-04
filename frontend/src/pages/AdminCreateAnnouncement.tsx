@@ -4,7 +4,6 @@ import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { AnnouncementHistoryModal } from '@/components/modals/AnnouncementHistoryModal'
 import AdminSidebar from '@/components/AdminSidebar'
-import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 import toast from 'react-hot-toast'
 
@@ -401,11 +400,6 @@ export default function AdminCreateAnnouncement() {
             </div>
           </div>
         </main>
-        
-        {/* Footer - positioned to the right of sidebar */}
-        <footer className="md:ml-64">
-          <AdminFooter />
-        </footer>
       </div>
     </div>
   )
