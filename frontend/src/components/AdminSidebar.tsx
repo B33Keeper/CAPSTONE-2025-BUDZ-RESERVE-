@@ -151,7 +151,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
 
       {/* Desktop Sidebar */}
       <div 
-        className="hidden md:block fixed top-16 left-0 z-30 w-64 h-[calc(100vh-4rem)] overflow-y-auto bg-gradient-to-b from-white via-gray-50/30 to-white border-r border-gray-200/80 shadow-xl sidebar-scroll"
+        className="hidden md:block fixed top-16 left-0 z-30 w-64 h-[calc(100vh-4rem-7rem)] overflow-y-auto bg-gradient-to-b from-white via-gray-50/30 to-white border-r border-gray-200/80 shadow-xl sidebar-scroll"
       >
         {/* Custom Scrollbar Styles */}
         <style dangerouslySetInnerHTML={{ __html: `
