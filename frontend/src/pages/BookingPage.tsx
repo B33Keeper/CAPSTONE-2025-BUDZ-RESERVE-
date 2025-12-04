@@ -2001,29 +2001,46 @@ export function BookingPage() {
                     </thead>
                     <tbody>
                       {equipmentBookings.map((booking, index) => {
-                        // Get the court schedule this equipment is associated with
-                        // Since we now create separate bookings per schedule, each booking has only one schedule
-                        let associatedSchedule: CourtBooking | null = null
+                        // Get all court schedules this equipment is associated with
+                        let associatedSchedules: CourtBooking[] = []
                         if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
-                          // Each booking now has a single schedule in selectedCourtSchedules
-                          const scheduleKey = booking.selectedCourtSchedules[0]
-                          const [courtName, schedule] = scheduleKey.split('-')
-                          associatedSchedule = courtBookings.find(cb => cb.court === courtName && cb.schedule === schedule) || null
+                          // Find all matching court bookings for the selected schedules
+                          booking.selectedCourtSchedules.forEach(scheduleKey => {
+                            // Schedule key format: "Court 1-8:00 am - 9:00 am"
+                            // Split by first '-' to get court name, rest is schedule
+                            const firstDashIndex = scheduleKey.indexOf('-')
+                            if (firstDashIndex > 0) {
+                              const courtName = scheduleKey.substring(0, firstDashIndex).trim()
+                              const schedule = scheduleKey.substring(firstDashIndex + 1).trim()
+                              const matchingBooking = courtBookings.find(cb => cb.court === courtName && cb.schedule === schedule)
+                              if (matchingBooking) {
+                                associatedSchedules.push(matchingBooking)
+                              }
+                            }
+                          })
                         } else if (courtBookings.length === 1) {
-                          associatedSchedule = courtBookings[0]
+                          // If no specific schedule selected and only one court booking, associate with it
+                          associatedSchedules = [courtBookings[0]]
                         }
                         
                         return (
-                        <tr key={`${booking.equipment}-${index}-${booking.selectedCourtSchedules?.[0] || ''}`}>
+                        <tr key={`${booking.equipment}-${index}-${booking.selectedCourtSchedules?.join(',') || ''}`}>
                           <td className="border border-gray-300 px-4 py-2">{booking.equipment}</td>
                           <td className="border border-gray-300 px-4 py-2">{booking.quantity || 1}</td>
                           <td className="border border-gray-300 px-4 py-2">{booking.time}</td>
                             {courtBookings.length > 1 && (
                               <td className="border border-gray-300 px-4 py-2">
-                                {associatedSchedule ? (
-                                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium">
-                                    {associatedSchedule.court} - {associatedSchedule.schedule}
-                                  </span>
+                                {associatedSchedules.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {associatedSchedules.map((schedule, idx) => (
+                                      <span 
+                                        key={idx}
+                                        className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium"
+                                      >
+                                        {schedule.court} - {schedule.schedule}
+                                      </span>
+                                    ))}
+                                  </div>
                                 ) : (
                                   <span className="text-gray-400 text-sm">Not specified</span>
                                 )}
