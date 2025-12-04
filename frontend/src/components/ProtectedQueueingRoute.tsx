@@ -13,13 +13,34 @@ export function ProtectedQueueingRoute({ children }: ProtectedQueueingRouteProps
   const { isAuthenticated, isLoading } = useAuthStore()
   const [hasAccess, setHasAccess] = useState<boolean | null>(null)
   const [checkingAccess, setCheckingAccess] = useState(true)
+  const [headerLoadingActive, setHeaderLoadingActive] = useState(false)
   const navigate = useNavigate()
+
+  // Listen for Header loading screen state
+  useEffect(() => {
+    const handleHeaderLoadingStart = () => {
+      setHeaderLoadingActive(true)
+    }
+    const handleHeaderLoadingEnd = () => {
+      setHeaderLoadingActive(false)
+    }
+
+    window.addEventListener('queueing-header-loading-start', handleHeaderLoadingStart)
+    window.addEventListener('queueing-header-loading-end', handleHeaderLoadingEnd)
+
+    return () => {
+      window.removeEventListener('queueing-header-loading-start', handleHeaderLoadingStart)
+      window.removeEventListener('queueing-header-loading-end', handleHeaderLoadingEnd)
+    }
+  }, [])
 
   useEffect(() => {
     const checkAccess = async () => {
       if (!isAuthenticated) {
         setHasAccess(false)
         setCheckingAccess(false)
+        // Notify Header that check is complete
+        window.dispatchEvent(new CustomEvent('queueing-access-check-complete'))
         return
       }
 
@@ -35,6 +56,8 @@ export function ProtectedQueueingRoute({ children }: ProtectedQueueingRouteProps
         toast.error('Failed to verify reservation access. Please try again.')
       } finally {
         setCheckingAccess(false)
+        // Notify Header that access check is complete
+        window.dispatchEvent(new CustomEvent('queueing-access-check-complete'))
       }
     }
 
@@ -56,7 +79,9 @@ export function ProtectedQueueingRoute({ children }: ProtectedQueueingRouteProps
     }
   }, [hasAccess, checkingAccess])
 
-  if (isLoading || checkingAccess) {
+  // Only show loading screen if Header's loading screen is not active
+  // This ensures we have one continuous loading screen
+  if (isLoading || (checkingAccess && !headerLoadingActive)) {
     return <QueueingLoadingScreen />
   }
 

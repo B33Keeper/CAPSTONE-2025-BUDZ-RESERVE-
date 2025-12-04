@@ -165,26 +165,32 @@ export function Header() {
       return
     }
     
+    // Show loading screen immediately
+    setShowQueueingLoading(true)
+    
+    // Dispatch event to indicate Header loading screen is active
+    // This prevents ProtectedQueueingRoute from showing its own loading screen
+    window.dispatchEvent(new CustomEvent('queueing-header-loading-start'))
+    
     // Check if user has active reservation before navigating
     try {
       const { apiServices } = await import('@/lib/apiServices')
       const accessCheck = await apiServices.checkQueueingAccess()
       
       if (!accessCheck.hasAccess) {
+        setShowQueueingLoading(false)
+        window.dispatchEvent(new CustomEvent('queueing-header-loading-end'))
         toast.error(accessCheck.message || 'You need an active reservation to access the queueing system.')
         return
       }
       
-      // Show loading screen
-      setShowQueueingLoading(true)
-      
-      // Wait for animation, then navigate
-      // The loading screen will hide automatically when navigation completes (via useEffect)
-      setTimeout(() => {
-        navigate('/queueing')
-      }, 1500) // 1.5 seconds loading animation
+      // Navigate to queueing page
+      // The loading screen will hide when ProtectedQueueingRoute finishes checking (via event)
+      navigate('/queueing')
     } catch (error: any) {
       console.error('Error checking queueing access:', error)
+      setShowQueueingLoading(false)
+      window.dispatchEvent(new CustomEvent('queueing-header-loading-end'))
       toast.error('Failed to verify reservation access. Please try again.')
     }
   }
@@ -247,18 +253,26 @@ export function Header() {
     }
   }, [])
 
-  // Hide loading screen when navigation to queueing page completes
+  // Listen for event from ProtectedQueueingRoute when access check completes
   useEffect(() => {
-    if (location.pathname.startsWith('/queueing') && showQueueingLoading) {
-      // Small delay to ensure page has rendered
-      const timer = setTimeout(() => {
-        setShowQueueingLoading(false)
-        // Dispatch event to notify that loading screen is complete
-        window.dispatchEvent(new CustomEvent('queueing-loading-complete'))
-      }, 300)
-      return () => clearTimeout(timer)
+    const handleAccessCheckComplete = () => {
+      if (showQueueingLoading) {
+        // Small delay to ensure smooth transition
+        const timer = setTimeout(() => {
+          setShowQueueingLoading(false)
+          window.dispatchEvent(new CustomEvent('queueing-header-loading-end'))
+          // Dispatch event to notify that loading screen is complete
+          window.dispatchEvent(new CustomEvent('queueing-loading-complete'))
+        }, 300)
+        return () => clearTimeout(timer)
+      }
     }
-  }, [location.pathname, showQueueingLoading])
+
+    window.addEventListener('queueing-access-check-complete', handleAccessCheckComplete)
+    return () => {
+      window.removeEventListener('queueing-access-check-complete', handleAccessCheckComplete)
+    }
+  }, [showQueueingLoading])
 
   return (
     <>
