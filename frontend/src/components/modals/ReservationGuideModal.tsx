@@ -208,8 +208,8 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
             preload="auto"
             onEnded={() => setIsMusicPlaying(false)}
           >
-            <source src="/assets/background-music.mp3" type="audio/mpeg" />
-            <source src="/assets/background-music.ogg" type="audio/ogg" />
+            <source src="/assets/BGmusic/Upbeat and Happy Pop Background Music For Videos.mp3" type="audio/mpeg" />
+            <source src="/assets/BGmusic/Upbeat%20and%20Happy%20Pop%20Background%20Music%20For%20Videos.mp3" type="audio/mpeg" />
             Your browser does not support the audio element.
           </audio>
           
@@ -381,18 +381,18 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
             <div className="flex items-center space-x-2 md:space-x-3 flex-1 justify-end">
               <button
                 onClick={() => setShowVideo(!showVideo)}
-                className="flex items-center space-x-1 md:space-x-2 px-2 md:px-4 py-2 rounded-lg border-2 border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200 text-sm md:text-base"
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg border-2 border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200"
                 aria-label="Toggle video"
               >
                 {showVideo ? (
                   <>
                     <X className="w-4 h-4" />
-                    <span className="hidden sm:inline">Hide Video</span>
+                    <span>Hide Video</span>
                   </>
                 ) : (
                   <>
                     <Play className="w-4 h-4" />
-                    <span className="hidden sm:inline">Watch Video</span>
+                    <span>Watch Video</span>
                   </>
                 )}
               </button>
