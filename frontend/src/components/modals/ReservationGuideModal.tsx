@@ -67,6 +67,10 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   useEffect(() => {
     if (showVideo && videoRef.current) {
       videoRef.current.load()
+      // Try to play the video
+      videoRef.current.play().catch((error) => {
+        console.error('Error playing video:', error)
+      })
     }
   }, [showVideo])
 
@@ -165,8 +169,19 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   autoPlay={false}
                   preload="auto"
                   playsInline
+                  onError={(e) => {
+                    console.error('Video error:', e)
+                    const video = e.currentTarget
+                    console.error('Video error details:', {
+                      error: video.error,
+                      networkState: video.networkState,
+                      readyState: video.readyState,
+                      src: video.src
+                    })
+                  }}
                 >
                   <source src="/assets/BookingProcess Video guide/BookingProcess.mp4" type="video/mp4" />
+                  <source src="/assets/BookingProcess%20Video%20guide/BookingProcess.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
