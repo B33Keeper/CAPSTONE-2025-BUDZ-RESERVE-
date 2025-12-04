@@ -48,6 +48,7 @@ export class AuthService {
         contact_number: user.contact_number,
         profile_picture: user.profile_picture,
         role: user.role,
+        can_manage_queueing: user.can_manage_queueing,
       },
     };
   }

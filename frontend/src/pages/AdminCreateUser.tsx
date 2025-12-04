@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff } from 'lucide-react'
-import { CONTACT_NUMBER_REGEX, PASSWORD_REGEX, USERNAME_REGEX } from '@/lib/validation'
+import { CONTACT_NUMBER_REGEX, PASSWORD_REGEX, USERNAME_REGEX, formatPHPhoneNumber } from '@/lib/validation'
 import AdminSidebar from '@/components/AdminSidebar'
 import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
@@ -55,10 +55,19 @@ const createUserSchema = z
       .min(1, 'Contact number is required')
       .refine(
         (value) => {
-          const normalized = value.replace(/[\s-]/g, '').trim()
-          return CONTACT_NUMBER_REGEX.test(normalized)
+          // Remove all non-digit characters except +
+          const normalized = value.replace(/[^\d+]/g, '')
+          // Must be exactly +63 followed by 10 digits, or 10 digits starting with 9
+          // Format: +639XXXXXXXXX (13 chars) or 09XXXXXXXXX (11 chars) or 9XXXXXXXXX (10 chars)
+          if (normalized.startsWith('+63')) {
+            return normalized.length === 13 && /^\+639\d{9}$/.test(normalized)
+          } else if (normalized.startsWith('0')) {
+            return normalized.length === 11 && /^09\d{9}$/.test(normalized)
+          } else {
+            return normalized.length === 10 && /^9\d{9}$/.test(normalized)
+          }
         },
-        { message: 'Contact number must contain 10 to 15 digits and may start with +' }
+        { message: 'Contact number must be a valid Philippine mobile number (e.g., +63 9XX XXX XXXX)' }
       ),
     can_manage_queueing: z.boolean().default(false),
   })
@@ -357,12 +366,18 @@ const AdminCreateUser = () => {
                     {...register('contact_number')}
                     id="contact_number"
                     type="tel"
+                    maxLength={17}
                     className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 ${
                       errors.contact_number 
                         ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
                         : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
                     } focus:outline-none focus:ring-4 bg-white`}
-                    placeholder="Enter contact number"
+                    placeholder="+63 9XX XXX XXXX"
+                    onChange={(e) => {
+                      const formatted = formatPHPhoneNumber(e.target.value)
+                      e.target.value = formatted
+                      register('contact_number').onChange(e)
+                    }}
                   />
                   {errors.contact_number && (
                     <p className="mt-1 text-sm text-red-600">{errors.contact_number.message}</p>
