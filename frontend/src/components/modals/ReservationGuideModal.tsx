@@ -98,14 +98,22 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
       })
       
       // Play background music when video is shown
+      // Note: Browser autoplay policies may prevent this without user interaction
       if (audioRef.current && !isMusicPlaying) {
         audioRef.current.volume = 0.3 // Set volume to 30% so it doesn't overpower the video
         audioRef.current.loop = true
-        audioRef.current.play().then(() => {
-          setIsMusicPlaying(true)
-        }).catch((error) => {
-          console.error('Error playing background music:', error)
-        })
+        // Try to play - if it fails due to autoplay policy, user can manually start it
+        const playPromise = audioRef.current.play()
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsMusicPlaying(true)
+            })
+            .catch((error) => {
+              console.warn('Background music autoplay prevented by browser. User interaction required:', error)
+              // Music will be available but won't autoplay - user can click the play button
+            })
+        }
       }
     } else {
       // Stop background music when video is hidden
@@ -207,6 +215,8 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
             ref={audioRef}
             preload="auto"
             onEnded={() => setIsMusicPlaying(false)}
+            onPlay={() => setIsMusicPlaying(true)}
+            onPause={() => setIsMusicPlaying(false)}
           >
             <source src="/assets/BGmusic/Upbeat and Happy Pop Background Music For Videos.mp3" type="audio/mpeg" />
             <source src="/assets/BGmusic/Upbeat%20and%20Happy%20Pop%20Background%20Music%20For%20Videos.mp3" type="audio/mpeg" />
