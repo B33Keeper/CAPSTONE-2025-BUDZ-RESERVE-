@@ -13,6 +13,7 @@ interface EquipmentBooking {
   time: string
   subtotal: number
   quantity?: number
+  selectedCourtSchedules?: string[] // For equipment bookings - which schedules they're associated with
 }
 
 interface BookingDetailsModalProps {
@@ -154,36 +155,101 @@ export function BookingDetailsModal({
           )}
 
           {/* Equipment Bookings */}
-          {equipmentBookings.length > 0 && (
-            <div className="mb-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <Clock className="w-5 h-5 text-purple-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Equipment Rentals</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Equipment</th>
-                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Quantity</th>
-                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Time</th>
-                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {equipmentBookings.map((booking, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="border border-gray-300 px-4 py-3">{booking.equipment}</td>
-                        <td className="border border-gray-300 px-4 py-3">{booking.quantity || 1}</td>
-                        <td className="border border-gray-300 px-4 py-3">{booking.time}</td>
-                        <td className="border border-gray-300 px-4 py-3 font-medium">₱{booking.subtotal.toLocaleString()}</td>
+          {equipmentBookings.length > 0 && (() => {
+            // Organize equipment bookings: group by equipment name + schedule
+            // If same equipment + same schedule with quantity > 1 → group as "Equipment x5"
+            // If same equipment but different schedules → show separate rows with schedule specified
+            const equipmentGroups = new Map<string, {
+              equipment: string;
+              schedule: string;
+              quantity: number;
+              subtotal: number;
+              scheduleDisplay: string;
+            }>();
+            
+            equipmentBookings.forEach(booking => {
+              const quantity = booking.quantity || 1;
+              const equipmentName = booking.equipment;
+              const timeSlot = booking.time;
+              
+              // Get the associated court schedule(s) for this equipment
+              if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+                // Equipment is associated with specific court schedules
+                booking.selectedCourtSchedules.forEach(scheduleKeyStr => {
+                  const [courtName, schedule] = scheduleKeyStr.split('-');
+                  const scheduleKey = `${equipmentName}-${scheduleKeyStr}`;
+                  const scheduleDisplay = `${courtName} - ${schedule}`;
+                  
+                  if (equipmentGroups.has(scheduleKey)) {
+                    const existing = equipmentGroups.get(scheduleKey)!;
+                    existing.quantity += quantity;
+                    existing.subtotal += booking.subtotal;
+                  } else {
+                    equipmentGroups.set(scheduleKey, {
+                      equipment: equipmentName,
+                      schedule: scheduleKeyStr,
+                      quantity: quantity,
+                      subtotal: booking.subtotal,
+                      scheduleDisplay: scheduleDisplay
+                    });
+                  }
+                });
+              } else {
+                // No specific schedule association - use the time slot as schedule
+                const scheduleKey = `${equipmentName}-${timeSlot}`;
+                const scheduleDisplay = timeSlot;
+                
+                if (equipmentGroups.has(scheduleKey)) {
+                  const existing = equipmentGroups.get(scheduleKey)!;
+                  existing.quantity += quantity;
+                  existing.subtotal += booking.subtotal;
+                } else {
+                  equipmentGroups.set(scheduleKey, {
+                    equipment: equipmentName,
+                    schedule: timeSlot,
+                    quantity: quantity,
+                    subtotal: booking.subtotal,
+                    scheduleDisplay: scheduleDisplay
+                  });
+                }
+              }
+            });
+            
+            const organizedEquipmentBookings = Array.from(equipmentGroups.values());
+            
+            return (
+              <div className="mb-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <Clock className="w-5 h-5 text-purple-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Equipment Rentals</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Equipment</th>
+                        <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Schedule</th>
+                        <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Subtotal</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {organizedEquipmentBookings.map((group, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-3 font-medium">
+                            {group.quantity > 1 
+                              ? `${group.equipment} x${group.quantity}` 
+                              : group.equipment}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-3">{group.scheduleDisplay || group.schedule}</td>
+                          <td className="border border-gray-300 px-4 py-3 font-medium">₱{group.subtotal.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Total Amount */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">

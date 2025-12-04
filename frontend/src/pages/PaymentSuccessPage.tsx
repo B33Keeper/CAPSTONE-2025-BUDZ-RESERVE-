@@ -521,35 +521,93 @@ export function PaymentSuccessPage() {
             )}
 
             {/* Equipment Bookings */}
-            {bookingSummary.equipmentBookings && bookingSummary.equipmentBookings.length > 0 && (
-              <div className="mb-6">
-                <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                  Equipment Bookings
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {bookingSummary.equipmentBookings.map((booking: any, index: number) => {
-                  const quantity = booking.quantity || 1;
-                  return (
-                    <div key={index} className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {booking.equipment}
-                            {quantity > 1 && <span className="text-xs text-gray-500 ml-1">(Qty: {quantity})</span>}
-                          </p>
-                          <p className="text-xs text-gray-600 mt-0.5 truncate">{booking.time}</p>
+            {bookingSummary.equipmentBookings && bookingSummary.equipmentBookings.length > 0 && (() => {
+              // Organize equipment bookings: group by equipment name + schedule
+              const equipmentGroups = new Map<string, {
+                equipment: string;
+                schedule: string;
+                quantity: number;
+                subtotal: number;
+                scheduleDisplay: string;
+              }>();
+              
+              bookingSummary.equipmentBookings.forEach((booking: any) => {
+                const quantity = booking.quantity || 1;
+                const equipmentName = booking.equipment;
+                const timeSlot = booking.time;
+                
+                // Get the associated court schedule(s) for this equipment
+                if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+                  booking.selectedCourtSchedules.forEach((scheduleKeyStr: string) => {
+                    const [courtName, schedule] = scheduleKeyStr.split('-');
+                    const scheduleKey = `${equipmentName}-${scheduleKeyStr}`;
+                    const scheduleDisplay = `${courtName} - ${schedule}`;
+                    
+                    if (equipmentGroups.has(scheduleKey)) {
+                      const existing = equipmentGroups.get(scheduleKey)!;
+                      existing.quantity += quantity;
+                      existing.subtotal += booking.subtotal;
+                    } else {
+                      equipmentGroups.set(scheduleKey, {
+                        equipment: equipmentName,
+                        schedule: scheduleKeyStr,
+                        quantity: quantity,
+                        subtotal: booking.subtotal,
+                        scheduleDisplay: scheduleDisplay
+                      });
+                    }
+                  });
+                } else {
+                  // No specific schedule association - use the time slot as schedule
+                  const scheduleKey = `${equipmentName}-${timeSlot}`;
+                  const scheduleDisplay = timeSlot;
+                  
+                  if (equipmentGroups.has(scheduleKey)) {
+                    const existing = equipmentGroups.get(scheduleKey)!;
+                    existing.quantity += quantity;
+                    existing.subtotal += booking.subtotal;
+                  } else {
+                    equipmentGroups.set(scheduleKey, {
+                      equipment: equipmentName,
+                      schedule: timeSlot,
+                      quantity: quantity,
+                      subtotal: booking.subtotal,
+                      scheduleDisplay: scheduleDisplay
+                    });
+                  }
+                }
+              });
+              
+              const organizedEquipmentBookings = Array.from(equipmentGroups.values());
+              
+              return (
+                <div className="mb-6">
+                  <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    Equipment Bookings
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {organizedEquipmentBookings.map((group, index) => (
+                      <div key={index} className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              {group.quantity > 1 
+                                ? `${group.equipment} x${group.quantity}` 
+                                : group.equipment}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-0.5 truncate">{group.scheduleDisplay || group.schedule}</p>
+                          </div>
+                          <p className="text-sm font-bold text-indigo-600 whitespace-nowrap">₱{group.subtotal.toLocaleString()}</p>
                         </div>
-                        <p className="text-sm font-bold text-indigo-600 whitespace-nowrap">₱{booking.subtotal.toLocaleString()}</p>
                       </div>
+                    ))}
                   </div>
-                  );
-                })}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Payment Details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t-2 border-slate-200">

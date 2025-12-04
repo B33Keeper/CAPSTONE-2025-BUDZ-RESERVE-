@@ -2198,7 +2198,13 @@ export function BookingPage() {
           setCurrentStep(3)
         }}
         courtBookings={courtBookings}
-        equipmentBookings={equipmentBookings}
+        equipmentBookings={equipmentBookings.map(booking => ({
+          equipment: booking.equipment,
+          time: booking.time,
+          subtotal: booking.subtotal,
+          quantity: booking.quantity || 1,
+          selectedCourtSchedules: booking.selectedCourtSchedules
+        }))}
         totalAmount={totalAmount}
         selectedDate={selectedDate}
       />
