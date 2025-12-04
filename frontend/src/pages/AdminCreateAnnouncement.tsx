@@ -4,7 +4,6 @@ import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { AnnouncementHistoryModal } from '@/components/modals/AnnouncementHistoryModal'
 import AdminSidebar from '@/components/AdminSidebar'
-import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 import toast from 'react-hot-toast'
 
@@ -402,7 +401,6 @@ export default function AdminCreateAnnouncement() {
           </div>
         </main>
       </div>
-      <AdminFooter />
     </div>
   )
 }

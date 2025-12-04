@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { apiServices, Court, type Reservation } from '@/lib/apiServices'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
-import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 import toast from 'react-hot-toast'
 
@@ -1047,7 +1046,6 @@ const AdminManageCourts = () => {
         </div>
       )}
 
-      <AdminFooter />
     </div>
   )
 }

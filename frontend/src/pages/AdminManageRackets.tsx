@@ -3,7 +3,6 @@ import { apiServices, Equipment } from '@/lib/apiServices'
 import { resolveImageUrl } from '@/lib/imageUtils'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
-import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 
 type FeedbackType = 'success' | 'error' | 'info'
@@ -1205,7 +1204,6 @@ const AdminManageRackets = () => {
           </div>
         </div>
       )}
-      <AdminFooter />
     </div>
   )
 }

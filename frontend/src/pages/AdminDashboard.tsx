@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
 import { apiServices } from '@/lib/apiServices'
 import AdminSidebar from '@/components/AdminSidebar'
-import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 import toast from 'react-hot-toast'
 
@@ -931,7 +930,6 @@ const AdminDashboard = () => {
           </div>
         </main>
       </div>
-      <AdminFooter />
     </div>
   )
 }

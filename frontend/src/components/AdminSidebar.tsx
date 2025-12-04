@@ -151,25 +151,8 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
 
       {/* Desktop Sidebar */}
       <div 
-        className="hidden md:block fixed top-16 left-0 z-30 w-64 h-[calc(100vh-4rem-7rem)] overflow-y-auto bg-gradient-to-b from-white via-gray-50/30 to-white border-r border-gray-200/80 shadow-xl sidebar-scroll"
+        className="hidden md:block fixed top-16 left-0 z-30 w-64 h-[calc(100vh-4rem)] bg-gradient-to-b from-white via-gray-50/30 to-white border-r border-gray-200/80 shadow-xl"
       >
-        {/* Custom Scrollbar Styles */}
-        <style dangerouslySetInnerHTML={{ __html: `
-          .sidebar-scroll::-webkit-scrollbar {
-            width: 6px;
-          }
-          .sidebar-scroll::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .sidebar-scroll::-webkit-scrollbar-thumb {
-            background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
-            border-radius: 10px;
-          }
-          .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(to bottom, #94a3b8, #64748b);
-          }
-        ` }} />
-        
         {/* Logo/Branding Section */}
         <div className="flex items-center justify-center px-4 py-5 border-b border-gray-200/60 bg-gradient-to-r from-blue-50/50 via-white to-indigo-50/50 backdrop-blur-sm">
           <div className="flex items-center space-x-3 group">
@@ -270,7 +253,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
       </div>
 
       {/* Mobile Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-40 w-80 bg-gradient-to-b from-white via-gray-50/50 to-white shadow-2xl border-r border-gray-200/80 transform transition-transform duration-300 ease-out md:hidden overflow-hidden flex flex-col ${
+      <div className={`fixed inset-y-0 left-0 z-40 w-80 bg-gradient-to-b from-white via-gray-50/50 to-white shadow-2xl border-r border-gray-200/80 transform transition-transform duration-300 ease-out md:hidden ${
         isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Mobile Header */}
@@ -297,7 +280,7 @@ export function AdminSidebar({ activeItem = 'Dashboard', onItemChange }: AdminSi
           </button>
         </div>
         
-        <nav className="px-4 py-5 space-y-2 overflow-y-auto flex-1 pb-6">
+        <nav className="px-4 py-5 space-y-2 pb-6">
           {sidebarItems.map((item, index) => {
             const isActive = activeItem === item.id
             const hasDivider = !item.indented && index > 0 && !sidebarItems[index - 1].indented
