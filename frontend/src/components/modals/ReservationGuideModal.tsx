@@ -45,7 +45,7 @@ const steps = [
   {
     number: 6,
     title: 'Complete Payment',
-    description: 'Proceed to payment using your preferred method (GCash, Maya, GrabPay, or Online Banking). Your reservation will be confirmed once payment is successful.',
+    description: 'Proceed to payment using your preferred method (GCash, Maya, GrabPay, or Online Banking). Your reservation will be confirmed once payment is successful. A digital receipt will be automatically sent to your registered email address.',
     icon: CreditCard,
     color: 'teal'
   }
