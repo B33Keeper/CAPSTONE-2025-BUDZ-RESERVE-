@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Calendar, Clock, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, LogIn } from 'lucide-react'
+import { X, Calendar, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, MapPin, ShoppingCart, ClipboardCheck, Play } from 'lucide-react'
 
 interface ReservationGuideModalProps {
   isOpen: boolean
@@ -25,21 +25,21 @@ const steps = [
     number: 3,
     title: 'Choose Your Court',
     description: 'Select the court number you want to book. Available courts will be highlighted in green.',
-    icon: CheckCircle,
+    icon: MapPin,
     color: 'purple'
   },
   {
     number: 4,
     title: 'Add Equipment (Optional)',
     description: 'If you need rackets or other equipment, you can add them to your reservation. Equipment rental fees will be added to your total.',
-    icon: CheckCircle,
+    icon: ShoppingCart,
     color: 'orange'
   },
   {
     number: 5,
     title: 'Review & Confirm',
     description: 'Review your booking details including date, time, court, and total amount. Make sure all information is correct before proceeding.',
-    icon: CheckCircle,
+    icon: ClipboardCheck,
     color: 'indigo'
   },
   {
@@ -54,10 +54,12 @@ const steps = [
 export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModalProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const [showVideo, setShowVideo] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(0)
+      setShowVideo(false)
     }
   }, [isOpen])
 
@@ -104,8 +106,29 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
           >
             <X className="w-5 h-5" />
           </button>
-          <h2 className="text-2xl font-bold mb-2">How to Make a Reservation</h2>
-          <p className="text-white/90 text-sm">Follow these simple steps to book your badminton court</p>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">How to Make a Reservation</h2>
+              <p className="text-white/90 text-sm">Follow these simple steps to book your badminton court</p>
+            </div>
+            <button
+              onClick={() => setShowVideo(!showVideo)}
+              className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all duration-200 backdrop-blur-sm"
+              aria-label="Toggle video"
+            >
+              {showVideo ? (
+                <>
+                  <X className="w-4 h-4" />
+                  <span className="text-sm font-medium">Hide Video</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" />
+                  <span className="text-sm font-medium">Watch Video</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Progress Bar */}
@@ -144,33 +167,52 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="text-center mb-6">
-            <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 ${
-              currentStepData.color === 'blue' ? 'bg-blue-100' :
-              currentStepData.color === 'green' ? 'bg-green-100' :
-              currentStepData.color === 'purple' ? 'bg-purple-100' :
-              currentStepData.color === 'orange' ? 'bg-orange-100' :
-              currentStepData.color === 'indigo' ? 'bg-indigo-100' :
-              currentStepData.color === 'teal' ? 'bg-teal-100' :
-              'bg-blue-100'
-            }`}>
-              <IconComponent className={`w-10 h-10 ${
-                currentStepData.color === 'blue' ? 'text-blue-600' :
-                currentStepData.color === 'green' ? 'text-green-600' :
-                currentStepData.color === 'purple' ? 'text-purple-600' :
-                currentStepData.color === 'orange' ? 'text-orange-600' :
-                currentStepData.color === 'indigo' ? 'text-indigo-600' :
-                currentStepData.color === 'teal' ? 'text-teal-600' :
-                'text-blue-600'
-              }`} />
+          {showVideo ? (
+            <div className="w-full">
+              <div className="bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4">
+                <video
+                  className="w-full h-full object-contain"
+                  controls
+                  autoPlay={false}
+                  preload="metadata"
+                >
+                  <source src="/assets/BookingProcess Video guide/BookingProcess.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <p className="text-center text-gray-600 text-sm">
+                Watch this video guide to see the complete booking process step by step.
+              </p>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {currentStepData.number}. {currentStepData.title}
-            </h3>
-            <p className="text-gray-600 text-lg leading-relaxed">
-              {currentStepData.description}
-            </p>
-          </div>
+          ) : (
+            <div className="text-center mb-6">
+              <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 ${
+                currentStepData.color === 'blue' ? 'bg-blue-100' :
+                currentStepData.color === 'green' ? 'bg-green-100' :
+                currentStepData.color === 'purple' ? 'bg-purple-100' :
+                currentStepData.color === 'orange' ? 'bg-orange-100' :
+                currentStepData.color === 'indigo' ? 'bg-indigo-100' :
+                currentStepData.color === 'teal' ? 'bg-teal-100' :
+                'bg-blue-100'
+              }`}>
+                <IconComponent className={`w-10 h-10 ${
+                  currentStepData.color === 'blue' ? 'text-blue-600' :
+                  currentStepData.color === 'green' ? 'text-green-600' :
+                  currentStepData.color === 'purple' ? 'text-purple-600' :
+                  currentStepData.color === 'orange' ? 'text-orange-600' :
+                  currentStepData.color === 'indigo' ? 'text-indigo-600' :
+                  currentStepData.color === 'teal' ? 'text-teal-600' :
+                  'text-blue-600'
+                }`} />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {currentStepData.number}. {currentStepData.title}
+              </h3>
+              <p className="text-gray-600 text-lg leading-relaxed">
+                {currentStepData.description}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
