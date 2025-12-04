@@ -160,24 +160,6 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               {currentStepData.description}
             </p>
           </div>
-
-          {/* Visual Guide */}
-          <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
-            <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Available</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span>Booked</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span>Selected</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
