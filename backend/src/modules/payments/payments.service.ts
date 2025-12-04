@@ -115,21 +115,50 @@ export class PaymentsService {
       
       // Use query builder for more explicit control over the date range
       // This ensures we capture ALL reservations in the specified period
+      // For Reservation_Date (date type), we need to compare date-only values
+      // For Created_at (datetime type), we compare full datetime values
       const queryBuilder = this.reservationsRepository
-        .createQueryBuilder('reservation')
-        .where(`reservation.${dateField} >= :startDate`, { startDate: queryStartDate });
+        .createQueryBuilder('reservation');
       
-      if (useExclusiveEnd) {
-        queryBuilder.andWhere(`reservation.${dateField} < :endDate`, { endDate: endDateForQuery });
+      if (useCreatedAt) {
+        // Created_at is datetime - compare full datetime
+        queryBuilder.where(`reservation.Created_at >= :startDate`, { startDate: queryStartDate });
+        if (useExclusiveEnd) {
+          queryBuilder.andWhere(`reservation.Created_at < :endDate`, { endDate: endDateForQuery });
+        } else {
+          queryBuilder.andWhere(`reservation.Created_at <= :endDate`, { endDate: endDateForQuery });
+        }
+        queryBuilder.orderBy('reservation.Created_at', 'DESC');
       } else {
-        queryBuilder.andWhere(`reservation.${dateField} <= :endDate`, { endDate: endDateForQuery });
+        // Reservation_Date is date type - need to compare date-only
+        // For date fields, TypeORM/MySQL will automatically compare date part only
+        // But we need to ensure we're using the correct date range
+        // For inclusive end, we need to include the full end date
+        const startDateOnly = new Date(queryStartDate);
+        startDateOnly.setHours(0, 0, 0, 0);
+        
+        // For end date, if exclusive, use the date before; if inclusive, use the end date
+        const endDateForComparison = useExclusiveEnd 
+          ? new Date(endDateForQuery)
+          : new Date(queryEndDate);
+        endDateForComparison.setHours(23, 59, 59, 999);
+        
+        if (useExclusiveEnd) {
+          // For exclusive, we want < endDate, so we compare with the date itself (not next day)
+          queryBuilder.where(`reservation.Reservation_Date >= :startDate`, { startDate: startDateOnly });
+          queryBuilder.andWhere(`reservation.Reservation_Date < :endDate`, { endDate: endDateForComparison });
+        } else {
+          // For inclusive, use <= to include the end date
+          queryBuilder.where(`reservation.Reservation_Date >= :startDate`, { startDate: startDateOnly });
+          queryBuilder.andWhere(`reservation.Reservation_Date <= :endDate`, { endDate: endDateForComparison });
+        }
+        queryBuilder.orderBy('reservation.Reservation_Date', 'DESC');
       }
       
       reservations = await queryBuilder
         .leftJoinAndSelect('reservation.user', 'user')
         .leftJoinAndSelect('reservation.court', 'court')
         .leftJoinAndSelect('reservation.payments', 'payments')
-        .orderBy(`reservation.${dateField}`, 'DESC')
         .getMany();
       
       console.log(`[SalesReport Service] Found ${reservations.length} reservations in date range (filtered by ${dateField})`);
