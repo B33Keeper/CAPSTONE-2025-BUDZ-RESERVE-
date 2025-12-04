@@ -38,13 +38,14 @@ export function HomePage() {
       {/* Floating "How it Works" Button - Lower Left */}
       <motion.button
         onClick={() => setShowGuide(true)}
-        className="fixed bottom-6 left-6 z-40 flex items-center space-x-2 px-6 py-4 text-white bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 rounded-lg font-semibold transition-all duration-300 group shadow-lg"
+        className="fixed bottom-6 left-6 z-40 flex items-center space-x-2 px-6 py-4 text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 backdrop-blur-sm border-2 border-white/50 rounded-lg font-semibold transition-all duration-300 group shadow-2xl"
         whileHover={{ scale: 1.05, y: -2 }}
         whileTap={{ scale: 0.95 }}
         aria-label="How it Works"
+        style={{ boxShadow: '0 10px 30px rgba(59, 130, 246, 0.5)' }}
       >
         <HelpCircle className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-        <span>How it Works</span>
+        <span className="font-bold">How it Works</span>
       </motion.button>
       
       <ReservationGuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
