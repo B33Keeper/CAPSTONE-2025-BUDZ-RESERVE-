@@ -128,31 +128,74 @@ export class PaymentsController {
             console.log(`[SalesReport Controller] Daily period - Resets at midnight, matching Admin Dashboard behavior`);
             break;
           case 'weekly':
-            // Weekly: Show last 7 days including today (today and 6 days before)
-            // Full week period from start of first day to end of last day
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0);
-            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            // Weekly: Show the full calendar week (Monday to Sunday) containing the current date
+            // If today is December 5, show December 1 (Monday) to December 7 (Sunday)
+            // This resets every week on Monday
+            const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+            // Calculate days to subtract to get to Monday (start of week)
+            // If Sunday (0), go back 6 days to get Monday. If Monday (1), go back 0 days. If Tuesday (2), go back 1 day, etc.
+            const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            // Calculate days to add to get to Sunday (end of week)
+            // If Sunday (0), add 0 days. If Monday (1), add 6 days. If Tuesday (2), add 5 days, etc.
+            const daysToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+            
+            // Start of week: Monday at 00:00:00.000
+            const mondayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysToMonday, 0, 0, 0, 0);
+            // End of week: Sunday at 23:59:59.999
+            const sundayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysToSunday, 23, 59, 59, 999);
+            
+            startDate = mondayDate;
+            endDate = sundayDate;
+            
+            console.log(`[SalesReport Controller] Weekly period - Day of week: ${dayOfWeek} (0=Sun, 1=Mon, ..., 6=Sat)`);
+            console.log(`[SalesReport Controller] Weekly period - Days to Monday: ${daysToMonday}, Days to Sunday: ${daysToSunday}`);
+            console.log(`[SalesReport Controller] Weekly period - Start (Monday): ${startDate.toISOString()}, End (Sunday): ${endDate.toISOString()}`);
+            console.log(`[SalesReport Controller] Weekly period - Resets every Monday, shows full week (Mon-Sun)`);
             break;
           case 'monthly':
             // Monthly: Show complete current month (1st to last day of month)
+            // Filters by Reservation_Date, shows all reservations from the 1st to the last day of the month
+            // Resets every month on the 1st
             startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-            // Get last day of current month
+            // Get last day of current month (using month + 1, day 0 = last day of previous month)
             const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
             endDate = lastDayOfMonth;
+            
+            console.log(`[SalesReport Controller] Monthly period - Current month: ${now.getMonth() + 1}/${now.getFullYear()}`);
+            console.log(`[SalesReport Controller] Monthly period - Start (1st of month): ${startDate.toISOString()}, End (last day): ${endDate.toISOString()}`);
+            console.log(`[SalesReport Controller] Monthly period - Resets every 1st of month, shows full month range`);
             break;
           case 'quarterly':
             // Quarterly: Show complete current quarter
+            // Q1: Jan-Mar, Q2: Apr-Jun, Q3: Jul-Sep, Q4: Oct-Dec
+            // Filters by Reservation_Date, shows all reservations from first day to last day of quarter
+            // Resets every quarter (Jan 1, Apr 1, Jul 1, Oct 1)
             const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+            const quarterNumber = Math.floor(now.getMonth() / 3) + 1;
             startDate = new Date(now.getFullYear(), quarterStartMonth, 1, 0, 0, 0, 0);
             // Get last day of current quarter (end of 3rd month of quarter)
             const quarterEndMonth = quarterStartMonth + 2;
             const lastDayOfQuarter = new Date(now.getFullYear(), quarterEndMonth + 1, 0, 23, 59, 59, 999);
             endDate = lastDayOfQuarter;
+            
+            const quarterMonthNames = ['January', 'April', 'July', 'October'];
+            const quarterEndMonthNames = ['March', 'June', 'September', 'December'];
+            
+            console.log(`[SalesReport Controller] Quarterly period - Current quarter: Q${quarterNumber} ${now.getFullYear()}`);
+            console.log(`[SalesReport Controller] Quarterly period - Quarter range: ${quarterMonthNames[quarterNumber - 1]} to ${quarterEndMonthNames[quarterNumber - 1]}`);
+            console.log(`[SalesReport Controller] Quarterly period - Start (1st of quarter): ${startDate.toISOString()}, End (last day of quarter): ${endDate.toISOString()}`);
+            console.log(`[SalesReport Controller] Quarterly period - Resets every quarter start, shows full quarter range`);
             break;
           case 'yearly':
-            // Yearly: Show complete current year (Jan 1 to Dec 31)
+            // Yearly: Show complete current year (January 1 to December 31)
+            // Filters by Reservation_Date, shows all reservations from Jan 1 to Dec 31
+            // Resets every year on January 1st
             startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
             endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+            
+            console.log(`[SalesReport Controller] Yearly period - Current year: ${now.getFullYear()}`);
+            console.log(`[SalesReport Controller] Yearly period - Start (Jan 1): ${startDate.toISOString()}, End (Dec 31): ${endDate.toISOString()}`);
+            console.log(`[SalesReport Controller] Yearly period - Resets every January 1st, shows full year range (Jan 1 - Dec 31)`);
             break;
           default:
             startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
