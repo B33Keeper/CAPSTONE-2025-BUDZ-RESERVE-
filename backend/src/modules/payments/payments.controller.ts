@@ -161,7 +161,10 @@ export class PaymentsController {
       }
 
       console.log(`[SalesReport Controller] Final date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
-      const result = await this.paymentsService.getSalesReport(startDate, endDate);
+      // Pass period to service so it knows which date field to filter by
+      const periodValue: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' = 
+        (period as any) || 'daily';
+      const result = await this.paymentsService.getSalesReport(startDate, endDate, periodValue);
       console.log(`[SalesReport Controller] Found ${result.data.length} records, summary:`, result.summary);
       return result;
     } catch (error) {
@@ -201,8 +204,8 @@ export class PaymentsController {
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
       const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
       
-      // Get sales report result
-      const salesReportResult = await this.paymentsService.getSalesReport(todayStart, todayEnd);
+      // Get sales report result (debug endpoint uses daily period)
+      const salesReportResult = await this.paymentsService.getSalesReport(todayStart, todayEnd, 'daily');
       
       // Get debug data from service
       const debugData = await this.paymentsService.debugReservationsData(todayStart, todayEnd);

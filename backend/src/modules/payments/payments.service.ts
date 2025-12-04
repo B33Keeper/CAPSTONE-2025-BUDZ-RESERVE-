@@ -75,12 +75,18 @@ export class PaymentsService {
     return this.findOne(id);
   }
 
-  async getSalesReport(startDate: Date, endDate: Date) {
-    console.log(`[SalesReport Service] Fetching sales report between ${startDate.toISOString()} and ${endDate.toISOString()}`);
+  async getSalesReport(startDate: Date, endDate: Date, period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' = 'daily') {
+    console.log(`[SalesReport Service] Fetching sales report between ${startDate.toISOString()} and ${endDate.toISOString()} for period: ${period}`);
     
     // Create new date objects to avoid mutating the original dates
     const queryStartDate = new Date(startDate);
     const queryEndDate = new Date(endDate);
+    
+    // Determine which date field to filter by based on period
+    // Daily: Filter by Created_at (when reservation was created) - resets every day at midnight
+    // Weekly/Monthly/Quarterly/Yearly: Filter by Reservation_Date (actual reservation date) - follows period range
+    const useCreatedAt = period === 'daily';
+    const dateField = useCreatedAt ? 'Created_at' : 'Reservation_Date';
     
     // For daily reports, ensure we capture the full day (12:00 AM to 11:59:59 PM)
     // Calculate next day's start time for exclusive upper bound
@@ -89,42 +95,51 @@ export class PaymentsService {
     nextDayStart.setDate(nextDayStart.getDate() + 1);
     nextDayStart.setHours(0, 0, 0, 0);
     
+    // For non-daily periods, use inclusive end date (end of the period)
+    // For daily, use exclusive upper bound (next day start)
+    const useExclusiveEnd = period === 'daily';
+    const endDateForQuery = useExclusiveEnd ? nextDayStart : queryEndDate;
+    const endDateOperator = useExclusiveEnd ? '<' : '<=';
+    
     // Log the dates for debugging
     console.log(`[SalesReport Service] Query dates - Start: ${queryStartDate.toISOString()} (Local: ${queryStartDate.toLocaleString()}), End: ${queryEndDate.toISOString()} (Local: ${queryEndDate.toLocaleString()})`);
-    console.log(`[SalesReport Service] Query range: >= ${queryStartDate.toISOString()} AND < ${nextDayStart.toISOString()} (captures full day 12:00 AM to 11:59:59 PM)`);
-    
-    // IMPORTANT: Filter by Created_at (when reservation was created) - same logic as Admin Dashboard
-    // Daily reports filter by Created_at to show reservations created today
-    // This ensures Daily data resets every day at midnight (12:00 AM), matching Admin Dashboard behavior
-    // At midnight, the date changes, so the next query filters by the new day's date automatically
+    console.log(`[SalesReport Service] Filtering by ${dateField} (${useCreatedAt ? 'Created_at - resets daily' : 'Reservation_Date - follows period range'})`);
+    console.log(`[SalesReport Service] Query range: ${dateField} >= ${queryStartDate.toISOString()} AND ${dateField} ${endDateOperator} ${endDateForQuery.toISOString()}`);
     
     // Use database WHERE clause instead of fetching all and filtering in JavaScript
     // This is MUCH faster, especially with large datasets
-    // Use MoreThanOrEqual and LessThan to ensure we capture the full day range
-    // This approach is more reliable than Between for capturing all records from 12:00 AM to 11:59:59 PM
+    // Use MoreThanOrEqual and LessThan/LessThanOrEqual to ensure we capture the full range
     let reservations;
     try {
       console.log(`[SalesReport Service] Querying reservations with date filter at database level...`);
       
       // Use query builder for more explicit control over the date range
-      // This ensures we capture ALL reservations from 12:00:00.000 AM to 11:59:59.999 PM
-      reservations = await this.reservationsRepository
+      // This ensures we capture ALL reservations in the specified period
+      const queryBuilder = this.reservationsRepository
         .createQueryBuilder('reservation')
-        .where('reservation.Created_at >= :startDate', { startDate: queryStartDate })
-        .andWhere('reservation.Created_at < :nextDayStart', { nextDayStart: nextDayStart })
+        .where(`reservation.${dateField} >= :startDate`, { startDate: queryStartDate });
+      
+      if (useExclusiveEnd) {
+        queryBuilder.andWhere(`reservation.${dateField} < :endDate`, { endDate: endDateForQuery });
+      } else {
+        queryBuilder.andWhere(`reservation.${dateField} <= :endDate`, { endDate: endDateForQuery });
+      }
+      
+      reservations = await queryBuilder
         .leftJoinAndSelect('reservation.user', 'user')
         .leftJoinAndSelect('reservation.court', 'court')
         .leftJoinAndSelect('reservation.payments', 'payments')
-        .orderBy('reservation.Created_at', 'DESC')
+        .orderBy(`reservation.${dateField}`, 'DESC')
         .getMany();
       
-      console.log(`[SalesReport Service] Found ${reservations.length} reservations created in date range (12:00 AM to 11:59:59 PM)`);
+      console.log(`[SalesReport Service] Found ${reservations.length} reservations in date range (filtered by ${dateField})`);
       
-      // Debug: Log first few reservation Created_at dates to verify they're in range
+      // Debug: Log first few reservation dates to verify they're in range
       if (reservations.length > 0) {
         console.log(`[SalesReport Service] Sample reservation dates:`);
         reservations.slice(0, 3).forEach((res, idx) => {
-          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: Created_at = ${res.Created_at?.toISOString()} (Local: ${res.Created_at?.toLocaleString()})`);
+          const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
+          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: ${dateField} = ${dateValue?.toISOString()} (Local: ${dateValue?.toLocaleString()})`);
         });
       } else {
         console.log(`[SalesReport Service] No reservations found. Running debug queries...`);
@@ -136,28 +151,31 @@ export class PaymentsService {
         // Debug 2: Check what date range we're querying
         console.log(`[SalesReport Service] Debug - Query range: ${queryStartDate.toISOString()} to ${queryEndDate.toISOString()}`);
         console.log(`[SalesReport Service] Debug - Query range local: ${queryStartDate.toLocaleString()} to ${queryEndDate.toLocaleString()}`);
+        console.log(`[SalesReport Service] Debug - Filtering by: ${dateField}`);
         
         // Debug 3: Get ALL recent reservations (last 7 days) to see what dates exist
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const recentReservations = await this.reservationsRepository.find({
-          where: {
-            Created_at: MoreThanOrEqual(sevenDaysAgo),
-          },
-          select: ['Reservation_ID', 'Created_at'],
-          order: { Created_at: 'DESC' },
+          where: useCreatedAt 
+            ? { Created_at: MoreThanOrEqual(sevenDaysAgo) }
+            : { Reservation_Date: MoreThanOrEqual(sevenDaysAgo) },
+          select: ['Reservation_ID', 'Created_at', 'Reservation_Date'],
+          order: useCreatedAt ? { Created_at: 'DESC' } : { Reservation_Date: 'DESC' },
           take: 10,
         });
-        console.log(`[SalesReport Service] Debug: Found ${recentReservations.length} reservations in last 7 days:`);
+        console.log(`[SalesReport Service] Debug: Found ${recentReservations.length} reservations in last 7 days (by ${dateField}):`);
         recentReservations.forEach((res, idx) => {
-          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: Created_at = ${res.Created_at?.toISOString()} (Local: ${res.Created_at?.toLocaleString()})`);
+          const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
+          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: ${dateField} = ${dateValue?.toISOString()} (Local: ${dateValue?.toLocaleString()})`);
         });
         
         // Debug 4: Check if query dates match any reservation dates
         if (recentReservations.length > 0) {
           const queryDateStr = queryStartDate.toISOString().split('T')[0];
           const matchingReservations = recentReservations.filter(res => {
-            const resDateStr = res.Created_at?.toISOString().split('T')[0];
+            const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
+            const resDateStr = dateValue?.toISOString().split('T')[0];
             return resDateStr === queryDateStr;
           });
           console.log(`[SalesReport Service] Debug: ${matchingReservations.length} reservations match query date (${queryDateStr})`);
