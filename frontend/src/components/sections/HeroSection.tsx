@@ -3,13 +3,8 @@ import { useAuthStore } from '@/store/authStore'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
 import toast from 'react-hot-toast'
-import { HelpCircle } from 'lucide-react'
 
-interface HeroSectionProps {
-  onShowGuide?: () => void
-}
-
-export function HeroSection({ onShowGuide }: HeroSectionProps = {}) {
+export function HeroSection() {
   const { isAuthenticated } = useAuthStore()
   const { ref, controls } = useScrollAnimation()
   const navigate = useNavigate()
@@ -169,7 +164,7 @@ export function HeroSection({ onShowGuide }: HeroSectionProps = {}) {
           initial={{ opacity: 0, y: 30 }}
           animate={controls}
           transition={{ duration: 0.8, delay: 0.8 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="flex justify-center"
         >
           {isAuthenticated ? (
             <motion.button
@@ -286,19 +281,6 @@ export function HeroSection({ onShowGuide }: HeroSectionProps = {}) {
                 </span>
               </Link>
             </motion.div>
-          )}
-          
-          {/* How it Works Button */}
-          {onShowGuide && (
-            <motion.button
-              onClick={onShowGuide}
-              className="flex items-center space-x-2 px-6 py-4 text-white bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 rounded-lg font-semibold transition-all duration-300 group"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <HelpCircle className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-              <span>How it Works</span>
-            </motion.button>
           )}
         </motion.div>
       </motion.div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Calendar, Clock, CreditCard, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react'
+import { X, Calendar, Clock, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, LogIn } from 'lucide-react'
 
 interface ReservationGuideModalProps {
   isOpen: boolean
@@ -9,38 +9,45 @@ interface ReservationGuideModalProps {
 const steps = [
   {
     number: 1,
-    title: 'Select Date & Time',
-    description: 'Choose your preferred date and time slot for your badminton court reservation. You can select multiple time slots if needed.',
-    icon: Calendar,
+    title: 'Create Account & Login',
+    description: 'First, you need to create an account if you don\'t have one yet. Click "Get Started" or "Sign Up" to register. After creating your account, make sure to log in. You must be logged in to make a reservation.',
+    icon: UserPlus,
     color: 'blue'
   },
   {
     number: 2,
-    title: 'Choose Your Court',
-    description: 'Select the court number you want to book. Available courts will be highlighted in green.',
-    icon: CheckCircle,
+    title: 'Select Date & Time',
+    description: 'Choose your preferred date and time slot for your badminton court reservation. You can select multiple time slots if needed.',
+    icon: Calendar,
     color: 'green'
   },
   {
     number: 3,
-    title: 'Add Equipment (Optional)',
-    description: 'If you need rackets or other equipment, you can add them to your reservation. Equipment rental fees will be added to your total.',
+    title: 'Choose Your Court',
+    description: 'Select the court number you want to book. Available courts will be highlighted in green.',
     icon: CheckCircle,
     color: 'purple'
   },
   {
     number: 4,
-    title: 'Review & Confirm',
-    description: 'Review your booking details including date, time, court, and total amount. Make sure all information is correct before proceeding.',
+    title: 'Add Equipment (Optional)',
+    description: 'If you need rackets or other equipment, you can add them to your reservation. Equipment rental fees will be added to your total.',
     icon: CheckCircle,
     color: 'orange'
   },
   {
     number: 5,
+    title: 'Review & Confirm',
+    description: 'Review your booking details including date, time, court, and total amount. Make sure all information is correct before proceeding.',
+    icon: CheckCircle,
+    color: 'indigo'
+  },
+  {
+    number: 6,
     title: 'Complete Payment',
     description: 'Proceed to payment using your preferred method (GCash, Maya, GrabPay, or Online Banking). Your reservation will be confirmed once payment is successful.',
     icon: CreditCard,
-    color: 'indigo'
+    color: 'teal'
   }
 ]
 
@@ -143,14 +150,18 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               currentStepData.color === 'green' ? 'bg-green-100' :
               currentStepData.color === 'purple' ? 'bg-purple-100' :
               currentStepData.color === 'orange' ? 'bg-orange-100' :
-              'bg-indigo-100'
+              currentStepData.color === 'indigo' ? 'bg-indigo-100' :
+              currentStepData.color === 'teal' ? 'bg-teal-100' :
+              'bg-blue-100'
             }`}>
               <IconComponent className={`w-10 h-10 ${
                 currentStepData.color === 'blue' ? 'text-blue-600' :
                 currentStepData.color === 'green' ? 'text-green-600' :
                 currentStepData.color === 'purple' ? 'text-purple-600' :
                 currentStepData.color === 'orange' ? 'text-orange-600' :
-                'text-indigo-600'
+                currentStepData.color === 'indigo' ? 'text-indigo-600' :
+                currentStepData.color === 'teal' ? 'text-teal-600' :
+                'text-blue-600'
               }`} />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
