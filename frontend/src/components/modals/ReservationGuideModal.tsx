@@ -161,7 +161,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
         <div className="flex-1 overflow-y-auto p-6">
           {showVideo ? (
             <div className="w-full">
-              <div className="bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4">
+              <div className="bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4 relative">
                 <video
                   ref={videoRef}
                   className="w-full h-full object-contain"
@@ -184,6 +184,23 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   <source src="/assets/BookingProcess%20Video%20guide/BookingProcess.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-900 mb-1">
+                      💡 Tip: Watch in Fullscreen
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      For the best viewing experience, click the fullscreen button (⛶) in the video player controls to watch in fullscreen mode.
+                    </p>
+                  </div>
+                </div>
               </div>
               <p className="text-center text-gray-600 text-sm">
                 Watch this video guide to see the complete booking process step by step.
