@@ -29,7 +29,6 @@ interface AuthState {
 
 interface RegisterData {
   name: string
-  age: number
   sex: 'Male' | 'Female'
   username: string
   email: string
