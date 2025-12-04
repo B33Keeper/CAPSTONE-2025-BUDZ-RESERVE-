@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { Eye, EyeOff } from 'lucide-react'
 import { CONTACT_NUMBER_REGEX, PASSWORD_REGEX, USERNAME_REGEX, formatPHPhoneNumber } from '@/lib/validation'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 
 const createUserSchema = z
@@ -421,6 +422,11 @@ const AdminCreateUser = () => {
             </div>
           </div>
         </main>
+        
+        {/* Footer - positioned to the right of sidebar */}
+        <footer className="md:ml-64">
+          <AdminFooter />
+        </footer>
       </div>
     </div>
   )

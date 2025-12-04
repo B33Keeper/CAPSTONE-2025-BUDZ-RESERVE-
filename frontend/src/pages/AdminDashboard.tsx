@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
 import { apiServices } from '@/lib/apiServices'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 import toast from 'react-hot-toast'
 
@@ -929,6 +930,11 @@ const AdminDashboard = () => {
             </div>
           </div>
         </main>
+        
+        {/* Footer - positioned to the right of sidebar */}
+        <footer className="md:ml-64">
+          <AdminFooter />
+        </footer>
       </div>
     </div>
   )

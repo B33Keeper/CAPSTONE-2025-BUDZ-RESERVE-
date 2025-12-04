@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 import toast from 'react-hot-toast'
 
@@ -719,6 +720,11 @@ const AdminViewSuggestions = () => {
           </div>
         </div>
       )}
+      
+      {/* Footer - positioned to the right of sidebar */}
+      <footer className="md:ml-64">
+        <AdminFooter />
+      </footer>
     </div>
   )
 }

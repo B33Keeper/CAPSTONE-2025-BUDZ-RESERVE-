@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { apiServices, Court, type Reservation } from '@/lib/apiServices'
 import api from '@/lib/api'
 import AdminSidebar from '@/components/AdminSidebar'
+import AdminFooter from '@/components/AdminFooter'
 import { AdminHeader } from '@/components/AdminHeader'
 import toast from 'react-hot-toast'
 
@@ -380,21 +381,12 @@ const AdminManageCourts = () => {
             <div className="hidden lg:block overflow-x-auto w-full">
               <table className="w-full table-auto">
                 <colgroup>
-                  <col className="w-[25%]" />
-                  <col className="w-[25%]" />
-                  <col className="w-[25%]" />
-                  <col className="w-[25%]" />
+                  <col className="w-[33%]" />
+                  <col className="w-[33%]" />
+                  <col className="w-[34%]" />
                 </colgroup>
                 <thead className="bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700 text-white">
                   <tr>
-                    <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
-                      <div className="flex items-center justify-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                        Court No.
-                      </div>
-                    </th>
                     <th className="px-6 py-4 text-center text-sm font-bold uppercase tracking-wider">
                       <div className="flex items-center justify-center gap-2">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -424,7 +416,7 @@ const AdminManageCourts = () => {
                 <tbody className="divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center align-middle">
+                      <td colSpan={3} className="px-6 py-12 text-center align-middle">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
                           <span className="text-gray-600">Loading courts...</span>
@@ -433,22 +425,17 @@ const AdminManageCourts = () => {
                     </tr>
                   ) : error ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-red-600 align-middle">{error}</td>
+                      <td colSpan={3} className="px-6 py-12 text-center text-red-600 align-middle">{error}</td>
                     </tr>
                   ) : currentCourts.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500 align-middle">No courts available</td>
+                      <td colSpan={3} className="px-6 py-12 text-center text-gray-500 align-middle">No courts available</td>
                     </tr>
                   ) : (
                     currentCourts.map((court, index) => (
                       <tr key={court.Court_Id} className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 group ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                         <td className="px-6 py-4 text-sm font-bold text-gray-900 align-middle text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                              <span className="text-blue-700 font-bold text-xs">{court.Court_Id}</span>
-                            </div>
-                            <span>{court.Court_Name}</span>
-                          </div>
+                          <span>{court.Court_Name}</span>
                         </td>
                         <td className="px-6 py-4 align-middle text-center">
                           <div className="flex justify-center">
@@ -537,13 +524,7 @@ const AdminManageCourts = () => {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center border-2 border-blue-200">
-                          <span className="text-blue-700 font-bold text-lg">{court.Court_Id}</span>
-                        </div>
                         <div>
-                          <span className="text-xs font-semibold uppercase tracking-widest text-blue-500 block mb-1">
-                            Court
-                          </span>
                           <h3 className="text-xl font-bold text-gray-900">{court.Court_Name}</h3>
                         </div>
                       </div>
@@ -1046,6 +1027,10 @@ const AdminManageCourts = () => {
         </div>
       )}
 
+      {/* Footer - positioned to the right of sidebar */}
+      <footer className="md:ml-64">
+        <AdminFooter />
+      </footer>
     </div>
   )
 }
