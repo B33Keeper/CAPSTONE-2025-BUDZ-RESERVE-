@@ -6,12 +6,11 @@ import { useAuthStore } from '@/store/authStore'
 import { api } from '@/lib/api'
 import { resolveImageUrl } from '@/lib/imageUtils'
 import toast from 'react-hot-toast'
-import { User, Mail, Phone, Calendar, Save, Upload, Lock, X } from 'lucide-react'
+import { User, Mail, Phone, Save, Upload, Lock, X } from 'lucide-react'
 import { formatPHPhoneNumber } from '@/lib/validation'
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  age: z.number().min(1, 'Age must be at least 1').max(120, 'Age must be less than 120'),
   sex: z.enum(['Male', 'Female']),
   email: z.string().email('Please enter a valid email address'),
   contact_number: z.string().optional(),
@@ -56,7 +55,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: user?.name || '',
-      age: user?.age || 0,
       sex: (user?.sex as 'Male' | 'Female') || 'Male',
       email: user?.email || '',
       contact_number: user?.contact_number ? formatPHPhoneNumber(user.contact_number) : '',
@@ -69,7 +67,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       const formattedContact = user.contact_number ? formatPHPhoneNumber(user.contact_number) : ''
       profileForm.reset({
         name: user.name || '',
-        age: user.age || 0,
         sex: (user.sex as 'Male' | 'Female') || 'Male',
         email: user.email || '',
         contact_number: formattedContact,
@@ -511,41 +508,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                     )}
                   </div>
 
-                  {/* Age and Sex Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
-                    {/* Age Field */}
-                    <div className="space-y-2 sm:space-y-3">
-                      <label className="text-xs sm:text-sm font-bold text-gray-800 flex items-center">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full mr-2 sm:mr-3"></div>
-                        Age
-                      </label>
-                      <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 md:pl-4 flex items-center pointer-events-none">
-                          <div className="p-1 sm:p-1.5 md:p-2 rounded-lg bg-purple-50 group-focus-within:bg-purple-100 transition-colors duration-300">
-                            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-500 group-focus-within:text-purple-600 transition-colors duration-200" />
-                          </div>
-                        </div>
-                        <input
-                          {...profileForm.register('age', { valueAsNumber: true })}
-                          type="number"
-                          className="w-full pl-11 sm:pl-14 md:pl-16 lg:pl-20 pr-3 sm:pr-4 md:pr-6 py-2.5 sm:py-3 md:py-4 lg:py-5 border-2 border-gray-200 rounded-lg sm:rounded-xl md:rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/80 focus:bg-white shadow-sm hover:shadow-md focus:shadow-lg text-sm sm:text-base"
-                          placeholder="Enter your age"
-                        />
-                      </div>
-                      {profileForm.formState.errors.age && (
-                        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl">
-                          <p className="text-sm text-red-600 flex items-center">
-                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                            {profileForm.formState.errors.age.message}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Sex Field */}
-                    <div className="space-y-2 sm:space-y-3">
+                  {/* Gender Field */}
+                  <div className="space-y-2 sm:space-y-3">
                       <label className="text-xs sm:text-sm font-bold text-gray-800 flex items-center">
                         <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-pink-500 rounded-full mr-2 sm:mr-3"></div>
                         Gender
@@ -586,7 +550,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         </div>
                       )}
                     </div>
-                  </div>
 
                   {/* Contact Number Field */}
                   <div className="space-y-2 sm:space-y-3">
