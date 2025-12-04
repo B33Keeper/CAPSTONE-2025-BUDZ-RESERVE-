@@ -93,21 +93,10 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true })
         try {
           const response = await api.post('/auth/register', userData)
-          const { access_token, user } = response.data
-
-          // Convert profile picture path to full URL if it exists
-          if (user.profile_picture) {
-            user.profile_picture = resolveImageUrl(user.profile_picture)
-          }
-
-          localStorage.setItem('access_token', access_token)
-          set({
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          })
-
-          return { user, access_token }
+          // Don't automatically log in the user after registration
+          // They need to log in manually
+          set({ isLoading: false })
+          return { user: response.data.user, access_token: response.data.access_token }
         } catch (error: any) {
           set({ isLoading: false })
           throw new Error(error.response?.data?.message || 'Registration failed')

@@ -130,9 +130,9 @@ export function SignupPage() {
         contact_number: userData.contact_number.replace(/[\s-]/g, '').trim(),
       }
       await registerUser(sanitizedData)
-      toast.success('Account created successfully!')
+      toast.success('Account created successfully! Please log in to continue.')
       reset()
-      navigate('/')
+      navigate('/login')
     } catch (error) {
       const message = getErrorMessage(error, 'Registration failed')
       setError('root', { type: 'manual', message })
