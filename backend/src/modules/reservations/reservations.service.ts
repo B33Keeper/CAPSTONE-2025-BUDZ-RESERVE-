@@ -1770,6 +1770,17 @@ export class ReservationsService {
           `[Equipment Rental] ✅ Multi-schedule rental detected: ${b.selectedCourtSchedules.length} schedule(s) selected: ${b.selectedCourtSchedules.join(', ')}`
         );
         
+        // Ensure equipmentRow exists before creating rental items
+        if (!equipmentRow) {
+          this.logger.error(
+            `[Equipment Rental] ❌ Equipment "${b.equipment}" not found. Cannot create rental items for multi-schedule rental.`
+          );
+          throw new BadRequestException(`Equipment "${b.equipment}" not found.`);
+        }
+        
+        // Assign to a non-nullable variable for TypeScript
+        const equipment = equipmentRow;
+        
         // Create a separate rental item for EACH schedule
         for (const scheduleKey of b.selectedCourtSchedules) {
           let scheduleRentalStartTime: Date | null = null;
@@ -1804,12 +1815,12 @@ export class ReservationsService {
               scheduleRentalEndTime = scheduleEnd > minEndTime ? scheduleEnd : minEndTime;
               
               // Check if rental item already exists for this specific schedule time range
-              if (equipmentRow && scheduleRentalStartTime && scheduleRentalEndTime) {
+              if (scheduleRentalStartTime && scheduleRentalEndTime) {
                 const existingScheduleRental = await this.equipmentRentalItemRepository
                   .createQueryBuilder('item')
                   .innerJoin('item.rental', 'rental')
                   .where('rental.reservation_id = :reservationId', { reservationId: reservation.Reservation_ID })
-                  .andWhere('item.equipment_id = :equipmentId', { equipmentId: equipmentRow.id })
+                  .andWhere('item.equipment_id = :equipmentId', { equipmentId: equipment.id })
                   .andWhere('item.rental_start_time = :startTime', { startTime: scheduleRentalStartTime })
                   .andWhere('item.rental_end_time = :endTime', { endTime: scheduleRentalEndTime })
                   .getOne();
@@ -1817,7 +1828,7 @@ export class ReservationsService {
                 if (existingScheduleRental) {
                   this.logger.warn(
                     `[Equipment Rental] ⚠️ Rental item already exists for schedule ${scheduleKey} ` +
-                    `(equipment: ${equipmentRow.equipment_name}, reservation: ${reservation.Reservation_ID}). ` +
+                    `(equipment: ${equipment.equipment_name}, reservation: ${reservation.Reservation_ID}). ` +
                     `Skipping to prevent duplicate.`
                   );
                   continue; // Skip this schedule - already has a rental item
@@ -1838,7 +1849,7 @@ export class ReservationsService {
               
               const rentalItem = this.equipmentRentalItemRepository.create({
                 rental_id: savedRental.id,
-                equipment_id: equipmentRow.id,
+                equipment_id: equipment.id,
                 quantity: quantity,
                 hours: hours,
                 hourly_price: hourlyPrice,
@@ -1853,7 +1864,7 @@ export class ReservationsService {
               total += scheduleSubtotal;
               
               this.logger.log(
-                `[Equipment Rental] ✅ Created rental item ${rentalItem.id} for ${equipmentRow.equipment_name} ` +
+                `[Equipment Rental] ✅ Created rental item ${rentalItem.id} for ${equipment.equipment_name} ` +
                 `(qty: ${quantity}) for schedule ${scheduleKey}. Stock reduced for this schedule.`
               );
             }
