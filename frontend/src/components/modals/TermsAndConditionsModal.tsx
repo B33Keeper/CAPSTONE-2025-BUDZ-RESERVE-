@@ -186,6 +186,7 @@ export function TermsAndConditionsModal({ isOpen, onClose, onAccept, initialAcce
                     <li>Rackets and any rented equipment are for use <strong>within the premises of Budz Badminton Court only</strong>.</li>
                     <li>Removing rented equipment from the venue is strictly prohibited.</li>
                     <li>Rented items must be returned in good condition at the end of your booked time.</li>
+                    <li>Customers will be <strong>liable and required to pay the full price</strong> of any racket or equipment that is damaged or destroyed during the rental period.</li>
                   </ul>
                 </div>
               </div>
