@@ -217,7 +217,7 @@ export class PaymentsService {
             
             // Fetch payments by original reservation ID
             const payments = await this.paymentsRepository.find({
-              where: { Reservation_ID: historyRecord.Original_ID }
+              where: { reservation_id: historyRecord.Original_ID }
             });
             
             // Create a reservation-like object matching the Reservation entity structure
