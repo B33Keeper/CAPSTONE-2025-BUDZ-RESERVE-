@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Calendar, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, MapPin, ShoppingCart, ClipboardCheck, Play } from 'lucide-react'
+import { TermsAndConditionsModal } from './TermsAndConditionsModal'
+import { useAuthStore } from '@/store/authStore'
 
 interface ReservationGuideModalProps {
   isOpen: boolean
@@ -17,7 +19,7 @@ const steps = [
   {
     number: 2,
     title: 'Select Date & Time',
-    description: 'Choose your preferred date and time slot for your badminton court reservation. You can select multiple time slots if needed.',
+    description: 'Choose your preferred date and time slot for your badminton court reservation. You can select multiple time slots if needed. Before proceeding to the next step, you must read and accept the Terms and Conditions.',
     icon: Calendar,
     color: 'green'
   },
@@ -57,14 +59,24 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   const [showVideo, setShowVideo] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [isTermsAccepted, setIsTermsAccepted] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const { user } = useAuthStore()
 
   useEffect(() => {
     if (isOpen) {
       setCurrentStep(0)
       setShowVideo(false)
       setIsMusicPlaying(false)
+      // Check if terms are already accepted
+      if (user?.id) {
+        const termsAccepted = localStorage.getItem(`termsAccepted_${user.id}`) === 'true'
+        setIsTermsAccepted(termsAccepted)
+      } else {
+        setIsTermsAccepted(false)
+      }
     }
     
     // Cleanup: stop music when modal closes
@@ -75,7 +87,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
         setIsMusicPlaying(false)
       }
     }
-  }, [isOpen])
+  }, [isOpen, user?.id])
 
   useEffect(() => {
     // Detect if user is on mobile device
@@ -92,29 +104,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   useEffect(() => {
     if (showVideo && videoRef.current) {
       videoRef.current.load()
-      // Try to play the video
-      videoRef.current.play().catch((error) => {
-        console.error('Error playing video:', error)
-      })
-      
-      // Play background music when video is shown
-      // Note: Browser autoplay policies may prevent this without user interaction
-      if (audioRef.current && !isMusicPlaying) {
-        audioRef.current.volume = 0.3 // Set volume to 30% so it doesn't overpower the video
-        audioRef.current.loop = true
-        // Try to play - if it fails due to autoplay policy, user can manually start it
-        const playPromise = audioRef.current.play()
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              setIsMusicPlaying(true)
-            })
-            .catch((error) => {
-              console.warn('Background music autoplay prevented by browser. User interaction required:', error)
-              // Music will be available but won't autoplay - user can click the play button
-            })
-        }
-      }
+      // Don't auto-play video or music - let user control it
     } else {
       // Stop background music when video is hidden
       if (audioRef.current && isMusicPlaying) {
@@ -125,6 +115,33 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
     }
   }, [showVideo, isMusicPlaying])
 
+  // Handle video play - start background music
+  const handleVideoPlay = () => {
+    if (audioRef.current && !isMusicPlaying) {
+      audioRef.current.volume = 0.3 // Set volume to 30% so it doesn't overpower the video
+      audioRef.current.loop = true
+      const playPromise = audioRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsMusicPlaying(true)
+          })
+          .catch((error) => {
+            console.warn('Background music play prevented:', error)
+          })
+      }
+    }
+  }
+
+  // Handle video end - stop background music
+  const handleVideoEnd = () => {
+    if (audioRef.current && isMusicPlaying) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setIsMusicPlaying(false)
+    }
+  }
+
   const handleClose = () => {
     if (dontShowAgain) {
       localStorage.setItem('reservation-guide-disabled', 'true')
@@ -133,6 +150,25 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   }
 
   const handleNext = () => {
+    // If on step 2 (index 1) and terms not accepted, show terms modal
+    if (currentStep === 1 && !isTermsAccepted) {
+      setShowTermsModal(true)
+      return
+    }
+    
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handleTermsAccept = () => {
+    // Store acceptance in localStorage if user is logged in
+    if (user?.id) {
+      localStorage.setItem(`termsAccepted_${user.id}`, 'true')
+    }
+    setIsTermsAccepted(true)
+    setShowTermsModal(false)
+    // Proceed to next step (step 3)
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1)
     }
@@ -150,14 +186,24 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   const IconComponent = currentStepData.icon
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleClose()
-        }
-      }}
-    >
+    <>
+      {/* Terms and Conditions Modal */}
+      <TermsAndConditionsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={handleTermsAccept}
+        initialAccepted={isTermsAccepted}
+        onAcceptedChange={setIsTermsAccepted}
+      />
+
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            handleClose()
+          }
+        }}
+      >
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-300">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 text-white relative">
@@ -233,6 +279,8 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   autoPlay={false}
                   preload="auto"
                   playsInline
+                  onPlay={handleVideoPlay}
+                  onEnded={handleVideoEnd}
                   onError={(e) => {
                     console.error('Video error:', e)
                     const video = e.currentTarget
@@ -391,7 +439,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
