@@ -230,54 +230,121 @@ const AdminSalesReport = () => {
         return
       }
 
-      // Create new PDF document
-      const doc = new jsPDF()
+      // Create new PDF document in landscape for better table layout
+      const doc = new jsPDF('landscape', 'mm', 'a4')
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      const margin = 15
+      const contentWidth = pageWidth - (margin * 2)
       
       // Generate filename with period and date
       const date = new Date().toISOString().split('T')[0]
       const periodLabel = periods.find(p => p.value === selectedPeriod)?.label || 'Daily'
       
-      // Add title
-      doc.setFontSize(18)
-      doc.text('Sales Report', 14, 20)
-      
-      // Add period and date info
-      doc.setFontSize(11)
-      let yPos = 30
-      doc.text(`Period: ${periodLabel}`, 14, yPos)
-      yPos += 6
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, yPos)
-      
+      // Calculate date range for display
+      let dateRangeText = ''
       if (dateFrom || dateTo) {
-        yPos += 6
-        const dateRange = dateFrom && dateTo 
-          ? `${new Date(dateFrom).toLocaleDateString()} - ${new Date(dateTo).toLocaleDateString()}`
+        dateRangeText = dateFrom && dateTo 
+          ? `${new Date(dateFrom).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} - ${new Date(dateTo).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
           : dateFrom 
-          ? `From: ${new Date(dateFrom).toLocaleDateString()}`
-          : `To: ${new Date(dateTo).toLocaleDateString()}`
-        doc.text(`Date Range: ${dateRange}`, 14, yPos)
-      }
-      
-      if (searchQuery) {
-        yPos += 6
-        doc.text(`Filtered by: "${searchQuery}"`, 14, yPos)
+          ? `From: ${new Date(dateFrom).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+          : `Until: ${new Date(dateTo).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+      } else {
+        const periodRange = getPeriodDateRange()
+        const startDateStr = periodRange.start.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        const endDateStr = periodRange.end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        if (selectedPeriod === 'daily') {
+          dateRangeText = endDateStr
+        } else {
+          dateRangeText = `${startDateStr} - ${endDateStr}`
+        }
       }
 
-      // Prepare table data
+      // Header Section
+      let yPos = margin
+      
+      // Company/Business Name
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Budz Reserve', margin, yPos)
+      
+      // Report Title
+      yPos += 8
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Sales Report', margin, yPos)
+      
+      // Report Details
+      yPos += 7
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      
+      // Period
+      doc.setFont('helvetica', 'bold')
+      doc.text('Period:', margin, yPos)
+      doc.setFont('helvetica', 'normal')
+      doc.text(periodLabel, margin + 20, yPos)
+      
+      // Date Range
+      yPos += 5
+      doc.setFont('helvetica', 'bold')
+      doc.text('Date Range:', margin, yPos)
+      doc.setFont('helvetica', 'normal')
+      doc.text(dateRangeText, margin + 30, yPos)
+      
+      // Generated Date
+      const generatedDate = new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      yPos += 5
+      doc.setFont('helvetica', 'bold')
+      doc.text('Generated:', margin, yPos)
+      doc.setFont('helvetica', 'normal')
+      doc.text(generatedDate, margin + 28, yPos)
+      
+      // Search filter if applied
+      if (searchQuery) {
+        yPos += 5
+        doc.setFont('helvetica', 'bold')
+        doc.text('Filter:', margin, yPos)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`"${searchQuery}"`, margin + 20, yPos)
+      }
+
+      // Prepare table data with better formatting
       const tableData = dataToExport.map(item => {
-        // Format equipment rentals
+        // Format equipment rentals more compactly
         const equipmentInfo = item.equipmentRentals && item.equipmentRentals.length > 0
           ? item.equipmentRentals.map(rental => 
-              `${rental.equipmentName} (Qty: ${rental.quantity}, ${rental.hours}h)`
-            ).join('; ')
-          : 'None'
+              `${rental.equipmentName} (${rental.quantity}x, ${rental.hours}h)`
+            ).join(', ')
+          : '-'
+
+        // Format court names (limit if too long)
+        let courtName = item.courtName || 'N/A'
+        if (courtName.length > 30) {
+          const courts = courtName.split(',').map(c => c.trim())
+          courtName = courts.length > 2 ? `${courts.slice(0, 2).join(', ')} +${courts.length - 2}` : courtName
+        }
+
+        // Format time (limit if too long)
+        let time = item.time || 'N/A'
+        if (time.length > 25) {
+          const times = time.split(',').map(t => t.trim())
+          time = times.length > 2 ? `${times.slice(0, 2).join(', ')} +${times.length - 2}` : time
+        }
 
         return [
           item.reservationId.toString(),
-          item.customerName,
-          item.courtName,
-          item.time,
-          item.date,
+          item.customerName.length > 20 ? item.customerName.substring(0, 17) + '...' : item.customerName,
+          courtName,
+          time,
+          item.date || 'N/A',
           item.paymentMethod,
           equipmentInfo,
           formatPrice(item.price),
@@ -285,54 +352,13 @@ const AdminSalesReport = () => {
         ]
       })
 
-      // Add table using autoTable
-      autoTable(doc, {
-        head: [['Reservation ID', 'Customer Name', 'Court Name', 'Time', 'Date', 'Payment Method', 'Racket Rent / Duration', 'Price', 'Status']],
-        body: tableData,
-        startY: yPos + 8,
-        styles: { 
-          fontSize: 7,
-          cellPadding: 1.5,
-          overflow: 'linebreak',
-          cellWidth: 'wrap'
-        },
-        headStyles: { 
-          fillColor: [66, 139, 202], 
-          textColor: 255, 
-          fontStyle: 'bold',
-          fontSize: 7,
-          halign: 'center'
-        },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
-        columnStyles: {
-          0: { cellWidth: 16, halign: 'center' }, // Reservation ID
-          1: { cellWidth: 25, halign: 'left' }, // Customer Name
-          2: { cellWidth: 16, halign: 'center' }, // Court Name
-          3: { cellWidth: 20, halign: 'center' }, // Time
-          4: { cellWidth: 20, halign: 'center' }, // Date
-          5: { cellWidth: 18, halign: 'center' }, // Payment Method
-          6: { cellWidth: 32, halign: 'left', overflow: 'linebreak' }, // Racket Rent / Duration - wrap text
-          7: { cellWidth: 18, halign: 'right' }, // Price
-          8: { cellWidth: 16, halign: 'center' } // Status
-        },
-        margin: { 
-          left: 10,
-          right: 10,
-          top: searchQuery ? 48 : 42
-        },
-        tableWidth: 'wrap'
-      })
-
-      // Calculate summary from filtered data
-      // Count individual court reservations (not transactions)
+      // Calculate summary before table
       const filteredSummary = dataToExport.reduce(
         (acc, item) => {
-          // Count courts by splitting comma-separated court names
           const courtCount = item.courtName ? item.courtName.split(',').length : 1
           acc.totalReservations += courtCount
           acc.totalIncome += item.price
           if (item.status === 'cancelled') {
-            // Count cancelled courts, not transactions
             acc.totalCancellations += courtCount
           }
           return acc
@@ -340,14 +366,111 @@ const AdminSalesReport = () => {
         { totalReservations: 0, totalIncome: 0, totalCancellations: 0 }
       )
 
-      // Add summary section
-      const finalY = (doc as any).lastAutoTable?.finalY || doc.internal.pageSize.height - 40
-      doc.setFontSize(12)
-      doc.text('Summary', 14, finalY + 15)
+      // Add table using autoTable with better styling
+      autoTable(doc, {
+        head: [['ID', 'Customer', 'Court', 'Time', 'Date', 'Payment', 'Equipment', 'Amount', 'Status']],
+        body: tableData,
+        startY: yPos + 10,
+        margin: { left: margin, right: margin },
+        styles: { 
+          fontSize: 8,
+          cellPadding: 2,
+          overflow: 'linebreak',
+          cellWidth: 'wrap',
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1
+        },
+        headStyles: { 
+          fillColor: [37, 99, 235], // Blue header
+          textColor: [255, 255, 255], 
+          fontStyle: 'bold',
+          fontSize: 9,
+          halign: 'center'
+        },
+        alternateRowStyles: { 
+          fillColor: [249, 250, 251] // Light gray
+        },
+        columnStyles: {
+          0: { cellWidth: 15, halign: 'center' }, // ID
+          1: { cellWidth: 35, halign: 'left' }, // Customer
+          2: { cellWidth: 30, halign: 'left', overflow: 'linebreak' }, // Court
+          3: { cellWidth: 35, halign: 'left', overflow: 'linebreak' }, // Time
+          4: { cellWidth: 30, halign: 'center' }, // Date
+          5: { cellWidth: 25, halign: 'center' }, // Payment
+          6: { cellWidth: 40, halign: 'left', overflow: 'linebreak' }, // Equipment
+          7: { cellWidth: 25, halign: 'right' }, // Amount
+          8: { cellWidth: 20, halign: 'center' } // Status
+        },
+        didDrawPage: (data: any) => {
+          // Add page numbers
+          const pageCount = doc.getNumberOfPages()
+          doc.setFontSize(8)
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(128, 128, 128)
+          doc.text(
+            `Page ${data.pageNumber} of ${pageCount}`,
+            pageWidth - margin,
+            pageHeight - 10,
+            { align: 'right' }
+          )
+        }
+      })
+
+      // Summary Section
+      const finalY = (doc as any).lastAutoTable?.finalY || pageHeight - 50
       
+      // Draw summary box
+      const summaryY = finalY + 10
+      const summaryHeight = 35
+      
+      // Summary background
+      doc.setFillColor(240, 240, 240)
+      doc.roundedRect(margin, summaryY, contentWidth, summaryHeight, 3, 3, 'F')
+      
+      // Summary title
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(0, 0, 0)
+      doc.text('Summary', margin + 5, summaryY + 8)
+      
+      // Summary content
       doc.setFontSize(10)
-      doc.text(`Total Court Reservations: ${filteredSummary.totalReservations}`, 14, finalY + 25)
-      doc.text(`Total Income: ${formatPrice(filteredSummary.totalIncome)}`, 14, finalY + 32)
+      doc.setFont('helvetica', 'normal')
+      const summaryStartY = summaryY + 18
+      
+      // Left column
+      doc.setFont('helvetica', 'bold')
+      doc.text('Total Reservations:', margin + 5, summaryStartY)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`${filteredSummary.totalReservations}`, margin + 50, summaryStartY)
+      
+      doc.setFont('helvetica', 'bold')
+      doc.text('Total Income:', margin + 5, summaryStartY + 7)
+      doc.setFont('helvetica', 'normal')
+      doc.text(formatPrice(filteredSummary.totalIncome), margin + 50, summaryStartY + 7)
+      
+      // Right column
+      if (filteredSummary.totalCancellations > 0) {
+        doc.setFont('helvetica', 'bold')
+        doc.text('Cancellations:', margin + contentWidth / 2 + 5, summaryStartY)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`${filteredSummary.totalCancellations}`, margin + contentWidth / 2 + 50, summaryStartY)
+      }
+      
+      doc.setFont('helvetica', 'bold')
+      doc.text('Total Records:', margin + contentWidth / 2 + 5, summaryStartY + 7)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`${dataToExport.length}`, margin + contentWidth / 2 + 50, summaryStartY + 7)
+
+      // Footer note
+      doc.setFontSize(8)
+      doc.setTextColor(128, 128, 128)
+      doc.text(
+        'This is an automated report generated by Budz Reserve Management System',
+        margin,
+        pageHeight - 5,
+        { align: 'left' }
+      )
 
       // Save the PDF
       const filename = `Sales_Report_${periodLabel}_${date}.pdf`
