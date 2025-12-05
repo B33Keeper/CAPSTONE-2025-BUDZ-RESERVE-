@@ -100,32 +100,36 @@ export class PaymentsController {
             // The report shows all reservations CREATED today (from 00:00:00.000 to 23:59:59.999)
             // At midnight, the date changes and the report automatically shows only new day's data
             
-            // Get current date components in local timezone
-            const todayYear = now.getFullYear();
-            const todayMonth = now.getMonth();
-            const todayDay = now.getDate();
+            // CRITICAL: Use Asia/Manila timezone for daily reports to match business operations
+            // This ensures that "today" means December 6 in Manila time, not UTC time
+            // Convert current UTC time to Asia/Manila timezone
+            const manilaTimeString = now.toLocaleString('en-US', { timeZone: 'Asia/Manila' });
+            const manilaDate = new Date(manilaTimeString);
             
-            // Create start of day in local timezone (00:00:00.000)
-            // This is the reset point - each new day starts at 00:00:00.000
-            const localStart = new Date(todayYear, todayMonth, todayDay, 0, 0, 0, 0);
+            // Get date components in Manila timezone
+            const todayYear = manilaDate.getFullYear();
+            const todayMonth = manilaDate.getMonth();
+            const todayDay = manilaDate.getDate();
             
-            // Create end of day in local timezone (23:59:59.999)
-            // Using end of day ensures:
-            // 1. The report shows all records from the current day until midnight
-            // 2. The day only resets at actual midnight (12:00 AM), matching Admin Dashboard behavior
-            // 3. All records from the current day are included until the clock hits midnight
-            const localEnd = new Date(todayYear, todayMonth, todayDay, 23, 59, 59, 999);
+            // Create start of day in Manila timezone (00:00:00.000)
+            // Format: "YYYY-MM-DD HH:mm:ss" in Manila timezone, then convert to Date
+            const manilaStartString = `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-${String(todayDay).padStart(2, '0')} 00:00:00`;
+            const manilaEndString = `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-${String(todayDay).padStart(2, '0')} 23:59:59`;
             
-            // Use local dates directly - TypeORM will handle timezone conversion for database queries
-            // CRITICAL: At midnight, the date changes, so the next query will filter by the new day's date
-            // This ensures Daily data resets every day automatically, matching Admin Dashboard behavior
-            startDate = localStart;
-            endDate = localEnd;
+            // Create dates by parsing in Manila timezone context
+            // We'll create a date that represents midnight in Manila, then convert to UTC for database query
+            const manilaStartDate = new Date(`${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}T00:00:00+08:00`);
+            const manilaEndDate = new Date(`${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}T23:59:59.999+08:00`);
             
-            console.log(`[SalesReport Controller] Daily period - Start: ${startDate.toISOString()}, End: ${endDate.toISOString()}`);
-            console.log(`[SalesReport Controller] Daily period - Local Start: ${startDate.toLocaleString()}, Local End: ${endDate.toLocaleString()}`);
-            console.log(`[SalesReport Controller] Daily period - Now: ${now.toISOString()}, Now Local: ${now.toLocaleString()}`);
-            console.log(`[SalesReport Controller] Daily period - Resets at midnight, matching Admin Dashboard behavior`);
+            // These dates are now in UTC but represent the start/end of day in Manila
+            startDate = manilaStartDate;
+            endDate = manilaEndDate;
+            
+            console.log(`[SalesReport Controller] Daily period - Manila time: ${manilaTimeString}`);
+            console.log(`[SalesReport Controller] Daily period - Manila date: ${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`);
+            console.log(`[SalesReport Controller] Daily period - Start (UTC): ${startDate.toISOString()}, End (UTC): ${endDate.toISOString()}`);
+            console.log(`[SalesReport Controller] Daily period - Start (Manila): ${startDate.toLocaleString('en-US', { timeZone: 'Asia/Manila' })}, End (Manila): ${endDate.toLocaleString('en-US', { timeZone: 'Asia/Manila' })}`);
+            console.log(`[SalesReport Controller] Daily period - Resets at midnight Manila time, matching Admin Dashboard behavior`);
             break;
           case 'weekly':
             // Weekly: Show the full calendar week (Monday to Sunday) containing the current date
