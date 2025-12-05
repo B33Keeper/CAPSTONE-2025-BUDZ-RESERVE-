@@ -158,6 +158,14 @@ export class PaymentsService {
           endDate: endDateStr // YYYY-MM-DD format (no timezone conversion)
         });
         queryBuilder.orderBy('reservation.Reservation_Date', 'DESC');
+        
+        // Verify the query with a raw SQL check for non-daily periods
+        const rawCheck = await this.reservationsRepository.manager.query(
+          `SELECT COUNT(*) as count FROM reservations 
+           WHERE Reservation_Date >= ? AND Reservation_Date <= ?`,
+          [startDateStr, endDateStr]
+        );
+        console.log(`[SalesReport Service] Raw SQL check - Found ${rawCheck[0]?.count || 0} active reservations matching date range (${startDateStr} to ${endDateStr})`);
       }
       
       reservations = await queryBuilder
@@ -333,6 +341,62 @@ export class PaymentsService {
       
       console.log(`[SalesReport Service] Total reservations (active + history): ${reservations.length}`);
       
+      // CRITICAL DEBUG: If no reservations found, check what's actually in the database
+      if (reservations.length === 0) {
+        console.log(`[SalesReport Service] ⚠️ NO RESERVATIONS FOUND! Running comprehensive debug...`);
+        
+        // Helper function for date formatting (reuse the same logic)
+        const formatDateString = (date: Date): string => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        
+        // Check ALL reservations in active table (no date filter)
+        const allActiveCount = await this.reservationsRepository.count();
+        console.log(`[SalesReport Service] Debug - Total active reservations in database: ${allActiveCount}`);
+        
+        // Check ALL reservations in history table (no date filter)
+        const allHistoryCount = await this.reservationsHistoryRepository.count();
+        console.log(`[SalesReport Service] Debug - Total history reservations in database: ${allHistoryCount}`);
+        
+        // Get sample dates from active table
+        const sampleActive = await this.reservationsRepository.manager.query(
+          'SELECT Reservation_ID, Reservation_Date, Status, Created_at FROM reservations ORDER BY Reservation_Date DESC LIMIT 10'
+        );
+        console.log(`[SalesReport Service] Debug - Sample active reservations:`, sampleActive);
+        
+        // Get sample dates from history table
+        const sampleHistory = await this.reservationsHistoryRepository.manager.query(
+          'SELECT History_ID, original_id, Reservation_Date, Status FROM reservations_history ORDER BY Reservation_Date DESC LIMIT 10'
+        );
+        console.log(`[SalesReport Service] Debug - Sample history reservations:`, sampleHistory);
+        
+        // Try querying with a wider date range to see if we get any results
+        const wideStart = new Date(queryStartDate);
+        wideStart.setMonth(wideStart.getMonth() - 1); // Go back 1 month
+        const wideEnd = new Date(queryEndDate);
+        wideEnd.setMonth(wideEnd.getMonth() + 1); // Go forward 1 month
+        
+        const wideStartStr = formatDateString(wideStart);
+        const wideEndStr = formatDateString(wideEnd);
+        
+        console.log(`[SalesReport Service] Debug - Trying wider date range: ${wideStartStr} to ${wideEndStr}`);
+        
+        const wideActive = await this.reservationsRepository.manager.query(
+          'SELECT COUNT(*) as count FROM reservations WHERE Reservation_Date >= ? AND Reservation_Date <= ?',
+          [wideStartStr, wideEndStr]
+        );
+        console.log(`[SalesReport Service] Debug - Reservations in wider range (active): ${wideActive[0]?.count || 0}`);
+        
+        const wideHistory = await this.reservationsHistoryRepository.manager.query(
+          'SELECT COUNT(*) as count FROM reservations_history WHERE Reservation_Date >= ? AND Reservation_Date <= ?',
+          [wideStartStr, wideEndStr]
+        );
+        console.log(`[SalesReport Service] Debug - Reservations in wider range (history): ${wideHistory[0]?.count || 0}`);
+      }
+      
       // Debug: Log first few reservation dates to verify they're in range
       if (reservations.length > 0) {
         console.log(`[SalesReport Service] Sample reservation dates:`);
@@ -421,11 +485,18 @@ export class PaymentsService {
 
       // Group reservations by transaction (same grouping logic, but don't require completed payments)
       // IMPORTANT: All reservations from the same transaction share the same Reference_Number and Paymongo_Reference_Number
+      console.log(`[SalesReport] Starting to process ${reservations.length} reservations for grouping`);
+      let cancelledCount = 0;
+      let processedCount = 0;
+      
       for (const reservation of reservations) {
         // Skip cancelled reservations (SAME as Admin Dashboard - excludes cancelled)
         if (reservation.Status === ReservationStatus.CANCELLED) {
+          cancelledCount++;
+          console.log(`[SalesReport] Skipping cancelled reservation ${reservation.Reservation_ID}`);
           continue;
         }
+        processedCount++;
         
         // PRIMARY GROUPING: Use Reference_Number or Paymongo_Reference_Number
         // All reservations created from the same PayMongo payment share these values
@@ -508,6 +579,8 @@ export class PaymentsService {
       
       // Equipment rentals will be fetched and added to total AFTER all reservations are grouped
     }
+    
+    console.log(`[SalesReport] Finished processing: ${processedCount} processed, ${cancelledCount} cancelled, ${transactionMap.size} transactions created`);
 
     // CRITICAL FIX: Calculate transaction totals AFTER all reservations are grouped
     // This prevents double-counting when payment is linked to only one reservation but transaction has multiple
