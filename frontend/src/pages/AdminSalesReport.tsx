@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
@@ -379,7 +379,7 @@ const AdminSalesReport = () => {
   }, [])
 
   // Fetch sales report data
-  const fetchSalesReport = async (period: string, forceRefresh = false) => {
+  const fetchSalesReport = useCallback(async (period: string, forceRefresh = false) => {
     try {
       setLoading(true)
       console.log(`[SalesReport] Fetching sales report for period: ${period}`, { forceRefresh })
@@ -405,12 +405,65 @@ const AdminSalesReport = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchSalesReport(selectedPeriod)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPeriod])
+
+  // Auto-refresh daily sales report at midnight (12:00 AM) to match dashboard behavior
+  useEffect(() => {
+    // Only set up midnight refresh for daily period
+    if (selectedPeriod !== 'daily') return
+
+    let midnightTimer: ReturnType<typeof setTimeout>
+
+    const scheduleMidnightRefresh = () => {
+      const now = new Date()
+      const nextMidnight = new Date(now)
+      nextMidnight.setHours(24, 0, 0, 0) // Next midnight
+      const msUntilMidnight = nextMidnight.getTime() - now.getTime()
+
+      console.log(`[SalesReport] Daily report will auto-refresh at midnight (in ${Math.round(msUntilMidnight / 1000 / 60)} minutes)`)
+
+      midnightTimer = setTimeout(async () => {
+        console.log('[SalesReport] Midnight reset triggered - Refreshing daily sales report')
+        // Refresh the daily report data
+        await fetchSalesReport('daily', true)
+        console.log('[SalesReport] Daily report refreshed after midnight reset')
+        // Schedule next midnight refresh
+        scheduleMidnightRefresh()
+      }, Math.max(msUntilMidnight, 0))
+    }
+
+    scheduleMidnightRefresh()
+
+    return () => {
+      if (midnightTimer) {
+        clearTimeout(midnightTimer)
+      }
+    }
+  }, [selectedPeriod, fetchSalesReport])
+
+  // Also check periodically if the day has changed (for cases where user keeps page open)
+  const lastCheckedDateRef = useRef<string>(new Date().toDateString())
+  
+  useEffect(() => {
+    // Only check for daily period
+    if (selectedPeriod !== 'daily') return
+
+    const checkDateChange = setInterval(() => {
+      const currentDate = new Date().toDateString()
+      if (currentDate !== lastCheckedDateRef.current) {
+        console.log('[SalesReport] Date changed detected - Refreshing daily sales report')
+        lastCheckedDateRef.current = currentDate
+        fetchSalesReport('daily', true)
+      }
+    }, 60000) // Check every minute
+
+    return () => clearInterval(checkDateChange)
+  }, [selectedPeriod, fetchSalesReport])
 
 
   // Reset pagination when search query or date filters change
