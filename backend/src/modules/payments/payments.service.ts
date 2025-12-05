@@ -469,7 +469,7 @@ export class PaymentsService {
         if (recentReservations.length > 0) {
           const queryDateStr = queryStartDate.toISOString().split('T')[0];
           const matchingReservations = recentReservations.filter(res => {
-            const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
+            const dateValue: any = useCreatedAt ? res.Created_at : res.Reservation_Date;
             // Handle both Date objects and date strings
             let resDateStr: string | null = null;
             if (dateValue instanceof Date) {
@@ -477,7 +477,7 @@ export class PaymentsService {
             } else if (typeof dateValue === 'string') {
               resDateStr = dateValue.split('T')[0];
             } else if (dateValue) {
-              resDateStr = new Date(dateValue as any).toISOString().split('T')[0];
+              resDateStr = new Date(dateValue).toISOString().split('T')[0];
             }
             return resDateStr === queryDateStr;
           });
