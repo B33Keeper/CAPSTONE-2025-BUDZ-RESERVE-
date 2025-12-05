@@ -380,33 +380,99 @@ const AdminDashboard = () => {
       setRecentReservations(sortedByCreated.slice(0, 5))
       
       // Get today's upcoming reservations (reservations scheduled for today that haven't ended)
+      // Use local timezone for accurate date comparison
       const now = new Date()
-      const todayStr = now.toISOString().split('T')[0]
+      const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const todayStr = `${todayLocal.getFullYear()}-${String(todayLocal.getMonth() + 1).padStart(2, '0')}-${String(todayLocal.getDate()).padStart(2, '0')}`
+      
+      console.log('[Dashboard] Filtering today\'s upcoming reservations:', {
+        todayStr,
+        totalReservations: safeReservations.length,
+        now: now.toISOString(),
+        nowLocal: now.toLocaleString()
+      })
+      
       const todayUpcoming = safeReservations.filter((res: any) => {
         const resDate = res.Reservation_Date || res.reservation_date
-        if (!resDate) return false
+        if (!resDate) {
+          console.log('[Dashboard] Reservation missing date:', res.Reservation_ID || res.id)
+          return false
+        }
         
-        const resDateStr = new Date(resDate).toISOString().split('T')[0]
-        if (resDateStr !== todayStr) return false
+        // Parse reservation date - handle both YYYY-MM-DD strings and Date objects
+        let resDateObj: Date
+        if (typeof resDate === 'string' && resDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          // Direct date string (YYYY-MM-DD)
+          const [year, month, day] = resDate.split('-').map(Number)
+          resDateObj = new Date(year, month - 1, day)
+        } else {
+          resDateObj = new Date(resDate)
+        }
+        
+        if (isNaN(resDateObj.getTime())) {
+          console.log('[Dashboard] Invalid date:', resDate, res.Reservation_ID || res.id)
+          return false
+        }
+        
+        const resDateLocal = new Date(resDateObj.getFullYear(), resDateObj.getMonth(), resDateObj.getDate())
+        const resDateStr = `${resDateLocal.getFullYear()}-${String(resDateLocal.getMonth() + 1).padStart(2, '0')}-${String(resDateLocal.getDate()).padStart(2, '0')}`
+        
+        if (resDateStr !== todayStr) {
+          return false
+        }
         
         const status = (res.Status || res.status || '').toLowerCase()
-        if (status === 'cancelled') return false
+        // Only exclude cancelled reservations, include all other statuses (confirmed, pending, etc.)
+        if (status === 'cancelled' || status === 'canceled') {
+          console.log('[Dashboard] Reservation cancelled:', res.Reservation_ID || res.id)
+          return false
+        }
         
-        // Check if reservation hasn't ended yet
+        // Check if reservation hasn't ended yet using local time
         const endTime = res.End_Time || res.end_time
-        if (!endTime) return true
+        if (!endTime) {
+          // If no end time, include it (might be all-day or time not set)
+          console.log('[Dashboard] Reservation included (no end time):', res.Reservation_ID || res.id)
+          return true
+        }
         
         const [hours, minutes] = endTime.split(':').map(Number)
-        const endDateTime = new Date(resDate)
-        endDateTime.setHours(hours, minutes, 0, 0)
+        if (isNaN(hours)) {
+          // Invalid time format, include it anyway
+          return true
+        }
         
-        return endDateTime > now
+        const endDateTime = new Date(resDateLocal)
+        endDateTime.setHours(hours || 0, minutes || 0, 0, 0)
+        
+        const isUpcoming = endDateTime > now
+        if (!isUpcoming) {
+          console.log('[Dashboard] Reservation ended:', {
+            id: res.Reservation_ID || res.id,
+            endTime,
+            endDateTime: endDateTime.toISOString(),
+            now: now.toISOString()
+          })
+        }
+        
+        return isUpcoming
       }).sort((a: any, b: any) => {
         const timeA = (a.Start_Time || a.start_time || '').split(':').map(Number)
         const timeB = (b.Start_Time || b.start_time || '').split(':').map(Number)
         if (timeA[0] !== timeB[0]) return timeA[0] - timeB[0]
-        return timeA[1] - timeB[1]
+        return (timeA[1] || 0) - (timeB[1] || 0)
       })
+      
+      console.log('[Dashboard] Today\'s upcoming reservations found:', {
+        count: todayUpcoming.length,
+        reservations: todayUpcoming.map((r: any) => ({
+          id: r.Reservation_ID || r.id,
+          date: r.Reservation_Date || r.reservation_date,
+          time: `${r.Start_Time || r.start_time} - ${r.End_Time || r.end_time}`,
+          status: r.Status || r.status
+        }))
+      })
+      
       setTodayUpcomingReservations(todayUpcoming.slice(0, 5))
       
       setLoading(false)
@@ -919,11 +985,32 @@ const AdminDashboard = () => {
                   recentReservations.map((res: any) => {
                     const courtName = res.court?.Court_Name || res.Court_Name || 'N/A'
                     const customerName = res.user?.Name || res.user?.name || 'Guest'
-                    const date = res.Reservation_Date || res.reservation_date
-                    const time = `${res.Start_Time || res.start_time || ''} - ${res.End_Time || res.end_time || ''}`
+                    const reservationDate = res.Reservation_Date || res.reservation_date
+                    const startTime = res.Start_Time || res.start_time || ''
+                    const endTime = res.End_Time || res.end_time || ''
                     const status = (res.Status || res.status || '').toLowerCase()
                     const createdDate = new Date(res.Created_at || res.created_at || Date.now())
                     const timeAgo = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60))
+                    
+                    // Format time to 12-hour format
+                    const formatTime = (timeStr: string) => {
+                      if (!timeStr) return 'N/A'
+                      const [hours, minutes] = timeStr.split(':').map(Number)
+                      if (isNaN(hours)) return timeStr
+                      const period = hours >= 12 ? 'PM' : 'AM'
+                      const displayHours = hours % 12 || 12
+                      return `${displayHours}:${String(minutes || 0).padStart(2, '0')} ${period}`
+                    }
+                    
+                    // Format date
+                    const formatDate = (dateStr: string) => {
+                      if (!dateStr) return 'N/A'
+                      const date = new Date(dateStr)
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                    
+                    const formattedDate = formatDate(reservationDate)
+                    const formattedTime = startTime && endTime ? `${formatTime(startTime)} - ${formatTime(endTime)}` : 'N/A'
                     
                     return (
                       <div
@@ -945,9 +1032,9 @@ const AdminDashboard = () => {
                               </span>
                             </div>
                             <p className="text-sm text-gray-600 mb-1">
-                              <span className="font-medium">{courtName}</span> • {date ? new Date(date).toLocaleDateString() : 'N/A'}
+                              <span className="font-medium">{courtName}</span> • {formattedDate}
                             </p>
-                            <p className="text-xs text-gray-500">{time}</p>
+                            <p className="text-xs text-gray-500">{formattedTime}</p>
                           </div>
                           <div className="text-right ml-4">
                             <p className="text-xs text-gray-400">
@@ -998,13 +1085,37 @@ const AdminDashboard = () => {
                     const customerName = res.user?.Name || res.user?.name || 'Guest'
                     const startTime = res.Start_Time || res.start_time || ''
                     const endTime = res.End_Time || res.end_time || ''
+                    const reservationDate = res.Reservation_Date || res.reservation_date
+                    
+                    // Format time to 12-hour format
+                    const formatTime = (timeStr: string) => {
+                      if (!timeStr) return 'N/A'
+                      const [hours, minutes] = timeStr.split(':').map(Number)
+                      if (isNaN(hours)) return timeStr
+                      const period = hours >= 12 ? 'PM' : 'AM'
+                      const displayHours = hours % 12 || 12
+                      return `${displayHours}:${String(minutes || 0).padStart(2, '0')} ${period}`
+                    }
+                    
+                    // Calculate if ongoing or upcoming using local timezone
+                    const now = new Date()
                     const [startHour, startMin] = startTime.split(':').map(Number)
                     const [endHour, endMin] = endTime.split(':').map(Number)
-                    const now = new Date()
-                    const startDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, startMin)
-                    const endDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), endHour, endMin)
-                    const isUpcoming = startDateTime > now
-                    const isOngoing = now >= startDateTime && now < endDateTime
+                    
+                    let isOngoing = false
+                    let isUpcoming = false
+                    
+                    if (reservationDate && startTime && endTime) {
+                      const resDate = new Date(reservationDate)
+                      const startDateTime = new Date(resDate.getFullYear(), resDate.getMonth(), resDate.getDate(), startHour || 0, startMin || 0)
+                      const endDateTime = new Date(resDate.getFullYear(), resDate.getMonth(), resDate.getDate(), endHour || 0, endMin || 0)
+                      
+                      isOngoing = now >= startDateTime && now < endDateTime
+                      isUpcoming = startDateTime > now
+                    }
+                    
+                    const formattedStartTime = formatTime(startTime)
+                    const formattedEndTime = formatTime(endTime)
                     
                     return (
                       <div
@@ -1025,7 +1136,7 @@ const AdminDashboard = () => {
                                   Ongoing
                                 </span>
                               )}
-                              {isUpcoming && (
+                              {isUpcoming && !isOngoing && (
                                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-white">
                                   Upcoming
                                 </span>
@@ -1035,7 +1146,7 @@ const AdminDashboard = () => {
                               <span className="font-medium">{courtName}</span>
                             </p>
                             <p className="text-sm font-medium text-emerald-600">
-                              {startTime} - {endTime}
+                              {formattedStartTime} - {formattedEndTime}
                             </p>
                           </div>
                           <div className="text-right ml-4">

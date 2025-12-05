@@ -13,19 +13,30 @@ export function HomePage() {
 
   useEffect(() => {
     // Wait for auth check to complete
-    if (isLoading) return
+    if (isLoading) {
+      return
+    }
 
     // Check if user has disabled the guide
     const guideDisabled = localStorage.getItem('reservation-guide-disabled') === 'true'
-    if (guideDisabled) return
+    if (guideDisabled) {
+      setShowGuide(false)
+      return
+    }
 
-    // Automatically show guide if user is not logged in
+    // Automatically show guide if user is not logged in (only on landing page)
+    // This will trigger when:
+    // 1. Auth check completes (isLoading becomes false)
+    // 2. User is not authenticated
     if (!isAuthenticated) {
-      // Small delay to ensure page is loaded
+      // Small delay to ensure page is fully loaded and rendered
       const timer = setTimeout(() => {
         setShowGuide(true)
-      }, 1000)
+      }, 1500) // Delay to ensure smooth page load
       return () => clearTimeout(timer)
+    } else {
+      // If user is logged in, hide the guide
+      setShowGuide(false)
     }
   }, [isAuthenticated, isLoading])
 
