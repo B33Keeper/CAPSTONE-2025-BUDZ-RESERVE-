@@ -245,23 +245,6 @@ export function BookingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, currentStep])
 
-  // Set up polling to refresh availability data every 5 seconds for real-time reservation updates
-  // This ensures that when a court and time slot is reserved, it shows as reserved immediately
-  useEffect(() => {
-    if (selectedDate && courts.length > 0 && currentStep === 2) {
-      const interval = setInterval(() => {
-        // Defer the async work to prevent blocking the main thread
-        setTimeout(() => {
-          console.log('[BookingPage] Auto-refreshing availability data for date:', selectedDate)
-          loadAvailabilityData(selectedDate)
-        }, 0)
-      }, 5000) // Poll every 5 seconds
-
-      return () => clearInterval(interval)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, currentStep, courts.length])
-
   // Load availability data when date is selected
   const loadAvailabilityData = async (date: string) => {
     if (!date) return
