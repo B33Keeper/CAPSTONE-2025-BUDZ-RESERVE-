@@ -439,6 +439,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
           </div>
         </div>
       </div>
+      </div>
     </>
   )
 }
