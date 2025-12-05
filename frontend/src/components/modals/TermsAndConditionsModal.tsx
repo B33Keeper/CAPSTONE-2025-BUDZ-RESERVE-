@@ -182,7 +182,7 @@ export function TermsAndConditionsModal({ isOpen, onClose, onAccept, initialAcce
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-teal-800 mb-3">7. Equipment Rental Usage</h3>
                   <ul className="list-disc list-inside space-y-2 text-gray-700">
-                    <li>A <strong>valid ID</strong> must be presented to the counter staff in order to receive rented equipment for safety and security purposes.</li>
+                    <li>A <strong>valid government ID</strong> must be presented to the counter staff in order to receive rented equipment for safety and security purposes.</li>
                     <li>Rackets and any rented equipment are for use <strong>within the premises of Budz Badminton Court only</strong>.</li>
                     <li>Removing rented equipment from the venue is strictly prohibited.</li>
                     <li>Rented items must be returned in good condition at the end of your booked time.</li>
