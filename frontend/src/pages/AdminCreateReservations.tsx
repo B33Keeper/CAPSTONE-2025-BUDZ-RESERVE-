@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 import { ShuttlecockLoader } from '@/components/ShuttlecockLoader'
 import AdminSidebar from '@/components/AdminSidebar'
 import { AdminHeader } from '@/components/AdminHeader'
+import { formatPHPhoneNumber } from '@/lib/validation'
 
 interface CourtBooking {
   court: string
@@ -1662,9 +1663,16 @@ export default function AdminCreateReservations() {
                   <input
                     type="tel"
                     value={customerContact}
-                    onChange={(e) => setCustomerContact(e.target.value)}
+                    onChange={(e) => {
+                      // Only allow numbers and + sign
+                      const input = e.target.value.replace(/[^\d+]/g, '')
+                      // Format the phone number
+                      const formatted = formatPHPhoneNumber(input)
+                      setCustomerContact(formatted)
+                    }}
+                    maxLength={17} // +63 9XX XXX XXXX = 17 characters
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter customer contact number (optional)"
+                        placeholder="+63 9XX XXX XXXX (optional)"
                       />
                 </div>
 
