@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react'
 import { apiServices, Court, Equipment, TimeSlot } from '@/lib/apiServices'
-import { TermsAndConditionsModal } from '@/components/modals/TermsAndConditionsModal'
 import { BookingDetailsModal } from '@/components/modals/BookingDetailsModal'
 import { RacketConfigurationModal } from '@/components/modals/RacketConfigurationModal'
 import { PaymentSummaryStep } from '@/components/PaymentSummaryStep'
@@ -57,7 +56,6 @@ export function BookingPage() {
   const [loadingEquipmentAvailability, setLoadingEquipmentAvailability] = useState(false)
   const [equipmentAvailability, setEquipmentAvailability] = useState<Map<number, number>>(new Map()) // equipmentId -> available stock (merged for display)
   const [equipmentAvailabilityPerSchedule, setEquipmentAvailabilityPerSchedule] = useState<Map<string, Map<number, number>>>(new Map()) // scheduleKey -> equipmentId -> available stock
-  const [showTermsModal, setShowTermsModal] = useState(false)
   const [showBookingDetailsModal, setShowBookingDetailsModal] = useState(false)
   const [showEquipmentGuard, setShowEquipmentGuard] = useState(false)
   const [showCourtTimeRequiredModal, setShowCourtTimeRequiredModal] = useState(false)
@@ -67,8 +65,6 @@ export function BookingPage() {
   const [referenceNumber, setReferenceNumber] = useState('')
   const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [duplicateMessage, setDuplicateMessage] = useState('')
-  const [isTermsAccepted, setIsTermsAccepted] = useState(false)
-  const [autoProceedAfterTerms, setAutoProceedAfterTerms] = useState(false)
   
   const DATE_WINDOW_DAYS = 28
   const today = new Date()
@@ -109,14 +105,6 @@ export function BookingPage() {
     { id: 4, name: 'Completed', hint: 'Booking finalized' }
   ]
 
-  useEffect(() => {
-    if (user?.id) {
-      const accepted = localStorage.getItem(`termsAccepted_${user.id}`) === 'true'
-      setIsTermsAccepted(accepted)
-    } else {
-      setIsTermsAccepted(false)
-    }
-  }, [user?.id])
 
   const getStepState = (stepId: number): 'completed' | 'current' | 'upcoming' => {
     if (stepId < currentStep) return 'completed'
@@ -1073,19 +1061,6 @@ export function BookingPage() {
     
     setDateError('')
     setTempSelectedDate(date)
-    
-    // Check if user has accepted terms for current session
-    if (user?.id) {
-      const termsAccepted = localStorage.getItem(`termsAccepted_${user.id}`) === 'true'
-      setIsTermsAccepted(termsAccepted)
-      if (!termsAccepted) {
-        // Show terms modal if not accepted yet
-        setAutoProceedAfterTerms(true)
-        setShowTermsModal(true)
-      }
-    } else {
-      setIsTermsAccepted(false)
-    }
   }
 
   const proceedToTimeAndCourtSelection = async () => {
@@ -1105,13 +1080,6 @@ export function BookingPage() {
   const handleProceedFromDateSelection = async () => {
     if (!tempSelectedDate) {
       setDateError('Please select a date before proceeding.')
-      return
-    }
-
-    if (!isTermsAccepted) {
-      setDateError('Please accept the Terms and Conditions to proceed.')
-      setAutoProceedAfterTerms(true)
-      setShowTermsModal(true)
       return
     }
 
@@ -1141,20 +1109,6 @@ export function BookingPage() {
 
   // Handle Terms and Conditions
 
-  const handleAcceptTerms = async () => {
-    setShowTermsModal(false)
-    // Store acceptance in localStorage with user ID to remember for current login session
-    if (user?.id) {
-      localStorage.setItem(`termsAccepted_${user.id}`, 'true')
-    }
-    setIsTermsAccepted(true)
-    setDateError('')
-
-    if (autoProceedAfterTerms) {
-      setAutoProceedAfterTerms(false)
-      await proceedToTimeAndCourtSelection()
-    }
-  }
 
   // Helper function to parse schedule string to start and end times (24-hour format)
   const parseScheduleToTimes = (schedule: string): { startTime: string; endTime: string } => {
@@ -1344,10 +1298,6 @@ export function BookingPage() {
     }
   }
 
-  const handleCloseTerms = () => {
-    setShowTermsModal(false)
-    setAutoProceedAfterTerms(false)
-  }
 
   // Initialize cell statuses on component mount
   useEffect(() => {
@@ -2136,14 +2086,6 @@ export function BookingPage() {
           )}
         </div>
       </div>
-
-      {/* Terms and Conditions Modal */}
-      <TermsAndConditionsModal
-        isOpen={showTermsModal}
-        onClose={handleCloseTerms}
-        onAccept={handleAcceptTerms}
-        initialAccepted={isTermsAccepted}
-      />
 
       {/* Booking Details Modal */}
       <RacketConfigurationModal
