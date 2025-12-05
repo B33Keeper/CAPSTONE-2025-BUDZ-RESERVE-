@@ -109,9 +109,24 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   useEffect(() => {
     if (showVideo && videoRef.current) {
       videoRef.current.load()
-      // Don't auto-play video or music - let user control it
+      // Automatically play video when shown
+      const playPromise = videoRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // Video started playing successfully
+          })
+          .catch((error) => {
+            console.warn('Video autoplay prevented:', error)
+            // Autoplay was prevented, user will need to click play manually
+          })
+      }
     } else {
-      // Stop background music when video is hidden
+      // Stop video and background music when video is hidden
+      if (videoRef.current) {
+        videoRef.current.pause()
+        videoRef.current.currentTime = 0
+      }
       if (audioRef.current && isMusicPlaying) {
         audioRef.current.pause()
         audioRef.current.currentTime = 0
@@ -265,9 +280,10 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   ref={videoRef}
                   className="w-full h-full object-contain"
                   controls
-                  autoPlay={false}
+                  autoPlay
                   preload="auto"
                   playsInline
+                  muted={false}
                   onPlay={handleVideoPlay}
                   onEnded={handleVideoEnd}
                   onLoadedMetadata={() => {
