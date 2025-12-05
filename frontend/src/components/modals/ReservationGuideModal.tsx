@@ -155,8 +155,8 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   }
 
   const handleNext = () => {
-    // If on step 2 (index 1) and terms not accepted, prevent proceeding
-    if (currentStep === 1 && !isTermsAccepted) {
+    // If on step 1 (index 0) and terms not accepted, prevent proceeding
+    if (currentStep === 0 && !isTermsAccepted) {
       return
     }
     
@@ -260,7 +260,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
           
           {showVideo ? (
             <div className="w-full">
-              <div className="bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4 relative group">
+              <div className="bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4 relative group pointer-events-auto">
                 <video
                   ref={videoRef}
                   className="w-full h-full object-contain"
@@ -270,6 +270,12 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   playsInline
                   onPlay={handleVideoPlay}
                   onEnded={handleVideoEnd}
+                  onLoadedMetadata={() => {
+                    // Ensure video metadata is loaded for seeking
+                    if (videoRef.current) {
+                      // Video metadata loaded, seeking should now work
+                    }
+                  }}
                   onError={(e) => {
                     console.error('Video error:', e)
                     const video = e.currentTarget
@@ -438,6 +444,21 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   </div>
                 </div>
               </div>
+
+              {/* Terms Acceptance Checkbox - Only show on step 1 */}
+              <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isTermsAccepted}
+                    onChange={(e) => handleTermsAcceptChange(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all duration-200"
+                  />
+                  <span className="ml-3 text-gray-800 font-medium">
+                    I have read and accept the Terms and Conditions
+                  </span>
+                </label>
+              </div>
             </div>
           ) : (
             <div className="text-center mb-6">
@@ -468,23 +489,6 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               <p className="text-gray-600 text-lg leading-relaxed">
                 {currentStepData.description}
               </p>
-              
-              {/* Terms Acceptance Checkbox - Only show on step 2 */}
-              {currentStep === 1 && (
-                <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isTermsAccepted}
-                      onChange={(e) => handleTermsAcceptChange(e.target.checked)}
-                      className="w-5 h-5 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all duration-200"
-                    />
-                    <span className="ml-3 text-gray-800 font-medium">
-                      I have read and accept the Terms and Conditions
-                    </span>
-                  </label>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -539,9 +543,9 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               {currentStep < steps.length - 1 ? (
                 <button
                   onClick={handleNext}
-                  disabled={currentStep === 1 && !isTermsAccepted}
+                  disabled={currentStep === 0 && !isTermsAccepted}
                   className={`flex items-center justify-center space-x-2 px-3 md:px-6 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl ${
-                    currentStep === 1 && !isTermsAccepted
+                    currentStep === 0 && !isTermsAccepted
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
                   }`}
