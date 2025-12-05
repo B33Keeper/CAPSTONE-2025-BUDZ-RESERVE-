@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Calendar, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, MapPin, ShoppingCart, ClipboardCheck, Play } from 'lucide-react'
-import { TermsAndConditionsModal } from './TermsAndConditionsModal'
+import { X, Calendar, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, MapPin, ShoppingCart, ClipboardCheck, Play, FileText, Shield, Clock, AlertCircle, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
 interface ReservationGuideModalProps {
@@ -12,40 +11,47 @@ const steps = [
   {
     number: 1,
     title: 'Create Account & Login',
-    description: 'First, you need to create an account if you don\'t have one yet. Click "Get Started" or "Sign Up" to register. You must read and agree to the Terms and Conditions before you can proceed with registration. After creating your account, make sure to log in. You must be logged in to make a reservation.',
+    description: 'First, you need to create an account if you don\'t have one yet. Click "Get Started" or "Sign Up" to register. After creating your account, make sure to log in. You must be logged in to make a reservation.',
     icon: UserPlus,
     color: 'blue'
   },
   {
     number: 2,
+    title: 'Read & Accept Terms and Conditions',
+    description: 'Please carefully read and understand our Terms and Conditions before proceeding with your reservation. You must accept these terms to continue with the booking process.',
+    icon: FileText,
+    color: 'amber'
+  },
+  {
+    number: 3,
     title: 'Select Date & Time',
-    description: 'Choose your preferred date and time slot for your badminton court reservation. You can select multiple time slots if needed. Before proceeding to the next step, you must read and accept the Terms and Conditions.',
+    description: 'Choose your preferred date and time slot for your badminton court reservation. You can select multiple time slots if needed.',
     icon: Calendar,
     color: 'green'
   },
   {
-    number: 3,
+    number: 4,
     title: 'Choose Your Court',
     description: 'Select the court number you want to book. Available courts will be highlighted in green.',
     icon: MapPin,
     color: 'purple'
   },
   {
-    number: 4,
+    number: 5,
     title: 'Add Equipment (Optional)',
     description: 'If you need rackets or other equipment, you can add them to your reservation. Equipment rental fees will be added to your total.',
     icon: ShoppingCart,
     color: 'orange'
   },
   {
-    number: 5,
+    number: 6,
     title: 'Review & Confirm',
     description: 'Review your booking details including date, time, court, and total amount. Make sure all information is correct before proceeding.',
     icon: ClipboardCheck,
     color: 'indigo'
   },
   {
-    number: 6,
+    number: 7,
     title: 'Complete Payment',
     description: 'Proceed to payment using your preferred method (GCash, Maya, GrabPay, or Online Banking). Your reservation will be confirmed once payment is successful. A digital receipt will be automatically sent to your registered email address.',
     icon: CreditCard,
@@ -59,7 +65,6 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   const [showVideo, setShowVideo] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isMusicPlaying, setIsMusicPlaying] = useState(false)
-  const [showTermsModal, setShowTermsModal] = useState(false)
   const [isTermsAccepted, setIsTermsAccepted] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -150,27 +155,16 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   }
 
   const handleNext = () => {
-    // If on step 2 (index 1) and terms not accepted, show terms modal
-    if (currentStep === 1 && !isTermsAccepted) {
-      setShowTermsModal(true)
-      return
-    }
-    
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1)
     }
   }
 
-  const handleTermsAccept = () => {
+  const handleTermsAcceptChange = (accepted: boolean) => {
+    setIsTermsAccepted(accepted)
     // Store acceptance in localStorage if user is logged in
-    if (user?.id) {
+    if (user?.id && accepted) {
       localStorage.setItem(`termsAccepted_${user.id}`, 'true')
-    }
-    setIsTermsAccepted(true)
-    setShowTermsModal(false)
-    // Proceed to next step (step 3)
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
     }
   }
 
@@ -186,17 +180,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   const IconComponent = currentStepData.icon
 
   return (
-    <>
-      {/* Terms and Conditions Modal */}
-      <TermsAndConditionsModal
-        isOpen={showTermsModal}
-        onClose={() => setShowTermsModal(false)}
-        onAccept={handleTermsAccept}
-        initialAccepted={isTermsAccepted}
-        onAcceptedChange={setIsTermsAccepted}
-      />
-
-      <div 
+    <div 
         className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
         onClick={(e) => {
           if (e.target === e.currentTarget) {
@@ -338,6 +322,133 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                 Watch this video guide to see the complete booking process step by step.
               </p>
             </div>
+          ) : currentStep === 1 ? (
+            // Step 2: Terms and Conditions Content
+            <div className="mb-6">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 bg-amber-100">
+                  <IconComponent className="w-10 h-10 text-amber-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  {currentStepData.number}. {currentStepData.title}
+                </h3>
+                <p className="text-gray-600 text-lg leading-relaxed mb-6">
+                  {currentStepData.description}
+                </p>
+              </div>
+
+              {/* Terms Content */}
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {/* Payment Methods */}
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <CreditCard className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-blue-800 mb-2">1. Accepted Payment Methods</h4>
+                      <p className="text-sm text-gray-700 mb-2">We accept the following payment methods:</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                        <li>GCash (Preferred method)</li>
+                        <li>PayMaya</li>
+                        <li>Bank Transfer</li>
+                        <li>Credit/Debit Cards</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Timing */}
+                <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <Clock className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-green-800 mb-2">2. Payment Timing</h4>
+                      <p className="text-sm text-gray-700">Full payment is required at the time of booking to confirm your reservation. No partial payments are accepted.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security */}
+                <div className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <Shield className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-purple-800 mb-2">3. Security of Payment</h4>
+                      <p className="text-sm text-gray-700">Payments are processed through secure, encrypted payment gateways to protect your personal and financial information.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Confirmation */}
+                <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-orange-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-orange-800 mb-2">4. Payment Confirmation</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                        <li>A confirmation email will be sent upon successful payment</li>
+                        <li>Keep your reference number for future inquiries</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Failed Payments */}
+                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-red-800 mb-2">5. Failed or Declined Payments</h4>
+                      <p className="text-sm text-gray-700">If a payment fails or is declined, the reservation will not be processed. Users are responsible for ensuring sufficient funds.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Refunds */}
+                <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 border border-indigo-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <RefreshCw className="w-5 h-5 text-indigo-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-indigo-800 mb-2">6. Refunds and Cancellation Policy</h4>
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-red-800 font-semibold text-sm mb-1">⚠️ Important: No Cancellation Policy</p>
+                        <p className="text-gray-700 text-sm">Once you have reserved a court, there is <strong>no cancellation or refund</strong> allowed.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Equipment Rental */}
+                <div className="bg-gradient-to-r from-teal-50 to-teal-100 border border-teal-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <Shield className="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-teal-800 mb-2">7. Equipment Rental Usage</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                        <li>A <strong>valid government ID</strong> must be presented to receive rented equipment</li>
+                        <li>Equipment is for use <strong>within the premises only</strong></li>
+                        <li>Removing equipment from the venue is strictly prohibited</li>
+                        <li>Customers will be <strong>liable for the full price</strong> of damaged equipment</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms Acceptance Checkbox */}
+              <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isTermsAccepted}
+                    onChange={(e) => handleTermsAcceptChange(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all duration-200"
+                  />
+                  <span className="ml-3 text-gray-800 font-medium">
+                    I have read and accept the Terms and Conditions
+                  </span>
+                </label>
+              </div>
+            </div>
           ) : (
             <div className="text-center mb-6">
               <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 ${
@@ -347,6 +458,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                 currentStepData.color === 'orange' ? 'bg-orange-100' :
                 currentStepData.color === 'indigo' ? 'bg-indigo-100' :
                 currentStepData.color === 'teal' ? 'bg-teal-100' :
+                currentStepData.color === 'amber' ? 'bg-amber-100' :
                 'bg-blue-100'
               }`}>
                 <IconComponent className={`w-10 h-10 ${
@@ -356,6 +468,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   currentStepData.color === 'orange' ? 'text-orange-600' :
                   currentStepData.color === 'indigo' ? 'text-indigo-600' :
                   currentStepData.color === 'teal' ? 'text-teal-600' :
+                  currentStepData.color === 'amber' ? 'text-amber-600' :
                   'text-blue-600'
                 }`} />
               </div>
@@ -419,7 +532,12 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               {currentStep < steps.length - 1 ? (
                 <button
                   onClick={handleNext}
-                  className="flex items-center justify-center space-x-2 px-3 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  disabled={currentStep === 1 && !isTermsAccepted}
+                  className={`flex items-center justify-center space-x-2 px-3 md:px-6 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl ${
+                    currentStep === 1 && !isTermsAccepted
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
+                  }`}
                   aria-label="Next"
                 >
                   <span className="hidden md:inline">Next</span>
@@ -439,8 +557,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
           </div>
         </div>
       </div>
-      </div>
-    </>
+    </div>
   )
 }
 
