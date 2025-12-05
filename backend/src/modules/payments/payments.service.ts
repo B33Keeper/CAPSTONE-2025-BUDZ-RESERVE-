@@ -181,7 +181,17 @@ export class PaymentsService {
         console.log(`[SalesReport Service] Sample active reservation dates:`);
         reservations.slice(0, 3).forEach((res, idx) => {
           const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
-          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: ${dateField} = ${dateValue?.toISOString()} (Local: ${dateValue?.toLocaleString()})`);
+          // Handle both Date objects and date strings
+          const dateStr = dateValue instanceof Date 
+            ? dateValue.toISOString() 
+            : typeof dateValue === 'string' 
+              ? dateValue 
+              : String(dateValue);
+          const localStr = dateValue instanceof Date 
+            ? dateValue.toLocaleString() 
+            : dateValue ? new Date(dateValue).toLocaleString() 
+            : 'N/A';
+          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: ${dateField} = ${dateStr} (Local: ${localStr})`);
         });
       } else {
         console.log(`[SalesReport Service] WARNING: No active reservations found in date range!`);
@@ -402,7 +412,18 @@ export class PaymentsService {
         console.log(`[SalesReport Service] Sample reservation dates:`);
         reservations.slice(0, 3).forEach((res, idx) => {
           const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
-          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: ${dateField} = ${dateValue?.toISOString()} (Local: ${dateValue?.toLocaleString()})`);
+          // Handle both Date objects and date strings (DATE type from DB may be string)
+          const dateStr = dateValue instanceof Date 
+            ? dateValue.toISOString() 
+            : typeof dateValue === 'string' 
+              ? dateValue 
+              : dateValue ? new Date(dateValue).toISOString() 
+              : 'N/A';
+          const localStr = dateValue instanceof Date 
+            ? dateValue.toLocaleString() 
+            : dateValue ? new Date(dateValue).toLocaleString() 
+            : 'N/A';
+          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: ${dateField} = ${dateStr} (Local: ${localStr})`);
         });
       } else {
         console.log(`[SalesReport Service] No reservations found. Running debug queries...`);
@@ -430,7 +451,18 @@ export class PaymentsService {
         console.log(`[SalesReport Service] Debug: Found ${recentReservations.length} reservations in last 7 days (by ${dateField}):`);
         recentReservations.forEach((res, idx) => {
           const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
-          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: ${dateField} = ${dateValue?.toISOString()} (Local: ${dateValue?.toLocaleString()})`);
+          // Handle both Date objects and date strings
+          const dateStr = dateValue instanceof Date 
+            ? dateValue.toISOString() 
+            : typeof dateValue === 'string' 
+              ? dateValue 
+              : dateValue ? new Date(dateValue).toISOString() 
+              : 'N/A';
+          const localStr = dateValue instanceof Date 
+            ? dateValue.toLocaleString() 
+            : dateValue ? new Date(dateValue).toLocaleString() 
+            : 'N/A';
+          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: ${dateField} = ${dateStr} (Local: ${localStr})`);
         });
         
         // Debug 4: Check if query dates match any reservation dates
@@ -438,7 +470,14 @@ export class PaymentsService {
           const queryDateStr = queryStartDate.toISOString().split('T')[0];
           const matchingReservations = recentReservations.filter(res => {
             const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
-            const resDateStr = dateValue?.toISOString().split('T')[0];
+            // Handle both Date objects and date strings
+            const resDateStr = dateValue instanceof Date 
+              ? dateValue.toISOString().split('T')[0]
+              : typeof dateValue === 'string'
+                ? dateValue.split('T')[0]
+                : dateValue 
+                  ? new Date(dateValue).toISOString().split('T')[0]
+                  : null;
             return resDateStr === queryDateStr;
           });
           console.log(`[SalesReport Service] Debug: ${matchingReservations.length} reservations match query date (${queryDateStr})`);
