@@ -131,18 +131,26 @@ export class PaymentsService {
         queryBuilder.orderBy('reservation.Created_at', 'DESC');
       } else {
         // Reservation_Date is DATE type (date-only, no time)
-        // Create date-only Date objects for comparison (strip time components)
-        const startDateOnly = new Date(queryStartDate.getFullYear(), queryStartDate.getMonth(), queryStartDate.getDate());
-        const endDateOnly = new Date(queryEndDate.getFullYear(), queryEndDate.getMonth(), queryEndDate.getDate());
+        // Format dates directly to avoid timezone conversion issues
+        // toISOString() converts to UTC which can shift the date by a day
+        const formatDateString = (date: Date): string => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
         
-        console.log(`[SalesReport Service] DATE comparison - Start: ${startDateOnly.toISOString().split('T')[0]}, End: ${endDateOnly.toISOString().split('T')[0]}`);
+        const startDateStr = formatDateString(queryStartDate);
+        const endDateStr = formatDateString(queryEndDate);
+        
+        console.log(`[SalesReport Service] DATE comparison - Start: ${startDateStr}, End: ${endDateStr}`);
         console.log(`[SalesReport Service] Original query dates - Start: ${queryStartDate.toISOString()} (Local: ${queryStartDate.toLocaleDateString()}), End: ${queryEndDate.toISOString()} (Local: ${queryEndDate.toLocaleDateString()})`);
         
         // Use Between operator for DATE field - TypeORM handles DATE type comparisons correctly
         // Between is inclusive on both ends (>= start AND <= end)
         queryBuilder.where('reservation.Reservation_Date BETWEEN :startDate AND :endDate', { 
-          startDate: startDateOnly.toISOString().split('T')[0], // YYYY-MM-DD format
-          endDate: endDateOnly.toISOString().split('T')[0] // YYYY-MM-DD format
+          startDate: startDateStr, // YYYY-MM-DD format (no timezone conversion)
+          endDate: endDateStr // YYYY-MM-DD format (no timezone conversion)
         });
         queryBuilder.orderBy('reservation.Reservation_Date', 'DESC');
       }

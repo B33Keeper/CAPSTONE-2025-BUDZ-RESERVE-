@@ -69,10 +69,16 @@ const AdminSalesReport = () => {
         return { start: startDate, end: endDate }
       
       case 'weekly':
-        // Weekly: Show last 7 days including today (full week period)
-        startDate.setDate(today.getDate() - 6) // 7 days total (today + 6 days before)
-        startDate.setHours(0, 0, 0, 0)
-        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+        // Weekly: Show the full calendar week (Monday to Sunday) containing the current date
+        // This matches the backend calculation
+        const dayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+        const daysToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek
+        
+        // Start of week: Monday at 00:00:00.000
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysToMonday, 0, 0, 0, 0)
+        // End of week: Sunday at 23:59:59.999
+        endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysToSunday, 23, 59, 59, 999)
         return { start: startDate, end: endDate }
       
       case 'monthly':
