@@ -301,7 +301,7 @@ export function PaymentSummaryStep({
               Payment Methods
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="flex flex-col items-center p-5 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 transform">
+              <div className="flex flex-col items-center p-5 bg-white border-2 border-gray-200 rounded-xl">
                 <div className="w-20 h-20 rounded-xl flex items-center justify-center mb-3 shadow-md overflow-hidden bg-white">
                   <img 
                     src="/assets/PAYMENT METHOD IMAGE/GCASH.png" 
@@ -311,7 +311,7 @@ export function PaymentSummaryStep({
                 </div>
                 <span className="text-sm font-semibold text-gray-700">GCash</span>
               </div>
-              <div className="flex flex-col items-center p-5 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 transform">
+              <div className="flex flex-col items-center p-5 bg-white border-2 border-gray-200 rounded-xl">
                 <div className="w-20 h-20 rounded-xl flex items-center justify-center mb-3 shadow-md overflow-hidden bg-white">
                   <img 
                     src="/assets/PAYMENT METHOD IMAGE/maya.jpg" 
@@ -321,7 +321,7 @@ export function PaymentSummaryStep({
                 </div>
                 <span className="text-sm font-semibold text-gray-700">Maya</span>
               </div>
-              <div className="flex flex-col items-center p-5 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 transform">
+              <div className="flex flex-col items-center p-5 bg-white border-2 border-gray-200 rounded-xl">
                 <div className="w-20 h-20 rounded-xl flex items-center justify-center mb-3 shadow-md overflow-hidden bg-white">
                   <img 
                     src="/assets/PAYMENT METHOD IMAGE/Grabpay.png" 
@@ -331,7 +331,7 @@ export function PaymentSummaryStep({
                 </div>
                 <span className="text-sm font-semibold text-gray-700">GrabPay</span>
               </div>
-              <div className="flex flex-col items-center p-5 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 transform">
+              <div className="flex flex-col items-center p-5 bg-white border-2 border-gray-200 rounded-xl">
                 <div className="w-20 h-20 rounded-xl flex items-center justify-center mb-3 shadow-md overflow-hidden bg-white">
                   <img 
                     src="/assets/PAYMENT METHOD IMAGE/Visa CARD.png" 
