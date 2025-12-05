@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Calendar, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, MapPin, ShoppingCart, ClipboardCheck, Play, FileText } from 'lucide-react'
+import { X, Calendar, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, MapPin, ShoppingCart, ClipboardCheck, Play, FileText, Shield, Clock, AlertCircle, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
 interface ReservationGuideModalProps {
@@ -18,7 +18,7 @@ const steps = [
   {
     number: 2,
     title: 'Read & Accept Terms and Conditions',
-    description: 'Please carefully read and understand our Terms and Conditions before proceeding with your reservation. You must accept these terms to continue with the booking process.',
+    description: 'Before you can select an available date in the booking process, you must carefully read and understand our Terms and Conditions. Please review all the terms below and accept them to continue with your reservation.',
     icon: FileText,
     color: 'amber'
   },
@@ -109,7 +109,13 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   useEffect(() => {
     if (showVideo && videoRef.current) {
       videoRef.current.load()
-      // Don't auto-play video or music - let user control it
+      // Auto-play video when shown
+      const playPromise = videoRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.warn('Video autoplay prevented:', error)
+        })
+      }
     } else {
       // Stop background music when video is hidden
       if (audioRef.current && isMusicPlaying) {
@@ -122,7 +128,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
 
   // Handle video play - start background music
   const handleVideoPlay = () => {
-    if (audioRef.current && !isMusicPlaying) {
+    if (audioRef.current) {
       audioRef.current.volume = 0.3 // Set volume to 30% so it doesn't overpower the video
       audioRef.current.loop = true
       const playPromise = audioRef.current.play()
@@ -135,6 +141,14 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
             console.warn('Background music play prevented:', error)
           })
       }
+    }
+  }
+
+  // Handle video pause - pause background music
+  const handleVideoPause = () => {
+    if (audioRef.current && isMusicPlaying) {
+      audioRef.current.pause()
+      setIsMusicPlaying(false)
     }
   }
 
@@ -260,10 +274,11 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   ref={videoRef}
                   className="w-full h-full object-contain"
                   controls
-                  autoPlay={false}
+                  autoPlay={true}
                   preload="auto"
                   playsInline
                   onPlay={handleVideoPlay}
+                  onPause={handleVideoPause}
                   onEnded={handleVideoEnd}
                   onError={(e) => {
                     console.error('Video error:', e)
@@ -322,6 +337,133 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                 Watch this video guide to see the complete booking process step by step.
               </p>
             </div>
+          ) : currentStep === 1 ? (
+            // Step 2: Terms and Conditions Content
+            <div className="mb-6">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 bg-amber-100">
+                  <IconComponent className="w-10 h-10 text-amber-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  {currentStepData.number}. {currentStepData.title}
+                </h3>
+                <p className="text-gray-600 text-lg leading-relaxed mb-6">
+                  {currentStepData.description}
+                </p>
+              </div>
+
+              {/* Terms Content */}
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {/* Payment Methods */}
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <CreditCard className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-blue-800 mb-2">1. Accepted Payment Methods</h4>
+                      <p className="text-sm text-gray-700 mb-2">We accept the following payment methods:</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                        <li>GCash (Preferred method)</li>
+                        <li>PayMaya</li>
+                        <li>Bank Transfer</li>
+                        <li>Credit/Debit Cards</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Timing */}
+                <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <Clock className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-green-800 mb-2">2. Payment Timing</h4>
+                      <p className="text-sm text-gray-700">Full payment is required at the time of booking to confirm your reservation. No partial payments are accepted.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security */}
+                <div className="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <Shield className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-purple-800 mb-2">3. Security of Payment</h4>
+                      <p className="text-sm text-gray-700">Payments are processed through secure, encrypted payment gateways to protect your personal and financial information.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Confirmation */}
+                <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="w-5 h-5 text-orange-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-orange-800 mb-2">4. Payment Confirmation</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                        <li>A confirmation email will be sent upon successful payment</li>
+                        <li>Keep your reference number for future inquiries</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Failed Payments */}
+                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-red-800 mb-2">5. Failed or Declined Payments</h4>
+                      <p className="text-sm text-gray-700">If a payment fails or is declined, the reservation will not be processed. Users are responsible for ensuring sufficient funds.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Refunds */}
+                <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 border border-indigo-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <RefreshCw className="w-5 h-5 text-indigo-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-indigo-800 mb-2">6. Refunds and Cancellation Policy</h4>
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p className="text-red-800 font-semibold text-sm mb-1">⚠️ Important: No Cancellation Policy</p>
+                        <p className="text-gray-700 text-sm">Once you have reserved a court, there is <strong>no cancellation or refund</strong> allowed.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Equipment Rental */}
+                <div className="bg-gradient-to-r from-teal-50 to-teal-100 border border-teal-200 rounded-xl p-4">
+                  <div className="flex items-start space-x-3">
+                    <Shield className="w-5 h-5 text-teal-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-teal-800 mb-2">7. Equipment Rental Usage</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 ml-2">
+                        <li>A <strong>valid government ID</strong> must be presented to receive rented equipment</li>
+                        <li>Equipment is for use <strong>within the premises only</strong></li>
+                        <li>Removing equipment from the venue is strictly prohibited</li>
+                        <li>Customers will be <strong>liable for the full price</strong> of damaged equipment</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms Acceptance Checkbox */}
+              <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isTermsAccepted}
+                    onChange={(e) => handleTermsAcceptChange(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all duration-200"
+                  />
+                  <span className="ml-3 text-gray-800 font-medium">
+                    I have read and accept the Terms and Conditions
+                  </span>
+                </label>
+              </div>
+            </div>
           ) : (
             <div className="text-center mb-6">
               <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 ${
@@ -351,23 +493,6 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               <p className="text-gray-600 text-lg leading-relaxed">
                 {currentStepData.description}
               </p>
-              
-              {/* Terms Acceptance Checkbox - Only show on step 2 */}
-              {currentStep === 1 && (
-                <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isTermsAccepted}
-                      onChange={(e) => handleTermsAcceptChange(e.target.checked)}
-                      className="w-5 h-5 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all duration-200"
-                    />
-                    <span className="ml-3 text-gray-800 font-medium">
-                      I have read and accept the Terms and Conditions
-                    </span>
-                  </label>
-                </div>
-              )}
             </div>
           )}
         </div>
