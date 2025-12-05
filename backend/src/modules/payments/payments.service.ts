@@ -166,6 +166,17 @@ export class PaymentsService {
       
       console.log(`[SalesReport Service] Found ${reservations.length} active reservations in date range (filtered by ${dateField})`);
       
+      // Debug: Log sample active reservations
+      if (reservations.length > 0) {
+        console.log(`[SalesReport Service] Sample active reservation dates:`);
+        reservations.slice(0, 3).forEach((res, idx) => {
+          const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
+          console.log(`  ${idx + 1}. Reservation ${res.Reservation_ID}: ${dateField} = ${dateValue?.toISOString()} (Local: ${dateValue?.toLocaleString()})`);
+        });
+      } else {
+        console.log(`[SalesReport Service] WARNING: No active reservations found in date range!`);
+      }
+      
       // Also query reservations_history for completed/ended reservations
       // This is critical because ended reservations are moved to history table
       let historyReservations: any[] = [];
@@ -185,19 +196,49 @@ export class PaymentsService {
           
           console.log(`[SalesReport Service] Also querying reservations_history for date range: ${startDateStr} to ${endDateStr}`);
           
-          const historyQueryBuilder = this.reservationsHistoryRepository
-            .createQueryBuilder('history');
+          // First, check if history table has any data at all
+          const totalHistoryCount = await this.reservationsHistoryRepository.manager.query(
+            'SELECT COUNT(*) as count FROM reservations_history'
+          );
+          console.log(`[SalesReport Service] Total records in reservations_history table: ${totalHistoryCount[0]?.count || 0}`);
           
-          historyQueryBuilder.where('history.Reservation_Date BETWEEN :startDate AND :endDate', {
-            startDate: startDateStr,
-            endDate: endDateStr
+          // Use raw SQL query for more reliable date comparison with reservations_history table
+          const historyRecordsRaw = await this.reservationsHistoryRepository.manager.query(
+            `SELECT * FROM reservations_history 
+             WHERE Reservation_Date BETWEEN ? AND ? 
+             ORDER BY Reservation_Date DESC`,
+            [startDateStr, endDateStr]
+          );
+          
+          console.log(`[SalesReport Service] Found ${historyRecordsRaw.length} history reservations in date range (raw query)`);
+          
+          if (historyRecordsRaw.length > 0) {
+            console.log(`[SalesReport Service] Sample history record:`, JSON.stringify(historyRecordsRaw[0], null, 2));
+          }
+          
+          // Convert raw results to ReservationHistory entities
+          const historyRecords = historyRecordsRaw.map((row: any) => {
+            const history = new ReservationHistory();
+            history.History_ID = row.History_ID;
+            history.Original_ID = row.original_id;
+            history.User_ID = row.User_ID;
+            history.Court_ID = row.Court_ID;
+            history.Reservation_Date = new Date(row.Reservation_Date);
+            history.Start_Time = row.Start_Time;
+            history.End_Time = row.End_Time;
+            history.Status = row.Status as ReservationStatus;
+            history.Total_Amount = parseFloat(row.Total_Amount);
+            history.Reference_Number = row.Reference_Number;
+            history.Paymongo_Reference_Number = row.Paymongo_Reference_Number;
+            history.Notes = row.Notes;
+            history.Is_Admin_Created = Boolean(row.Is_Admin_Created);
+            history.Created_at = new Date(row.Created_at);
+            history.Updated_at = new Date(row.Updated_at);
+            history.Archived_at = new Date(row.Archived_at);
+            return history;
           });
           
-          historyQueryBuilder.orderBy('history.Reservation_Date', 'DESC');
-          
-          const historyRecords = await historyQueryBuilder.getMany();
-          
-          console.log(`[SalesReport Service] Found ${historyRecords.length} history reservations in date range`);
+          console.log(`[SalesReport Service] Converted ${historyRecords.length} raw history records to entities`);
           
           // Convert history records to reservation-like objects and fetch related data
           for (const historyRecord of historyRecords) {
@@ -221,7 +262,8 @@ export class PaymentsService {
             });
             
             // Create a reservation-like object matching the Reservation entity structure
-            const reservationLike = {
+            // Ensure all fields match what the grouping logic expects
+            const reservationLike: any = {
               Reservation_ID: historyRecord.Original_ID,
               User_ID: historyRecord.User_ID,
               Court_ID: historyRecord.Court_ID,
@@ -240,13 +282,22 @@ export class PaymentsService {
                 id: userData.id, 
                 name: userData.name, 
                 email: userData.email 
-              } : null,
+              } : { name: 'Unknown User' }, // Provide default to avoid null issues
               court: courtData ? { 
                 Court_Id: courtData.Court_Id, 
                 Court_Name: courtData.Court_Name 
-              } : null,
-              payments: payments
+              } : { Court_Name: 'Unknown Court' }, // Provide default to avoid null issues
+              payments: payments || [] // Ensure payments is always an array
             };
+            
+            console.log(`[SalesReport Service] Created reservation-like object for history record ${historyRecord.Original_ID}:`, {
+              Reservation_ID: reservationLike.Reservation_ID,
+              Reservation_Date: reservationLike.Reservation_Date,
+              Status: reservationLike.Status,
+              hasUser: !!reservationLike.user,
+              hasCourt: !!reservationLike.court,
+              paymentsCount: reservationLike.payments.length
+            });
             
             historyReservations.push(reservationLike);
           }
