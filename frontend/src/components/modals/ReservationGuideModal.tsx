@@ -11,14 +11,14 @@ const steps = [
   {
     number: 1,
     title: 'Create Account & Login',
-    description: 'First, you need to create an account if you don\'t have one yet. Click "Get Started" or "Sign Up" to register. After creating your account, make sure to log in. You must be logged in to make a reservation.',
+    description: 'First, you need to create an account if you don\'t have one yet. Click "Get Started" or "Sign Up" to register. After creating your account, make sure to log in. You must be logged in to make a reservation. Before proceeding, you must read and accept the Terms and Conditions.',
     icon: UserPlus,
     color: 'blue'
   },
   {
     number: 2,
     title: 'Read & Accept Terms and Conditions',
-    description: 'Before you can select an available date in the booking process, you must carefully read and understand our Terms and Conditions. Please review all the terms below and accept them to continue with your reservation.',
+    description: 'Please carefully read and understand our Terms and Conditions below. Before you can select an available date in the booking process, you must read and accept these terms first. You must accept these terms to continue with the booking process.',
     icon: FileText,
     color: 'amber'
   },
@@ -109,13 +109,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   useEffect(() => {
     if (showVideo && videoRef.current) {
       videoRef.current.load()
-      // Auto-play video when shown
-      const playPromise = videoRef.current.play()
-      if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          console.warn('Video autoplay prevented:', error)
-        })
-      }
+      // Don't auto-play video or music - let user control it
     } else {
       // Stop background music when video is hidden
       if (audioRef.current && isMusicPlaying) {
@@ -128,7 +122,7 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
 
   // Handle video play - start background music
   const handleVideoPlay = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !isMusicPlaying) {
       audioRef.current.volume = 0.3 // Set volume to 30% so it doesn't overpower the video
       audioRef.current.loop = true
       const playPromise = audioRef.current.play()
@@ -141,14 +135,6 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
             console.warn('Background music play prevented:', error)
           })
       }
-    }
-  }
-
-  // Handle video pause - pause background music
-  const handleVideoPause = () => {
-    if (audioRef.current && isMusicPlaying) {
-      audioRef.current.pause()
-      setIsMusicPlaying(false)
     }
   }
 
@@ -169,6 +155,11 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   }
 
   const handleNext = () => {
+    // If on step 1 (index 0) and terms not accepted, prevent proceeding
+    if (currentStep === 0 && !isTermsAccepted) {
+      return
+    }
+    
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1)
     }
@@ -274,11 +265,10 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   ref={videoRef}
                   className="w-full h-full object-contain"
                   controls
-                  autoPlay={true}
+                  autoPlay={false}
                   preload="auto"
                   playsInline
                   onPlay={handleVideoPlay}
-                  onPause={handleVideoPause}
                   onEnded={handleVideoEnd}
                   onError={(e) => {
                     console.error('Video error:', e)
@@ -448,21 +438,6 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                   </div>
                 </div>
               </div>
-
-              {/* Terms Acceptance Checkbox */}
-              <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isTermsAccepted}
-                    onChange={(e) => handleTermsAcceptChange(e.target.checked)}
-                    className="w-5 h-5 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all duration-200"
-                  />
-                  <span className="ml-3 text-gray-800 font-medium">
-                    I have read and accept the Terms and Conditions
-                  </span>
-                </label>
-              </div>
             </div>
           ) : (
             <div className="text-center mb-6">
@@ -493,6 +468,23 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               <p className="text-gray-600 text-lg leading-relaxed">
                 {currentStepData.description}
               </p>
+              
+              {/* Terms Acceptance Checkbox - Only show on step 1 */}
+              {currentStep === 0 && (
+                <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isTermsAccepted}
+                      onChange={(e) => handleTermsAcceptChange(e.target.checked)}
+                      className="w-5 h-5 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 transition-all duration-200"
+                    />
+                    <span className="ml-3 text-gray-800 font-medium">
+                      I have read and accept the Terms and Conditions
+                    </span>
+                  </label>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -547,9 +539,9 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               {currentStep < steps.length - 1 ? (
                 <button
                   onClick={handleNext}
-                  disabled={currentStep === 1 && !isTermsAccepted}
+                  disabled={currentStep === 0 && !isTermsAccepted}
                   className={`flex items-center justify-center space-x-2 px-3 md:px-6 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl ${
-                    currentStep === 1 && !isTermsAccepted
+                    currentStep === 0 && !isTermsAccepted
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
                   }`}
