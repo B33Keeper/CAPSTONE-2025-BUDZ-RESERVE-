@@ -471,13 +471,14 @@ export class PaymentsService {
           const matchingReservations = recentReservations.filter(res => {
             const dateValue = useCreatedAt ? res.Created_at : res.Reservation_Date;
             // Handle both Date objects and date strings
-            const resDateStr = dateValue instanceof Date 
-              ? dateValue.toISOString().split('T')[0]
-              : typeof dateValue === 'string'
-                ? dateValue.split('T')[0]
-                : dateValue 
-                  ? new Date(dateValue).toISOString().split('T')[0]
-                  : null;
+            let resDateStr: string | null = null;
+            if (dateValue instanceof Date) {
+              resDateStr = dateValue.toISOString().split('T')[0];
+            } else if (typeof dateValue === 'string') {
+              resDateStr = dateValue.split('T')[0];
+            } else if (dateValue) {
+              resDateStr = new Date(dateValue as any).toISOString().split('T')[0];
+            }
             return resDateStr === queryDateStr;
           });
           console.log(`[SalesReport Service] Debug: ${matchingReservations.length} reservations match query date (${queryDateStr})`);
