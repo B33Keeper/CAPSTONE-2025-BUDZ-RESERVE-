@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Calendar, CheckCircle, ArrowRight, ArrowLeft, UserPlus, MapPin, ShoppingCart, ClipboardCheck, Play, FileText } from 'lucide-react'
+import { X, Calendar, CreditCard, CheckCircle, ArrowRight, ArrowLeft, UserPlus, MapPin, ShoppingCart, ClipboardCheck, Play, FileText } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
 interface ReservationGuideModalProps {
