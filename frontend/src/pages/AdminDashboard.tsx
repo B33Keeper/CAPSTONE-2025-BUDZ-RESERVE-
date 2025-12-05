@@ -20,6 +20,8 @@ const AdminDashboard = () => {
   const [yearlyReservationTotal, setYearlyReservationTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [recentReservations, setRecentReservations] = useState<any[]>([])
+  const [todayUpcomingReservations, setTodayUpcomingReservations] = useState<any[]>([])
 
   // Format price for display
   const formatPrice = (price: number) => {
@@ -368,6 +370,45 @@ const AdminDashboard = () => {
       setMonthlyReservationData(monthlyData)
       setMaxMonthlyReservation(Math.max(...monthsAccumulator, 0))
       setYearlyReservationTotal(yearlyTotal)
+      
+      // Get recent reservations (last 5, sorted by Created_at)
+      const sortedByCreated = [...safeReservations].sort((a: any, b: any) => {
+        const dateA = new Date(a.Created_at || a.created_at || 0).getTime()
+        const dateB = new Date(b.Created_at || b.created_at || 0).getTime()
+        return dateB - dateA
+      })
+      setRecentReservations(sortedByCreated.slice(0, 5))
+      
+      // Get today's upcoming reservations (reservations scheduled for today that haven't ended)
+      const now = new Date()
+      const todayStr = now.toISOString().split('T')[0]
+      const todayUpcoming = safeReservations.filter((res: any) => {
+        const resDate = res.Reservation_Date || res.reservation_date
+        if (!resDate) return false
+        
+        const resDateStr = new Date(resDate).toISOString().split('T')[0]
+        if (resDateStr !== todayStr) return false
+        
+        const status = (res.Status || res.status || '').toLowerCase()
+        if (status === 'cancelled') return false
+        
+        // Check if reservation hasn't ended yet
+        const endTime = res.End_Time || res.end_time
+        if (!endTime) return true
+        
+        const [hours, minutes] = endTime.split(':').map(Number)
+        const endDateTime = new Date(resDate)
+        endDateTime.setHours(hours, minutes, 0, 0)
+        
+        return endDateTime > now
+      }).sort((a: any, b: any) => {
+        const timeA = (a.Start_Time || a.start_time || '').split(':').map(Number)
+        const timeB = (b.Start_Time || b.start_time || '').split(':').map(Number)
+        if (timeA[0] !== timeB[0]) return timeA[0] - timeB[0]
+        return timeA[1] - timeB[1]
+      })
+      setTodayUpcomingReservations(todayUpcoming.slice(0, 5))
+      
       setLoading(false)
       setRefreshing(false)
     } catch (error: any) {
@@ -842,89 +883,171 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Quick Links Section */}
-          <div className="mb-6 sm:mb-8">
+          {/* Recent Activity & Today's Schedule */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            {/* Recent Reservations */}
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8 animate-fadeInUp">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Quick Links</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {/* Upload Photo */}
-                <button
-                  onClick={() => navigate('/admin/upload-photo')}
-                  className="flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl hover:from-blue-100 hover:to-indigo-100 transition-all duration-300 hover:scale-105 hover:shadow-lg border-2 border-blue-200 hover:border-blue-400 group"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-500 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-600 transition-colors group-hover:scale-110">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <span className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-blue-700 transition-colors text-center">Upload Photo</span>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Recent Reservations</h2>
+                </div>
+                <button
+                  onClick={() => navigate('/admin/create-reservations')}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  View All →
                 </button>
+              </div>
+              <div className="space-y-3">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : recentReservations.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p>No recent reservations</p>
+                  </div>
+                ) : (
+                  recentReservations.map((res: any) => {
+                    const courtName = res.court?.Court_Name || res.Court_Name || 'N/A'
+                    const customerName = res.user?.Name || res.user?.name || 'Guest'
+                    const date = res.Reservation_Date || res.reservation_date
+                    const time = `${res.Start_Time || res.start_time || ''} - ${res.End_Time || res.end_time || ''}`
+                    const status = (res.Status || res.status || '').toLowerCase()
+                    const createdDate = new Date(res.Created_at || res.created_at || Date.now())
+                    const timeAgo = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60))
+                    
+                    return (
+                      <div
+                        key={res.Reservation_ID || res.id}
+                        className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                        onClick={() => navigate('/admin/create-reservations')}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-gray-900 truncate">{customerName}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                                status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {status}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-1">
+                              <span className="font-medium">{courtName}</span> • {date ? new Date(date).toLocaleDateString() : 'N/A'}
+                            </p>
+                            <p className="text-xs text-gray-500">{time}</p>
+                          </div>
+                          <div className="text-right ml-4">
+                            <p className="text-xs text-gray-400">
+                              {timeAgo < 60 ? `${timeAgo}m ago` : `${Math.floor(timeAgo / 60)}h ago`}
+                            </p>
+                            <p className="text-sm font-semibold text-blue-600 mt-1">
+                              {formatPrice(extractReservationAmount(res))}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
 
-                {/* Add Announcement */}
-                <button
-                  onClick={() => navigate('/admin/create-announcement')}
-                  className="flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl hover:from-purple-100 hover:to-pink-100 transition-all duration-300 hover:scale-105 hover:shadow-lg border-2 border-purple-200 hover:border-purple-400 group"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-purple-500 rounded-lg flex items-center justify-center mb-3 group-hover:bg-purple-600 transition-colors group-hover:scale-110">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+            {/* Today's Upcoming Reservations */}
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6 sm:p-8 animate-fadeInUp">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <span className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-purple-700 transition-colors text-center">Add Announcement</span>
-                </button>
-
-                {/* Manage Courts */}
-                <button
-                  onClick={() => navigate('/admin/manage-courts')}
-                  className="flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl hover:from-green-100 hover:to-emerald-100 transition-all duration-300 hover:scale-105 hover:shadow-lg border-2 border-green-200 hover:border-green-400 group"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-green-500 rounded-lg flex items-center justify-center mb-3 group-hover:bg-green-600 transition-colors group-hover:scale-110">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-                      <circle cx="16" cy="12" r="1"/>
-                    </svg>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Today's Schedule</h2>
+                </div>
+                <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
                   </div>
-                  <span className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-green-700 transition-colors text-center">Manage Courts</span>
-                </button>
-
-                {/* Manage Rackets */}
-                <button
-                  onClick={() => navigate('/admin/manage-rackets')}
-                  className="flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-orange-50 to-red-50 rounded-xl hover:from-orange-100 hover:to-red-100 transition-all duration-300 hover:scale-105 hover:shadow-lg border-2 border-orange-200 hover:border-orange-400 group"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-orange-500 rounded-lg flex items-center justify-center mb-3 group-hover:bg-orange-600 transition-colors group-hover:scale-110">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                ) : todayUpcomingReservations.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
+                    <p>No upcoming reservations today</p>
                   </div>
-                  <span className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-orange-700 transition-colors text-center">Manage Rackets</span>
-                </button>
-
-                {/* Sales Report */}
-                <button
-                  onClick={() => navigate('/admin/sales-report')}
-                  className="flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl hover:from-yellow-100 hover:to-amber-100 transition-all duration-300 hover:scale-105 hover:shadow-lg border-2 border-yellow-200 hover:border-yellow-400 group"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-500 rounded-lg flex items-center justify-center mb-3 group-hover:bg-yellow-600 transition-colors group-hover:scale-110">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-yellow-700 transition-colors text-center">Sales Report</span>
-                </button>
-
-                {/* View Suggestions */}
-                <button
-                  onClick={() => navigate('/admin/view-suggestions')}
-                  className="flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl hover:from-indigo-100 hover:to-blue-100 transition-all duration-300 hover:scale-105 hover:shadow-lg border-2 border-indigo-200 hover:border-indigo-400 group"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-indigo-500 rounded-lg flex items-center justify-center mb-3 group-hover:bg-indigo-600 transition-colors group-hover:scale-110">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm sm:text-base font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors text-center">View Suggestions</span>
-                </button>
+                ) : (
+                  todayUpcomingReservations.map((res: any) => {
+                    const courtName = res.court?.Court_Name || res.Court_Name || 'N/A'
+                    const customerName = res.user?.Name || res.user?.name || 'Guest'
+                    const startTime = res.Start_Time || res.start_time || ''
+                    const endTime = res.End_Time || res.end_time || ''
+                    const [startHour, startMin] = startTime.split(':').map(Number)
+                    const [endHour, endMin] = endTime.split(':').map(Number)
+                    const now = new Date()
+                    const startDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, startMin)
+                    const endDateTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), endHour, endMin)
+                    const isUpcoming = startDateTime > now
+                    const isOngoing = now >= startDateTime && now < endDateTime
+                    
+                    return (
+                      <div
+                        key={res.Reservation_ID || res.id}
+                        className={`p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+                          isOngoing 
+                            ? 'bg-emerald-50 border-emerald-300 shadow-md' 
+                            : 'bg-gradient-to-r from-gray-50 to-white border-gray-200 hover:border-emerald-300 hover:shadow-md'
+                        }`}
+                        onClick={() => navigate('/admin/create-reservations')}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-gray-900 truncate">{customerName}</span>
+                              {isOngoing && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500 text-white animate-pulse">
+                                  Ongoing
+                                </span>
+                              )}
+                              {isUpcoming && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-white">
+                                  Upcoming
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mb-1">
+                              <span className="font-medium">{courtName}</span>
+                            </p>
+                            <p className="text-sm font-medium text-emerald-600">
+                              {startTime} - {endTime}
+                            </p>
+                          </div>
+                          <div className="text-right ml-4">
+                            <p className="text-sm font-semibold text-emerald-600">
+                              {formatPrice(extractReservationAmount(res))}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
           </div>
