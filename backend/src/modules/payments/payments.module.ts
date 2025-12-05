@@ -14,6 +14,7 @@ import { EquipmentRental } from './entities/equipment-rental.entity';
 import { EquipmentRentalItem } from './entities/equipment-rental-item.entity';
 import { Equipment } from '../equipment/entities/equipment.entity';
 import { Reservation } from '../reservations/entities/reservation.entity';
+import { ReservationHistory } from '../reservations/entities/reservation-history.entity';
 import { User } from '../users/entities/user.entity';
 import { ReservationsModule } from '../reservations/reservations.module';
 import { CourtsModule } from '../courts/courts.module';
@@ -23,7 +24,7 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Payment, Reservation, EquipmentRental, EquipmentRentalItem, Equipment, User]),
+    TypeOrmModule.forFeature([Payment, Reservation, ReservationHistory, EquipmentRental, EquipmentRentalItem, Equipment, User]),
     forwardRef(() => ReservationsModule),
     CourtsModule,
     EquipmentModule,

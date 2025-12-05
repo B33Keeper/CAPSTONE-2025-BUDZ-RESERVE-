@@ -5,6 +5,7 @@ import { Payment } from './entities/payment.entity';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ReservationsService } from '../reservations/reservations.service';
 import { Reservation, ReservationStatus } from '../reservations/entities/reservation.entity';
+import { ReservationHistory } from '../reservations/entities/reservation-history.entity';
 import { PaymentStatus } from './entities/payment.entity';
 import { EquipmentRental } from './entities/equipment-rental.entity';
 import { EquipmentRentalItem } from './entities/equipment-rental-item.entity';
@@ -17,6 +18,8 @@ export class PaymentsService {
     private paymentsRepository: Repository<Payment>,
     @InjectRepository(Reservation)
     private reservationsRepository: Repository<Reservation>,
+    @InjectRepository(ReservationHistory)
+    private reservationsHistoryRepository: Repository<ReservationHistory>,
     @InjectRepository(EquipmentRental)
     private equipmentRentalRepository: Repository<EquipmentRental>,
     @InjectRepository(EquipmentRentalItem)
@@ -161,7 +164,104 @@ export class PaymentsService {
         .leftJoinAndSelect('reservation.payments', 'payments')
         .getMany();
       
-      console.log(`[SalesReport Service] Found ${reservations.length} reservations in date range (filtered by ${dateField})`);
+      console.log(`[SalesReport Service] Found ${reservations.length} active reservations in date range (filtered by ${dateField})`);
+      
+      // Also query reservations_history for completed/ended reservations
+      // This is critical because ended reservations are moved to history table
+      let historyReservations: any[] = [];
+      if (!useCreatedAt) {
+        // Only query history for non-daily periods (weekly/monthly/quarterly/yearly)
+        // Daily uses Created_at which won't be in history yet
+        try {
+          const formatDateString = (date: Date): string => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
+          
+          const startDateStr = formatDateString(queryStartDate);
+          const endDateStr = formatDateString(queryEndDate);
+          
+          console.log(`[SalesReport Service] Also querying reservations_history for date range: ${startDateStr} to ${endDateStr}`);
+          
+          const historyQueryBuilder = this.reservationsHistoryRepository
+            .createQueryBuilder('history');
+          
+          historyQueryBuilder.where('history.Reservation_Date BETWEEN :startDate AND :endDate', {
+            startDate: startDateStr,
+            endDate: endDateStr
+          });
+          
+          historyQueryBuilder.orderBy('history.Reservation_Date', 'DESC');
+          
+          const historyRecords = await historyQueryBuilder.getMany();
+          
+          console.log(`[SalesReport Service] Found ${historyRecords.length} history reservations in date range`);
+          
+          // Convert history records to reservation-like objects and fetch related data
+          for (const historyRecord of historyRecords) {
+            // Fetch user by id using raw query (User entity uses 'id' as PK)
+            const userResult = await this.reservationsRepository.manager.query(
+              'SELECT id, name, email FROM users WHERE id = ?',
+              [historyRecord.User_ID]
+            );
+            const userData = userResult[0] || null;
+            
+            // Fetch court by Court_Id using raw query
+            const courtResult = await this.reservationsRepository.manager.query(
+              'SELECT Court_Id, Court_Name FROM courts WHERE Court_Id = ?',
+              [historyRecord.Court_ID]
+            );
+            const courtData = courtResult[0] || null;
+            
+            // Fetch payments by original reservation ID
+            const payments = await this.paymentsRepository.find({
+              where: { Reservation_ID: historyRecord.Original_ID }
+            });
+            
+            // Create a reservation-like object matching the Reservation entity structure
+            const reservationLike = {
+              Reservation_ID: historyRecord.Original_ID,
+              User_ID: historyRecord.User_ID,
+              Court_ID: historyRecord.Court_ID,
+              Reservation_Date: historyRecord.Reservation_Date,
+              Start_Time: historyRecord.Start_Time,
+              End_Time: historyRecord.End_Time,
+              Status: historyRecord.Status,
+              Total_Amount: historyRecord.Total_Amount,
+              Reference_Number: historyRecord.Reference_Number,
+              Paymongo_Reference_Number: historyRecord.Paymongo_Reference_Number,
+              Notes: historyRecord.Notes,
+              Is_Admin_Created: historyRecord.Is_Admin_Created,
+              Created_at: historyRecord.Created_at,
+              Updated_at: historyRecord.Updated_at,
+              user: userData ? { 
+                id: userData.id, 
+                name: userData.name, 
+                email: userData.email 
+              } : null,
+              court: courtData ? { 
+                Court_Id: courtData.Court_Id, 
+                Court_Name: courtData.Court_Name 
+              } : null,
+              payments: payments
+            };
+            
+            historyReservations.push(reservationLike);
+          }
+          
+          console.log(`[SalesReport Service] Converted ${historyReservations.length} history records to reservation format`);
+        } catch (error) {
+          console.error(`[SalesReport Service] Error querying reservations_history:`, error);
+          // Continue with active reservations only if history query fails
+        }
+      }
+      
+      // Combine active and history reservations
+      reservations = [...reservations, ...historyReservations];
+      
+      console.log(`[SalesReport Service] Total reservations (active + history): ${reservations.length}`);
       
       // Debug: Log first few reservation dates to verify they're in range
       if (reservations.length > 0) {
