@@ -243,7 +243,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-blue-900/20 to-purple-900/20 backdrop-blur-md flex justify-center items-start sm:items-center z-50 p-2 sm:p-3 md:p-6 overflow-y-auto"
+      className="fixed inset-0 bg-gradient-to-br from-gray-900/80 via-blue-900/20 to-purple-900/20 backdrop-blur-md flex justify-center items-start sm:items-center z-50 p-2 sm:p-3 md:p-6 overflow-y-auto sm:overflow-y-hidden"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose()
@@ -251,11 +251,11 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       }}
     >
       <div 
-        className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl border border-white/20 w-full max-w-3xl sm:max-w-5xl lg:max-w-6xl flex flex-col sm:flex-row my-2 sm:my-4 md:my-6 animate-in slide-in-from-bottom-4 duration-500"
+        className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl border border-white/20 w-full max-w-3xl sm:max-w-5xl lg:max-w-6xl flex flex-col sm:flex-row my-2 sm:my-0 md:my-0 sm:max-h-[90vh] animate-in slide-in-from-bottom-4 duration-500"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Left Sidebar */}
-        <div className="w-full sm:w-1/3 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 border-b sm:border-b-0 sm:border-r border-blue-200/30 flex flex-col relative flex-shrink-0">
+        <div className="w-full sm:w-1/3 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 border-b sm:border-b-0 sm:border-r border-blue-200/30 flex flex-col relative flex-shrink-0 sm:overflow-hidden">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full -translate-x-16 -translate-y-16"></div>
@@ -390,7 +390,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         </div>
 
         {/* Right Content */}
-        <div className="w-full sm:w-2/3 flex flex-col bg-gradient-to-br from-gray-50/50 to-white/80 relative">
+        <div className="w-full sm:w-2/3 flex flex-col bg-gradient-to-br from-gray-50/50 to-white/80 relative sm:overflow-hidden">
           {/* Exit Button - Upper Right */}
           <button
             onClick={onClose}
@@ -441,7 +441,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
           </div>
 
           {/* Content - Scrollable */}
-          <div className="flex justify-center px-3 sm:px-4 md:px-6 pb-2">
+          <div className="flex justify-center px-3 sm:px-4 md:px-6 pb-2 sm:overflow-y-auto sm:flex-1 sm:min-h-0">
             <div className="max-w-2xl w-full py-2 sm:py-3 md:py-4">
               {activeTab === 'profile' ? (
                 <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-3 sm:space-y-4 md:space-y-5">
