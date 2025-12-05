@@ -10,17 +10,17 @@ interface ReservationGuideModalProps {
 const steps = [
   {
     number: 1,
-    title: 'Create Account & Login',
-    description: 'First, you need to create an account if you don\'t have one yet. Click "Get Started" or "Sign Up" to register. After creating your account, make sure to log in. You must be logged in to make a reservation. Before proceeding, you must read and accept the Terms and Conditions.',
-    icon: UserPlus,
-    color: 'blue'
-  },
-  {
-    number: 2,
     title: 'Read & Accept Terms and Conditions',
     description: 'Please carefully read and understand our Terms and Conditions below. Before you can select an available date in the booking process, you must read and accept these terms first. You must accept these terms to continue with the booking process.',
     icon: FileText,
     color: 'amber'
+  },
+  {
+    number: 2,
+    title: 'Create Account & Login',
+    description: 'First, you need to create an account if you don\'t have one yet. Click "Get Started" or "Sign Up" to register. After creating your account, make sure to log in. You must be logged in to make a reservation. Before proceeding, you must read and accept the Terms and Conditions.',
+    icon: UserPlus,
+    color: 'blue'
   },
   {
     number: 3,
@@ -155,8 +155,8 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
   }
 
   const handleNext = () => {
-    // If on step 1 (index 0) and terms not accepted, prevent proceeding
-    if (currentStep === 0 && !isTermsAccepted) {
+    // If on step 2 (index 1) and terms not accepted, prevent proceeding
+    if (currentStep === 1 && !isTermsAccepted) {
       return
     }
     
@@ -327,8 +327,8 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                 Watch this video guide to see the complete booking process step by step.
               </p>
             </div>
-          ) : currentStep === 1 ? (
-            // Step 2: Terms and Conditions Content
+          ) : currentStep === 0 ? (
+            // Step 1: Terms and Conditions Content
             <div className="mb-6">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 bg-amber-100">
@@ -469,8 +469,8 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
                 {currentStepData.description}
               </p>
               
-              {/* Terms Acceptance Checkbox - Only show on step 1 */}
-              {currentStep === 0 && (
+              {/* Terms Acceptance Checkbox - Only show on step 2 */}
+              {currentStep === 1 && (
                 <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
                   <label className="flex items-center cursor-pointer">
                     <input
@@ -539,9 +539,9 @@ export function ReservationGuideModal({ isOpen, onClose }: ReservationGuideModal
               {currentStep < steps.length - 1 ? (
                 <button
                   onClick={handleNext}
-                  disabled={currentStep === 0 && !isTermsAccepted}
+                  disabled={currentStep === 1 && !isTermsAccepted}
                   className={`flex items-center justify-center space-x-2 px-3 md:px-6 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl ${
-                    currentStep === 0 && !isTermsAccepted
+                    currentStep === 1 && !isTermsAccepted
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
                   }`}
