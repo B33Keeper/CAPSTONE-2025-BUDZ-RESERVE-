@@ -149,10 +149,12 @@ export class PaymentsService {
         console.log(`[SalesReport Service] DATE comparison - Start: ${startDateStr}, End: ${endDateStr}`);
         console.log(`[SalesReport Service] Original query dates - Start: ${queryStartDate.toISOString()} (Local: ${queryStartDate.toLocaleDateString()}), End: ${queryEndDate.toISOString()} (Local: ${queryEndDate.toLocaleDateString()})`);
         
-        // Use Between operator for DATE field - TypeORM handles DATE type comparisons correctly
-        // Between is inclusive on both ends (>= start AND <= end)
-        queryBuilder.where('reservation.Reservation_Date BETWEEN :startDate AND :endDate', { 
-          startDate: startDateStr, // YYYY-MM-DD format (no timezone conversion)
+        // Use explicit >= and <= operators for DATE field to ensure inclusive range
+        // This is more reliable than BETWEEN for DATE type comparisons
+        queryBuilder.where('reservation.Reservation_Date >= :startDate', { 
+          startDate: startDateStr // YYYY-MM-DD format (no timezone conversion)
+        });
+        queryBuilder.andWhere('reservation.Reservation_Date <= :endDate', { 
           endDate: endDateStr // YYYY-MM-DD format (no timezone conversion)
         });
         queryBuilder.orderBy('reservation.Reservation_Date', 'DESC');
@@ -175,6 +177,22 @@ export class PaymentsService {
         });
       } else {
         console.log(`[SalesReport Service] WARNING: No active reservations found in date range!`);
+        
+        // Debug: Check what Reservation_Date values actually exist in the database
+        const allReservationDates = await this.reservationsRepository.manager.query(
+          'SELECT DISTINCT Reservation_Date FROM reservations ORDER BY Reservation_Date DESC LIMIT 20'
+        );
+        console.log(`[SalesReport Service] Debug - Sample Reservation_Date values in database:`, 
+          allReservationDates.map((r: any) => r.Reservation_Date)
+        );
+        
+        // Also check history table
+        const allHistoryDates = await this.reservationsHistoryRepository.manager.query(
+          'SELECT DISTINCT Reservation_Date FROM reservations_history ORDER BY Reservation_Date DESC LIMIT 20'
+        );
+        console.log(`[SalesReport Service] Debug - Sample Reservation_Date values in history:`, 
+          allHistoryDates.map((r: any) => r.Reservation_Date)
+        );
       }
       
       // Also query reservations_history for completed/ended reservations
@@ -203,9 +221,10 @@ export class PaymentsService {
           console.log(`[SalesReport Service] Total records in reservations_history table: ${totalHistoryCount[0]?.count || 0}`);
           
           // Use raw SQL query for more reliable date comparison with reservations_history table
+          // Use explicit >= and <= for consistency with active reservations query
           const historyRecordsRaw = await this.reservationsHistoryRepository.manager.query(
             `SELECT * FROM reservations_history 
-             WHERE Reservation_Date BETWEEN ? AND ? 
+             WHERE Reservation_Date >= ? AND Reservation_Date <= ?
              ORDER BY Reservation_Date DESC`,
             [startDateStr, endDateStr]
           );
