@@ -697,7 +697,12 @@ export function BookingPage() {
     
     setRacketTimes(prev => {
       const newMap = new Map(prev)
-      newMap.set(racketName, time)
+      if (quantity === 0) {
+        // Remove time entry when quantity is 0 (unselecting)
+        newMap.delete(racketName)
+      } else {
+        newMap.set(racketName, time)
+      }
       return newMap
     })
     
