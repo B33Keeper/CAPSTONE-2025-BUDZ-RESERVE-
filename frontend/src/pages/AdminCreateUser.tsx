@@ -18,10 +18,11 @@ const createUserSchema = z
       .max(50, 'First name must be at most 50 characters')
       .refine((value) => /[A-Za-z]/.test(value), 'First name must contain letters'),
     middleInitial: z
-      .string()
+      .string({ required_error: 'Middle initial is required' })
       .trim()
+      .min(1, 'Middle initial is required')
       .max(1, 'Middle initial must be a single character')
-      .optional()
+      .refine((value) => /[A-Za-z]/.test(value), 'Middle initial must be a letter')
       .transform((val) => (val && val.length > 0 ? val.toUpperCase() : undefined)),
     lastName: z
       .string({ required_error: 'Last name is required' })
@@ -29,9 +30,12 @@ const createUserSchema = z
       .min(1, 'Last name is required')
       .max(50, 'Last name must be at most 50 characters')
       .refine((value) => /[A-Za-z]/.test(value), 'Last name must contain letters'),
-    sex: z.enum(['Male', 'Female'], {
-      required_error: 'Please select a sex',
-    }),
+    sex: z.custom<'Male' | 'Female'>(
+      (val) => val === 'Male' || val === 'Female',
+      {
+        message: 'Required',
+      }
+    ),
     username: z
       .string({ required_error: 'Username is required' })
       .trim()
@@ -103,10 +107,12 @@ const AdminCreateUser = () => {
     register,
     handleSubmit,
     reset,
+    trigger,
     formState: { errors },
   } = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: {
       firstName: '',
       middleInitial: '',
@@ -119,7 +125,14 @@ const AdminCreateUser = () => {
       contact_number: '',
       can_manage_queueing: false,
     },
+    shouldFocusError: true,
   })
+
+  const handleInvalidSubmit = async () => {
+    // Trigger validation on all fields to show errors
+    await trigger()
+    // Individual field errors are already displayed, no need for toast notification
+  }
 
   const onSubmit = async (data: CreateUserFormData) => {
     setIsSubmitting(true)
@@ -213,7 +226,7 @@ const AdminCreateUser = () => {
           <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200/60 p-4 sm:p-6 md:p-8 lg:p-10">
 
-              <form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit(onSubmit)}>
+              <form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit(onSubmit, handleInvalidSubmit)}>
                 {/* First Row - First Name, Middle Initial, Last Name */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* First Name Field */}
@@ -240,7 +253,7 @@ const AdminCreateUser = () => {
                   {/* Middle Initial Field */}
                   <div>
                     <label htmlFor="middleInitial" className="block text-sm font-medium text-gray-700 mb-2">
-                      Middle Initial <span className="text-gray-400 font-normal">(Optional)</span>
+                      Middle Initial
                     </label>
                     <input
                       {...register('middleInitial')}

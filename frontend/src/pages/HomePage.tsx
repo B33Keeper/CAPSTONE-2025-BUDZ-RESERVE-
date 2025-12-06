@@ -24,11 +24,12 @@ export function HomePage() {
       return
     }
 
-    // Automatically show guide if user is not logged in (only on landing page)
+    // Automatically show guide if user is not logged in (on all devices - mobile and desktop)
     // This will trigger when:
     // 1. Auth check completes (isLoading becomes false)
     // 2. User is not authenticated
     if (!isAuthenticated) {
+      // Show guide on both mobile and desktop
       // Small delay to ensure page is fully loaded and rendered
       const timer = setTimeout(() => {
         setShowGuide(true)
