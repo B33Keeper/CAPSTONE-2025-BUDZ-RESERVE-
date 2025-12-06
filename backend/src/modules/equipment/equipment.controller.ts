@@ -75,6 +75,16 @@ export class EquipmentController {
     return this.equipmentService.getAvailableEquipment();
   }
 
+  @Get(':id/has-rentals')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Check if equipment has active or pending rentals' })
+  @ApiResponse({ status: 200, description: 'Rental status retrieved successfully' })
+  async checkHasRentals(@Param('id', ParseIntPipe) id: number) {
+    const hasRentals = await this.equipmentService.hasActiveOrPendingRentals(id);
+    return { hasActiveOrPendingRentals: hasRentals };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get equipment by ID' })
   @ApiResponse({ status: 200, description: 'Equipment retrieved successfully' })

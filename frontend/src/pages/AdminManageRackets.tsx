@@ -46,6 +46,8 @@ const AdminManageRackets = () => {
   })
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [hasActiveRentals, setHasActiveRentals] = useState(false)
+  const [checkingRentals, setCheckingRentals] = useState(false)
 
   const clearFieldError = (field: string) => {
     setFormErrors(prev => {
@@ -131,8 +133,8 @@ const AdminManageRackets = () => {
       errors.tension = 'Tension is required.'
     }
 
-    // Make Status required
-    if (!data.status || !data.status.trim()) {
+    // Status is only required when editing, not when adding (defaults to 'Available')
+    if (!isAdd && (!data.status || !data.status.trim())) {
       errors.status = 'Status is required.'
     }
 
@@ -243,9 +245,21 @@ const AdminManageRackets = () => {
     })
   }
 
-  const handleEditRacket = (racketId: number) => {
+  const handleEditRacket = async (racketId: number) => {
     const racket = rackets.find(r => r.id === racketId)
     if (racket) {
+      // Check if racket has active or pending rentals
+      setCheckingRentals(true)
+      try {
+        const response = await api.get(`/equipment/${racketId}/has-rentals`)
+        setHasActiveRentals(response.data.hasActiveOrPendingRentals || false)
+      } catch (error) {
+        console.error('Error checking rentals:', error)
+        setHasActiveRentals(false) // Default to false if check fails
+      } finally {
+        setCheckingRentals(false)
+      }
+
       const imageUrl = resolveImageUrl(racket.image_path || '')
       const preparedRacket = {
         ...racket,
@@ -269,7 +283,7 @@ const AdminManageRackets = () => {
       equipment_name: '',
       stocks: null,
       price: null,
-      status: '',
+      status: 'Available', // Default status for new rackets
       image_path: '',
       unit: '',
       weight: '',
@@ -280,6 +294,7 @@ const AdminManageRackets = () => {
     setInitialRacketData(sanitizeRacketForComparison(newRacket))
     setImagePreview(null)
     setSelectedFile(null)
+    setHasActiveRentals(false) // Reset rental status for new rackets
     setIsAddModal(true)
     setEditModalOpen(true)
   }
@@ -371,6 +386,8 @@ const AdminManageRackets = () => {
     setEditingRacket(null)
     setIsAddModal(false)
     setSelectedFile(null)
+    setHasActiveRentals(false)
+    setCheckingRentals(false)
     setImagePreview(null)
     setFormErrors({})
     setInitialRacketData(null)
@@ -1021,49 +1038,62 @@ const AdminManageRackets = () => {
                     )}
                   </div>
 
-                  {/* Enhanced Status Field */}
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                      <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Status
-                      <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={editingRacket.status ?? ''}
-                        onChange={(e) => {
-                          clearFieldError('status')
-                          setEditingRacket({...editingRacket, status: e.target.value})
-                        }}
-                        className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all appearance-none bg-white cursor-pointer ${
-                          formErrors.status
-                            ? 'border-red-400 focus:ring-red-500 focus:border-red-500'
-                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                        }`}
-                      >
-                        <option value="" disabled>
-                          Select status
-                        </option>
-                        <option value="Available">Available</option>
-                        <option value="Unavailable">Unavailable</option>
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  {/* Status Field - Only show when editing, not when adding */}
+                  {!isAddModal && (
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                        <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
+                        Status
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={editingRacket.status ?? ''}
+                          onChange={(e) => {
+                            clearFieldError('status')
+                            setEditingRacket({...editingRacket, status: e.target.value})
+                          }}
+                          disabled={hasActiveRentals || checkingRentals}
+                          className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all appearance-none ${
+                            hasActiveRentals || checkingRentals
+                              ? 'bg-gray-100 border-gray-300 cursor-not-allowed text-gray-500'
+                              : formErrors.status
+                              ? 'border-red-400 focus:ring-red-500 focus:border-red-500 bg-white cursor-pointer'
+                              : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500 bg-white cursor-pointer'
+                          }`}
+                        >
+                          <option value="" disabled>
+                            Select status
+                          </option>
+                          <option value="Available">Available</option>
+                          <option value="Unavailable">Unavailable</option>
+                        </select>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg className={`w-5 h-5 ${hasActiveRentals || checkingRentals ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
                       </div>
+                      {hasActiveRentals && (
+                        <p className="mt-2 text-sm text-amber-600 flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          Status cannot be changed. This racket has active or pending rentals.
+                        </p>
+                      )}
+                      {formErrors.status && (
+                        <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {formErrors.status}
+                        </p>
+                      )}
                     </div>
-                    {formErrors.status && (
-                      <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {formErrors.status}
-                      </p>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

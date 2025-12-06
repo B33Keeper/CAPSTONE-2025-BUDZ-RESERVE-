@@ -196,7 +196,7 @@ export function BookingPage() {
         
         const [courtsData, equipmentData, timeSlotsData] = await Promise.all([
           apiServices.getCourts(),
-          apiServices.getEquipment(),
+          apiServices.getAvailableEquipment(), // Only get equipment with status = 'Available'
           apiServices.getTimeSlots()
         ])
         

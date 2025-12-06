@@ -33,7 +33,7 @@ export function HomePage() {
       // Small delay to ensure page is fully loaded and rendered
       const timer = setTimeout(() => {
         setShowGuide(true)
-      }, 1500) // Delay to ensure smooth page load
+      }, 1000) // Reduced delay for better user experience
       return () => clearTimeout(timer)
     } else {
       // If user is logged in, hide the guide
