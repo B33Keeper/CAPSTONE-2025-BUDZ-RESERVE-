@@ -721,17 +721,18 @@ export function BookingPage() {
       setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
     } else {
       // CRITICAL: If multiple schedules are selected, create separate bookings - one per schedule
+      // Each schedule gets the full quantity specified by the user
       if (schedulesToUse.length > 1) {
-        // Multiple schedules: create separate bookings, each with quantity 1
+        // Multiple schedules: create separate bookings, each with the specified quantity
         setEquipmentBookings(prev => {
           const filtered = prev.filter(booking => booking.equipment !== racketName)
           
-          // Create separate booking for each selected schedule
+          // Create separate booking for each selected schedule with the full quantity
           const newBookings: EquipmentBooking[] = schedulesToUse.map(scheduleKey => ({
             equipment: racketName,
             time: `${time} hr`,
-            subtotal: price * time * 1, // Each schedule gets full price (1 racket per schedule)
-            quantity: 1, // One racket per schedule
+            subtotal: price * time * quantity, // Each schedule gets price * quantity
+            quantity: quantity, // Use the actual quantity for each schedule
             selectedCourtSchedules: [scheduleKey] // Single schedule per booking
           }))
           
@@ -1798,29 +1799,43 @@ export function BookingPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                   {equipment.map((item, index) => {
                     // Get availability: if schedule cells are selected, calculate based on selected schedules for this racket
-                    // When multiple schedules are selected, show the minimum availability across those schedules
+                    // Account for quantities from equipmentBookings in the current session
                     let availableStock = item.stocks ?? 0
                     
                     if (selectedCells.size > 0) {
-                      // Check if this racket is booked for specific schedules
+                      // Get all bookings for this racket across all equipment bookings
                       const racketBookings = equipmentBookings.filter(b => b.equipment === item.equipment_name)
                       
-                      if (racketBookings.length > 0 && equipmentAvailabilityPerSchedule.size > 0) {
-                        // Get availability for schedules where this racket is booked
-                        const availabilities: number[] = []
-                        racketBookings.forEach(booking => {
-                          if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
-                            booking.selectedCourtSchedules.forEach(scheduleKey => {
-                              const scheduleAvail = equipmentAvailabilityPerSchedule.get(scheduleKey)
-                              if (scheduleAvail && scheduleAvail.has(item.id)) {
-                                availabilities.push(scheduleAvail.get(item.id) ?? 0)
+                      if (equipmentAvailabilityPerSchedule.size > 0 && courtBookings.length > 0) {
+                        // Calculate per-schedule availability, subtracting quantities from current session bookings
+                        const scheduleAvailabilities: number[] = []
+                        
+                        // For each court booking that matches selected cells, calculate availability
+                        courtBookings.forEach(courtBooking => {
+                          const scheduleKey = `${courtBooking.court}-${courtBooking.schedule}`
+                          const cellKey = `COURT ${getCourtIdFromName(courtBooking.court)}-${courtBooking.schedule}`
+                          
+                          // Only process schedules that are actually selected in cells
+                          if (selectedCells.has(cellKey)) {
+                            const baseAvailability = equipmentAvailabilityPerSchedule.get(scheduleKey)?.get(item.id) ?? item.stocks ?? 0
+                            
+                            // Calculate total quantity booked for this racket in this schedule from current session
+                            let totalQuantityForSchedule = 0
+                            racketBookings.forEach(racketBooking => {
+                              if (racketBooking.selectedCourtSchedules && racketBooking.selectedCourtSchedules.includes(scheduleKey)) {
+                                totalQuantityForSchedule += racketBooking.quantity || 0
                               }
                             })
+                            
+                            // Subtract the quantities from base availability
+                            const adjustedAvailability = Math.max(0, baseAvailability - totalQuantityForSchedule)
+                            scheduleAvailabilities.push(adjustedAvailability)
                           }
                         })
                         
-                        if (availabilities.length > 0) {
-                          availableStock = Math.min(...availabilities)
+                        if (scheduleAvailabilities.length > 0) {
+                          // Use minimum availability across all selected schedules
+                          availableStock = Math.min(...scheduleAvailabilities)
                         } else if (equipmentAvailability.has(item.id)) {
                           availableStock = equipmentAvailability.get(item.id) ?? 0
                         }
@@ -2208,6 +2223,7 @@ export function BookingPage() {
         maxTime={courtBookings.length > 0 ? calculateReservationDuration() : undefined}
         scheduleSpecificAvailability={(() => {
           // Calculate availability based on selected schedules for this racket
+          // Account for quantities from equipmentBookings in the current session
           if (!selectedRacketForModal || selectedCells.size === 0 || courtBookings.length === 0) {
             return undefined
           }
@@ -2215,13 +2231,32 @@ export function BookingPage() {
           // If we have per-schedule availability and schedules selected for this racket, use it
           if (equipmentAvailabilityPerSchedule.size > 0 && selectedCourtSchedulesForRacket.size > 0) {
             const availabilities: number[] = []
+            
+            // Get all bookings for this racket (excluding current one being configured)
+            const racketBookings = equipmentBookings.filter(b => 
+              b.equipment === selectedRacketForModal.equipment_name
+            )
+            
             selectedCourtSchedulesForRacket.forEach((scheduleKey) => {
               const scheduleAvailMap = equipmentAvailabilityPerSchedule.get(scheduleKey)
               if (scheduleAvailMap && scheduleAvailMap.has(selectedRacketForModal.id)) {
-                availabilities.push(scheduleAvailMap.get(selectedRacketForModal.id) ?? 0)
+                const baseAvailability = scheduleAvailMap.get(selectedRacketForModal.id) ?? 0
+                
+                // Calculate total quantity booked for this racket in this schedule from current session
+                let totalQuantityForSchedule = 0
+                racketBookings.forEach(booking => {
+                  if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.includes(scheduleKey)) {
+                    totalQuantityForSchedule += booking.quantity || 0
+                  }
+                })
+                
+                const adjustedAvailability = Math.max(0, baseAvailability - totalQuantityForSchedule)
+                availabilities.push(adjustedAvailability)
               }
             })
+            
             if (availabilities.length > 0) {
+              // Use minimum availability across all selected schedules
               return Math.min(...availabilities)
             }
           }
