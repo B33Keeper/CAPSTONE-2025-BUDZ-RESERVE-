@@ -138,10 +138,10 @@ export function AnnouncementModal() {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 sm:p-6">
-      <div className="w-full max-w-[90vw] sm:max-w-[520px] md:max-w-[560px] lg:max-w-[620px] max-h-[90vh] overflow-y-auto rounded-3xl bg-gradient-to-br from-white via-white to-blue-50 p-[2px] shadow-2xl shadow-blue-900/20 animate-slideDown">
-        <div className="flex flex-col overflow-hidden rounded-[26px] bg-white">
+      <div className="w-full max-w-[90vw] sm:max-w-[520px] md:max-w-[560px] lg:max-w-[620px] max-h-[90vh] rounded-3xl bg-gradient-to-br from-white via-white to-blue-50 p-[2px] shadow-2xl shadow-blue-900/20 animate-slideDown">
+        <div className="flex flex-col h-full max-h-[90vh] overflow-hidden rounded-[26px] bg-white">
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#0b7bff] via-[#5a5bff] to-[#8a33ff] text-white px-6 py-4 flex items-center justify-between shadow-inner">
+          <div className="bg-gradient-to-r from-[#0b7bff] via-[#5a5bff] to-[#8a33ff] text-white px-6 py-4 flex items-center justify-between shadow-inner flex-shrink-0">
           <div className="flex items-start space-x-3">
             <svg className="w-6 h-6 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
@@ -176,19 +176,19 @@ export function AnnouncementModal() {
         </div>
 
           {/* Content */}
-          <div className="px-4 pb-0 sm:px-6">
-            <div className="w-full rounded-[32px] bg-white px-4 py-4 shadow-lg">
-              <div className="mb-4 text-center">
+          <div className="flex-1 px-4 pb-0 sm:px-6 overflow-hidden flex flex-col min-h-0">
+            <div className="w-full rounded-[32px] bg-white px-4 py-4 shadow-lg flex flex-col flex-1 min-h-0">
+              <div className="mb-4 text-center flex-shrink-0">
                 <h3 className="text-xl font-semibold text-gray-900 tracking-tight">{announcement.title}</h3>
               </div>
 
               {announcement.announcement_type === 'image' && imageUrl && (
-                <div className="relative overflow-hidden rounded-[28px] border border-gray-200 bg-gray-100/60">
+                <div className="relative overflow-hidden rounded-[28px] border border-gray-200 bg-gray-100/60 flex-shrink-1 min-h-0 flex items-center justify-center">
                   <button
                     type="button"
                     onClick={handlePreviousAnnouncement}
                     disabled={!hasPrevious}
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 bg-white/95 text-blue-600 shadow transition ${
+                    className={`absolute left-3 top-1/2 -translate-y-1/2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 bg-white/95 text-blue-600 shadow transition ${
                       hasPrevious ? 'hover:bg-white' : 'opacity-40 cursor-default pointer-events-none'
                     }`}
                     aria-label="Previous announcement"
@@ -201,7 +201,7 @@ export function AnnouncementModal() {
                     type="button"
                     onClick={handleNextAnnouncement}
                     disabled={!hasNext}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 bg-white/95 text-blue-600 shadow transition ${
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 bg-white/95 text-blue-600 shadow transition ${
                       hasNext ? 'hover:bg-white' : 'opacity-40 cursor-default pointer-events-none'
                     }`}
                     aria-label="Next announcement"
@@ -213,7 +213,7 @@ export function AnnouncementModal() {
                   <img
                     src={imageUrl}
                     alt={announcement.title}
-                    className="h-full w-full object-cover"
+                    className="max-h-[calc(90vh-280px)] w-full object-contain"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none'
                     }}
@@ -222,7 +222,7 @@ export function AnnouncementModal() {
               )}
 
               {announcement.content && (
-                <div className="mt-4 text-gray-700 whitespace-pre-wrap text-base leading-relaxed">
+                <div className="mt-4 text-gray-700 whitespace-pre-wrap text-base leading-relaxed overflow-y-auto max-h-[200px] flex-shrink-0">
                   {announcement.content}
                 </div>
               )}
@@ -263,7 +263,7 @@ export function AnnouncementModal() {
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50 px-6 py-4 mt-4 flex items-center justify-between">
+          <div className="bg-gray-50 px-6 py-4 mt-4 flex items-center justify-between flex-shrink-0">
             <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
               <input
                 type="checkbox"
