@@ -401,7 +401,7 @@ export function QueueSettingsPage() {
 
       const reportDate = activeTab === 'current'
         ? formatDateForPDF(todayISODate)
-        : 'All History Batches'
+        : selectedHistoryDate ? formatDateForPDF(selectedHistoryDate) : 'All History Batches'
       doc.text(`Date: ${reportDate}`, margin, yPos)
       yPos += 10
 

@@ -28,6 +28,7 @@ export function AdminHeader({ title, subtitle, extraButtons }: AdminHeaderProps)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loadingNotifications, setLoadingNotifications] = useState(false)
+  const [expandedNotifications, setExpandedNotifications] = useState<Set<number>>(new Set())
   const dropdownRef = useRef<HTMLDivElement>(null)
   const notificationsRef = useRef<HTMLDivElement>(null)
 
@@ -237,38 +238,70 @@ export function AdminHeader({ title, subtitle, extraButtons }: AdminHeaderProps)
                         </div>
                       ) : (
                         <div className="divide-y divide-gray-100">
-                          {notifications.map((notification) => (
-                            <div
-                              key={notification.id}
-                              onClick={() => {
-                                if (!notification.is_read) {
-                                  markAsRead(notification.id)
-                                }
-                              }}
-                              className={`px-4 py-3 hover:bg-gray-50/50 transition-colors cursor-pointer ${
-                                !notification.is_read ? 'bg-blue-50/30' : ''
-                              }`}
-                            >
-                              <div className="flex items-start space-x-3">
-                                <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
-                                  !notification.is_read ? 'bg-blue-500' : 'bg-transparent'
-                                }`}></div>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-medium ${
-                                    !notification.is_read ? 'text-gray-900' : 'text-gray-700'
-                                  }`}>
-                                    {notification.title}
-                                  </p>
-                                  <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                                    {notification.message}
-                                  </p>
-                                  <p className="text-xs text-gray-400 mt-1">
-                                    {formatTimeAgo(notification.created_at)}
-                                  </p>
+                          {notifications.map((notification) => {
+                            const isExpanded = expandedNotifications.has(notification.id)
+                            return (
+                              <div
+                                key={notification.id}
+                                className={`px-4 py-3 hover:bg-gray-50/50 transition-colors ${
+                                  !notification.is_read ? 'bg-blue-50/30' : ''
+                                }`}
+                              >
+                                <div className="flex items-start space-x-3">
+                                  <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
+                                    !notification.is_read ? 'bg-blue-500' : 'bg-transparent'
+                                  }`}></div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <p className={`text-sm font-medium flex-1 ${
+                                        !notification.is_read ? 'text-gray-900' : 'text-gray-700'
+                                      }`}>
+                                        {notification.title}
+                                      </p>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setExpandedNotifications(prev => {
+                                            const newSet = new Set(prev)
+                                            if (newSet.has(notification.id)) {
+                                              newSet.delete(notification.id)
+                                            } else {
+                                              newSet.add(notification.id)
+                                            }
+                                            return newSet
+                                          })
+                                          if (!notification.is_read) {
+                                            markAsRead(notification.id)
+                                          }
+                                        }}
+                                        className="flex-shrink-0 p-1 rounded-md hover:bg-gray-200/50 transition-colors"
+                                        aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                                      >
+                                        <svg
+                                          className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
+                                            isExpanded ? 'rotate-180' : ''
+                                          }`}
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                    <p className={`text-xs text-gray-600 mt-1 transition-all duration-200 ${
+                                      isExpanded ? '' : 'line-clamp-2'
+                                    }`}>
+                                      {notification.message}
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                      {formatTimeAgo(notification.created_at)}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
