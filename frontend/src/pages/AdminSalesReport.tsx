@@ -758,23 +758,23 @@ const AdminSalesReport = () => {
         />
 
         {/* Main Content */}
-        <main className="p-3 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden bg-gray-50 min-h-screen animate-fadeIn transition-all duration-300 md:ml-64">
+        <main className="p-2 sm:p-4 md:p-6 lg:p-8 overflow-x-hidden bg-gray-50 min-h-screen animate-fadeIn transition-all duration-300 md:ml-64">
           {/* Enhanced Header Section */}
-          <div className="mb-4 sm:mb-6 lg:mb-8">
-            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200/60 p-4 sm:p-6 lg:p-8 xl:p-10 animate-slideDown backdrop-blur-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+          <div className="mb-3 sm:mb-4 md:mb-6 lg:mb-8">
+            <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl border border-gray-200/60 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 animate-slideDown backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 md:gap-6">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
-                    <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg flex-shrink-0">
-                      <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3 md:mb-4">
+                    <div className="p-1.5 sm:p-2 md:p-3 rounded-lg sm:rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg flex-shrink-0">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-1 sm:mb-2 break-words">
+                      <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent mb-1 sm:mb-2 break-words">
                         Sales Report
                       </h1>
-                      <p className="text-sm sm:text-base lg:text-lg text-gray-600 leading-relaxed">
+                      <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-600 leading-relaxed">
                         Track revenue, reservations, and performance metrics with detailed analytics and insights
                       </p>
                     </div>
@@ -785,16 +785,15 @@ const AdminSalesReport = () => {
           </div>
 
           {/* Controls Section - Outside the header card */}
-          <div className="flex flex-col gap-4 mb-6">
-            {/* Single Row: Date Filter, Period Buttons, Download Button, and Search Filter */}
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-              {/* Left Side: Date Filter */}
-              <div className="flex items-center gap-3 bg-white rounded-lg border border-gray-300 p-2 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
+            {/* Date Filter - Mobile First */}
+            <div className="w-full bg-white rounded-lg border border-gray-300 p-2 sm:p-3 shadow-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <label className="text-sm font-medium text-gray-700">From:</label>
+                  <label className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">From:</label>
                   <input
                     type="date"
                     value={dateFrom}
@@ -806,11 +805,11 @@ const AdminSalesReport = () => {
                       }
                     }}
                     max={dateTo || undefined}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                    className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-xs sm:text-sm"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">To:</label>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">To:</label>
                   <input
                     type="date"
                     value={dateTo}
@@ -822,7 +821,7 @@ const AdminSalesReport = () => {
                       }
                     }}
                     min={dateFrom || undefined}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                    className="flex-1 min-w-0 px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-xs sm:text-sm"
                   />
                 </div>
                 {(dateFrom || dateTo) && (
@@ -831,7 +830,7 @@ const AdminSalesReport = () => {
                       setDateFrom('')
                       setDateTo('')
                     }}
-                    className="ml-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+                    className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
                     title="Clear date filter"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -840,14 +839,16 @@ const AdminSalesReport = () => {
                   </button>
                 )}
               </div>
+            </div>
 
-              {/* Center: Period Buttons */}
-              <div className="flex items-center gap-0 bg-white border border-gray-300 rounded-md p-0.5">
+            {/* Period Buttons - Scrollable on Mobile */}
+            <div className="w-full overflow-x-auto">
+              <div className="flex items-center gap-0 bg-white border border-gray-300 rounded-md p-0.5 min-w-max sm:min-w-0">
                 {periods.map((period) => (
                   <button
                     key={period.value}
                     onClick={() => handlePeriodChange(period.value as any)}
-                    className={`px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 ${
+                    className={`px-3 sm:px-4 py-2 rounded-md font-medium text-xs sm:text-sm transition-all duration-200 whitespace-nowrap ${
                       selectedPeriod === period.value
                         ? 'bg-blue-600 text-white'
                         : 'text-gray-700 hover:bg-gray-50'
@@ -857,36 +858,40 @@ const AdminSalesReport = () => {
                   </button>
                 ))}
               </div>
+            </div>
 
-              {/* Right Side: Refresh, Download Button and Search Filter */}
-              <div className="flex items-center gap-4">
+            {/* Action Buttons and Search - Stack on Mobile */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+              {/* Refresh and Download Buttons */}
+              <div className="flex items-center gap-2 sm:gap-3">
                 {/* Refresh Button */}
                 <button
                   onClick={() => {
                     fetchSalesReport(selectedPeriod, true)
                   }}
                   disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md font-medium transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md font-medium text-xs sm:text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
                   title="Refresh data"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Refresh
+                  <span className="hidden xs:inline">Refresh</span>
                 </button>
                 
                 {/* Download Report Button with Dropdown */}
-                <div className="relative" ref={downloadDropdownRef}>
+                <div className="relative flex-1 sm:flex-initial" ref={downloadDropdownRef}>
                   <button
                     onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+                    className="flex items-center justify-center gap-1.5 sm:gap-2 w-full sm:w-auto px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium text-xs sm:text-sm transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Download Report
+                    <span className="hidden sm:inline">Download Report</span>
+                    <span className="sm:hidden">Download</span>
                     <svg 
-                      className={`w-4 h-4 transition-transform duration-200 ${showDownloadDropdown ? 'rotate-180' : ''}`} 
+                      className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 ${showDownloadDropdown ? 'rotate-180' : ''}`} 
                       fill="none" 
                       stroke="currentColor" 
                       viewBox="0 0 24 24"
@@ -918,25 +923,25 @@ const AdminSalesReport = () => {
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Search Bar */}
-                <div className="relative w-full sm:w-auto sm:max-w-md">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search sales data..."
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
-                  />
-                  <svg 
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
+              {/* Search Bar */}
+              <div className="relative w-full sm:flex-1 sm:max-w-md">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search sales data..."
+                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-xs sm:text-sm"
+                />
+                <svg 
+                  className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
             </div>
           </div>
@@ -944,20 +949,22 @@ const AdminSalesReport = () => {
           {/* Sales Report Table */}
           <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden animate-fadeInUp">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-600">Loading sales report...</span>
+              <div className="flex items-center justify-center py-8 sm:py-12">
+                <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-2 sm:ml-3 text-xs sm:text-sm text-gray-600">Loading sales report...</span>
               </div>
             ) : (
               <>
                 {/* Date Display */}
-                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-sm font-medium text-gray-700">Report Date:</span>
-                    <span className="text-sm font-semibold text-gray-900">
+                <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">Report Date:</span>
+                    </div>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-900 break-words">
                       {(() => {
                         // If manual date filters are set, use those
                         if (dateFrom || dateTo) {
@@ -984,23 +991,23 @@ const AdminSalesReport = () => {
                     </span>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
+                <div className="overflow-x-auto -mx-2 sm:mx-0">
+                  <table className="w-full border-collapse min-w-[800px] sm:min-w-full">
                     <thead>
                       <tr className="border-b-2 border-gray-200" style={{ backgroundColor: '#475569' }}>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">CUSTOMER</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">COURT #</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">TIME</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">DATE</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">PAYMENT</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">RACKET RENT / DURATION</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">PRICE</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">CUSTOMER</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">COURT #</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">TIME</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">DATE</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">PAYMENT</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">RACKET RENT / DURATION</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">PRICE</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredData.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                          <td colSpan={7} className="px-3 sm:px-6 py-6 sm:py-8 text-center text-gray-500">
                             {searchQuery || dateFrom || dateTo ? (
                               <div>
                                 <p className="text-lg font-medium mb-2">No results found</p>
@@ -1046,36 +1053,36 @@ const AdminSalesReport = () => {
                             } animate-slideIn`}
                             style={{ animationDelay: `${index * 50}ms` }}
                           >
-                            <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.customerName}</td>
-                            <td className="px-6 py-4 text-sm text-gray-700">
+                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-gray-900 break-words">{item.customerName}</td>
+                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700">
                               <div className="flex flex-col gap-1">
                                 {item.courtName.split(', ').map((court, idx) => (
-                                  <div key={idx} className="flex items-center space-x-2">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                    <span>{court.trim()}</span>
+                                  <div key={idx} className="flex items-center space-x-1.5 sm:space-x-2">
+                                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-500 rounded-full flex-shrink-0"></div>
+                                    <span className="break-words">{court.trim()}</span>
                                   </div>
                                 ))}
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-700">
+                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700">
                               <div className="flex flex-col gap-1">
                                 {item.time.split(', ').map((time, idx) => (
-                                  <div key={idx} className="flex items-center space-x-2">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    <span>{time.trim()}</span>
+                                  <div key={idx} className="flex items-center space-x-1.5 sm:space-x-2">
+                                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                                    <span className="break-words">{time.trim()}</span>
                                   </div>
                                 ))}
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-700">{item.date}</td>
-                            <td className="px-6 py-4 text-sm font-medium text-green-600">{item.paymentMethod}</td>
-                            <td className="px-6 py-4 text-sm text-gray-700">
+                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">{item.date}</td>
+                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-green-600 break-words">{item.paymentMethod}</td>
+                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-gray-700">
                               {item.equipmentRentals && item.equipmentRentals.length > 0 ? (
-                                <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-col gap-1 sm:gap-1.5">
                                   {item.equipmentRentals.map((rental, idx) => (
-                                    <div key={idx} className="flex items-center gap-1.5">
-                                      <span className="font-medium">{rental.equipmentName}</span>
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium">
+                                    <div key={idx} className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+                                      <span className="font-medium break-words">{rental.equipmentName}</span>
+                                      <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium whitespace-nowrap">
                                         {rental.hours}h
                                         {rental.quantity && rental.quantity > 1 ? ` x${rental.quantity}` : ''}
                                       </span>
@@ -1086,7 +1093,7 @@ const AdminSalesReport = () => {
                                 <span className="text-gray-400">None</span>
                               )}
                             </td>
-                            <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                            <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-semibold text-green-600 whitespace-nowrap">
                               {formatPrice(item.price)}
                             </td>
                           </tr>
@@ -1097,24 +1104,24 @@ const AdminSalesReport = () => {
                 </div>
 
                 {/* Summary Statistics */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 px-3 sm:px-4 py-3 sm:py-4 border-t border-gray-200 bg-gray-50">
                   {/* Total Reservations Card */}
-                  <div className="bg-white px-4 py-6 rounded-lg border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-4">
+                  <div className="bg-white px-3 sm:px-4 py-4 sm:py-6 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       {/* Icon */}
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </div>
-                      <div className="flex-1">
-                        <div className="text-sm text-gray-600 mb-1">
-                          Total Court Reservations
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs sm:text-sm text-gray-600 mb-1">
+                          <span className="block sm:inline">Total Court Reservations</span>
                           {(dateFrom || dateTo || searchQuery || selectedPeriod === 'daily') && (
-                            <span className="text-xs text-gray-400 ml-2">(Filtered)</span>
+                            <span className="text-xs text-gray-400 ml-0 sm:ml-2 block sm:inline">(Filtered)</span>
                           )}
                         </div>
-                        <div className="text-2xl font-bold text-gray-900">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-900">
                           {/* Count individual court reservations from filtered transactions */}
                           {(() => {
                             // Count courts by splitting comma-separated court names in each transaction
@@ -1130,22 +1137,22 @@ const AdminSalesReport = () => {
                     </div>
                   </div>
                   {/* Total Income Card */}
-                  <div className="bg-white px-4 py-6 rounded-lg border border-gray-200 shadow-sm">
-                    <div className="flex items-center gap-4">
+                  <div className="bg-white px-3 sm:px-4 py-4 sm:py-6 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       {/* Icon */}
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
-                      <div className="flex-1">
-                        <div className="text-sm text-gray-600 mb-1">
-                          Total Income
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs sm:text-sm text-gray-600 mb-1">
+                          <span className="block sm:inline">Total Income</span>
                           {(dateFrom || dateTo || searchQuery || selectedPeriod === 'daily') && (
-                            <span className="text-xs text-gray-400 ml-2">(Filtered)</span>
+                            <span className="text-xs text-gray-400 ml-0 sm:ml-2 block sm:inline">(Filtered)</span>
                           )}
                         </div>
-                        <div className="text-2xl font-bold text-green-600">
+                        <div className="text-xl sm:text-2xl font-bold text-green-600 break-words">
                           {/* Always calculate from filtered data to ensure accuracy */}
                           {formatPrice(
                             filteredData.reduce((sum, item) => sum + item.price, 0)
@@ -1158,23 +1165,25 @@ const AdminSalesReport = () => {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-end px-4 py-3 border-t border-gray-200">
+                  <div className="flex items-center justify-center sm:justify-end px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200">
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-2 sm:px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Previous page"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <span className="mx-4 text-sm text-gray-700">
+                    <span className="mx-2 sm:mx-4 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
                       Page {currentPage} out of {totalPages}
                     </span>
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
-                      className="px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-2 sm:px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Next page"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
