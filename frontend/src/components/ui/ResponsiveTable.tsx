@@ -86,12 +86,14 @@ interface ResponsiveTableCellProps {
   children: ReactNode
   className?: string
   hideOnMobile?: boolean
+  rowSpan?: number
 }
 
 export function ResponsiveTableCell({ 
   children, 
   className = '', 
-  hideOnMobile = false 
+  hideOnMobile = false,
+  rowSpan
 }: ResponsiveTableCellProps) {
   const { isMobile } = useResponsive()
 
@@ -104,7 +106,7 @@ export function ResponsiveTableCell({
   const defaultAlign = hasTextAlign ? '' : 'text-left'
 
   return (
-    <td className={`px-2 sm:px-4 py-3 text-xs sm:text-sm text-gray-900 ${defaultAlign} ${className}`}>
+    <td rowSpan={rowSpan} className={`px-2 sm:px-4 py-3 text-xs sm:text-sm text-gray-900 ${defaultAlign} ${className}`}>
       {children}
     </td>
   )
