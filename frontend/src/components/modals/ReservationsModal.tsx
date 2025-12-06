@@ -696,10 +696,14 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                         <ResponsiveTableHeaderCell className="font-bold text-gray-800 text-xs sm:text-sm text-center">Price</ResponsiveTableHeaderCell>
                     </ResponsiveTableHeader>
                     <ResponsiveTableBody>
-                  {currentGroups.map((group, groupIndex) => {
-                    // Calculate total for the entire group
+                  {currentGroups.map((group, index) => {
+                    // Get all rental items from all reservations in this group
+                    const allRentalItems: RentalItem[] = []
                     let totalRentalAmount = 0
                     group.reservations.forEach(reservation => {
+                      const rentalItems = rentalsMap[reservation.Reservation_ID]?.items ?? []
+                      allRentalItems.push(...rentalItems)
+                      // Add equipment rental total to the group total
                       const rentalTotal = rentalsMap[reservation.Reservation_ID]?.total ?? 0
                       totalRentalAmount += rentalTotal
                     })
@@ -713,76 +717,67 @@ export function ReservationsModal({ isOpen, onClose }: ReservationsModalProps) {
                       return sum + (Number(res.Total_Amount) || 0)
                     }, 0) + totalRentalAmount
                     
-                    // Render each reservation with its associated rentals on the same line
-                    return group.reservations.map((reservation, reservationIndex) => {
-                      // Get rentals for this specific reservation
-                      const reservationRentals = rentalsMap[reservation.Reservation_ID]?.items ?? []
-                      const reservationRentalTotal = rentalsMap[reservation.Reservation_ID]?.total ?? 0
-                      
-                      // Calculate this reservation's total (court + rentals)
-                      const reservationTotal = (Number(reservation.Total_Amount) || 0) + reservationRentalTotal
-                      
-                      // For the first reservation in group, show full row with ID, date, payment
-                      // For subsequent reservations, show a continuation row
-                      const isFirstReservation = reservationIndex === 0
-                      
-                      return (
-                        <ResponsiveTableRow 
-                          key={`${group.key}-${reservation.Reservation_ID}-${reservationIndex}`} 
-                          className="hover:bg-blue-50/50 transition-colors duration-200 border-b border-gray-100"
-                        >
-                          {isFirstReservation && (
-                            <>
-                              <ResponsiveTableCell className="font-medium text-gray-700 text-center" rowSpan={group.reservations.length}>
-                                <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
-                                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <span className="text-[10px] sm:text-xs font-bold text-blue-600">{startIndex + groupIndex + 1}</span>
-                                  </div>
+                    // Format courts and times for display
+                    const courtsAndTimes = group.reservations.map(res => {
+                      const courtName = res.court?.Court_Name || 'Unknown Court'
+                      const timeRange = `${formatTime(res.Start_Time)} - ${formatTime(res.End_Time)}`
+                      return `${courtName} (${timeRange})`
+                    }).join(', ')
+                    
+                    return (
+                      <ResponsiveTableRow 
+                        key={`${group.key}-${startIndex + index}`} 
+                        className="hover:bg-blue-50/50 transition-colors duration-200 border-b border-gray-100"
+                      >
+                        <ResponsiveTableCell className="font-medium text-gray-700 text-center">
+                          <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-[10px] sm:text-xs font-bold text-blue-600">{startIndex + index + 1}</span>
+                            </div>
+                          </div>
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell className="font-medium text-gray-800 text-xs sm:text-sm text-center">
+                          {formatDate(group.reservationDate)}
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell className="text-gray-700 text-center">
+                          <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
+                            {group.reservations.map((reservation, idx) => (
+                              <div key={idx} className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                                <span className="text-xs sm:text-sm">{`${formatTime(reservation.Start_Time)} - ${formatTime(reservation.End_Time)}`}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell hideOnMobile className="text-gray-700 text-center">
+                          <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
+                            {group.reservations.map((reservation, idx) => {
+                              const courtName = reservation.court?.Court_Name || 'Unknown Court'
+                              return (
+                                <div key={idx} className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-500 rounded-full flex-shrink-0"></div>
+                                  <span className="text-xs sm:text-sm">{courtName}</span>
                                 </div>
-                              </ResponsiveTableCell>
-                              <ResponsiveTableCell className="font-medium text-gray-800 text-xs sm:text-sm text-center" rowSpan={group.reservations.length}>
-                                {formatDate(group.reservationDate)}
-                              </ResponsiveTableCell>
-                            </>
-                          )}
-                          <ResponsiveTableCell className="text-gray-700 text-center">
-                            <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
-                              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                              <span className="text-xs sm:text-sm">{`${formatTime(reservation.Start_Time)} - ${formatTime(reservation.End_Time)}`}</span>
-                            </div>
-                          </ResponsiveTableCell>
-                          <ResponsiveTableCell hideOnMobile className="text-gray-700 text-center">
-                            <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
-                              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-500 rounded-full flex-shrink-0"></div>
-                              <span className="text-xs sm:text-sm">{reservation.court?.Court_Name || 'Unknown Court'}</span>
-                            </div>
-                          </ResponsiveTableCell>
-                          {isFirstReservation && (
-                            <ResponsiveTableCell hideOnMobile className="text-gray-700 text-xs sm:text-sm text-center" rowSpan={group.reservations.length}>
-                              <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
-                                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
-                                <span>{getPaymentMethod(payments)}</span>
-                              </div>
-                            </ResponsiveTableCell>
-                          )}
-                          <ResponsiveTableCell className="text-gray-700 text-center">
-                            <div className="min-w-0 flex justify-center">
-                              {formatRentalItems(reservationRentals)}
-                            </div>
-                          </ResponsiveTableCell>
-                          <ResponsiveTableCell className="text-green-600 text-center">
-                            {isFirstReservation && group.reservations.length > 1 ? (
-                              <div className="flex flex-col items-center">
-                                <span className="font-bold text-xs sm:text-sm">₱{formatPrice(groupTotalAmount)}</span>
-                                <span className="text-[9px] text-gray-400 mt-0.5">(Total)</span>
-                              </div>
-                            ) : (
-                              <span className="font-bold text-xs sm:text-sm">₱{formatPrice(reservationTotal)}</span>
-                            )}
-                          </ResponsiveTableCell>
-                        </ResponsiveTableRow>
-                      )
-                    })
+                              )
+                            })}
+                          </div>
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell hideOnMobile className="text-gray-700 text-xs sm:text-sm text-center">
+                          <div className="flex items-center justify-center space-x-1.5 sm:space-x-2">
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
+                            <span>{getPaymentMethod(payments)}</span>
+                          </div>
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell className="text-gray-700 text-center">
+                          <div className="min-w-0 flex justify-center">
+                            {formatRentalItems(allRentalItems)}
+                          </div>
+                        </ResponsiveTableCell>
+                        <ResponsiveTableCell className="text-green-600 text-center">
+                          <span className="font-bold text-xs sm:text-sm">₱{formatPrice(groupTotalAmount)}</span>
+                        </ResponsiveTableCell>
+                      </ResponsiveTableRow>
+                    )
                   })}
                     </ResponsiveTableBody>
                   </ResponsiveTable>

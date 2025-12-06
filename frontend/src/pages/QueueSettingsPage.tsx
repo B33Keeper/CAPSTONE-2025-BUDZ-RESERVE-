@@ -1423,13 +1423,13 @@ export function QueueSettingsPage() {
                                 </span>
                               )}
                             </td>
-                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-right">
-                              <div className="flex justify-end gap-1.5 sm:gap-2">
+                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center">
+                              <div className="flex justify-center gap-1.5 sm:gap-2">
                                 {row.status === 'paid' ? (
                                   <button
                                     type="button"
                                     onClick={() => handleTogglePaymentStatus(row.playerId)}
-                                    className="rounded-full border border-white/20 bg-white/10 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:border-blue-300 hover:bg-blue-500/20 hover:text-blue-100 whitespace-nowrap"
+                                    className="rounded-full border border-white/20 bg-white/10 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:border-blue-300 hover:bg-blue-500/20 hover:text-blue-100 whitespace-nowrap text-center"
                                   >
                                     Mark Unpaid
                                   </button>
@@ -1438,7 +1438,7 @@ export function QueueSettingsPage() {
                                     type="button"
                                     onClick={() => handleTogglePaymentStatus(row.playerId)}
                                     disabled={row.isInActiveMatch}
-                                    className="rounded-full border border-white/20 bg-white/10 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:border-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-100 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-white/20 disabled:hover:bg-white/10 disabled:hover:text-white/80"
+                                    className="rounded-full border border-white/20 bg-white/10 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:border-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-100 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-white/20 disabled:hover:bg-white/10 disabled:hover:text-white/80 text-center"
                                     title={row.isInActiveMatch ? 'Cannot mark as paid while player is in an active match' : ''}
                                   >
                                     Set Paid
