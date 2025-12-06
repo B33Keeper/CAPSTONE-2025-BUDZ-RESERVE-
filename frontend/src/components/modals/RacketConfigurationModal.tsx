@@ -65,6 +65,11 @@ export function RacketConfigurationModal({
     onClose()
   }
 
+  const handleUnselect = () => {
+    onConfirm(0, time)
+    onClose()
+  }
+
   const handleQuantityChange = (newQuantity: number) => {
     const clampedQuantity = Math.max(0, Math.min(maxStock, newQuantity))
     setQuantity(clampedQuantity)
@@ -285,14 +290,23 @@ export function RacketConfigurationModal({
           >
             Cancel
           </button>
+          {initialQuantity > 0 && (
+            <button
+              onClick={handleUnselect}
+              className="px-5 sm:px-6 md:px-8 py-3 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl font-semibold transition-all duration-200 shadow-lg text-sm sm:text-base w-full sm:w-auto touch-manipulation bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 hover:shadow-xl transform hover:scale-105 active:scale-95"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                Unselect
+              </span>
+            </button>
+          )}
           <button
             onClick={handleConfirm}
-            disabled={quantity === 0 && initialQuantity === 0}
+            disabled={quantity === 0}
             className={`px-5 sm:px-6 md:px-8 py-3 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl font-semibold transition-all duration-200 shadow-lg text-sm sm:text-base w-full sm:w-auto touch-manipulation ${
-              quantity > 0 || (quantity === 0 && initialQuantity > 0)
-                ? quantity === 0 && initialQuantity > 0
-                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 hover:shadow-xl transform hover:scale-105 active:scale-95'
-                  : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-xl transform hover:scale-105 active:scale-95'
+              quantity > 0
+                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-xl transform hover:scale-105 active:scale-95'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
             }`}
           >
@@ -300,11 +314,6 @@ export function RacketConfigurationModal({
               <span className="flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
                 Confirm Selection
-              </span>
-            ) : quantity === 0 && initialQuantity > 0 ? (
-              <span className="flex items-center justify-center gap-2">
-                <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                Remove Selection
               </span>
             ) : (
               'Select Quantity'
