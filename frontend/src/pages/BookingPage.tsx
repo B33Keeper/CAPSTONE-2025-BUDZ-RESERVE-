@@ -656,15 +656,25 @@ export function BookingPage() {
     
     const selectedEquipment = equipment.find(eq => eq.equipment_name === racketName)
     if (selectedEquipment) {
-      // Check if this racket is already booked
-      const existingBooking = equipmentBookings.find(b => b.equipment === racketName)
+      // Find ALL bookings for this racket (since multiple schedules create separate bookings)
+      const existingBookings = equipmentBookings.filter(b => b.equipment === racketName)
+      
+      // Collect all selected court schedules from all bookings for this racket
+      const allSelectedSchedules = new Set<string>()
+      existingBookings.forEach(booking => {
+        if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+          booking.selectedCourtSchedules.forEach(schedule => {
+            allSelectedSchedules.add(schedule)
+          })
+        }
+      })
       
       // If multiple court bookings exist, show schedule selection modal first
       if (courtBookings.length > 1) {
         setPendingRacketForScheduleSelection(selectedEquipment)
-        // Pre-select schedules if this racket is already booked
-        if (existingBooking?.selectedCourtSchedules && existingBooking.selectedCourtSchedules.length > 0) {
-          setSelectedCourtSchedulesForRacket(new Set(existingBooking.selectedCourtSchedules))
+        // Pre-select all schedules that were previously selected for this racket
+        if (allSelectedSchedules.size > 0) {
+          setSelectedCourtSchedulesForRacket(allSelectedSchedules)
         } else {
           setSelectedCourtSchedulesForRacket(new Set())
         }
@@ -677,6 +687,22 @@ export function BookingPage() {
   }
 
   const handleRacketModalConfirm = (racketName: string, quantity: number, time: number) => {
+    // If quantity is 0, unselect the racket completely
+    if (quantity === 0) {
+      setRacketQuantities(prev => {
+        const newMap = new Map(prev)
+        newMap.delete(racketName)
+        return newMap
+      })
+      setRacketTimes(prev => {
+        const newMap = new Map(prev)
+        newMap.delete(racketName)
+        return newMap
+      })
+      setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
+      return
+    }
+    
     // Get selected court schedules for this racket
     const selectedSchedules = selectedCourtSchedulesForRacket.size > 0 
       ? Array.from(selectedCourtSchedulesForRacket)
@@ -795,6 +821,12 @@ export function BookingPage() {
     if (newQuantity === 0) {
       // Remove all bookings for this racket
       setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
+      // Also remove from racketTimes to ensure complete unselection
+      setRacketTimes(prev => {
+        const newMap = new Map(prev)
+        newMap.delete(racketName)
+        return newMap
+      })
     } else {
       // CRITICAL: If multiple schedules are selected, create separate bookings - one per schedule
       // Each schedule represents a separate racket rental

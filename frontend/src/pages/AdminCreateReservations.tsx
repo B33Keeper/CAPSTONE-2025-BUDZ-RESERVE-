@@ -561,13 +561,23 @@ export default function AdminCreateReservations() {
     
     const selectedEquipment = equipment.find(eq => eq.equipment_name === racketName)
     if (selectedEquipment) {
-      // Check if this racket is already booked
-      const existingBooking = equipmentBookings.find(b => b.equipment === racketName)
+      // Find ALL bookings for this racket (since multiple schedules create separate bookings)
+      const existingBookings = equipmentBookings.filter(b => b.equipment === racketName)
+      
+      // Collect all selected court schedules from all bookings for this racket
+      const allSelectedSchedules = new Set<string>()
+      existingBookings.forEach(booking => {
+        if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+          booking.selectedCourtSchedules.forEach(schedule => {
+            allSelectedSchedules.add(schedule)
+          })
+        }
+      })
       
       // Calculate schedule duration for initial time
       let initialTime = 1
-      if (existingBooking?.selectedCourtSchedules && existingBooking.selectedCourtSchedules.length > 0) {
-        initialTime = getMinScheduleDuration(existingBooking.selectedCourtSchedules)
+      if (allSelectedSchedules.size > 0) {
+        initialTime = getMinScheduleDuration(Array.from(allSelectedSchedules))
       } else if (courtBookings.length === 1) {
         initialTime = calculateScheduleDuration(courtBookings[0].schedule)
       } else if (courtBookings.length > 1) {
@@ -586,10 +596,10 @@ export default function AdminCreateReservations() {
       // If multiple court bookings exist, show schedule selection modal first
       if (courtBookings.length > 1) {
         setPendingRacketForScheduleSelection(selectedEquipment)
-        // Pre-select schedules if this racket is already booked
-        if (existingBooking?.selectedCourtSchedules && existingBooking.selectedCourtSchedules.length > 0) {
-          setSelectedCourtSchedulesForRacket(new Set(existingBooking.selectedCourtSchedules))
-      } else {
+        // Pre-select all schedules that were previously selected for this racket
+        if (allSelectedSchedules.size > 0) {
+          setSelectedCourtSchedulesForRacket(allSelectedSchedules)
+        } else {
           setSelectedCourtSchedulesForRacket(new Set())
         }
         setShowCourtScheduleSelectionModal(true)
@@ -601,6 +611,12 @@ export default function AdminCreateReservations() {
   }
 
   const handleRacketModalConfirm = (racketName: string, quantity: number, time: number) => {
+    // If quantity is 0, unselect the racket completely
+    if (quantity === 0) {
+      handleRacketQuantityChange(racketName, 0)
+      return
+    }
+    
     // Get selected court schedules for this racket
     const selectedSchedules = selectedCourtSchedulesForRacket.size > 0 
       ? Array.from(selectedCourtSchedulesForRacket)
@@ -674,6 +690,12 @@ export default function AdminCreateReservations() {
     if (newQuantity === 0) {
       // Remove all bookings for this racket
       setEquipmentBookings(prev => prev.filter(booking => booking.equipment !== racketName))
+      // Also remove from racketTimes to ensure complete unselection
+      setRacketTimes(prev => {
+        const newMap = new Map(prev)
+        newMap.delete(racketName)
+        return newMap
+      })
     } else {
       // CRITICAL: If multiple schedules are selected, create separate bookings - one per schedule
       // Each schedule represents a separate racket rental
@@ -2086,7 +2108,7 @@ export default function AdminCreateReservations() {
                     return (
                           <div
                             key={item.id}
-                      className={`relative h-auto min-h-[280px] sm:h-72 md:h-80 lg:h-84 animate-fade-in ${
+                      className={`relative h-auto min-h-[300px] sm:h-80 md:h-88 lg:h-96 animate-fade-in ${
                         isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer group'
                       }`}
                             style={{ animationDelay: `${index * 80}ms` }}
@@ -2102,20 +2124,20 @@ export default function AdminCreateReservations() {
                           : isOutOfStock
                             ? 'border-gray-200 bg-gradient-to-br from-white via-gray-50 to-blue-50'
                             : 'border-blue-200/60 hover:border-blue-400 hover:from-blue-50 hover:via-purple-50/30 hover:to-blue-100 hover:scale-[1.03] hover:-translate-y-2 hover:shadow-blue-300/50 active:scale-[0.98]'
-                      }`}>
+                            }`}>
                         {/* Premium Badge */}
                         {!isOutOfStock && availableStock > 5 && (
                           <div className="absolute -top-2 sm:-top-3 left-2 sm:left-3 z-20 bg-gradient-to-r from-yellow-400 via-orange-500 to-amber-500 text-white text-xs sm:text-sm font-extrabold px-3 py-1.5 rounded-full shadow-xl border-2 border-white/50 backdrop-blur-sm animate-pulse">
-                            Popular
-                          </div>
-                        )}
+                                      Popular
+                                    </div>
+                                  )}
                                   
                         {/* Stock Badge */}
                         {availableStock > 0 && (
                           <div className="absolute -top-2 sm:-top-3 -right-2 sm:-right-3 z-20 bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs sm:text-sm font-extrabold rounded-full w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center shadow-xl border-2 border-white/50 backdrop-blur-sm animate-bounce">
                             {availableStock}
-                          </div>
-                        )}
+                                    </div>
+                                  )}
                                   
                         {/* Equipment Image Container */}
                         <div className="flex-1 flex items-center justify-center w-full mb-3 sm:mb-4 relative">
@@ -2128,23 +2150,23 @@ export default function AdminCreateReservations() {
                             <div className={`relative w-full h-full bg-white rounded-xl sm:rounded-2xl shadow-md overflow-hidden transition-all duration-700 ${
                               !isOutOfStock ? 'group-hover:shadow-2xl group-hover:shadow-blue-300/30' : ''
                             }`}>
-                              <img
+                                        <img
                                 src={item.image_path ? resolveImageUrl(item.image_path) : '/assets/img/equipments/racket-removebg-preview.png'}
-                                alt={item.equipment_name}
+                                          alt={item.equipment_name}
                                 className={`w-full h-full object-contain object-center transition-all duration-700 ${
                                   !isOutOfStock ? 'group-hover:scale-110 group-hover:rotate-3' : ''
                                 }`}
-                                style={{
+                                          style={{
                                   filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))',
-                                  background: 'transparent'
-                                }}
-                              />
+                                            background: 'transparent'
+                                          }}
+                                        />
                               
                               {/* Shimmer effect on hover - only for available items */}
                               {!isOutOfStock && (
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
                               )}
-                            </div>
+                                      </div>
                             
                             {/* Floating particles effect - only for available items */}
                             {!isOutOfStock && (
@@ -2153,10 +2175,10 @@ export default function AdminCreateReservations() {
                                 <div className="absolute top-6 right-4 w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping opacity-60" style={{animationDelay: '0.3s'}}></div>
                                 <div className="absolute bottom-4 left-5 w-1.5 h-1.5 bg-pink-400 rounded-full animate-ping opacity-60" style={{animationDelay: '0.6s'}}></div>
                                 <div className="absolute bottom-6 right-3 w-1 h-1 bg-cyan-400 rounded-full animate-ping opacity-60" style={{animationDelay: '0.9s'}}></div>
-                              </div>
+                                      </div>
                             )}
-                          </div>
-                        </div>
+                                    </div>
+                                  </div>
                                   
                         {/* Equipment Info */}
                         <div className="w-full text-center space-y-3 sm:space-y-4">
@@ -2167,16 +2189,16 @@ export default function AdminCreateReservations() {
                                 ? 'text-emerald-700 group-hover:text-emerald-800'
                                 : 'text-gray-800 group-hover:text-blue-600 transform group-hover:scale-105'
                           }`}>
-                            {item.equipment_name}
-                          </h3>
-                          
+                                      {item.equipment_name}
+                                    </h3>
+                                    
                           {/* Stock Status with Enhanced Animation */}
                           <div className="flex items-center justify-center space-x-2 sm:space-x-2.5">
                             <div className={`w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full animate-pulse shadow-lg ${
                               availableStock > 0 
                                 ? 'bg-gradient-to-br from-emerald-400 to-green-600 shadow-emerald-300/60' 
                                 : 'bg-gradient-to-br from-red-400 to-rose-600 shadow-red-300/60'
-                            }`}></div>
+                                      }`}></div>
                             <p className={`text-[11px] sm:text-xs md:text-sm font-semibold line-clamp-1 ${
                               isOutOfStock 
                                 ? 'text-rose-600' 
@@ -2185,9 +2207,9 @@ export default function AdminCreateReservations() {
                                   : 'text-gray-600'
                             }`}>
                               {availableStock > 0 ? `${availableStock} available${courtBookings.length > 0 ? ' for selected schedule' : ''}` : 'Out of stock'}
-                            </p>
-                          </div>
-                          
+                                      </p>
+                                    </div>
+                                    
                           {/* Enhanced Price Display */}
                           <div className={`rounded-xl sm:rounded-2xl px-4 sm:px-5 py-2 sm:py-2.5 border-2 shadow-md transition-all duration-500 ${
                             isOutOfStock
@@ -2203,10 +2225,10 @@ export default function AdminCreateReservations() {
                                   ? 'text-emerald-700 group-hover:text-emerald-800'
                                   : 'text-blue-700 group-hover:text-blue-800'
                             }`}>
-                              ₱{item.price}/hour
-                            </p>
-                          </div>
-                        </div>
+                                        ₱{item.price}/hour
+                                      </p>
+                                    </div>
+                                  </div>
                                   
                         {/* Enhanced Hover Overlay - Only show if not out of stock */}
                         {!isOutOfStock && (
@@ -2216,12 +2238,12 @@ export default function AdminCreateReservations() {
                                 <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                              </div>
-                            </div>
-                          </div>
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  </div>
                         )}
-                        
+                                  
                         {/* Selection Indicator */}
                         {isSelected && (
                           <div className="absolute top-3 left-3 z-20 bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs font-extrabold px-3 py-1.5 rounded-full shadow-xl border-2 border-white/50 backdrop-blur-sm animate-pulse">
@@ -2229,10 +2251,10 @@ export default function AdminCreateReservations() {
                               <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
-                            Selected
+                                      Selected
                             </span>
-                          </div>
-                        )}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                     )
