@@ -30,9 +30,12 @@ const signupSchema = z
       .min(1, 'Last name is required')
       .max(50, 'Last name must be at most 50 characters')
       .refine((value) => /[A-Za-z]/.test(value), 'Last name must contain letters'),
-    sex: z.enum(['Male', 'Female'], {
-      required_error: 'Please select a sex',
-    }),
+    sex: z.custom<'Male' | 'Female'>(
+      (val) => val === 'Male' || val === 'Female',
+      {
+        message: 'Please select your sex',
+      }
+    ),
     username: z
       .string({ required_error: 'Username is required' })
       .trim()
@@ -96,11 +99,13 @@ export function SignupPage() {
     reset,
     setError,
     clearErrors,
+    trigger,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
-    mode: 'onChange',
-    reValidateMode: 'onBlur',
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: {
       firstName: '',
       middleInitial: '',
@@ -115,8 +120,30 @@ export function SignupPage() {
     shouldFocusError: true,
   })
 
-  const handleInvalidSubmit = () => {
-    toast.error('Please fill out the required fields.')
+  const handleInvalidSubmit = async () => {
+    // Trigger validation on all fields to show errors
+    const isValid = await trigger()
+    
+    if (!isValid) {
+      const values = getValues()
+      const emptyRequiredFields: string[] = []
+      
+      // Check which required fields are empty
+      if (!values.firstName?.trim()) emptyRequiredFields.push('First Name')
+      if (!values.lastName?.trim()) emptyRequiredFields.push('Last Name')
+      if (!values.sex) emptyRequiredFields.push('Sex')
+      if (!values.username?.trim()) emptyRequiredFields.push('Username')
+      if (!values.email?.trim()) emptyRequiredFields.push('Email Address')
+      if (!values.password?.trim()) emptyRequiredFields.push('Password')
+      if (!values.confirmPassword?.trim()) emptyRequiredFields.push('Confirm Password')
+      if (!values.contact_number?.trim()) emptyRequiredFields.push('Contact Number')
+      
+      if (emptyRequiredFields.length > 0) {
+        toast.error(`Please fill out the following required fields: ${emptyRequiredFields.join(', ')}`)
+      } else {
+        toast.error('Please correct the errors in the form fields.')
+      }
+    }
   }
 
   const onSubmit = async (data: SignupFormData) => {
