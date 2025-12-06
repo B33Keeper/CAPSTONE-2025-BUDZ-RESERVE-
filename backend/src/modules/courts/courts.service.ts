@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Court, CourtStatus } from './entities/court.entity';
 import { CreateCourtDto } from './dto/create-court.dto';
 import { UpdateCourtDto } from './dto/update-court.dto';
-import { Reservation } from '../reservations/entities/reservation.entity';
+import { Reservation, ReservationStatus } from '../reservations/entities/reservation.entity';
 
 @Injectable()
 export class CourtsService {
@@ -40,6 +40,23 @@ export class CourtsService {
 
   async update(id: number, updateCourtDto: UpdateCourtDto): Promise<Court> {
     const court = await this.findOne(id);
+    
+    // If Price is being changed, check for pending or active (confirmed) reservations
+    if (updateCourtDto.Price !== undefined && updateCourtDto.Price !== court.Price) {
+      const activeOrPendingReservations = await this.reservationsRepository.count({
+        where: {
+          Court_ID: id,
+          Status: In([ReservationStatus.PENDING, ReservationStatus.CONFIRMED]),
+        },
+      });
+
+      if (activeOrPendingReservations > 0) {
+        throw new BadRequestException(
+          `Cannot modify price. This court has ${activeOrPendingReservations} active or pending reservation(s). Please wait for all reservations to be completed or cancelled.`
+        );
+      }
+    }
+    
     await this.courtsRepository.update(id, updateCourtDto);
     return this.findOne(id);
   }

@@ -26,6 +26,7 @@ const AdminManageCourts = () => {
   const [editPrice, setEditPrice] = useState(0)
   const [isUpdatingPrice, setIsUpdatingPrice] = useState(false)
   const [upcomingReservationsMap, setUpcomingReservationsMap] = useState<Map<number, number>>(new Map())
+  const [pendingReservationsMap, setPendingReservationsMap] = useState<Map<number, number>>(new Map())
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
     open: boolean
     courtId: number | null
@@ -77,6 +78,7 @@ const AdminManageCourts = () => {
         const inactiveStatuses = ['cancelled', 'canceled', 'completed', 'complete', 'done', 'finished', 'expired']
         const maintenanceGuardWindowMs = 1000 * 60 * 60 * 24 * 7 // 7 days
 
+        // Track upcoming reservations for maintenance guard
         reservationsData
           .filter((reservation: Reservation) => {
             const reservationDateTime = new Date(`${reservation.Reservation_Date}T${reservation.Start_Time}`)
@@ -92,6 +94,20 @@ const AdminManageCourts = () => {
           })
 
         setUpcomingReservationsMap(upcomingMap)
+
+        // Track active (confirmed) and pending reservations for price modification guard
+        const activeOrPendingMap = new Map<number, number>()
+        reservationsData
+          .filter((reservation: Reservation) => {
+            const status = reservation.Status?.toLowerCase() ?? ''
+            return status === 'pending' || status === 'confirmed'
+          })
+          .forEach((reservation: Reservation) => {
+            const currentCount = activeOrPendingMap.get(reservation.Court_ID) ?? 0
+            activeOrPendingMap.set(reservation.Court_ID, currentCount + 1)
+          })
+
+        setPendingReservationsMap(activeOrPendingMap)
         console.log('[AdminManageCourts] Courts set successfully:', sortedCourts.length)
       } catch (error: any) {
         console.error('[AdminManageCourts] Error fetching courts:', error)
@@ -111,6 +127,12 @@ const AdminManageCourts = () => {
 
   const hasUpcomingReservation = (courtId: number) =>
     (upcomingReservationsMap.get(courtId) ?? 0) > 0
+
+  const hasPendingReservation = (courtId: number) =>
+    (pendingReservationsMap.get(courtId) ?? 0) > 0
+
+  const hasActiveOrPendingReservation = (courtId: number) =>
+    (pendingReservationsMap.get(courtId) ?? 0) > 0
 
   const handleStatusChange = async (courtId: number, newStatus: string) => {
     if (
@@ -603,7 +625,13 @@ const AdminManageCourts = () => {
                           </span>
                           <button
                             onClick={() => handleEditCourt(court.Court_Id)}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 px-4 py-2 text-sm font-semibold text-blue-600 transition-all hover:border-blue-300 hover:from-blue-100 hover:to-blue-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+                            disabled={hasActiveOrPendingReservation(court.Court_Id)}
+                            className={`inline-flex items-center justify-center gap-2 rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 px-4 py-2 text-sm font-semibold text-blue-600 transition-all shadow-md ${
+                              hasActiveOrPendingReservation(court.Court_Id)
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:border-blue-300 hover:from-blue-100 hover:to-blue-200 hover:shadow-lg transform hover:scale-105 active:scale-95'
+                            }`}
+                            title={hasActiveOrPendingReservation(court.Court_Id) ? 'Cannot edit price: Court has active or pending reservations' : 'Edit Court Price'}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -611,6 +639,14 @@ const AdminManageCourts = () => {
                             Edit Price
                           </button>
                         </div>
+                        {hasActiveOrPendingReservation(court.Court_Id) && (
+                          <p className="mt-2 text-sm text-amber-700 flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span>Cannot edit price. This court has {pendingReservationsMap.get(court.Court_Id)} active or pending reservation(s).</span>
+                          </p>
+                        )}
                       </div>
 
                       <button
@@ -750,12 +786,26 @@ const AdminManageCourts = () => {
                     value={editPrice}
                     onChange={(e) => setEditPrice(Number(e.target.value) || 0)}
                     placeholder="Enter new price"
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isUpdatingPrice}
-                    autoFocus
+                    className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                      hasActiveOrPendingReservation(editingCourt.Court_Id)
+                        ? 'border-gray-300 bg-gray-100 cursor-not-allowed text-gray-500'
+                        : 'border-gray-300 focus:ring-green-500 focus:border-green-500'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    disabled={isUpdatingPrice || hasActiveOrPendingReservation(editingCourt.Court_Id)}
+                    autoFocus={!hasActiveOrPendingReservation(editingCourt.Court_Id)}
                   />
                 </div>
-                {editPrice > 0 && (
+                {hasActiveOrPendingReservation(editingCourt.Court_Id) && (
+                  <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-amber-700">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span className="font-medium">Price cannot be modified. This court has {pendingReservationsMap.get(editingCourt.Court_Id)} active or pending reservation(s).</span>
+                    </div>
+                  </div>
+                )}
+                {editPrice > 0 && !hasActiveOrPendingReservation(editingCourt.Court_Id) && (
                   <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center gap-2 text-sm text-green-700">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -782,9 +832,9 @@ const AdminManageCourts = () => {
               </button>
               <button
                 onClick={handleUpdatePrice}
-                disabled={isUpdatingPrice || editPrice <= 0}
+                disabled={isUpdatingPrice || editPrice <= 0 || hasActiveOrPendingReservation(editingCourt.Court_Id)}
                 className={`px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 ${
-                  !isUpdatingPrice && editPrice > 0 && 'hover:from-green-700 hover:to-emerald-700 transform hover:scale-105 active:scale-95'
+                  !isUpdatingPrice && editPrice > 0 && !hasActiveOrPendingReservation(editingCourt.Court_Id) && 'hover:from-green-700 hover:to-emerald-700 transform hover:scale-105 active:scale-95'
                 }`}
               >
                 {isUpdatingPrice ? (
