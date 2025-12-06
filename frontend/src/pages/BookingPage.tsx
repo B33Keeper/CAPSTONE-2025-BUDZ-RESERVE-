@@ -1798,38 +1798,26 @@ export function BookingPage() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                   {equipment.map((item, index) => {
-                    // Get availability: if schedule cells are selected, calculate based on selected schedules for this racket
-                    // Account for quantities from equipmentBookings in the current session
+                    // Get availability: if schedule cells are selected, use backend availability
+                    // Do NOT subtract quantities from current session bookings (only confirmed reservations affect stock)
                     let availableStock = item.stocks ?? 0
                     
                     if (selectedCells.size > 0) {
-                      // Get all bookings for this racket across all equipment bookings
-                      const racketBookings = equipmentBookings.filter(b => b.equipment === item.equipment_name)
-                      
+                      // Use backend availability which already accounts for confirmed reservations
                       if (equipmentAvailabilityPerSchedule.size > 0 && courtBookings.length > 0) {
-                        // Calculate per-schedule availability, subtracting quantities from current session bookings
+                        // Calculate per-schedule availability from backend (confirmed reservations only)
                         const scheduleAvailabilities: number[] = []
                         
-                        // For each court booking that matches selected cells, calculate availability
+                        // For each court booking that matches selected cells, get backend availability
                         courtBookings.forEach(courtBooking => {
                           const scheduleKey = `${courtBooking.court}-${courtBooking.schedule}`
                           const cellKey = `COURT ${getCourtIdFromName(courtBooking.court)}-${courtBooking.schedule}`
                           
                           // Only process schedules that are actually selected in cells
                           if (selectedCells.has(cellKey)) {
-                            const baseAvailability = equipmentAvailabilityPerSchedule.get(scheduleKey)?.get(item.id) ?? item.stocks ?? 0
-                            
-                            // Calculate total quantity booked for this racket in this schedule from current session
-                            let totalQuantityForSchedule = 0
-                            racketBookings.forEach(racketBooking => {
-                              if (racketBooking.selectedCourtSchedules && racketBooking.selectedCourtSchedules.includes(scheduleKey)) {
-                                totalQuantityForSchedule += racketBooking.quantity || 0
-                              }
-                            })
-                            
-                            // Subtract the quantities from base availability
-                            const adjustedAvailability = Math.max(0, baseAvailability - totalQuantityForSchedule)
-                            scheduleAvailabilities.push(adjustedAvailability)
+                            // Get availability from backend (already accounts for confirmed reservations)
+                            const backendAvailability = equipmentAvailabilityPerSchedule.get(scheduleKey)?.get(item.id) ?? item.stocks ?? 0
+                            scheduleAvailabilities.push(backendAvailability)
                           }
                         })
                         
@@ -2223,7 +2211,7 @@ export function BookingPage() {
         maxTime={courtBookings.length > 0 ? calculateReservationDuration() : undefined}
         scheduleSpecificAvailability={(() => {
           // Calculate availability based on selected schedules for this racket
-          // Account for quantities from equipmentBookings in the current session
+          // Use backend availability only (confirmed reservations), not current session selections
           if (!selectedRacketForModal || selectedCells.size === 0 || courtBookings.length === 0) {
             return undefined
           }
@@ -2232,26 +2220,13 @@ export function BookingPage() {
           if (equipmentAvailabilityPerSchedule.size > 0 && selectedCourtSchedulesForRacket.size > 0) {
             const availabilities: number[] = []
             
-            // Get all bookings for this racket (excluding current one being configured)
-            const racketBookings = equipmentBookings.filter(b => 
-              b.equipment === selectedRacketForModal.equipment_name
-            )
-            
+            // Get availability from backend (already accounts for confirmed reservations only)
             selectedCourtSchedulesForRacket.forEach((scheduleKey) => {
               const scheduleAvailMap = equipmentAvailabilityPerSchedule.get(scheduleKey)
               if (scheduleAvailMap && scheduleAvailMap.has(selectedRacketForModal.id)) {
-                const baseAvailability = scheduleAvailMap.get(selectedRacketForModal.id) ?? 0
-                
-                // Calculate total quantity booked for this racket in this schedule from current session
-                let totalQuantityForSchedule = 0
-                racketBookings.forEach(booking => {
-                  if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.includes(scheduleKey)) {
-                    totalQuantityForSchedule += booking.quantity || 0
-                  }
-                })
-                
-                const adjustedAvailability = Math.max(0, baseAvailability - totalQuantityForSchedule)
-                availabilities.push(adjustedAvailability)
+                // Use backend availability directly (no need to subtract current session bookings)
+                const backendAvailability = scheduleAvailMap.get(selectedRacketForModal.id) ?? 0
+                availabilities.push(backendAvailability)
               }
             })
             
