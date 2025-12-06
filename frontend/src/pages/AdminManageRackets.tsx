@@ -366,6 +366,8 @@ const AdminManageRackets = () => {
       setImagePreview(null)
       setFormErrors({})
       setInitialRacketData(null)
+      setHasActiveRentals(false)
+      setCheckingRentals(false)
       openFeedbackModal(
         'success',
         isAddModal ? 'Racket added' : 'Racket updated',
@@ -767,14 +769,25 @@ const AdminManageRackets = () => {
                             price: Number.isNaN(value) ? null : value
                           })
                         }}
+                        disabled={(!isAddModal && hasActiveRentals) || checkingRentals}
                         className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all ${
-                          formErrors.price
+                          (!isAddModal && hasActiveRentals) || checkingRentals
+                            ? 'bg-gray-100 border-gray-300 cursor-not-allowed text-gray-500'
+                            : formErrors.price
                             ? 'border-red-400 focus:ring-red-500 focus:border-red-500'
                             : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                         }`}
                         placeholder="0.00"
                       />
                     </div>
+                    {!isAddModal && hasActiveRentals && (
+                      <p className="mt-2 text-sm text-amber-600 flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        Price cannot be modified. This racket has active or pending rentals.
+                      </p>
+                    )}
                     {formErrors.price && (
                       <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -981,7 +994,12 @@ const AdminManageRackets = () => {
                             const current = Number(editingRacket.stocks) || 0
                             setEditingRacket({ ...editingRacket, stocks: current + 1 })
                           }}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          disabled={(!isAddModal && hasActiveRentals) || checkingRentals}
+                          className={`transition-colors ${
+                            (!isAddModal && hasActiveRentals) || checkingRentals
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-400 hover:text-blue-600'
+                          }`}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -994,7 +1012,12 @@ const AdminManageRackets = () => {
                             const current = Number(editingRacket.stocks) || 0
                             setEditingRacket({ ...editingRacket, stocks: Math.max(0, current - 1) })
                           }}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          disabled={(!isAddModal && hasActiveRentals) || checkingRentals}
+                          className={`transition-colors ${
+                            (!isAddModal && hasActiveRentals) || checkingRentals
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-400 hover:text-blue-600'
+                          }`}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1020,14 +1043,25 @@ const AdminManageRackets = () => {
                             stocks: Number.isNaN(value) ? null : Math.max(0, Math.floor(value))
                           })
                         }}
+                        disabled={(!isAddModal && hasActiveRentals) || checkingRentals}
                         className={`w-full px-4 py-3 pr-12 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all ${
-                          formErrors.stocks
+                          (!isAddModal && hasActiveRentals) || checkingRentals
+                            ? 'bg-gray-100 border-gray-300 cursor-not-allowed text-gray-500'
+                            : formErrors.stocks
                             ? 'border-red-400 focus:ring-red-500 focus:border-red-500'
                             : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                         }`}
                         placeholder="0"
                       />
                     </div>
+                    {!isAddModal && hasActiveRentals && (
+                      <p className="mt-2 text-sm text-amber-600 flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        Stock cannot be modified. This racket has active or pending rentals.
+                      </p>
+                    )}
                     {formErrors.stocks && (
                       <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

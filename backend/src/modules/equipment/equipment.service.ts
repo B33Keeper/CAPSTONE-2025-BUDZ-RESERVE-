@@ -104,12 +104,32 @@ export class EquipmentService {
   async update(id: number, updateEquipmentDto: UpdateEquipmentDto): Promise<Equipment> {
     const equipment = await this.findOne(id);
     
+    // Check if there are active/pending rentals
+    const hasRentals = await this.hasActiveOrPendingRentals(id);
+    
     // If status is being changed and there are active/pending rentals, prevent the change
     if (updateEquipmentDto.status && updateEquipmentDto.status !== equipment.status) {
-      const hasRentals = await this.hasActiveOrPendingRentals(id);
       if (hasRentals) {
         throw new BadRequestException(
           'Cannot change status. This racket has active or pending rentals. Please wait for all rentals to be completed or cancelled.'
+        );
+      }
+    }
+    
+    // If price is being changed and there are active/pending rentals, prevent the change
+    if (updateEquipmentDto.price !== undefined && updateEquipmentDto.price !== equipment.price) {
+      if (hasRentals) {
+        throw new BadRequestException(
+          'Cannot modify price. This racket has active or pending rentals. Please wait for all rentals to be completed or cancelled.'
+        );
+      }
+    }
+    
+    // If stock is being changed and there are active/pending rentals, prevent the change
+    if (updateEquipmentDto.stocks !== undefined && updateEquipmentDto.stocks !== equipment.stocks) {
+      if (hasRentals) {
+        throw new BadRequestException(
+          'Cannot modify stock. This racket has active or pending rentals. Please wait for all rentals to be completed or cancelled.'
         );
       }
     }
