@@ -19,10 +19,11 @@ const signupSchema = z
       .max(50, 'First name must be at most 50 characters')
       .refine((value) => /[A-Za-z]/.test(value), 'First name must contain letters'),
     middleInitial: z
-      .string()
+      .string({ required_error: 'Middle initial is required' })
       .trim()
+      .min(1, 'Middle initial is required')
       .max(1, 'Middle initial must be a single character')
-      .optional()
+      .refine((value) => /[A-Za-z]/.test(value), 'Middle initial must be a letter')
       .transform((val) => (val && val.length > 0 ? val.toUpperCase() : undefined)),
     lastName: z
       .string({ required_error: 'Last name is required' })
@@ -33,7 +34,7 @@ const signupSchema = z
     sex: z.custom<'Male' | 'Female'>(
       (val) => val === 'Male' || val === 'Female',
       {
-        message: 'Please select your sex',
+        message: 'Required',
       }
     ),
     username: z
@@ -100,7 +101,6 @@ export function SignupPage() {
     setError,
     clearErrors,
     trigger,
-    getValues,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -122,28 +122,8 @@ export function SignupPage() {
 
   const handleInvalidSubmit = async () => {
     // Trigger validation on all fields to show errors
-    const isValid = await trigger()
-    
-    if (!isValid) {
-      const values = getValues()
-      const emptyRequiredFields: string[] = []
-      
-      // Check which required fields are empty
-      if (!values.firstName?.trim()) emptyRequiredFields.push('First Name')
-      if (!values.lastName?.trim()) emptyRequiredFields.push('Last Name')
-      if (!values.sex) emptyRequiredFields.push('Sex')
-      if (!values.username?.trim()) emptyRequiredFields.push('Username')
-      if (!values.email?.trim()) emptyRequiredFields.push('Email Address')
-      if (!values.password?.trim()) emptyRequiredFields.push('Password')
-      if (!values.confirmPassword?.trim()) emptyRequiredFields.push('Confirm Password')
-      if (!values.contact_number?.trim()) emptyRequiredFields.push('Contact Number')
-      
-      if (emptyRequiredFields.length > 0) {
-        toast.error(`Please fill out the following required fields: ${emptyRequiredFields.join(', ')}`)
-      } else {
-        toast.error('Please correct the errors in the form fields.')
-      }
-    }
+    await trigger()
+    // Individual field errors are already displayed, no need for toast notification
   }
 
   const onSubmit = async (data: SignupFormData) => {
@@ -220,7 +200,7 @@ export function SignupPage() {
             {/* Middle Initial Field */}
             <div>
               <label htmlFor="middleInitial" className="block text-sm font-medium text-gray-700 mb-2">
-                Middle Initial <span className="text-gray-400 font-normal">(Optional)</span>
+                Middle Initial
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-colors duration-200 group-focus-within:text-blue-600">
@@ -502,7 +482,6 @@ export function SignupPage() {
                 {...register('contact_number')}
                 id="contact_number"
                 type="tel"
-                required
                 className={`w-full pl-10 pr-4 py-3 border-2 rounded-lg transition-all duration-200 ${
                   errors.contact_number 
                     ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
