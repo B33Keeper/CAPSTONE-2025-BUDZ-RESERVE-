@@ -522,6 +522,8 @@ export function QueuePlayersPage() {
       const createdPlayer = await apiServices.createQueuePlayer(payload)
       setPlayers((prev) => [...prev, createdPlayer])
       setPlayerName('')
+      setSelectedSex(null)
+      setSelectedSkill(null)
       toast.success(`${createdPlayer.name} added to queue.`)
     } catch (error) {
       console.error('Failed to create queue player', error)

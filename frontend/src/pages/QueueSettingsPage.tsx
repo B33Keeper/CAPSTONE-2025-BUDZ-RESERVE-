@@ -1214,15 +1214,15 @@ export function QueueSettingsPage() {
                 {activeTab === 'current' ? (
                   // Current Fees Table
                   <table className="min-w-full divide-y divide-white/10 text-xs sm:text-sm text-white/80">
-                    <thead className="border-b border-white/18 bg-[#14070e] text-left uppercase tracking-wide text-white/60">
+                    <thead className="border-b border-white/18 bg-[#14070e] uppercase tracking-wide text-white/60">
                       <tr>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Player</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Games</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Shuttle Fees</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Court Fee</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Total</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Player Status</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">Status</th>
+                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left font-semibold text-[10px] sm:text-xs">Player</th>
+                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Games</th>
+                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Shuttle Fees</th>
+                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Court Fee</th>
+                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Total</th>
+                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Player Status</th>
+                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Status</th>
                         <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right font-semibold text-[10px] sm:text-xs">Action</th>
                       </tr>
                     </thead>
@@ -1265,11 +1265,11 @@ export function QueueSettingsPage() {
                               </div>
                             </td>
                             <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm">{row.games}</td>
-                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm">{formatCurrency(row.shuttleFee)}</td>
-                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm">{formatCurrency(row.courtFee)}</td>
-                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-xs sm:text-sm">{formatCurrency(row.shuttleFee + row.courtFee)}</td>
-                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-                              <span className={`rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs font-semibold uppercase tracking-wide ${
+                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm">{formatCurrency(row.shuttleFee)}</td>
+                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm">{formatCurrency(row.courtFee)}</td>
+                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center font-semibold text-xs sm:text-sm">{formatCurrency(row.shuttleFee + row.courtFee)}</td>
+                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center">
+                              <span className={`inline-flex rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs font-semibold uppercase tracking-wide ${
                                 row.playerStatus === 'Playing' 
                                   ? 'border border-blue-400/60 bg-blue-500/15 text-blue-200'
                                   : row.playerStatus === 'In Queue'
@@ -1281,13 +1281,13 @@ export function QueueSettingsPage() {
                                 {row.playerStatus}
                               </span>
                             </td>
-                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center">
                               {row.status === 'paid' ? (
-                                <span className="rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs font-semibold uppercase tracking-wide border border-emerald-400/60 bg-emerald-500/15 text-emerald-200">
+                                <span className="inline-flex rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs font-semibold uppercase tracking-wide border border-emerald-400/60 bg-emerald-500/15 text-emerald-200">
                                   Paid
                                 </span>
                               ) : (
-                                <span className="rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs font-semibold uppercase tracking-wide border border-amber-400/60 bg-amber-500/10 text-amber-200">
+                                <span className="inline-flex rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs font-semibold uppercase tracking-wide border border-amber-400/60 bg-amber-500/10 text-amber-200">
                                   Unpaid
                                 </span>
                               )}
@@ -1342,13 +1342,13 @@ export function QueueSettingsPage() {
                           </span>
                         </div>
                         <table className="min-w-full divide-y divide-white/10 text-xs sm:text-sm text-white/80">
-                          <thead className="border-b border-white/18 bg-[#14070e] text-left uppercase tracking-wide text-white/60">
+                          <thead className="border-b border-white/18 bg-[#14070e] uppercase tracking-wide text-white/60">
                             <tr>
-                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">PLAYER</th>
-                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">GAMES</th>
-                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs"></th>
-                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">COURT FEE</th>
-                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 font-semibold text-[10px] sm:text-xs">TOTAL</th>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left font-semibold text-[10px] sm:text-xs">PLAYER</th>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">GAMES</th>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">SHUTTLE FEES</th>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">COURT FEE</th>
+                              <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">TOTAL</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1377,9 +1377,9 @@ export function QueueSettingsPage() {
                                   </div>
                                 </td>
                                 <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm">{record.gamesPlayed}</td>
-                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm">{formatCurrency(Number(record.shuttleFee))}</td>
-                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm">{formatCurrency(Number(record.courtFee))}</td>
-                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-xs sm:text-sm">{formatCurrency(Number(record.shuttleFee) + Number(record.courtFee))}</td>
+                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm">{formatCurrency(Number(record.shuttleFee))}</td>
+                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm">{formatCurrency(Number(record.courtFee))}</td>
+                                <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-center font-semibold text-xs sm:text-sm">{formatCurrency(Number(record.shuttleFee) + Number(record.courtFee))}</td>
                               </tr>
                             ))}
                           </tbody>
