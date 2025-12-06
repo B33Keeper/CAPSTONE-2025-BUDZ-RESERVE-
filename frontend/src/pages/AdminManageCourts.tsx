@@ -490,11 +490,9 @@ const AdminManageCourts = () => {
                         </td>
                         <td className="px-6 py-4 text-center align-middle">
                           <div className="flex items-center justify-center gap-3">
-                            <div className="relative group/price">
-                              <span className="font-bold text-lg text-gray-800 bg-gradient-to-br from-gray-100 to-gray-200 px-4 py-2 rounded-xl whitespace-nowrap border-2 border-gray-300 shadow-sm">
-                                ₱{Number(court.Price || 0).toFixed(2)}
-                              </span>
-                            </div>
+                            <span className="font-bold text-lg text-gray-800">
+                              ₱{Number(court.Price || 0).toFixed(2)}
+                            </span>
                             <button
                               onClick={() => handleEditCourt(court.Court_Id)}
                               className="w-10 h-10 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl flex items-center justify-center hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-110 active:scale-95 group/edit flex-shrink-0"
@@ -620,7 +618,7 @@ const AdminManageCourts = () => {
                           Price
                         </label>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          <span className="font-bold text-lg text-gray-800 bg-gradient-to-br from-gray-100 to-gray-200 px-4 py-2 rounded-xl whitespace-nowrap text-center border-2 border-gray-300 shadow-sm">
+                          <span className="font-bold text-lg text-gray-800">
                             ₱{Number(court.Price || 0).toFixed(2)}
                           </span>
                           <button

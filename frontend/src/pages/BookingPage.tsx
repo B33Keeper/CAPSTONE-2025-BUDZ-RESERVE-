@@ -1104,7 +1104,9 @@ export function BookingPage() {
   })
 
   const isRacketBooked = (racket: string) => {
-    return equipmentBookings.some(booking => booking.equipment === racket)
+    // Check if quantity is greater than 0 (more reliable than just checking equipmentBookings)
+    const quantity = racketQuantities.get(racket) || 0
+    return quantity > 0
   }
 
   // Handle Terms and Conditions
