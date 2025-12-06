@@ -243,6 +243,49 @@ const AdminDashboard = () => {
     return 0
   }, [])
 
+  // Helper function to get racket rental information for display
+  const getRacketRentalInfo = useCallback((reservation: any) => {
+    if (!reservation) return { count: 0, hasRentals: false }
+
+    const rentalsArray = Array.isArray(reservation.rentals)
+      ? reservation.rentals
+      : Array.isArray(reservation.equipmentRentals)
+        ? reservation.equipmentRentals
+        : []
+
+    if (rentalsArray.length === 0) {
+      return { count: 0, hasRentals: false }
+    }
+
+    let totalCount = 0
+    const equipmentNames: string[] = []
+
+    rentalsArray.forEach((rental: any) => {
+      if (Array.isArray(rental.items) && rental.items.length > 0) {
+        rental.items.forEach((item: any) => {
+          const quantity = Number(item?.quantity ?? item?.Quantity ?? item?.qty ?? item?.count ?? 0)
+          if (!isNaN(quantity) && quantity > 0) {
+            totalCount += quantity
+            // Try to get equipment name
+            const equipmentName = item?.equipment?.equipment_name ?? 
+                                 item?.equipment_name ?? 
+                                 item?.equipment?.name ??
+                                 'Racket'
+            if (!equipmentNames.includes(equipmentName)) {
+              equipmentNames.push(equipmentName)
+            }
+          }
+        })
+      }
+    })
+
+    return {
+      count: totalCount,
+      hasRentals: totalCount > 0,
+      equipmentNames: equipmentNames.slice(0, 2) // Show max 2 equipment names
+    }
+  }, [])
+
   const calculateDailyRacketRentals = useCallback(
     (reservations: any[]) => {
       // Calculate from reservations CREATED today
@@ -1011,6 +1054,7 @@ const AdminDashboard = () => {
                     
                     const formattedDate = formatDate(reservationDate)
                     const formattedTime = startTime && endTime ? `${formatTime(startTime)} - ${formatTime(endTime)}` : 'N/A'
+                    const racketInfo = getRacketRentalInfo(res)
                     
                     return (
                       <div
@@ -1034,7 +1078,17 @@ const AdminDashboard = () => {
                             <p className="text-sm text-gray-600 mb-1">
                               <span className="font-medium">{courtName}</span> • {formattedDate}
                             </p>
-                            <p className="text-xs text-gray-500">{formattedTime}</p>
+                            <p className="text-xs text-gray-500 mb-1">{formattedTime}</p>
+                            {racketInfo.hasRentals && (
+                              <div className="flex items-center gap-1.5 mt-1.5">
+                                <svg className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                                <span className="text-xs text-amber-700 font-medium">
+                                  {racketInfo.count} racket{racketInfo.count !== 1 ? 's' : ''} rented
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div className="text-right ml-4">
                             <p className="text-xs text-gray-400">
@@ -1116,6 +1170,7 @@ const AdminDashboard = () => {
                     
                     const formattedStartTime = formatTime(startTime)
                     const formattedEndTime = formatTime(endTime)
+                    const racketInfo = getRacketRentalInfo(res)
                     
                     return (
                       <div
@@ -1145,9 +1200,19 @@ const AdminDashboard = () => {
                             <p className="text-sm text-gray-600 mb-1">
                               <span className="font-medium">{courtName}</span>
                             </p>
-                            <p className="text-sm font-medium text-emerald-600">
+                            <p className="text-sm font-medium text-emerald-600 mb-1">
                               {formattedStartTime} - {formattedEndTime}
                             </p>
+                            {racketInfo.hasRentals && (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <svg className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                                <span className="text-xs text-amber-700 font-medium">
+                                  {racketInfo.count} racket{racketInfo.count !== 1 ? 's' : ''} rented
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div className="text-right ml-4">
                             <p className="text-sm font-semibold text-emerald-600">

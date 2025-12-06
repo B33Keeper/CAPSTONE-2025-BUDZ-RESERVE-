@@ -271,14 +271,24 @@ export default function AdminCreateAnnouncement() {
 
                 {/* Title */}
                 <div>
-                  <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 sm:mb-3">
-                    Title <span className="text-red-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <label className="block text-sm sm:text-base font-bold text-gray-700">
+                      Title <span className="text-red-500">*</span>
+                    </label>
+                    <span className={`text-xs font-medium ${title.length > 100 ? 'text-red-500' : 'text-gray-500'}`}>
+                      {title.length}/100
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 100) {
+                        setTitle(e.target.value)
+                      }
+                    }}
                     placeholder="Enter announcement title"
+                    maxLength={100}
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 border-2 border-gray-300 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all bg-white text-gray-900 font-medium text-sm sm:text-base"
                     required
                     disabled={isSubmitting}
@@ -288,14 +298,24 @@ export default function AdminCreateAnnouncement() {
                 {/* Content (for text type) */}
                 {announcementType === 'text' && (
                   <div>
-                    <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 sm:mb-3">
-                      Content <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-2 sm:mb-3">
+                      <label className="block text-sm sm:text-base font-bold text-gray-700">
+                        Content <span className="text-red-500">*</span>
+                      </label>
+                      <span className={`text-xs font-medium ${content.length > 2000 ? 'text-red-500' : 'text-gray-500'}`}>
+                        {content.length}/2000
+                      </span>
+                    </div>
                     <textarea
                       value={content}
-                      onChange={(e) => setContent(e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 2000) {
+                          setContent(e.target.value)
+                        }
+                      }}
                       placeholder="Enter announcement content"
                       rows={8}
+                      maxLength={2000}
                       className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 border-2 border-gray-300 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none bg-white text-gray-900 text-sm sm:text-base"
                       required
                       disabled={isSubmitting}
@@ -357,14 +377,24 @@ export default function AdminCreateAnnouncement() {
                       />
                       {imagePreview && (
                         <div>
-                          <label className="block text-sm sm:text-base font-bold text-gray-700 mb-2 sm:mb-3">
-                            Optional Content (Caption)
-                          </label>
+                          <div className="flex items-center justify-between mb-2 sm:mb-3">
+                            <label className="block text-sm sm:text-base font-bold text-gray-700">
+                              Optional Content (Caption)
+                            </label>
+                            <span className={`text-xs font-medium ${content.length > 2000 ? 'text-red-500' : 'text-gray-500'}`}>
+                              {content.length}/2000
+                            </span>
+                          </div>
                           <textarea
                             value={content}
-                            onChange={(e) => setContent(e.target.value)}
+                            onChange={(e) => {
+                              if (e.target.value.length <= 2000) {
+                                setContent(e.target.value)
+                              }
+                            }}
                             placeholder="Enter optional caption or description"
                             rows={4}
+                            maxLength={2000}
                             className="w-full px-3 sm:px-4 py-2.5 sm:py-3.5 border-2 border-gray-300 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all resize-none bg-white text-gray-900 text-sm sm:text-base"
                             disabled={isSubmitting}
                           />
