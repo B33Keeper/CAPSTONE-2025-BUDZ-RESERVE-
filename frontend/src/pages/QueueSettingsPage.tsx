@@ -96,6 +96,8 @@ export function QueueSettingsPage() {
   }, [])
 
   const [selectedHistoryDate, setSelectedHistoryDate] = useState<string>(getTodayISODate())
+  const [sortBy, setSortBy] = useState<keyof FeeRow | ''>('')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
@@ -201,10 +203,72 @@ export function QueueSettingsPage() {
   }, [rows])
 
   const filteredRows = useMemo(() => {
-    if (!searchQuery.trim()) return rows
-    const query = searchQuery.toLowerCase()
-    return rows.filter((row) => row.label.toLowerCase().includes(query))
-  }, [rows, searchQuery])
+    let filtered = rows
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter((row) => row.label.toLowerCase().includes(query))
+    }
+    
+    // Apply sorting
+    if (sortBy) {
+      filtered = [...filtered].sort((a, b) => {
+        let aValue: string | number
+        let bValue: string | number
+        
+        switch (sortBy) {
+          case 'label':
+            aValue = a.label.toLowerCase()
+            bValue = b.label.toLowerCase()
+            break
+          case 'games':
+            aValue = a.games
+            bValue = b.games
+            break
+          case 'shuttleFee':
+            aValue = a.shuttleFee
+            bValue = b.shuttleFee
+            break
+          case 'courtFee':
+            aValue = a.courtFee
+            bValue = b.courtFee
+            break
+          case 'status':
+            aValue = a.status
+            bValue = b.status
+            break
+          case 'playerStatus':
+            aValue = a.playerStatus
+            bValue = b.playerStatus
+            break
+          default:
+            return 0
+        }
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          const comparison = aValue.localeCompare(bValue)
+          return sortOrder === 'asc' ? comparison : -comparison
+        } else {
+          const comparison = (aValue as number) - (bValue as number)
+          return sortOrder === 'asc' ? comparison : -comparison
+        }
+      })
+    }
+    
+    return filtered
+  }, [rows, searchQuery, sortBy, sortOrder])
+
+  const handleSort = (column: keyof FeeRow) => {
+    if (sortBy === column) {
+      // Toggle sort order if clicking the same column
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Set new column and default to ascending
+      setSortBy(column)
+      setSortOrder('asc')
+    }
+  }
 
   // Filter history by selected date and search query - show all records for the date in one table
   const filteredHistoryByDate = useMemo(() => {
@@ -1216,13 +1280,139 @@ export function QueueSettingsPage() {
                   <table className="min-w-full divide-y divide-white/10 text-xs sm:text-sm text-white/80">
                     <thead className="border-b border-white/18 bg-[#14070e] uppercase tracking-wide text-white/60">
                       <tr>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left font-semibold text-[10px] sm:text-xs">Player</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Games</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Shuttle Fees</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Court Fee</th>
+                        <th 
+                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
+                          onClick={() => handleSort('label')}
+                        >
+                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                            <svg 
+                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'label' ? 'opacity-100' : 'opacity-40'}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              {sortBy === 'label' && sortOrder === 'asc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              ) : sortBy === 'label' && sortOrder === 'desc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              )}
+                            </svg>
+                            <span>Player</span>
+                          </div>
+                        </th>
+                        <th 
+                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
+                          onClick={() => handleSort('games')}
+                        >
+                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                            <svg 
+                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'games' ? 'opacity-100' : 'opacity-40'}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              {sortBy === 'games' && sortOrder === 'asc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              ) : sortBy === 'games' && sortOrder === 'desc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              )}
+                            </svg>
+                            <span>Games</span>
+                          </div>
+                        </th>
+                        <th 
+                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
+                          onClick={() => handleSort('shuttleFee')}
+                        >
+                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                            <svg 
+                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'shuttleFee' ? 'opacity-100' : 'opacity-40'}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              {sortBy === 'shuttleFee' && sortOrder === 'asc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              ) : sortBy === 'shuttleFee' && sortOrder === 'desc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              )}
+                            </svg>
+                            <span>Shuttle Fees</span>
+                          </div>
+                        </th>
+                        <th 
+                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
+                          onClick={() => handleSort('courtFee')}
+                        >
+                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                            <svg 
+                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'courtFee' ? 'opacity-100' : 'opacity-40'}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              {sortBy === 'courtFee' && sortOrder === 'asc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              ) : sortBy === 'courtFee' && sortOrder === 'desc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              )}
+                            </svg>
+                            <span>Court Fee</span>
+                          </div>
+                        </th>
                         <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Total</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Player Status</th>
-                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Status</th>
+                        <th 
+                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
+                          onClick={() => handleSort('playerStatus')}
+                        >
+                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                            <svg 
+                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'playerStatus' ? 'opacity-100' : 'opacity-40'}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              {sortBy === 'playerStatus' && sortOrder === 'asc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              ) : sortBy === 'playerStatus' && sortOrder === 'desc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              )}
+                            </svg>
+                            <span>Player Status</span>
+                          </div>
+                        </th>
+                        <th 
+                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
+                          onClick={() => handleSort('status')}
+                        >
+                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                            <svg 
+                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'status' ? 'opacity-100' : 'opacity-40'}`}
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              {sortBy === 'status' && sortOrder === 'asc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              ) : sortBy === 'status' && sortOrder === 'desc' ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                              )}
+                            </svg>
+                            <span>Status</span>
+                          </div>
+                        </th>
                         <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right font-semibold text-[10px] sm:text-xs">Action</th>
                       </tr>
                     </thead>
@@ -1242,8 +1432,8 @@ export function QueueSettingsPage() {
                       ) : (
                         filteredRows.map((row) => (
                           <tr key={row.label} className="border-b border-white/18 bg-[#14070e] transition-colors hover:bg-[#1a0a12]">
-                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-white">
-                              <div className="flex items-center gap-2 sm:gap-3">
+                            <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 font-semibold text-white text-center">
+                              <div className="flex items-center justify-center gap-2 sm:gap-3">
                                 <span
                                   className={`inline-flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-white/10 text-xs sm:text-sm shadow-inner flex-shrink-0 ${
                                     row.sex === 'male' ? 'text-sky-300 bg-sky-500/15' : 'text-pink-300 bg-pink-500/15'
