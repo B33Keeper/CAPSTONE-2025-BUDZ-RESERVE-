@@ -96,8 +96,29 @@ export function QueueSettingsPage() {
   }, [])
 
   const [selectedHistoryDate, setSelectedHistoryDate] = useState<string>(getTodayISODate())
+  const sortOptions = [
+    { label: 'Player', value: 'label' },
+    { label: 'Games', value: 'games' },
+    { label: 'Shuttle Fees', value: 'shuttleFee' },
+    { label: 'Court Fee', value: 'courtFee' },
+    { label: 'Player Status', value: 'playerStatus' },
+    { label: 'Status', value: 'status' }
+  ] as const
   const [sortBy, setSortBy] = useState<keyof FeeRow | ''>('')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
+        setIsSortMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
@@ -207,7 +228,7 @@ export function QueueSettingsPage() {
     
     // Apply search filter
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
+    const query = searchQuery.toLowerCase()
       filtered = filtered.filter((row) => row.label.toLowerCase().includes(query))
     }
     
@@ -247,28 +268,15 @@ export function QueueSettingsPage() {
         }
         
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          const comparison = aValue.localeCompare(bValue)
-          return sortOrder === 'asc' ? comparison : -comparison
+          return aValue.localeCompare(bValue)
         } else {
-          const comparison = (aValue as number) - (bValue as number)
-          return sortOrder === 'asc' ? comparison : -comparison
+          return (aValue as number) - (bValue as number)
         }
       })
     }
     
     return filtered
-  }, [rows, searchQuery, sortBy, sortOrder])
-
-  const handleSort = (column: keyof FeeRow) => {
-    if (sortBy === column) {
-      // Toggle sort order if clicking the same column
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-    } else {
-      // Set new column and default to ascending
-      setSortBy(column)
-      setSortOrder('asc')
-    }
-  }
+  }, [rows, searchQuery, sortBy])
 
   // Filter history by selected date and search query - show all records for the date in one table
   const filteredHistoryByDate = useMemo(() => {
@@ -1280,139 +1288,72 @@ export function QueueSettingsPage() {
                   <table className="min-w-full divide-y divide-white/10 text-xs sm:text-sm text-white/80">
                     <thead className="border-b border-white/18 bg-[#14070e] uppercase tracking-wide text-white/60">
                       <tr>
-                        <th 
-                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
-                          onClick={() => handleSort('label')}
-                        >
-                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                            <svg 
-                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'label' ? 'opacity-100' : 'opacity-40'}`}
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
+                        <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold">
+                          <div ref={sortMenuRef} className="relative flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsSortMenuOpen((prev) => !prev)}
+                              className={`rounded-full border border-white/10 bg-white/5 p-1 sm:p-1.5 text-white/70 transition hover:border-white/30 hover:text-white ${isSortMenuOpen ? 'border-white/40 text-white' : ''}`}
+                              aria-haspopup="listbox"
+                              aria-expanded={isSortMenuOpen}
+                              aria-label="Sort by column"
                             >
-                              {sortBy === 'label' && sortOrder === 'asc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                              ) : sortBy === 'label' && sortOrder === 'desc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                              )}
-                            </svg>
-                            <span>Player</span>
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 sm:h-4 sm:w-4">
+                                <path d="M2.75 5.5a.75.75 0 01.75-.75h13a.75.75 0 010 1.5h-13a.75.75 0 01-.75-.75zM5 10a.75.75 0 01.75-.75h9.5a.75.75 0 010 1.5h-9.5A.75.75 0 015 10zm3 4.5a.75.75 0 01.75-.75h6.5a.75.75 0 010 1.5h-6.5A.75.75 0 018 14.5z" />
+                              </svg>
+                            </button>
+                            <span className={`text-[10px] sm:text-xs ${sortBy === 'label' ? 'text-white' : 'text-white/80'}`}>Player</span>
+                            {isSortMenuOpen && (
+                              <div className="absolute left-0 top-full z-30 mt-2 sm:mt-3 w-44 sm:w-48 overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/40 backdrop-blur">
+                                <ul className="max-h-64 overflow-y-auto py-1 sm:py-2" role="listbox">
+                                  {sortOptions.map((option) => {
+                                    const isActive = sortBy === option.value
+                                    return (
+                                      <li key={option.value}>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setSortBy(option.value as keyof FeeRow)
+                                            setIsSortMenuOpen(false)
+                                          }}
+                                          className={`flex w-full items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm transition ${
+                                            isActive
+                                              ? 'bg-indigo-500/90 text-white shadow-[0_15px_25px_rgba(99,102,241,0.35)]'
+                                              : 'text-white/75 hover:bg-white/10 hover:text-white'
+                                          }`}
+                                          role="option"
+                                          aria-selected={isActive}
+                                        >
+                                          <span className="truncate text-left">{option.label}</span>
+                                          {isActive && (
+                                            <svg
+                                              xmlns="http://www.w3.org/2000/svg"
+                                              viewBox="0 0 20 20"
+                                              fill="currentColor"
+                                              className="h-4 w-4 shrink-0 text-white"
+                                            >
+                                              <path
+                                                fillRule="evenodd"
+                                                d="M16.704 5.29a1 1 0 010 1.42l-7.25 7.24a1 1 0 01-1.414 0l-3.25-3.24a1 1 0 011.414-1.42L8.75 11.59l6.543-6.3a1 1 0 011.411 0z"
+                                                clipRule="evenodd"
+                                              />
+                                            </svg>
+                                          )}
+                                        </button>
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              </div>
+                            )}
                           </div>
                         </th>
-                        <th 
-                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
-                          onClick={() => handleSort('games')}
-                        >
-                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                            <svg 
-                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'games' ? 'opacity-100' : 'opacity-40'}`}
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              {sortBy === 'games' && sortOrder === 'asc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                              ) : sortBy === 'games' && sortOrder === 'desc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                              )}
-                            </svg>
-                            <span>Games</span>
-                          </div>
-                        </th>
-                        <th 
-                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
-                          onClick={() => handleSort('shuttleFee')}
-                        >
-                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                            <svg 
-                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'shuttleFee' ? 'opacity-100' : 'opacity-40'}`}
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              {sortBy === 'shuttleFee' && sortOrder === 'asc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                              ) : sortBy === 'shuttleFee' && sortOrder === 'desc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                              )}
-                            </svg>
-                            <span>Shuttle Fees</span>
-                          </div>
-                        </th>
-                        <th 
-                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
-                          onClick={() => handleSort('courtFee')}
-                        >
-                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                            <svg 
-                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'courtFee' ? 'opacity-100' : 'opacity-40'}`}
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              {sortBy === 'courtFee' && sortOrder === 'asc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                              ) : sortBy === 'courtFee' && sortOrder === 'desc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                              )}
-                            </svg>
-                            <span>Court Fee</span>
-                          </div>
-                        </th>
+                        <th className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs ${sortBy === 'games' ? 'text-white' : ''}`}>Games</th>
+                        <th className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs ${sortBy === 'shuttleFee' ? 'text-white' : ''}`}>Shuttle Fees</th>
+                        <th className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs ${sortBy === 'courtFee' ? 'text-white' : ''}`}>Court Fee</th>
                         <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs">Total</th>
-                        <th 
-                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
-                          onClick={() => handleSort('playerStatus')}
-                        >
-                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                            <svg 
-                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'playerStatus' ? 'opacity-100' : 'opacity-40'}`}
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              {sortBy === 'playerStatus' && sortOrder === 'asc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                              ) : sortBy === 'playerStatus' && sortOrder === 'desc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                              )}
-                            </svg>
-                            <span>Player Status</span>
-                          </div>
-                        </th>
-                        <th 
-                          className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs cursor-pointer hover:bg-white/5 transition-colors"
-                          onClick={() => handleSort('status')}
-                        >
-                          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-                            <svg 
-                              className={`w-3 h-3 sm:w-4 sm:h-4 transition-opacity ${sortBy === 'status' ? 'opacity-100' : 'opacity-40'}`}
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              {sortBy === 'status' && sortOrder === 'asc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                              ) : sortBy === 'status' && sortOrder === 'desc' ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                              )}
-                            </svg>
-                            <span>Status</span>
-                          </div>
-                        </th>
+                        <th className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs ${sortBy === 'playerStatus' ? 'text-white' : ''}`}>Player Status</th>
+                        <th className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-center font-semibold text-[10px] sm:text-xs ${sortBy === 'status' ? 'text-white' : ''}`}>Status</th>
                         <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right font-semibold text-[10px] sm:text-xs">Action</th>
                       </tr>
                     </thead>
