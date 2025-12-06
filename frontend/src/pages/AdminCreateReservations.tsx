@@ -2469,34 +2469,7 @@ export default function AdminCreateReservations() {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {(() => {
-                          // First, expand equipment bookings that have multiple schedules
-                          const expandedEquipment: Array<{ booking: EquipmentBooking, scheduleKey: string, scheduleDisplay: string }> = []
-                          equipmentBookings.forEach(booking => {
-                            if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
-                              // Split by each schedule
-                              booking.selectedCourtSchedules.forEach(scheduleKey => {
-                                const [courtName, schedule] = scheduleKey.split('-')
-                                const courtBooking = courtBookings.find(cb => cb.court === courtName && cb.schedule === schedule)
-                                const scheduleDisplay = courtBooking ? courtBooking.schedule : booking.time
-                                expandedEquipment.push({ booking, scheduleKey, scheduleDisplay })
-                              })
-                            } else {
-                              // No specific schedule, use time as key
-                              const scheduleKey = booking.time
-                              expandedEquipment.push({ booking, scheduleKey, scheduleDisplay: booking.time })
-                            }
-                          })
-
-                          // Group expanded equipment by schedule key
-                          const equipmentBySchedule = new Map<string, Array<{ booking: EquipmentBooking, scheduleDisplay: string }>>()
-                          expandedEquipment.forEach(({ booking, scheduleKey, scheduleDisplay }) => {
-                            if (!equipmentBySchedule.has(scheduleKey)) {
-                              equipmentBySchedule.set(scheduleKey, [])
-                            }
-                            equipmentBySchedule.get(scheduleKey)!.push({ booking, scheduleDisplay })
-                          })
-
-                          // Build rows: courts first, then grouped equipment
+                          // Build rows: courts first, then equipment
                           const rows: Array<{ type: 'court' | 'equipment', data: any }> = []
 
                           // Add court bookings
@@ -2504,38 +2477,34 @@ export default function AdminCreateReservations() {
                             rows.push({ type: 'court', data: booking })
                           })
 
-                          // Add grouped equipment bookings - group by schedule, display multiple rackets horizontally
-                          equipmentBySchedule.forEach((equipmentList) => {
-                            // Get schedule display from first item
-                            const scheduleDisplay = equipmentList[0].scheduleDisplay
+                          // Add equipment bookings - each booking is already associated with a specific schedule
+                          equipmentBookings.forEach(booking => {
+                            // Get the associated court schedule for this booking
+                            // Since each booking with multiple schedules creates separate bookings (one per schedule),
+                            // each booking's selectedCourtSchedules should have only one entry
+                            let scheduleDisplay = booking.time // Default fallback
                             
-                            // Calculate total subtotal for this schedule group
-                            // Each equipment booking in the list represents one schedule, so use full subtotal
-                            // But if the original booking had multiple schedules, we need to calculate per-schedule price
-                            const subtotal = equipmentList.reduce((sum, item) => {
-                              const booking = item.booking
-                              // Calculate price per schedule: if booking has multiple schedules, divide by count
-                              // Otherwise, use full subtotal
-                              const numSchedules = booking.selectedCourtSchedules?.length || 1
-                              if (numSchedules > 1) {
-                                // Calculate per-schedule price from equipment data
-                                const equipmentItem = equipment.find(eq => eq.equipment_name === booking.equipment)
-                                const price = Number(equipmentItem?.price) || 100
-                                const timeMatch = booking.time.match(/(\d+(?:\.\d+)?)\s*hr/i)
-                                const hours = timeMatch ? parseFloat(timeMatch[1]) : 1
-                                const quantity = booking.quantity || 1
-                                return sum + (price * hours * quantity)
-                              } else {
-                                return sum + booking.subtotal
+                            if (booking.selectedCourtSchedules && booking.selectedCourtSchedules.length > 0) {
+                              // Get the first (and typically only) associated schedule
+                              const scheduleKey = booking.selectedCourtSchedules[0]
+                              const [courtName, schedule] = scheduleKey.split('-')
+                              const courtBooking = courtBookings.find(cb => cb.court === courtName && cb.schedule === schedule)
+                              if (courtBooking) {
+                                scheduleDisplay = `${courtName} • ${schedule}`
                               }
-                            }, 0)
+                            } else if (courtBookings.length === 1) {
+                              // Single court booking - associate with it
+                              scheduleDisplay = `${courtBookings[0].court} • ${courtBookings[0].schedule}`
+                            }
 
                             rows.push({
                               type: 'equipment',
                               data: {
-                                equipment: equipmentList.map(item => item.booking),
+                                equipment: booking.equipment,
+                                quantity: booking.quantity || 1,
+                                time: booking.time,
                                 schedule: scheduleDisplay,
-                                subtotal: subtotal
+                                subtotal: booking.subtotal
                               }
                             })
                           })
@@ -2547,19 +2516,12 @@ export default function AdminCreateReservations() {
                                 {row.type === 'court' ? (
                                   row.data.court
                                 ) : (
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    {row.data.equipment.map((eq: EquipmentBooking, eqIndex: number) => (
-                                      <div key={eqIndex} className="flex items-center gap-1.5">
-                                        <span>{eq.equipment}</span>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium">
-                                          {eq.time.replace(' hr', 'h')}
-                                          {eq.quantity && eq.quantity > 1 ? ` x${eq.quantity}` : ''}
-                                        </span>
-                                        {eqIndex < row.data.equipment.length - 1 && (
-                                          <span className="text-gray-400 mx-1">•</span>
-                    )}
-                  </div>
-                                    ))}
+                                  <div className="flex items-center gap-2">
+                                    <span>{row.data.equipment}</span>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium">
+                                      {row.data.time.replace(' hr', 'h')}
+                                      {row.data.quantity && row.data.quantity > 1 ? ` x${row.data.quantity}` : ''}
+                                    </span>
                                   </div>
                                 )}
                               </td>
