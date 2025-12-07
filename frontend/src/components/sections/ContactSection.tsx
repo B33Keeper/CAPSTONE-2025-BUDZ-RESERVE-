@@ -7,8 +7,9 @@ import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
 const COOLDOWN_MS = 60 * 60 * 1000 // 1 hour in milliseconds
-const NAME_MIN_LENGTH = 12
-const NAME_MAX_LENGTH = 40
+const NAME_MIN_LENGTH = 5
+const NAME_MAX_LENGTH = 60
+const NAME_PATTERN = /^[a-zA-Z\s]*$/ // Only letters and spaces
 
 export function ContactSection() {
   const { ref, controls } = useScrollAnimation()
@@ -132,15 +133,24 @@ export function ContactSection() {
       return false
     }
     
+    // Check if name contains only letters and spaces
+    if (!NAME_PATTERN.test(trimmedName)) {
+      setNameError('Name can only contain letters and spaces (no numbers or special characters)')
+      return false
+    }
+    
     setNameError('')
     return true
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const value = e.target.value
+    let value = e.target.value
     
     if (e.target.name === 'name') {
-      // Validate name length in real-time
+      // Filter out any characters that are not letters or spaces
+      value = value.replace(/[^a-zA-Z\s]/g, '')
+      
+      // Validate name length and pattern in real-time
       validateName(value)
     }
     
@@ -277,13 +287,14 @@ export function ContactSection() {
               <input
                 type="text"
                 name="name"
-                placeholder="Enter your full name (12-40 characters)"
+                placeholder="Enter your full name (5-60 characters, letters only)"
                 value={formData.name}
                 onChange={handleChange}
                 autoComplete="name"
                 required
                 minLength={NAME_MIN_LENGTH}
                 maxLength={NAME_MAX_LENGTH}
+                pattern={NAME_PATTERN.source}
                 className={`w-full p-3 sm:p-4 border-2 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:ring-2 hover:border-gray-300 ${
                   nameError
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-200'
@@ -295,7 +306,7 @@ export function ContactSection() {
               )}
               {!nameError && formData.name.trim().length > 0 && (
                 <p className="mt-1 text-xs text-gray-500">
-                  Name must be between {NAME_MIN_LENGTH} and {NAME_MAX_LENGTH} characters
+                  Name must be between {NAME_MIN_LENGTH} and {NAME_MAX_LENGTH} characters, letters only
                 </p>
               )}
             </div>
