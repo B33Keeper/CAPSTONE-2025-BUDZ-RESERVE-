@@ -327,7 +327,7 @@ export function ContactSection() {
             
             <button
               type="submit"
-              disabled={isSubmitting || isOnCooldown || (nameError && !isAuthenticated)}
+              disabled={isSubmitting || isOnCooldown || (!isAuthenticated && nameError.length > 0)}
               className="send-btn bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-4 px-6 sm:px-10 rounded-xl cursor-pointer text-base sm:text-lg font-semibold transition-all duration-300 mx-auto hover:from-blue-700 hover:to-blue-800 hover:-translate-y-1 hover:shadow-xl flex items-center space-x-2 sm:space-x-3 w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               style={{ boxShadow: '0 8px 25px rgba(59, 130, 246, 0.4)' }}
             >
