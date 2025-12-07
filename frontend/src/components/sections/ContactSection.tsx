@@ -287,7 +287,7 @@ export function ContactSection() {
               <input
                 type="text"
                 name="name"
-                placeholder="Enter your full name (5-60 characters, letters only)"
+                placeholder="Enter your full name"
                 value={formData.name}
                 onChange={handleChange}
                 autoComplete="name"
