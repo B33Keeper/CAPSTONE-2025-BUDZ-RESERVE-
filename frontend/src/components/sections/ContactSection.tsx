@@ -1,10 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { MapPin, Phone, Send } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useScrollAnimation } from '@/hooks/useScrollAnimation'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+
+const COOLDOWN_MS = 60 * 60 * 1000 // 1 hour in milliseconds
+const NAME_MIN_LENGTH = 12
+const NAME_MAX_LENGTH = 40
 
 export function ContactSection() {
   const { ref, controls } = useScrollAnimation()
@@ -14,35 +18,207 @@ export function ContactSection() {
     message: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [nameError, setNameError] = useState('')
+  const [cooldownRemaining, setCooldownRemaining] = useState<number | null>(null)
+  const [isOnCooldown, setIsOnCooldown] = useState(false)
+
+  // Check cooldown status for authenticated users
+  useEffect(() => {
+    if (!isAuthenticated || !user) return
+
+    const key = `suggestion_cooldown_${user.id}`
+    const checkCooldown = () => {
+      const lastSubmissionTime = localStorage.getItem(key)
+      if (lastSubmissionTime) {
+        const timeSinceLastSubmission = Date.now() - parseInt(lastSubmissionTime, 10)
+        const remaining = COOLDOWN_MS - timeSinceLastSubmission
+
+        if (remaining > 0) {
+          setIsOnCooldown(true)
+          setCooldownRemaining(remaining)
+        } else {
+          setIsOnCooldown(false)
+          setCooldownRemaining(null)
+          localStorage.removeItem(key)
+        }
+      } else {
+        setIsOnCooldown(false)
+        setCooldownRemaining(null)
+      }
+    }
+
+    checkCooldown()
+    const interval = setInterval(checkCooldown, 1000)
+
+    return () => clearInterval(interval)
+  }, [isAuthenticated, user?.id])
+
+  // Check cooldown status for anonymous users (when name is entered)
+  useEffect(() => {
+    if (isAuthenticated) return
+
+    const trimmedName = formData.name.trim()
+    if (!trimmedName) {
+      setIsOnCooldown(false)
+      setCooldownRemaining(null)
+      return
+    }
+
+    const key = `suggestion_cooldown_anonymous_${trimmedName.toLowerCase()}`
+    const checkCooldown = () => {
+      const lastSubmissionTime = localStorage.getItem(key)
+      if (lastSubmissionTime) {
+        const timeSinceLastSubmission = Date.now() - parseInt(lastSubmissionTime, 10)
+        const remaining = COOLDOWN_MS - timeSinceLastSubmission
+
+        if (remaining > 0) {
+          setIsOnCooldown(true)
+          setCooldownRemaining(remaining)
+        } else {
+          setIsOnCooldown(false)
+          setCooldownRemaining(null)
+          localStorage.removeItem(key)
+        }
+      } else {
+        setIsOnCooldown(false)
+        setCooldownRemaining(null)
+      }
+    }
+
+    // Debounce the check when name changes
+    const timeoutId = setTimeout(checkCooldown, 500)
+    
+    const interval = setInterval(checkCooldown, 1000)
+
+    return () => {
+      clearTimeout(timeoutId)
+      clearInterval(interval)
+    }
+  }, [isAuthenticated, formData.name])
+
+  // Update countdown display
+  useEffect(() => {
+    if (cooldownRemaining !== null && cooldownRemaining > 0) {
+      const timer = setInterval(() => {
+        setCooldownRemaining((prev) => {
+          if (prev === null || prev <= 1000) {
+            setIsOnCooldown(false)
+            return null
+          }
+          return prev - 1000
+        })
+      }, 1000)
+
+      return () => clearInterval(timer)
+    }
+  }, [cooldownRemaining])
+
+  const formatTimeRemaining = (ms: number): string => {
+    const minutes = Math.floor(ms / (60 * 1000))
+    const seconds = Math.floor((ms % (60 * 1000)) / 1000)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  const validateName = (name: string): boolean => {
+    const trimmedName = name.trim()
+    
+    if (trimmedName.length < NAME_MIN_LENGTH) {
+      setNameError(`Name must be at least ${NAME_MIN_LENGTH} characters long`)
+      return false
+    }
+    
+    if (trimmedName.length > NAME_MAX_LENGTH) {
+      setNameError(`Name must not exceed ${NAME_MAX_LENGTH} characters`)
+      return false
+    }
+    
+    setNameError('')
+    return true
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const value = e.target.value
+    
+    if (e.target.name === 'name') {
+      // Validate name length in real-time
+      validateName(value)
+    }
+    
+    setFormData({
+      ...formData,
+      [e.target.name]: value,
+    })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Validate name if not authenticated
+    if (!isAuthenticated) {
+      if (!validateName(formData.name)) {
+        return
+      }
+    }
+
+    // Determine the cooldown key
+    const cooldownKey = isAuthenticated && user
+      ? `suggestion_cooldown_${user.id}`
+      : formData.name.trim()
+        ? `suggestion_cooldown_anonymous_${formData.name.trim().toLowerCase()}`
+        : null
+
+    // Check cooldown
+    if (cooldownKey) {
+      const lastSubmissionTime = localStorage.getItem(cooldownKey)
+      if (lastSubmissionTime) {
+        const timeSinceLastSubmission = Date.now() - parseInt(lastSubmissionTime, 10)
+        if (timeSinceLastSubmission < COOLDOWN_MS) {
+          const remaining = COOLDOWN_MS - timeSinceLastSubmission
+          const remainingMinutes = Math.ceil(remaining / (60 * 1000))
+          toast.error(`Please wait ${remainingMinutes} minute(s) before submitting another message.`)
+          setIsOnCooldown(true)
+          setCooldownRemaining(remaining)
+          return
+        }
+      }
+    }
+    
     setIsSubmitting(true)
     try {
       const payload = {
-        name: isAuthenticated && user ? user.name : formData.name,
+        name: isAuthenticated && user ? user.name : formData.name.trim(),
         message: formData.message,
         user_id: isAuthenticated && user ? user.id : undefined,
       }
 
       await api.post('/suggestions', payload)
       
+      // Save cooldown timestamp
+      if (cooldownKey) {
+        localStorage.setItem(cooldownKey, Date.now().toString())
+      }
+      
       toast.success('Thank you for your suggestion! We appreciate your feedback.')
-    setFormData({ name: '', message: '' })
+      setFormData({ name: '', message: '' })
+      setNameError('')
+      
+      // Update cooldown state
+      setIsOnCooldown(true)
+      setCooldownRemaining(COOLDOWN_MS)
     } catch (error: any) {
       console.error('Error submitting suggestion:', error)
-      toast.error(error.response?.data?.message || 'Failed to submit suggestion. Please try again.')
+      const errorMessage = error.response?.data?.message || 'Failed to submit suggestion. Please try again.'
+      toast.error(errorMessage)
+      
+      // If error is about cooldown, update local state
+      if (errorMessage.includes('cooldown') || errorMessage.includes('wait')) {
+        setIsOnCooldown(true)
+        // Try to extract remaining time from error message or set to full cooldown
+        setCooldownRemaining(COOLDOWN_MS)
+      }
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
   }
 
   return (
@@ -92,17 +268,36 @@ export function ContactSection() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isAuthenticated && (
             <div className="form-group">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Your Name
+                <span className="text-gray-500 font-normal ml-2">
+                  ({formData.name.trim().length}/{NAME_MAX_LENGTH})
+                </span>
+              </label>
               <input
                 type="text"
                 name="name"
-                placeholder="Enter your full name"
+                placeholder="Enter your full name (12-40 characters)"
                 value={formData.name}
                 onChange={handleChange}
                 autoComplete="name"
                 required
-                className="w-full p-3 sm:p-4 border-2 border-gray-200 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-gray-300"
+                minLength={NAME_MIN_LENGTH}
+                maxLength={NAME_MAX_LENGTH}
+                className={`w-full p-3 sm:p-4 border-2 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:ring-2 hover:border-gray-300 ${
+                  nameError
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-200'
+                    : 'border-gray-200 focus:border-blue-500 focus:ring-blue-200'
+                }`}
               />
+              {nameError && (
+                <p className="mt-1 text-sm text-red-600">{nameError}</p>
+              )}
+              {!nameError && formData.name.trim().length > 0 && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Name must be between {NAME_MIN_LENGTH} and {NAME_MAX_LENGTH} characters
+                </p>
+              )}
             </div>
             )}
             <div className="form-group">
@@ -117,14 +312,34 @@ export function ContactSection() {
                 className="w-full p-3 sm:p-4 border-2 border-gray-200 rounded-xl text-sm sm:text-base bg-white transition-all duration-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-gray-300 resize-none"
               />
             </div>
+            
+            {/* Cooldown Message */}
+            {isOnCooldown && cooldownRemaining !== null && cooldownRemaining > 0 && (
+              <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4">
+                <p className="text-sm text-yellow-800 font-semibold mb-1">
+                  ⏱️ Cooldown Active
+                </p>
+                <p className="text-sm text-yellow-700">
+                  Please wait <span className="font-bold">{formatTimeRemaining(cooldownRemaining)}</span> before sending another message.
+                </p>
+              </div>
+            )}
+            
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="send-btn bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-4 px-6 sm:px-10 rounded-xl cursor-pointer text-base sm:text-lg font-semibold transition-all duration-300 mx-auto hover:from-blue-700 hover:to-blue-800 hover:-translate-y-1 hover:shadow-xl flex items-center space-x-2 sm:space-x-3 w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting || isOnCooldown || (nameError && !isAuthenticated)}
+              className="send-btn bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-4 px-6 sm:px-10 rounded-xl cursor-pointer text-base sm:text-lg font-semibold transition-all duration-300 mx-auto hover:from-blue-700 hover:to-blue-800 hover:-translate-y-1 hover:shadow-xl flex items-center space-x-2 sm:space-x-3 w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               style={{ boxShadow: '0 8px 25px rgba(59, 130, 246, 0.4)' }}
             >
               <Send className={`w-6 h-6 ${isSubmitting ? 'animate-spin' : ''}`} />
-              <span>{isSubmitting ? 'Sending...' : 'Send Message'}</span>
+              <span>
+                {isSubmitting 
+                  ? 'Sending...' 
+                  : isOnCooldown 
+                    ? `On Cooldown (${cooldownRemaining ? formatTimeRemaining(cooldownRemaining) : '1:00'})`
+                    : 'Send Message'
+                }
+              </span>
             </button>
           </form>
         </motion.div>
