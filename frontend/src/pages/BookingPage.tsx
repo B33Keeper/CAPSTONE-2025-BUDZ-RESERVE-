@@ -1085,10 +1085,10 @@ export function BookingPage() {
     const { badge } = cellDisplayConfig[state]
     // Shorten text on mobile for maintenance badge
     const badgeText = state === 'maintenance' 
-      ? badge.text.replace('Under maintenance', 'Maintenance')
+      ? badge.text.replace('Under maintenance', 'Maint.')
       : badge.text
     return (
-      <span className={`inline-flex items-center gap-0.5 sm:gap-1 rounded-full px-1.5 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-xs font-medium whitespace-nowrap ${badge.className}`}>
+      <span className={`inline-flex items-center gap-0.5 sm:gap-1 rounded-full px-1 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-xs font-medium whitespace-nowrap ${badge.className}`}>
         {badge.icon}
         <span className="tracking-tight">{badgeText}</span>
       </span>
@@ -1669,8 +1669,8 @@ export function BookingPage() {
                                 canInteract ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 active:scale-[0.99]' : 'opacity-95'
                               }`}
                             >
-                              <div className="flex items-start sm:items-center gap-1.5 sm:gap-2 min-w-0">
-                                <span className="text-base sm:text-sm font-bold text-gray-900 leading-tight flex-1 min-w-0 truncate pr-1">{court.Court_Name}</span>
+                              <div className="flex items-center gap-1 sm:gap-2 w-full">
+                                <span className="text-base sm:text-sm font-bold text-gray-900 leading-tight flex-1">{court.Court_Name}</span>
                                 <div className="flex-shrink-0">{renderStatusBadge(displayState)}</div>
                               </div>
                               <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-1 sm:gap-2">
