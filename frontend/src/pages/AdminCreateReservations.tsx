@@ -47,6 +47,8 @@ export default function AdminCreateReservations() {
   const [customerName, setCustomerName] = useState('')
   const [customerEmail, setCustomerEmail] = useState('')
   const [customerContact, setCustomerContact] = useState('')
+  const [nameError, setNameError] = useState('')
+  const [emailError, setEmailError] = useState('')
   
   const [courtBookings, setCourtBookings] = useState<CourtBooking[]>([])
   const [equipmentBookings, setEquipmentBookings] = useState<EquipmentBooking[]>([])
@@ -994,7 +996,37 @@ export default function AdminCreateReservations() {
   }
 
   const handleProceedFromCustomerInfo = async () => {
-    // Customer information is optional - proceed directly to date selection
+    // Validate required fields
+    let hasError = false
+    
+    // Clear previous errors
+    setNameError('')
+    setEmailError('')
+    
+    // Validate name (required)
+    if (!customerName.trim()) {
+      setNameError('Customer name is required')
+      hasError = true
+    }
+    
+    // Validate email (required)
+    if (!customerEmail.trim()) {
+      setEmailError('Customer email is required')
+      hasError = true
+    } else {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(customerEmail.trim())) {
+        setEmailError('Please enter a valid email address')
+        hasError = true
+      }
+    }
+    
+    if (hasError) {
+      return
+    }
+    
+    // Contact number is optional - proceed to date selection
     setCurrentStep(2)
   }
 
@@ -1647,40 +1679,64 @@ export default function AdminCreateReservations() {
                   <div className="bg-gray-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-t-lg -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 mb-4 sm:mb-6 shadow">
                     <h2 className="text-sm sm:text-base md:text-lg font-semibold">Enter Customer Information</h2>
                     <p className="text-blue-100 text-[10px] sm:text-xs md:text-sm mt-1">
-                      Customer details are optional. You can proceed without filling these fields.
+                      Customer name and email are required. Contact number is optional.
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded">
+                  <p className="text-sm text-blue-700">
+                      Customer name and email are required. Contact number is optional.
                   </p>
                 </div>
 
                   <div className="space-y-4">
                 <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Customer Name
+                        Customer Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter customer name (optional)"
+                    onChange={(e) => {
+                      setCustomerName(e.target.value)
+                      if (nameError) setNameError('')
+                    }}
+                    required
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          nameError ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Enter customer name"
                   />
+                  {nameError && (
+                    <p className="mt-1 text-sm text-red-600">{nameError}</p>
+                  )}
                 </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Customer Email
+                        Customer Email <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter customer email (optional)"
+                    onChange={(e) => {
+                      setCustomerEmail(e.target.value)
+                      if (emailError) setEmailError('')
+                    }}
+                    required
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          emailError ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Enter customer email"
                       />
+                  {emailError && (
+                    <p className="mt-1 text-sm text-red-600">{emailError}</p>
+                  )}
                 </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Customer Contact Number
+                        Customer Contact Number <span className="text-gray-400 text-xs">(Optional)</span>
                   </label>
                   <input
                     type="tel"
@@ -1694,7 +1750,7 @@ export default function AdminCreateReservations() {
                     }}
                     maxLength={17} // +63 9XX XXX XXXX = 17 characters
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="+63 9XX XXX XXXX (optional)"
+                        placeholder="+63 9XX XXX XXXX"
                       />
                 </div>
 
