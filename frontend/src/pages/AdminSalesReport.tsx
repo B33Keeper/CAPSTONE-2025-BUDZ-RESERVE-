@@ -16,6 +16,7 @@ interface EquipmentRental {
 interface SalesReportItem {
   reservationId: number
   customerName: string
+  contactNumber: string | null
   courtName: string
   time: string
   date: string
@@ -135,7 +136,7 @@ const AdminSalesReport = () => {
       const periodLabel = periods.find(p => p.value === selectedPeriod)?.label || 'Daily'
       
       // Prepare CSV headers
-      const headers = ['Reservation ID', 'Customer Name', 'Court Name', 'Time', 'Date', 'Payment Method', 'Racket Rent / Duration', 'Price', 'Status']
+      const headers = ['Reservation ID', 'Customer Name', 'Contact Number', 'Court Name', 'Time', 'Date', 'Payment Method', 'Racket Rent / Duration', 'Price', 'Status']
       
       // Prepare CSV rows
       const csvRows = dataToExport.map(item => {
@@ -149,6 +150,7 @@ const AdminSalesReport = () => {
         return [
           item.reservationId.toString(),
           `"${item.customerName.replace(/"/g, '""')}"`,
+          `"${(item.contactNumber || 'N/A').replace(/"/g, '""')}"`,
           `"${item.courtName.replace(/"/g, '""')}"`,
           `"${item.time.replace(/"/g, '""')}"`,
           `"${item.date.replace(/"/g, '""')}"`,
@@ -342,6 +344,7 @@ const AdminSalesReport = () => {
         return [
           item.reservationId.toString(),
           item.customerName.length > 20 ? item.customerName.substring(0, 17) + '...' : item.customerName,
+          item.contactNumber || 'N/A',
           courtName,
           time,
           item.date || 'N/A',
@@ -368,7 +371,7 @@ const AdminSalesReport = () => {
 
       // Add table using autoTable with better styling
       autoTable(doc, {
-        head: [['ID', 'Customer', 'Court', 'Time', 'Date', 'Payment', 'Equipment', 'Amount', 'Status']],
+        head: [['ID', 'Customer', 'Contact', 'Court', 'Time', 'Date', 'Payment', 'Equipment', 'Amount', 'Status']],
         body: tableData,
         startY: yPos + 10,
         margin: { left: margin, right: margin },
@@ -392,14 +395,15 @@ const AdminSalesReport = () => {
         },
         columnStyles: {
           0: { cellWidth: 15, halign: 'center' }, // ID
-          1: { cellWidth: 35, halign: 'left' }, // Customer
-          2: { cellWidth: 30, halign: 'left', overflow: 'linebreak' }, // Court
-          3: { cellWidth: 35, halign: 'left', overflow: 'linebreak' }, // Time
-          4: { cellWidth: 30, halign: 'center' }, // Date
-          5: { cellWidth: 25, halign: 'center' }, // Payment
-          6: { cellWidth: 40, halign: 'left', overflow: 'linebreak' }, // Equipment
-          7: { cellWidth: 25, halign: 'right' }, // Amount
-          8: { cellWidth: 20, halign: 'center' } // Status
+          1: { cellWidth: 30, halign: 'left' }, // Customer
+          2: { cellWidth: 25, halign: 'left' }, // Contact
+          3: { cellWidth: 25, halign: 'left', overflow: 'linebreak' }, // Court
+          4: { cellWidth: 30, halign: 'left', overflow: 'linebreak' }, // Time
+          5: { cellWidth: 25, halign: 'center' }, // Date
+          6: { cellWidth: 20, halign: 'center' }, // Payment
+          7: { cellWidth: 35, halign: 'left', overflow: 'linebreak' }, // Equipment
+          8: { cellWidth: 22, halign: 'right' }, // Amount
+          9: { cellWidth: 18, halign: 'center' } // Status
         },
         didDrawPage: (data: any) => {
           // Add page numbers
@@ -675,6 +679,9 @@ const AdminSalesReport = () => {
     
     // Search in customer name
     if (item.customerName.toLowerCase().includes(query)) return true
+    
+    // Search in contact number
+    if (item.contactNumber && item.contactNumber.toLowerCase().includes(query)) return true
     
     // Search in court name
     if (item.courtName.toLowerCase().includes(query)) return true
@@ -995,6 +1002,7 @@ const AdminSalesReport = () => {
                     <thead>
                       <tr className="border-b-2 border-gray-200" style={{ backgroundColor: '#475569' }}>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">CUSTOMER</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">CONTACT #</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">COURT #</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">TIME</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">DATE</th>
@@ -1006,7 +1014,7 @@ const AdminSalesReport = () => {
                     <tbody>
                       {filteredData.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                          <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                             {searchQuery || dateFrom || dateTo ? (
                               <div>
                                 <p className="text-lg font-medium mb-2">No results found</p>
@@ -1053,6 +1061,7 @@ const AdminSalesReport = () => {
                             style={{ animationDelay: `${index * 50}ms` }}
                           >
                             <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.customerName}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">{item.contactNumber || 'N/A'}</td>
                             <td className="px-6 py-4 text-sm text-gray-700">
                               <div className="flex flex-col gap-1">
                                 {item.courtName.split(', ').map((court, idx) => (

@@ -1083,14 +1083,19 @@ export function BookingPage() {
 
   const renderStatusBadge = (state: CellDisplayState) => {
     const { badge } = cellDisplayConfig[state]
-    // Shorten text on mobile for maintenance badge
-    const badgeText = state === 'maintenance' 
-      ? badge.text.replace('Under maintenance', 'Maint.')
-      : badge.text
+    // Show shortened text on mobile, full text on desktop for maintenance badge
+    const isMaintenance = state === 'maintenance'
     return (
       <span className={`inline-flex items-center gap-0.5 sm:gap-1 rounded-full px-1 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-xs font-medium whitespace-nowrap ${badge.className}`}>
         {badge.icon}
-        <span className="tracking-tight">{badgeText}</span>
+        {isMaintenance ? (
+          <>
+            <span className="tracking-tight sm:hidden">Maint.</span>
+            <span className="tracking-tight hidden sm:inline">{badge.text}</span>
+          </>
+        ) : (
+          <span className="tracking-tight">{badge.text}</span>
+        )}
       </span>
     )
   }

@@ -495,6 +495,7 @@ export class PaymentsService {
       reservations: Reservation[];
       payment: Payment | null;
       customerName: string;
+      contactNumber: string | null;
       date: Date;
       created_at: Date | null;
       paymentMethod: string;
@@ -565,6 +566,7 @@ export class PaymentsService {
           reservations: [],
           payment: anyPayment || null, // Use any payment, not just completed
           customerName: reservation.user?.name || 'admin', // Default to 'admin' for admin-created reservations
+          contactNumber: reservation.user?.contact_number || null,
           date: reservation.Reservation_Date,
           created_at: reservation.Created_at || new Date(), // Store creation date for sorting
           paymentMethod: anyPayment?.payment_method || 'Pending',
@@ -764,6 +766,7 @@ export class PaymentsService {
       reportData.push({
         reservationId: transaction.reservations[0].Reservation_ID, // Use first reservation ID as identifier
         customerName: transaction.customerName,
+        contactNumber: transaction.contactNumber || null,
         courtName: courtsDisplay, // Show all courts in the transaction
         time: timesDisplay, // Show all time slots in the transaction
         date: reportDate, // Use reservation date, not payment date
