@@ -601,7 +601,7 @@ export default function AdminCreateReservations() {
         // Pre-select all schedules that were previously selected for this racket
         if (allSelectedSchedules.size > 0) {
           setSelectedCourtSchedulesForRacket(allSelectedSchedules)
-        } else {
+      } else {
           setSelectedCourtSchedulesForRacket(new Set())
         }
         setShowCourtScheduleSelectionModal(true)
@@ -2574,10 +2574,10 @@ export default function AdminCreateReservations() {
                                 ) : (
                                   <div className="flex items-center gap-2">
                                     <span>{row.data.equipment}</span>
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-xs font-medium">
                                       {row.data.time.replace(' hr', 'h')}
                                       {row.data.quantity && row.data.quantity > 1 ? ` x${row.data.quantity}` : ''}
-                                    </span>
+                                        </span>
                                   </div>
                                 )}
                               </td>
