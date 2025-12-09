@@ -134,25 +134,32 @@ const AdminDashboard = () => {
     for (const [transactionKey, transaction] of transactionMap.entries()) {
       // Calculate transaction total amount
       // Priority 1: Sum of payment amounts (if payments exist)
+      // IMPORTANT: Payment amount already includes equipment costs, so we should NOT add equipment rentals again
       let transactionAmount = 0
+      let usingPaymentAmount = false
+      
       if (transaction.payments.length > 0) {
         transactionAmount = transaction.payments.reduce((sum: number, payment: any) => {
           const amount = Number(payment?.amount ?? 0)
           return sum + (isNaN(amount) ? 0 : amount)
         }, 0)
+        usingPaymentAmount = transactionAmount > 0
       }
       
       // Priority 2: Sum of Total_Amount from all reservations in transaction (if no payments)
+      // Note: Reservation Total_Amount only includes court prices, so we need to add equipment rentals
       if (transactionAmount === 0) {
         transactionAmount = transaction.reservations.reduce((sum: number, res: any) => {
           const totalAmount = Number(res.Total_Amount ?? res.total_amount ?? res.totalAmount ?? 0)
           return sum + (isNaN(totalAmount) ? 0 : totalAmount)
         }, 0)
+        usingPaymentAmount = false
       }
       
-      // Add equipment rental amounts (sum from all reservations in transaction)
+      // Add equipment rental amounts ONLY if NOT using payment amount
+      // (Payment amount already includes equipment costs)
       let equipmentRentalAmount = 0
-      if (transaction.equipmentRentals.length > 0) {
+      if (!usingPaymentAmount && transaction.equipmentRentals.length > 0) {
         // Use Set to avoid double-counting same rental
         const uniqueRentals = new Map<string, any>()
         for (const rental of transaction.equipmentRentals) {
@@ -168,7 +175,7 @@ const AdminDashboard = () => {
         }, 0)
       }
       
-      // Total for this transaction = transaction amount + equipment rental amount
+      // Total for this transaction = transaction amount + equipment rental amount (only if not using payment)
       totalSales += transactionAmount + equipmentRentalAmount
     }
 

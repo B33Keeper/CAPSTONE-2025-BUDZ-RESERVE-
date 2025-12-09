@@ -646,19 +646,27 @@ export class PaymentsService {
         }
       }
       
+      // Track whether we're using payment amount (which already includes equipment) or reservation totals
+      let usingPaymentAmount = false;
+      
       if (transactionPaymentAmount > 0) {
         // Use payment amount for the entire transaction (ONE payment covers all reservations)
+        // IMPORTANT: Payment amount already includes equipment costs, so we should NOT add equipment rentals again
         transaction.totalAmount = transactionPaymentAmount;
-        console.log(`[SalesReport] Transaction ${transactionKey}: Using payment amount ${transactionPaymentAmount} for entire transaction (${transaction.reservations.length} reservations)`);
+        usingPaymentAmount = true;
+        console.log(`[SalesReport] Transaction ${transactionKey}: Using payment amount ${transactionPaymentAmount} for entire transaction (${transaction.reservations.length} reservations) - payment already includes equipment`);
       } else {
         // No payments found - sum Total_Amount from all reservations
+        // Note: Reservation Total_Amount only includes court prices, so we need to add equipment rentals
         transaction.totalAmount = transaction.reservations.reduce((sum: number, res: any) => {
           return sum + (Number(res.Total_Amount) || 0);
         }, 0);
+        usingPaymentAmount = false;
         console.log(`[SalesReport] Transaction ${transactionKey}: No payments found, using sum of Total_Amount from ${transaction.reservations.length} reservations: ${transaction.totalAmount}`);
       }
       
-      // Add equipment rental amounts (sum from all reservations in transaction)
+      // Collect equipment items for display (always needed for report display)
+      // But only add equipment rental amounts to total if NOT using payment amount
       let totalEquipmentRentalAmount = 0;
       for (const res of transaction.reservations) {
         try {
@@ -669,9 +677,13 @@ export class PaymentsService {
           
           if (rental) {
             const rentalTotalAmount = Number(rental.total_amount) || 0;
-            totalEquipmentRentalAmount += rentalTotalAmount;
             
-            // Also collect equipment items for display
+            // Only add to total if NOT using payment amount (payment already includes equipment)
+            if (!usingPaymentAmount) {
+              totalEquipmentRentalAmount += rentalTotalAmount;
+            }
+            
+            // Also collect equipment items for display (always needed)
             if (rental.items && rental.items.length > 0) {
               const items = await this.equipmentRentalItemRepository.find({
                 where: { rental_id: rental.id },
@@ -706,9 +718,13 @@ export class PaymentsService {
         }
       }
       
-      if (totalEquipmentRentalAmount > 0) {
+      // Only add equipment rental amounts if NOT using payment amount
+      // (Payment amount already includes equipment costs)
+      if (!usingPaymentAmount && totalEquipmentRentalAmount > 0) {
         transaction.totalAmount += totalEquipmentRentalAmount;
         console.log(`[SalesReport] Transaction ${transactionKey}: Added equipment rental total ${totalEquipmentRentalAmount}, Final total: ${transaction.totalAmount}`);
+      } else if (usingPaymentAmount && totalEquipmentRentalAmount > 0) {
+        console.log(`[SalesReport] Transaction ${transactionKey}: Skipping equipment rental addition (${totalEquipmentRentalAmount}) - payment amount already includes equipment costs`);
       }
     }
 
