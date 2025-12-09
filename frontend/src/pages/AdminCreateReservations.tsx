@@ -3405,9 +3405,7 @@ export default function AdminCreateReservations() {
                     ? '/assets/PAYMENT QR CODe/Gcash_QR.jpg'
                     : selectedProviderForPreview === 'paymaya'
                     ? '/assets/PAYMENT QR CODe/Gcash_QR.jpg'
-                    : selectedProviderForPreview === 'grab_pay'
-                    ? '/assets/PAYMENT QR CODe/GRABPY_QR.jpg'
-                    : `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(`${selectedProviderForPreview.toUpperCase()}_SAMPLE_${totalAmount}`)}`
+                    : '/assets/PAYMENT QR CODe/GRABPY_QR.jpg'
                   }
                   alt={`${selectedProviderForPreview === 'gcash' ? 'GCash' : selectedProviderForPreview === 'paymaya' ? 'PayMaya' : 'GrabPay'} QR Code`}
                   className="w-80 h-80 object-contain"
