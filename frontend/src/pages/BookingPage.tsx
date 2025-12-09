@@ -1666,7 +1666,7 @@ export function BookingPage() {
                               }`}
                             >
                               <div className="flex items-start sm:items-center justify-between gap-1.5 sm:gap-2">
-                                <span className="text-xs sm:text-sm font-semibold text-gray-900 line-clamp-1">{court.Court_Name}</span>
+                                <span className="text-base sm:text-sm font-bold text-gray-900 leading-tight">{court.Court_Name}</span>
                                 <div className="flex-shrink-0">{renderStatusBadge(displayState)}</div>
                               </div>
                               <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-1 sm:gap-2">
