@@ -49,6 +49,7 @@ export default function AdminCreateReservations() {
   const [customerContact, setCustomerContact] = useState('')
   const [nameError, setNameError] = useState('')
   const [emailError, setEmailError] = useState('')
+  const [contactError, setContactError] = useState('')
   
   const [courtBookings, setCourtBookings] = useState<CourtBooking[]>([])
   const [equipmentBookings, setEquipmentBookings] = useState<EquipmentBooking[]>([])
@@ -1002,6 +1003,7 @@ export default function AdminCreateReservations() {
     // Clear previous errors
     setNameError('')
     setEmailError('')
+    setContactError('')
     
     // Validate name (required)
     if (!customerName.trim()) {
@@ -1022,11 +1024,36 @@ export default function AdminCreateReservations() {
       }
     }
     
+    // Validate contact number (required)
+    if (!customerContact.trim()) {
+      setContactError('Contact number is required')
+      hasError = true
+    } else {
+      // Validate Philippine phone number format
+      const normalized = customerContact.replace(/[^\d+]/g, '')
+      if (normalized.startsWith('+63')) {
+        if (normalized.length !== 13 || !/^\+639\d{9}$/.test(normalized)) {
+          setContactError('Contact number must be a valid Philippine mobile number (e.g., +63 9XX XXX XXXX)')
+          hasError = true
+        }
+      } else if (normalized.startsWith('0')) {
+        if (normalized.length !== 11 || !/^09\d{9}$/.test(normalized)) {
+          setContactError('Contact number must be a valid Philippine mobile number (e.g., +63 9XX XXX XXXX)')
+          hasError = true
+        }
+      } else {
+        if (normalized.length !== 10 || !/^9\d{9}$/.test(normalized)) {
+          setContactError('Contact number must be a valid Philippine mobile number (e.g., +63 9XX XXX XXXX)')
+          hasError = true
+        }
+      }
+    }
+    
     if (hasError) {
       return
     }
     
-    // Contact number is optional - proceed to date selection
+    // All fields validated - proceed to date selection
     setCurrentStep(2)
   }
 
@@ -1679,13 +1706,13 @@ export default function AdminCreateReservations() {
                   <div className="bg-gray-600 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-t-lg -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 mb-4 sm:mb-6 shadow">
                     <h2 className="text-sm sm:text-base md:text-lg font-semibold">Enter Customer Information</h2>
                     <p className="text-blue-100 text-[10px] sm:text-xs md:text-sm mt-1">
-                      Customer name and email are required. Contact number is optional.
+                      Customer name, email, and contact number are required.
                   </p>
                 </div>
 
                 <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded">
                   <p className="text-sm text-blue-700">
-                      Customer name and email are required. Contact number is optional.
+                      Customer name, email, and contact number are required.
                   </p>
                 </div>
 
@@ -1736,7 +1763,7 @@ export default function AdminCreateReservations() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Customer Contact Number <span className="text-gray-400 text-xs">(Optional)</span>
+                        Customer Contact Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -1747,11 +1774,18 @@ export default function AdminCreateReservations() {
                       // Format the phone number
                       const formatted = formatPHPhoneNumber(input)
                       setCustomerContact(formatted)
+                      if (contactError) setContactError('')
                     }}
+                    required
                     maxLength={17} // +63 9XX XXX XXXX = 17 characters
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          contactError ? 'border-red-500' : 'border-gray-300'
+                        }`}
                         placeholder="+63 9XX XXX XXXX"
                       />
+                  {contactError && (
+                    <p className="mt-1 text-sm text-red-600">{contactError}</p>
+                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 mt-6">
@@ -2693,13 +2727,22 @@ export default function AdminCreateReservations() {
                       <div className="flex justify-center mb-4">
                         <div className="bg-white p-4 rounded-lg shadow-lg">
                           <img 
-                            src={qrCodeData.qrCode} 
+                            src={selectedQrProvider === 'gcash' 
+                              ? '/assets/PAYMENT QR CODe/Gcash_QR.jpg'
+                              : selectedQrProvider === 'paymaya'
+                              ? '/assets/PAYMENT QR CODe/Gcash_QR.jpg'
+                              : selectedQrProvider === 'grab_pay'
+                              ? '/assets/PAYMENT QR CODe/GRABPY_QR.jpg'
+                              : qrCodeData.qrCode
+                            } 
                             alt="QR Code" 
                             className="w-64 h-64 object-contain"
                             onError={(e) => {
                               // Fallback if QR code image fails to load
                               const target = e.target as HTMLImageElement
+                              if (selectedQrProvider !== 'gcash' && selectedQrProvider !== 'paymaya' && selectedQrProvider !== 'grab_pay') {
                               target.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCodeData.qrCode)}`
+                              }
                             }}
                           />
                         </div>
@@ -3358,7 +3401,14 @@ export default function AdminCreateReservations() {
             <div className="flex flex-col items-center mb-6">
               <div className="bg-white p-8 rounded-xl shadow-lg mb-4">
                 <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(`${selectedProviderForPreview.toUpperCase()}_SAMPLE_${totalAmount}`)}`}
+                  src={selectedProviderForPreview === 'gcash' 
+                    ? '/assets/PAYMENT QR CODe/Gcash_QR.jpg'
+                    : selectedProviderForPreview === 'paymaya'
+                    ? '/assets/PAYMENT QR CODe/Gcash_QR.jpg'
+                    : selectedProviderForPreview === 'grab_pay'
+                    ? '/assets/PAYMENT QR CODe/GRABPY_QR.jpg'
+                    : `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(`${selectedProviderForPreview.toUpperCase()}_SAMPLE_${totalAmount}`)}`
+                  }
                   alt={`${selectedProviderForPreview === 'gcash' ? 'GCash' : selectedProviderForPreview === 'paymaya' ? 'PayMaya' : 'GrabPay'} QR Code`}
                   className="w-80 h-80 object-contain"
                 />
