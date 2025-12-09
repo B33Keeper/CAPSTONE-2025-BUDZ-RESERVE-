@@ -511,7 +511,10 @@ const AdminSalesReport = () => {
       // - Backend filters by Created_at (when reservation was created)
       // - Manual date filters filter by Reservation_Date (when court is booked) - client-side only
       // This is intentional to allow filtering by booking date vs creation date
-      const response = await api.get(`/payments/sales-report?period=${period}`)
+      // Increase timeout to 60 seconds (1 minute) for large datasets (quarterly, yearly, etc.)
+      const response = await api.get(`/payments/sales-report?period=${period}`, {
+        timeout: 60000 // 60 seconds (1 minute) for sales report queries
+      })
       console.log(`[SalesReport] Response:`, response.data)
       if (response.data) {
         setSalesData(response.data.data || [])
