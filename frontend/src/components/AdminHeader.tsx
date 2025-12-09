@@ -22,7 +22,7 @@ interface Notification {
 
 export function AdminHeader({ title, subtitle, extraButtons }: AdminHeaderProps) {
   const navigate = useNavigate()
-  const { user, logout, checkAuth } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -31,11 +31,6 @@ export function AdminHeader({ title, subtitle, extraButtons }: AdminHeaderProps)
   const [expandedNotifications, setExpandedNotifications] = useState<Set<number>>(new Set())
   const dropdownRef = useRef<HTMLDivElement>(null)
   const notificationsRef = useRef<HTMLDivElement>(null)
-
-  // Refresh user data on mount to ensure latest data from backend
-  useEffect(() => {
-    checkAuth()
-  }, [checkAuth])
 
   // Helper function to format role
   const formatRole = (role?: string) => {
@@ -323,7 +318,7 @@ export function AdminHeader({ title, subtitle, extraButtons }: AdminHeaderProps)
                 {/* Profile Picture */}
                 <div className="relative">
                   <img
-                    src={user?.profile_picture || (user?.role === 'admin' ? '/assets/Admin Profile/Admin.png' : '/assets/img/home-page/Ellipse 1.png')}
+                    src={user?.profile_picture || '/assets/img/home-page/Ellipse 1.png'}
                     alt="Profile"
                     className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white shadow-md ring-2 ring-gray-200/60 group-hover:ring-blue-400/60 transition-all duration-300"
                   />
@@ -333,7 +328,7 @@ export function AdminHeader({ title, subtitle, extraButtons }: AdminHeaderProps)
                 {/* User Info */}
                 <div className="text-left hidden sm:block">
                   <div className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
-                    {user?.username || user?.name || 'User'}
+                    {user?.name || user?.username || 'User'}
                   </div>
                   <div className="text-xs font-medium text-gray-500 group-hover:text-blue-600 transition-colors">
                     {formatRole(user?.role)}
